@@ -1,0 +1,327 @@
+// ============================================================================
+// FMEA Smart System - Prisma Schema
+// Version: 1.0.0
+// Database: PostgreSQL
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// 🏢 MASTER TABLES - 기초정보
+// ============================================================================
+
+/// 회사 정보
+model Company {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  plants    Plant[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("companies")
+}
+
+/// 공장 정보
+model Plant {
+  id          String       @id @default(cuid())
+  companyId   String
+  company     Company      @relation(fields: [companyId], references: [id])
+  name        String
+  departments Department[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([companyId, name])
+  @@map("plants")
+}
+
+/// 부서 정보
+model Department {
+  id        String       @id @default(cuid())
+  plantId   String
+  plant     Plant        @relation(fields: [plantId], references: [id])
+  name      String
+  members   TeamMember[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([plantId, name])
+  @@map("departments")
+}
+
+/// 팀원 정보
+model TeamMember {
+  id           String      @id @default(cuid())
+  departmentId String
+  department   Department  @relation(fields: [departmentId], references: [id])
+  name         String
+  position     String
+  email        String?
+  phone        String?
+  cftMembers   CFTMember[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@map("team_members")
+}
+
+/// 제품 정보
+model Product {
+  id           String        @id @default(cuid())
+  customerName String
+  productName  String
+  partNumber   String        @unique
+  plantName    String?
+  productType  ProductType   @default(ASSEMBLY)
+  parentId     String?
+  parent       Product?      @relation("ProductHierarchy", fields: [parentId], references: [id])
+  children     Product[]     @relation("ProductHierarchy")
+  fmeaProjects FMEAProject[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("products")
+}
+
+enum ProductType {
+  ASSEMBLY
+  SUBSYSTEM
+  COMPONENT
+}
+
+// ============================================================================
+// 📊 FMEA PROJECT & WORKSHEET
+// ============================================================================
+
+/// FMEA 프로젝트
+model FMEAProject {
+  id           String   @id @default(cuid())
+  projectName  String
+  fmeaType     FMEAType
+  productId    String?
+  product      Product? @relation(fields: [productId], references: [id])
+  customerName String?
+  productName  String?
+  partNumber   String?
+  startDate    DateTime?
+  endDate      DateTime?
+  currentStage Int      @default(1)
+  status       ProjectStatus @default(DRAFT)
+
+  // 승인권자
+  plannerName  String?
+  plannerDate  DateTime?
+  checkerName  String?
+  checkerDate  DateTime?
+  approverName String?
+  approverDate DateTime?
+
+  // Relations
+  pfmeaWorksheets PFMEAWorksheet[]
+  cftMembers      CFTMember[]
+  revisions       Revision[]
+  improvements    Improvement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("fmea_projects")
+}
+
+enum FMEAType {
+  PFMEA
+  DFMEA
+}
+
+enum ProjectStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  RELEASED
+  CLOSED
+}
+
+/// PFMEA 워크시트 (40컬럼 - 핵심 필드만)
+model PFMEAWorksheet {
+  id        String      @id @default(cuid())
+  projectId String
+  project   FMEAProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  rowIndex  Int
+
+  // 1단계: 구조분석
+  structureL1 String? // 완제품명
+  structureL2 String? // 공정명
+  structureL3 String? // 작업요소
+
+  // 2단계: 기능분석
+  functionL2 String? // 공정기능
+  functionL3 String? // 작업요소기능
+
+  // 3단계: 고장분석
+  failureEffect String? // FE
+  failureMode   String? // FM
+  failureCause  String? // FC
+  productChar   String? // 제품특성
+  processChar   String? // 공정특성
+  specialChar   String? // 특별특성
+
+  // 4단계: 리스크분석
+  preventionCtrl String?  // PC
+  detectionCtrl  String?  // DC
+  severity       Int?     // S
+  occurrence     Int?     // O
+  detection      Int?     // D
+  apCurrent      APLevel? // AP
+
+  // 5단계: 최적화
+  actionType   String?
+  actionDesc   String?
+  responsible  String?
+  targetDate   DateTime?
+  actionStatus String?
+
+  // 메타데이터
+  mergeParentId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([projectId, rowIndex])
+  @@map("pfmea_worksheets")
+}
+
+enum APLevel {
+  H
+  M
+  L
+}
+
+// ============================================================================
+// 🔗 RELATION TABLES
+// ============================================================================
+
+/// CFT 팀원
+model CFTMember {
+  id        String      @id @default(cuid())
+  projectId String
+  project   FMEAProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  memberId  String
+  member    TeamMember  @relation(fields: [memberId], references: [id])
+  role      CFTRole
+  joinedAt  DateTime    @default(now())
+
+  @@unique([projectId, memberId])
+  @@map("cft_members")
+}
+
+enum CFTRole {
+  LEADER
+  MEMBER
+  REVIEWER
+  OBSERVER
+}
+
+/// 개정 이력
+model Revision {
+  id          String      @id @default(cuid())
+  projectId   String
+  project     FMEAProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  revisionNo  String
+  description String
+  changedBy   String
+  changedAt   DateTime    @default(now())
+
+  @@index([projectId])
+  @@map("revisions")
+}
+
+/// 개선조치
+model Improvement {
+  id             String            @id @default(cuid())
+  projectId      String
+  project        FMEAProject       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  worksheetRowId String
+  apLevel        APLevel
+  actionType     String?
+  actionDesc     String
+  responsible    String
+  targetDate     DateTime
+  status         ImprovementStatus @default(OPEN)
+  completedDate  DateTime?
+  evidence       String?
+
+  // SOD 변화
+  severityBefore   Int?
+  occurrenceBefore Int?
+  detectionBefore  Int?
+  severityAfter    Int?
+  occurrenceAfter  Int?
+  detectionAfter   Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, status])
+  @@map("improvements")
+}
+
+enum ImprovementStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  VERIFIED
+  CLOSED
+}
+
+// ============================================================================
+// 🔑 SOD CRITERIA
+// ============================================================================
+
+/// 심각도 기준
+model SeverityCriteria {
+  id            String   @id @default(cuid())
+  fmeaType      FMEAType
+  score         Int
+  impact        String
+  description   String
+  descriptionKr String?
+  createdAt     DateTime @default(now())
+
+  @@unique([fmeaType, score, impact])
+  @@map("severity_criteria")
+}
+
+/// 발생도 기준
+model OccurrenceCriteria {
+  id            String   @id @default(cuid())
+  fmeaType      FMEAType
+  score         Int
+  controlType   String
+  description   String
+  descriptionKr String?
+  createdAt     DateTime @default(now())
+
+  @@unique([fmeaType, score])
+  @@map("occurrence_criteria")
+}
+
+/// 검출도 기준
+model DetectionCriteria {
+  id            String   @id @default(cuid())
+  fmeaType      FMEAType
+  score         Int
+  maturity      String
+  opportunity   String
+  description   String
+  descriptionKr String?
+  createdAt     DateTime @default(now())
+
+  @@unique([fmeaType, score])
+  @@map("detection_criteria")
+}
