@@ -227,9 +227,12 @@ export default function DashboardPage() {
             <span className="px-2 py-1 rounded bg-white/10 text-white/70">
               완료: {apStats.completed}/{apStats.total}
             </span>
-            <button className="ml-2 px-3 py-1 rounded bg-white/10 text-white/70 hover:bg-white/20 transition-colors">
+            <Link 
+              href="/dashboard/ap-improvement"
+              className="ml-2 px-3 py-1 rounded bg-white/10 text-white/70 hover:bg-white/20 transition-colors"
+            >
               전체보기 →
-            </button>
+            </Link>
           </div>
         </div>
         

@@ -94,3 +94,4 @@ export function InfoBar({ project }: InfoBarProps) {
 export default InfoBar;
 
 
+

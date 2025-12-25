@@ -32,10 +32,19 @@ src/
 ### 1. Dashboard 모듈
 | 파일 | 라인 | 역할 | 의존성 |
 |------|------|------|--------|
-| `app/dashboard/page.tsx` | 354 | 메인 페이지 | CompanyLogo, Link |
+| `app/dashboard/page.tsx` | 358 | 메인 페이지 | Link |
 | `app/dashboard/layout.tsx` | 47 | 레이아웃 | Sidebar, StatusBar |
 
-### 2. Layout 컴포넌트
+### 2. AP 개선관리 모듈 (분리 완료 2025-12-26)
+| 파일 | 라인 | 역할 | 의존성 |
+|------|------|------|--------|
+| `app/dashboard/ap-improvement/page.tsx` | 208 | 메인 페이지 | types, mock-data, utils, APModal |
+| `app/dashboard/ap-improvement/types.ts` | 39 | 타입 정의 | - |
+| `app/dashboard/ap-improvement/mock-data.ts` | 100 | 목업 데이터 | types |
+| `app/dashboard/ap-improvement/utils.ts` | 67 | 유틸 함수 | types |
+| `app/dashboard/ap-improvement/APModal.tsx` | 182 | 모달 컴포넌트 | types, shadcn/ui |
+
+### 3. Layout 컴포넌트
 | 파일 | 라인 | 역할 | 의존성 |
 |------|------|------|--------|
 | `components/layout/Sidebar.tsx` | 298 | 사이드바 | CompanyLogo, Link |
@@ -43,7 +52,7 @@ src/
 | `components/layout/StatusBar.tsx` | 101 | 상태바 | - |
 | `components/layout/index.ts` | - | 내보내기 | 모든 layout |
 
-### 3. 공통 컴포넌트
+### 4. 공통 컴포넌트
 | 파일 | 라인 | 역할 | 의존성 |
 |------|------|------|--------|
 | `components/CompanyLogo.tsx` | 206 | 회사 로고 | Image |
@@ -76,11 +85,15 @@ PFMEA (예정)
 
 | 카테고리 | 파일 수 | 총 라인 | 평균 라인 |
 |----------|---------|---------|-----------|
-| Pages | 3 | 415 | 138 |
-| Components | 5 | 714 | 143 |
+| Pages | 4 | 613 | 153 |
+| Components | 6 | 896 | 149 |
 | Hooks | 0 | 0 | 0 |
-| Utils | 1 | 6 | 6 |
-| **합계** | **9** | **1,135** | **126** |
+| Utils | 2 | 73 | 37 |
+| Types | 1 | 39 | 39 |
+| Data | 1 | 100 | 100 |
+| **합계** | **14** | **1,721** | **123** |
+
+> **최종 업데이트**: 2025-12-26 17:00
 
 ---
 
@@ -112,8 +125,10 @@ PFMEA (예정)
 | 로고 변경 | `components/CompanyLogo.tsx` |
 | 사이드바 메뉴 | `components/layout/Sidebar.tsx` |
 | 대시보드 카드 | `app/dashboard/page.tsx` |
-| AP 테이블 | `app/dashboard/page.tsx` (향후 분리 예정) |
-| 바로가기 버튼 | `app/dashboard/page.tsx` (향후 분리 예정) |
+| AP 요약 테이블 | `app/dashboard/page.tsx` |
+| AP 전체 관리 | `app/dashboard/ap-improvement/page.tsx` |
+| AP 모달 | `app/dashboard/ap-improvement/APModal.tsx` |
+| 바로가기 버튼 | `app/dashboard/page.tsx` |
 
 ### 컴포넌트별 위치
 | 컴포넌트 | 경로 |
@@ -130,7 +145,7 @@ PFMEA (예정)
 | 날짜 | 변경 | 담당 |
 |------|------|------|
 | 2025-12-26 | 초기 인덱스 생성 | AI |
-| - | - | - |
+| 2025-12-26 | AP 개선관리 모듈 분리 (607→596행, 5파일) | AI |
 
 ---
 
@@ -151,4 +166,5 @@ npm run deps:graph
 ---
 
 © AMP SYSTEM - FMEA Smart System
+
 
