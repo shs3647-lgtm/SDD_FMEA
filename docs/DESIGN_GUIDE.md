@@ -47,14 +47,111 @@
 | 경고 (DONE) | 주황 | `#f59e0b` |
 | 위험 (DELAY) | 빨강 | `#ef4444` |
 
-### 2.2 표준 테이블 색상
+### 2.2 표준 테이블 색상 (table-design-reference.html 기준)
 
-| 영역 | 색상 | Hex |
+| 영역 | 색상 | Hex | 용도 |
+|------|------|-----|------|
+| 헤더 | 진한 남청색 | `#00587a` | 헤더 행 전체 |
+| 좌측 열 | 진한 남청색 | `#00587a` | 첫 번째 열 (row-header) |
+| 홀수 행 | 흰색 | `#ffffff` | 바디 영역 홀수 행 |
+| 짝수 행 | 연한 하늘색 | `#e0f2fb` | 바디 영역 짝수 행 |
+| 테두리 | 회색 | `#999999` | 모든 셀 테두리 |
+| 페이지 배경 | 연한 회색 | `#f5f5f5` | 페이지 전체 배경 |
+
+### 2.3 라이트 테마 (폼/테이블 페이지)
+
+| 용도 | 색상 | Hex |
 |------|------|-----|
-| 헤더 | 진한 남청색 | `#00587a` |
-| 홀수 행 | 흰색 | `#ffffff` |
-| 짝수 행 | 연한 하늘색 | `#e0f2fb` |
-| 테두리 | 회색 | `#999999` |
+| 배경 | 연한 회색 | `#f5f5f5` |
+| 컨테이너 | 흰색 | `#ffffff` |
+| 그림자 | 박스 그림자 | `rgba(0,0,0,0.1)` |
+| 안내 박스 | 연한 하늘색 | `#e0f2fb` |
+| 성공 메시지 | 연한 초록 | `#d1fae5` |
+
+---
+
+## 2-1. 표준 테이블 디자인 (필수)
+
+### 적용 범위
+모든 데이터 테이블에 표준 디자인 적용
+
+### CSS 스타일
+
+```css
+/* 테이블 기본 스타일 */
+.standard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "Malgun Gothic", sans-serif;
+}
+
+/* 모든 셀 공통 테두리 */
+.standard-table th,
+.standard-table td {
+  border: 1px solid #999;
+  padding: 8px;
+  text-align: center;
+}
+
+/* 헤더 행 스타일 (1행 전체) */
+.standard-table thead th {
+  background-color: #00587a;
+  color: #ffffff;
+  font-weight: bold;
+}
+
+/* 좌측 첫 번째 열 스타일 (전체 행) */
+.standard-table .row-header {
+  background-color: #00587a;
+  color: #ffffff;
+  font-weight: bold;
+}
+
+/* 바디 영역 - 짝수 행 (연한 하늘색) */
+.standard-table tbody tr:nth-child(even) td:not(.row-header) {
+  background-color: #e0f2fb;
+}
+
+/* 바디 영역 - 홀수 행 (흰색) */
+.standard-table tbody tr:nth-child(odd) td:not(.row-header) {
+  background-color: #ffffff;
+}
+```
+
+### Tailwind 클래스 조합
+
+```html
+<!-- 헤더 -->
+<th class="bg-[#00587a] text-white font-bold px-3 py-2 text-center" style="border: 1px solid #999">
+
+<!-- 좌측 열 (row-header) -->
+<td class="bg-[#00587a] text-white font-bold px-3 py-2" style="border: 1px solid #999">
+
+<!-- 홀수 행 셀 -->
+<td class="bg-white px-3 py-2 text-black" style="border: 1px solid #999">
+
+<!-- 짝수 행 셀 -->
+<td class="bg-[#e0f2fb] px-3 py-2 text-black" style="border: 1px solid #999">
+```
+
+### 색상 범례 컴포넌트
+
+```html
+<div class="flex items-center gap-6 text-xs text-gray-600">
+  <div class="flex items-center gap-2">
+    <div class="w-4 h-4 bg-[#00587a]" style="border: 1px solid #999"></div>
+    <span>헤더/좌측열: #00587a</span>
+  </div>
+  <div class="flex items-center gap-2">
+    <div class="w-4 h-4 bg-[#e0f2fb]" style="border: 1px solid #999"></div>
+    <span>짝수 행: #e0f2fb</span>
+  </div>
+  <div class="flex items-center gap-2">
+    <div class="w-4 h-4 bg-white" style="border: 1px solid #999"></div>
+    <span>홀수 행: #ffffff</span>
+  </div>
+</div>
+```
 
 ---
 
@@ -241,6 +338,7 @@
 | 버전 | 날짜 | 변경사항 |
 |------|------|----------|
 | 1.0.0 | 2025-12-26 | 초기 디자인 가이드 작성 |
+| 1.1.0 | 2025-12-26 | 표준 테이블 디자인 상세 규격 추가 (table-design-reference.html 기준) |
 
 ---
 
