@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Smart System — Welcome</title>
+  <meta name="color-scheme" content="light dark" />
+  <style>
+    :root{
+      --bg1:#0d1830; --bg2:#0b1426; --panel:#0e1a33; --text:#eaf0ff; --muted:#a7b6d3;
+      --brand:#5ba9ff; --brand-2:#88c0ff; --ok:#22c55e; --done:#f59e0b; --delay:#ef4444;
+      --stroke:#1d2a48; --shadow:0 12px 28px rgba(0,0,0,.35); --radius:14px;
+    }
+    *{box-sizing:border-box} html,body{height:100%}
+    body{
+      margin:0; font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",Arial,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+      color:var(--text);
+      background:radial-gradient(1200px 700px at 70% -10%, #162a56 0%, var(--bg1) 45%, var(--bg2) 100%) fixed;
+    }
+    /* Top bar */
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;position:sticky;top:0;z-index:10;
+      backdrop-filter:saturate(140%) blur(8px);background:linear-gradient(180deg,rgba(15,23,42,.45),rgba(15,23,42,.20));border-bottom:1px solid var(--stroke)}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800}
+    .logo{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,var(--brand),var(--brand-2));box-shadow:0 6px 16px rgba(91,169,255,.35)}
+    .icons a{color:var(--muted);text-decoration:none;margin-left:16px;font-size:14px;padding:6px 10px;border-radius:10px;border:1px solid transparent}
+    .icons a:hover{color:var(--text);border-color:var(--stroke);background:rgba(255,255,255,.06)}
+    /* Layout */
+    .wrap{max-width:1200px;margin:26px auto 34px;padding:0 18px}
+    .hero{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+    @media (max-width:980px){.hero{grid-template-columns:1fr}}
+    .card{background:var(--panel);border:1px solid var(--stroke);border-radius:var(--radius);box-shadow:var(--shadow)}
+    /* Left hero */
+    .hero-left{padding:0;overflow:hidden;position:relative}
+    .hero-header{padding:10px 18px;font-size:13px;font-weight:800;color:#9cc5ff}
+    .hero-banner{margin:0 18px 16px;background:#1b5e7a;border-radius:8px;color:#fff;padding:18px;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:900;font-size:20px;letter-spacing:.2px}
+    .hero-desc{color:var(--muted);font-size:13px;padding:0 18px 14px}
+    /* Right hero */
+    .hero-right{padding:0;overflow:hidden;position:relative}
+    .yt-wrap{width:100%;height:100%;border-radius:0;overflow:hidden;border:none;background:#1b5e7a;display:flex;align-items:center;justify-content:center}
+    .yt-url{position:absolute;bottom:0;left:0;right:0;padding:8px 12px;background:rgba(0,0,0,0.7);color:#fff;font-size:11px;word-break:break-all}
+    /* Status row */
+    .section-title{margin:18px 0 10px;font-weight:900;font-size:16px}
+    .status-row{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+    .status-card{padding:16px 18px;display:flex;align-items:center;justify-content:space-between}
+    .status-title{color:var(--muted);font-size:13px;margin:0 0 6px}
+    .status-num{font-size:30px;font-weight:900;margin:0}
+    .chip{padding:4px 10px;border-radius:999px;font-size:12px;color:#fff;font-weight:800}
+    .chip.ok{background:var(--ok)} .chip.done{background:var(--done)} .chip.delay{background:var(--delay)}
+    /* Quick links */
+    .quick-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
+    @media (max-width:980px){.quick-grid{grid-template-columns:repeat(2,1fr)}}
+    .mini{padding:14px 16px;cursor:pointer;transition:.18s ease}
+    .mini:hover{transform:translateY(-2px)}
+    .mini h4{margin:0 0 6px;font-size:14px;font-weight:900}
+    .mini p{margin:0;color:var(--muted);font-size:12px}
+    .badge{display:inline-block;padding:2px 7px;border-radius:999px;font-size:12px;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));margin-left:6px}
+    /* Links (two rows) */
+    .links h3{margin:16px 0 8px;font-size:14px;font-weight:900;color:#b9cff3}
+    .link-row{display:flex;flex-wrap:wrap;gap:10px}
+    .site-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid var(--stroke);border-radius:999px;background:rgba(255,255,255,.05);text-decoration:none;color:var(--text);font-size:12px;font-weight:800}
+    .site-pill:hover{background:rgba(255,255,255,.10)}
+    .dot{width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand-2))}
+    .footer{margin:18px 0 8px;color:var(--muted);font-size:12px;text-align:center}
+  </style>
+</head>
+<body>
+  <!-- Top -->
+  <header class="topbar">
+    <div class="brand"><div class="logo"></div><div>Smart System</div></div>
+    <nav class="icons"><a href="#">Help</a><a href="#">Settings</a></nav>
+  </header>
+
+  <main class="wrap">
+    <!-- Hero (배너만) -->
+    <section class="hero" style="grid-template-columns: 1fr;">
+      <div class="card hero-left">
+        <div class="hero-header">Welcom ! Smart System !</div>
+        <div class="hero-banner">Smart System으로<br/>프리미엄 자동차 시장에 진출하세요 !</div>
+        <div class="hero-desc">FMEA · Control Plan · PFD · Work Standard · SPC · MSA — 모듈식 품질 플랫폼</div>
+      </div>
+    </section>
+
+    <!-- Status -->
+    <h2 class="section-title">프로젝트 프리뷰 — My Projects Status</h2>
+    <div class="status-row">
+      <div class="card status-card"><div><div class="status-title">진행중</div><p class="status-num" id="stat-inprogress">8</p></div><span class="chip ok">OK</span></div>
+      <div class="card status-card"><div><div class="status-title">완료</div><p class="status-num" id="stat-done">14</p></div><span class="chip done">DONE</span></div>
+      <div class="card status-card"><div><div class="status-title">지연</div><p class="status-num" id="stat-delayed">3</p></div><span class="chip delay">DELAY</span></div>
+    </div>
+
+    <!-- Quick links -->
+    <h2 class="section-title">바로가기</h2>
+    <div class="quick-grid">
+      <div class="card mini" onclick="location.href='project-list-mui.html'"><h4>Project<span class="badge">GO</span></h4><p>프로젝트 목록</p></div>
+      <div class="card mini" onclick="location.href='fmea-list-ag.html'"><h4>FMEA</h4><p>PFMEA 4th(G) 워크시트</p></div>
+      <div class="card mini" onclick="location.href='cp-list-ag.html'"><h4>CP</h4><p>공정관리 계획</p></div>
+      <div class="card mini" onclick="location.href='pfd-list-ag.html'"><h4>PFD</h4><p>공정 흐름도</p></div>
+      <div class="card mini" onclick="location.href='ws-list-ag.html'"><h4>WS</h4><p>작업표준</p></div>
+      <div class="card mini" onclick="location.href='pm-list-ag.html'"><h4>PM</h4><p>설비/예방보전</p></div>
+    </div>
+
+    <!-- Links -->
+    <h2 class="section-title">관련 사이트</h2>
+    <div class="links">
+      <h3>AMP 시스템</h3>
+      <div class="link-row">
+        <a class="site-pill" href="http://ampbiz.co.kr" target="_blank" rel="noopener"><span class="dot"></span>ampbiz.co.kr</a>
+        <a class="site-pill" href="http://kfmea.com/theme/businesscube/pages/sub_0201.php" target="_blank" rel="noopener"><span class="dot"></span>kfmea.com</a>
+        <a class="site-pill" href="https://cafe.naver.com/ampqm" target="_blank" rel="noopener"><span class="dot"></span>cafe.naver.com/ampqm</a>
+        <a class="site-pill" href="https://www.youtube.com/@AMPTV1stauto" target="_blank" rel="noopener"><span class="dot"></span>YouTube: AMPTV1stauto</a>
+      </div>
+
+      <h3>관련기관 사이트</h3>
+      <div class="link-row">
+        <a class="site-pill" href="https://www.aiag.org" target="_blank" rel="noopener"><span class="dot"></span>AIAG</a>
+        <a class="site-pill" href="https://vdaqmc.de/en/" target="_blank" rel="noopener"><span class="dot"></span>VDA QMC</a>
+        <a class="site-pill" href="https://www.iso.org" target="_blank" rel="noopener"><span class="dot"></span>ISO</a>
+        <a class="site-pill" href="https://www.iatfglobaloversight.org" target="_blank" rel="noopener"><span class="dot"></span>IATF Oversight</a>
+      </div>
+    </div>
+
+    <p class="footer">v1.3 · 로컬 경로: C:\02_HANDSON · © AMP SYSTEM</p>
+  </main>
+
+  <!-- 자급자족 설정(원하면 숫자/링크만 교체) -->
+  <script>
+    // 간단 설정(선택): 아래 값을 수정하면 화면이 즉시 반영됩니다.
+    const stats = { inprogress: 8, done: 14, delayed: 3 };
+    document.getElementById('stat-inprogress').textContent = stats.inprogress;
+    document.getElementById('stat-done').textContent = stats.done;
+    document.getElementById('stat-delayed').textContent = stats.delayed;
+  </script>
+</body>
+</html>

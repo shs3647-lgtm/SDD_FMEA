@@ -1,0 +1,23 @@
+Level,Part Name,Spec,Qty,Process
+1,1.PCR Tire,SC000001,1,
+1.1,1.1Tread Package,ACD00001,1,TD압출
+1.1.1,1.1.1-Cap Tread,,,TD압출
+1.1.2,1.1.2-Tread Cushion,,,압출
+1.1.3,1.1.3-Pattern,,,
+1.2,1.2-Sidewall P.,CD000001,1,SD압출
+1.2.1,1.2.1-Sidewall,,,
+1.1.2,1.2.2-Rim Stripe,,,
+1.3,1.3-Inner Liner P.,AIS000001,1,
+1.3.1,1.3.1-Inner Liner,,,
+1.4,1.4-Bead P.,IS0000001,1,
+1.4.1,1.4.1-Bead Wire,,,
+1.4.2,1.4.2-Bead Filler,,,
+1.5,1.5-Steel Belt P.,ASH00001,1,
+1.5.1,1.5.1-Steel Belt,ASH00001,1,
+1.5.2,1.5.2-Edge Tape,,,
+1.6,1.6-Capply P.,SH0000001,1,
+1.6.1,1.6.1-Capply,,,
+1.7,1.7-Body Ply P.,SD0000001,1,
+1.7.1,1.7.1-Body Ply,,,
+1.8,1.8-Mold Profile,DSD00001,1,
+1.8.1,1.8.1-Dimension,,,
