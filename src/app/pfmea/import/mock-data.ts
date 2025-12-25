@@ -6,7 +6,7 @@
  * @updated 2025-12-26 - 1시트 16컬럼 방식으로 변경
  */
 
-import { ImportRowData, ImportColumn, GeneratedRelation } from './types';
+import { ImportRowData, ImportColumn, GeneratedRelation, CommonItem } from './types';
 
 /** 16개 컬럼 정의 */
 export const importColumns: ImportColumn[] = [
@@ -147,4 +147,50 @@ export const calculateStats = (data: ImportRowData[]) => {
   const l3Items = new Set(data.flatMap(d => [d.workElement, d.processChar, d.failureCause, d.preventionCtrl, d.equipment].filter(Boolean))).size;
 
   return { totalRows: data.length, uniqueProcesses, l1Items, l2Items, l3Items };
+};
+
+/** 공통 기초정보 (모든 공정에서 사용) */
+export const commonItems: CommonItem[] = [
+  // MN: Man (사람) - 5개
+  { id: 'MN01', category: 'MN', categoryName: 'Man (사람)', name: '셋업엔지니어', description: '설비 셋업 및 조정 담당', failureCauses: ['셋업 파라미터 설정 오류', '셋업 절차 미준수'] },
+  { id: 'MN02', category: 'MN', categoryName: 'Man (사람)', name: '작업자', description: '생산 작업 수행', failureCauses: ['작업표준서 미준수', '작업 실수', '교육 부족'] },
+  { id: 'MN03', category: 'MN', categoryName: 'Man (사람)', name: '운반원', description: '자재 및 제품 운반', failureCauses: ['운반 중 손상', '오배송', '취급 부주의'] },
+  { id: 'MN04', category: 'MN', categoryName: 'Man (사람)', name: '보전원', description: '설비 유지보수 담당', failureCauses: ['예방정비 미실시', '정비 오류', '점검 누락'] },
+  { id: 'MN05', category: 'MN', categoryName: 'Man (사람)', name: '검사원', description: '품질 검사 수행', failureCauses: ['검사 누락', '오판정', '검사 기준 미준수'] },
+
+  // EN: Environment (환경) - 5개
+  { id: 'EN01', category: 'EN', categoryName: 'Environment (환경)', name: '온도', description: '작업장 온도 조건', failureCauses: ['온도 범위 이탈', '온도 변동 과다'] },
+  { id: 'EN02', category: 'EN', categoryName: 'Environment (환경)', name: '습도', description: '작업장 습도 조건', failureCauses: ['습도 범위 이탈', '결로 발생'] },
+  { id: 'EN03', category: 'EN', categoryName: 'Environment (환경)', name: '이물', description: '이물질 오염 요인', failureCauses: ['이물 혼입', '청정도 미달'] },
+  { id: 'EN04', category: 'EN', categoryName: 'Environment (환경)', name: '정전기', description: '정전기 발생 조건', failureCauses: ['정전기 방전', 'ESD 손상'] },
+  { id: 'EN05', category: 'EN', categoryName: 'Environment (환경)', name: '진동', description: '설비/작업장 진동', failureCauses: ['진동으로 인한 이완', '정밀도 저하'] },
+
+  // IM: Indirect Material (부자재) - 6개
+  { id: 'IM01', category: 'IM', categoryName: 'Indirect Material (부자재)', name: '그리이스', description: '윤활용 그리이스', failureCauses: ['도포량 과다/부족', '종류 오적용', '유효기간 초과'] },
+  { id: 'IM02', category: 'IM', categoryName: 'Indirect Material (부자재)', name: '작동유', description: '유압 작동유', failureCauses: ['오일 오염', '오일량 부족', '점도 불량'] },
+  { id: 'IM03', category: 'IM', categoryName: 'Indirect Material (부자재)', name: '냉각수', description: '설비 냉각용 냉각수', failureCauses: ['냉각수 부족', '온도 이상', '오염'] },
+  { id: 'IM04', category: 'IM', categoryName: 'Indirect Material (부자재)', name: '윤활유', description: '설비 윤활용 오일', failureCauses: ['윤활 불량', '오일 누유', '교환주기 초과'] },
+  { id: 'IM05', category: 'IM', categoryName: 'Indirect Material (부자재)', name: '이형제', description: '금형 이형제', failureCauses: ['도포 불균일', '종류 오적용'] },
+  { id: 'IM06', category: 'IM', categoryName: 'Indirect Material (부자재)', name: '비닐커버', description: '보호용 비닐커버', failureCauses: ['손상된 커버 사용', '미적용'] },
+];
+
+/** 공통 항목을 관계형 데이터에 추가 */
+export const addCommonItemsToRelation = (relation: GeneratedRelation): GeneratedRelation => {
+  const commonWorkElements = commonItems.map(item => ({
+    name: `[${item.category}] ${item.name}`,
+    func: item.description || ''
+  }));
+  
+  const commonFailureCauses = commonItems.flatMap(item => 
+    (item.failureCauses || []).map(fc => `[${item.category}] ${fc}`)
+  );
+
+  return {
+    ...relation,
+    l3: {
+      ...relation.l3,
+      workElements: [...relation.l3.workElements, ...commonWorkElements],
+      failureCauses: [...relation.l3.failureCauses, ...commonFailureCauses],
+    }
+  };
 };

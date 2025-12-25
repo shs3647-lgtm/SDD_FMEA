@@ -83,3 +83,26 @@ export interface PreviewStats {
   l2Items: number;
   l3Items: number;
 }
+
+/** 공통 작업요소 분류 (4M+E+IM) */
+export type CommonCategory = 'MN' | 'MA' | 'MT' | 'ME' | 'EN' | 'IM';
+
+/** 공통 기초정보 항목 */
+export interface CommonItem {
+  id: string;
+  category: CommonCategory;
+  categoryName: string;
+  name: string;
+  description?: string;
+  failureCauses?: string[];  // 관련 고장원인
+}
+
+/** 공통 카테고리 정의 */
+export const COMMON_CATEGORIES: { code: CommonCategory; name: string; color: string }[] = [
+  { code: 'MN', name: 'Man (사람)', color: 'bg-blue-500' },
+  { code: 'MA', name: 'Machine (설비)', color: 'bg-purple-500' },
+  { code: 'MT', name: 'Material (원자재)', color: 'bg-orange-500' },
+  { code: 'ME', name: 'Method (작업방법)', color: 'bg-cyan-500' },
+  { code: 'EN', name: 'Environment (환경)', color: 'bg-teal-500' },
+  { code: 'IM', name: 'Indirect Material (부자재)', color: 'bg-pink-500' },
+];
