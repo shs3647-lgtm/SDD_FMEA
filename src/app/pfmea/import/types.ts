@@ -1,131 +1,85 @@
 /**
  * @file types.ts
- * @description PFMEA 기초정보 Import 타입 정의
+ * @description PFMEA 기초정보 Import 타입 정의 (단순화 버전)
  * @author AI Assistant
  * @created 2025-12-26
+ * @updated 2025-12-26 - 16컬럼 단일 시트 방식으로 변경
  * @prd PRD-026-pfmea-master-data-import.md
+ * 
+ * 사용자는 1개 시트에 16컬럼만 입력하면
+ * 시스템이 공정번호 기준으로 관계형 DB를 자동 생성
  */
 
-/** 공정정보 */
-export interface ProcessInfo {
-  id: number;
-  process_no: string;
-  process_name: string;
-  process_desc: string;
-  parent_no?: string;
-  sort_order: number;
+/** 단일 Import 행 데이터 (16컬럼) */
+export interface ImportRowData {
+  processNo: string;           // A: 공정번호 (필수, 연결 KEY)
+  processName: string;         // B: 공정명 (필수)
+  processDesc: string;         // C: 공정기능(설명)
+  productChar: string;         // D: 제품특성 (L2)
+  workElement: string;         // E: 작업요소 (L3)
+  workElementFunc: string;     // F: 작업요소기능
+  processChar: string;         // G: 공정특성 (L3)
+  productFunction: string;     // H: 완제품기능 (L1)
+  requirement: string;         // I: 완제품요구사항 (L1)
+  failureEffect: string;       // J: 고장영향 FE (L1)
+  failureMode: string;         // K: 고장형태 FM (L2)
+  failureCause: string;        // L: 고장원인 FC (L3)
+  detectionCtrl: string;       // M: 검출관리 DC (L2)
+  preventionCtrl: string;      // N: 예방관리 PC (L3)
+  equipment: string;           // O: 설비/장비 (L3)
+  inspectionEquip: string;     // P: 검사장비 EP (L2)
 }
 
-/** 작업요소 (4M) */
-export interface WorkElement {
-  id: number;
-  lookup_key: string;
-  process_no: string;
-  process_name: string;
-  element_name: string;
-  element_4m: 'Man' | 'Machine' | 'Material' | 'Method';
-  element_desc?: string;
-}
-
-/** 제품특성 */
-export interface ProductChar {
-  id: number;
-  lookup_key: string;
-  process_no: string;
-  process_name: string;
-  product_name: string;
-  char_name: string;
-}
-
-/** 공정특성 */
-export interface ProcessChar {
-  id: number;
-  lookup_key: string;
-  process_no: string;
-  char_name: string;
-}
-
-/** 요구사항/고장영향 */
-export interface Requirement {
-  id: number;
-  req_no: string;
-  category: 'Your Plant' | 'CAR MAKER' | 'User';
-  description: string;
-  requirement: string;
-  failure_effect: string;
-}
-
-/** 고장형태 */
-export interface FailureMode {
-  id: number;
-  lookup_key: string;
-  process_no: string;
-  product_char: string;
-  fm_description: string;
-}
-
-/** 고장원인 */
-export interface FailureCause {
-  id: number;
-  lookup_key: string;
-  process_no: string;
-  element_4m: string;
-  fc_description: string;
-}
-
-/** 예방관리 */
-export interface PreventionCtrl {
-  id: number;
-  ctrl_id: string;
-  ctrl_description: string;
-}
-
-/** 검출관리 */
-export interface DetectionCtrl {
-  id: number;
-  ctrl_id: string;
-  ctrl_description: string;
-}
-
-/** Import 시트 정보 */
-export interface ImportSheet {
-  id: string;
-  name: string;
-  korName: string;
-  level: 'L1' | 'L2' | 'L3' | 'Common';
-  recordCount?: number;
-  selected: boolean;
+/** Import 컬럼 정의 */
+export interface ImportColumn {
+  key: keyof ImportRowData;
+  label: string;
+  level: 'KEY' | 'L1' | 'L2' | 'L3';
+  required: boolean;
+  width: number;
 }
 
 /** Import 결과 */
 export interface ImportResult {
-  sheet: string;
-  count: number;
-  errors: string[];
   success: boolean;
+  totalRows: number;
+  processCount: number;
+  generatedTables: {
+    tableName: string;
+    recordCount: number;
+  }[];
+  errors: string[];
 }
 
-/** 3레벨 연계 데이터 */
-export interface LevelData {
+/** 자동 생성된 관계형 데이터 */
+export interface GeneratedRelation {
+  processNo: string;
+  processName: string;
   l1: {
-    productName?: string;
-    productFunction?: string;
-    requirement?: Requirement;
-    failureEffect?: string;
+    productFunction: string;
+    requirement: string;
+    failureEffect: string;
   };
   l2: {
-    processNo: string;
-    processName: string;
-    processDesc?: string;
-    productChars: ProductChar[];
-    failureModes: FailureMode[];
-    detectionCtrls: DetectionCtrl[];
+    productChars: string[];
+    failureModes: string[];
+    detectionCtrls: string[];
+    inspectionEquips: string[];
   };
   l3: {
-    workElements: WorkElement[];
-    processChars: ProcessChar[];
-    failureCauses: FailureCause[];
-    preventionCtrls: PreventionCtrl[];
+    workElements: { name: string; func: string }[];
+    processChars: string[];
+    failureCauses: string[];
+    preventionCtrls: string[];
+    equipments: string[];
   };
 }
 
+/** 미리보기 통계 */
+export interface PreviewStats {
+  totalRows: number;
+  uniqueProcesses: number;
+  l1Items: number;
+  l2Items: number;
+  l3Items: number;
+}
