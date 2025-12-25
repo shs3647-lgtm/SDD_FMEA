@@ -1,17 +1,13 @@
 /**
  * @file Sidebar.tsx
- * @description 아이콘 중심 사이드바 컴포넌트 (호버 시 확장)
+ * @description 컬러 아이콘 사이드바 컴포넌트 (호버 시 확장)
  * @author AI Assistant
  * @created 2025-12-25
- * @version 1.0.0
+ * @version 2.0.0
  * 
- * @usage
- * <Sidebar />
- * 
- * 기능:
- * - 기본 48px 너비의 아이콘 사이드바
- * - 호버 시 200px로 확장되어 메뉴 레이블 표시
- * - 현재 활성 메뉴 하이라이트
+ * 디자인 참고: 화면디자인.PNG
+ * - 네이비 배경 + 컬러 아이콘
+ * - 호버 시 200px 확장
  */
 
 'use client';
@@ -20,34 +16,89 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import {
-  LayoutDashboard,
-  FileSpreadsheet,
-  FilePlus,
-  FolderOpen,
-  Users,
-  History,
-  Settings,
-  User,
-  ChevronRight,
-} from 'lucide-react';
+import CompanyLogo from '@/components/CompanyLogo';
+
+// 컬러 아이콘 SVG 컴포넌트들
+const ColorIcons = {
+  // AMP 로고 스타일 (주황/빨강 원형)
+  Dashboard: ({ className }: { className?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none">
+      <circle cx="8" cy="8" r="6" fill="#FF6B35" />
+      <circle cx="16" cy="16" r="6" fill="#FF4444" />
+    </svg>
+  ),
+  // 분홍색 차트
+  Worksheet: ({ className }: { className?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none">
+      <rect x="2" y="12" width="4" height="10" rx="1" fill="#E91E8C" />
+      <rect x="8" y="8" width="4" height="14" rx="1" fill="#E91E8C" opacity="0.7" />
+      <rect x="14" y="4" width="4" height="18" rx="1" fill="#E91E8C" opacity="0.5" />
+      <rect x="20" y="10" width="4" height="12" rx="1" fill="#E91E8C" opacity="0.3" />
+    </svg>
+  ),
+  // 민트색 연결 아이콘
+  Register: ({ className }: { className?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none">
+      <path d="M4 6h16M4 12h16M4 18h10" stroke="#4DD0E1" strokeWidth="2.5" strokeLinecap="round" />
+      <circle cx="20" cy="18" r="3" fill="#4DD0E1" />
+    </svg>
+  ),
+  // 청록색 폴더
+  List: ({ className }: { className?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none">
+      <path d="M3 6C3 4.89543 3.89543 4 5 4H9L11 6H19C20.1046 6 21 6.89543 21 8V18C21 19.1046 20.1046 20 19 20H5C3.89543 20 3 19.1046 3 18V6Z" fill="#26C6DA" />
+    </svg>
+  ),
+  // 분홍 체크
+  CFT: ({ className }: { className?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" fill="#F48FB1" opacity="0.3" />
+      <path d="M8 12L11 15L17 9" stroke="#E91E8C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  // 큐브 아이콘 (보라색)
+  Revision: ({ className }: { className?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none">
+      <path d="M12 2L20 7V17L12 22L4 17V7L12 2Z" fill="#9575CD" opacity="0.3" />
+      <path d="M12 2L20 7V17L12 22L4 17V7L12 2Z" stroke="#7E57C2" strokeWidth="1.5" />
+      <path d="M12 22V12M12 12L4 7M12 12L20 7" stroke="#7E57C2" strokeWidth="1.5" />
+    </svg>
+  ),
+  // 설정 기어 (청록색)
+  Settings: ({ className }: { className?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="3" fill="#4DD0E1" />
+      <path d="M12 1V3M12 21V23M23 12H21M3 12H1M20.5 3.5L19 5M5 19L3.5 20.5M20.5 20.5L19 19M5 5L3.5 3.5" 
+        stroke="#4DD0E1" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
+  // 사용자 (주황색)
+  User: ({ className }: { className?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="8" r="4" fill="#FF8A65" />
+      <path d="M4 20C4 16.6863 7.13401 14 12 14C16.866 14 20 16.6863 20 20" 
+        stroke="#FF8A65" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  ),
+};
 
 // 메뉴 아이템 정의
 const menuItems = [
   {
     id: 'dashboard',
     label: '대시보드',
-    icon: LayoutDashboard,
+    Icon: ColorIcons.Dashboard,
     href: '/dashboard',
     subItems: [
       { label: 'Welcome', href: '/dashboard' },
       { label: 'Top RPN', href: '/dashboard/top-rpn' },
+      { label: 'Lessons Learned', href: '/dashboard/lessons' },
     ],
   },
   {
     id: 'worksheet',
     label: '워크시트',
-    icon: FileSpreadsheet,
+    Icon: ColorIcons.Worksheet,
     href: '/pfmea',
     subItems: [
       { label: 'P-FMEA', href: '/pfmea' },
@@ -59,35 +110,35 @@ const menuItems = [
   {
     id: 'register',
     label: '등록',
-    icon: FilePlus,
+    Icon: ColorIcons.Register,
     href: '/project/register',
   },
   {
     id: 'list',
     label: '리스트',
-    icon: FolderOpen,
+    Icon: ColorIcons.List,
     href: '/project/list',
   },
   {
     id: 'cft',
     label: 'CFT',
-    icon: Users,
+    Icon: ColorIcons.CFT,
     href: '/project/cft',
   },
   {
     id: 'revision',
     label: '개정',
-    icon: History,
+    Icon: ColorIcons.Revision,
     href: '/project/revision',
   },
 ];
 
-// 하단 메뉴 (설정, 사용자)
+// 하단 메뉴
 const bottomMenuItems = [
   {
     id: 'master',
     label: '기초정보',
-    icon: Settings,
+    Icon: ColorIcons.Settings,
     href: '/master',
     subItems: [
       { label: 'PFMEA 임포트', href: '/master/pfmea-import' },
@@ -99,48 +150,119 @@ const bottomMenuItems = [
   {
     id: 'user',
     label: '사용자정보',
-    icon: User,
+    Icon: ColorIcons.User,
     href: '/settings/user',
   },
 ];
 
 /**
  * 사이드바 컴포넌트
- * 
- * @description
- * 좌측 고정 사이드바로, 기본 상태에서는 아이콘만 표시되고
- * 호버 시 확장되어 메뉴 레이블과 서브메뉴가 표시됩니다.
  */
 export function Sidebar() {
   const pathname = usePathname();
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const [isHovered, setIsHovered] = useState(false);
 
-  /**
-   * 현재 경로가 메뉴 아이템의 경로와 일치하는지 확인
-   */
   const isActive = (href: string) => {
     return pathname === href || pathname?.startsWith(href + '/');
   };
 
-  /**
-   * 메뉴 아이템 클릭 핸들러
-   */
   const handleItemClick = (itemId: string, hasSubItems: boolean) => {
     if (hasSubItems) {
       setExpandedItem(expandedItem === itemId ? null : itemId);
     }
   };
 
+  const renderMenuItems = (items: typeof menuItems) => {
+    return items.map((item) => {
+      const Icon = item.Icon;
+      const active = isActive(item.href);
+      const hasSubItems = item.subItems && item.subItems.length > 0;
+      const isExpanded = expandedItem === item.id && isHovered;
+
+      return (
+        <div key={item.id} className="mb-1">
+          <Link
+            href={hasSubItems && isHovered ? '#' : item.href}
+            onClick={(e) => {
+              if (hasSubItems && isHovered) {
+                e.preventDefault();
+                handleItemClick(item.id, true);
+              }
+            }}
+            className={cn(
+              'flex items-center gap-3 px-2.5 py-2.5 mx-1 rounded-lg',
+              'transition-all duration-200',
+              active && 'bg-white/10 shadow-lg',
+              !active && 'hover:bg-white/5'
+            )}
+          >
+            {/* 컬러 아이콘 */}
+            <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center">
+              <Icon className="w-6 h-6" />
+            </div>
+            
+            {/* 레이블 */}
+            <span
+              className={cn(
+                'whitespace-nowrap text-sm font-medium text-white/90',
+                'transition-all duration-200',
+                isHovered ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'
+              )}
+            >
+              {item.label}
+            </span>
+
+            {/* 서브메뉴 화살표 */}
+            {hasSubItems && isHovered && (
+              <svg 
+                className={cn(
+                  'ml-auto w-4 h-4 text-white/60 transition-transform duration-200',
+                  isExpanded && 'rotate-90'
+                )}
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            )}
+          </Link>
+
+          {/* 서브메뉴 */}
+          {hasSubItems && isExpanded && (
+            <div className="ml-10 mt-1 space-y-0.5">
+              {item.subItems?.map((subItem) => (
+                <Link
+                  key={subItem.href}
+                  href={subItem.href}
+                  className={cn(
+                    'block px-3 py-1.5 text-xs rounded-md',
+                    'transition-colors duration-200',
+                    isActive(subItem.href) 
+                      ? 'text-cyan-300 bg-cyan-500/20' 
+                      : 'text-white/60 hover:text-white hover:bg-white/5'
+                  )}
+                >
+                  {subItem.label}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    });
+  };
+
   return (
     <aside
       className={cn(
-        // 기본 스타일
         'fixed left-0 top-0 z-50 h-screen',
-        'bg-gradient-to-b from-slate-800 to-slate-900',
+        // 네이비 그라데이션 배경
+        'bg-gradient-to-b from-[#1a237e] via-[#283593] to-[#1a237e]',
         'flex flex-col',
         'transition-all duration-300 ease-in-out',
-        // 너비: 기본 48px, 호버 시 200px
+        'shadow-xl',
         isHovered ? 'w-[200px]' : 'w-12'
       )}
       onMouseEnter={() => setIsHovered(true)}
@@ -149,162 +271,28 @@ export function Sidebar() {
         setExpandedItem(null);
       }}
     >
-      {/* ======== 로고 영역 ======== */}
-      <div className="flex h-12 items-center justify-center border-b border-slate-700 bg-slate-900">
-        <span className="text-lg font-bold text-blue-400">
-          {isHovered ? 'FMEA Smart' : 'F'}
-        </span>
+      {/* ======== 회사 로고 영역 (클릭하여 변경 가능) ======== */}
+      <div className="flex items-center justify-center border-b border-white/10 py-3">
+        <CompanyLogo 
+          width={isHovered ? 160 : 40} 
+          height={isHovered ? 50 : 40} 
+        />
       </div>
 
       {/* ======== 메인 메뉴 ======== */}
-      <nav className="flex-1 overflow-y-auto py-2">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(item.href);
-          const hasSubItems = item.subItems && item.subItems.length > 0;
-          const isExpanded = expandedItem === item.id && isHovered;
-
-          return (
-            <div key={item.id}>
-              {/* 메인 메뉴 아이템 */}
-              <Link
-                href={hasSubItems && isHovered ? '#' : item.href}
-                onClick={(e) => {
-                  if (hasSubItems && isHovered) {
-                    e.preventDefault();
-                    handleItemClick(item.id, true);
-                  }
-                }}
-                className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 mx-1 rounded-md',
-                  'text-slate-300 hover:text-white',
-                  'transition-colors duration-200',
-                  active && 'bg-blue-600/30 text-white border-l-2 border-blue-500',
-                  !active && 'hover:bg-slate-700/50'
-                )}
-              >
-                <Icon className="h-5 w-5 flex-shrink-0" />
-                
-                {/* 레이블 (호버 시에만 표시) */}
-                <span
-                  className={cn(
-                    'whitespace-nowrap transition-opacity duration-200',
-                    isHovered ? 'opacity-100' : 'opacity-0 w-0'
-                  )}
-                >
-                  {item.label}
-                </span>
-
-                {/* 서브메뉴 화살표 */}
-                {hasSubItems && isHovered && (
-                  <ChevronRight
-                    className={cn(
-                      'ml-auto h-4 w-4 transition-transform duration-200',
-                      isExpanded && 'rotate-90'
-                    )}
-                  />
-                )}
-              </Link>
-
-              {/* 서브메뉴 */}
-              {hasSubItems && isExpanded && (
-                <div className="ml-8 mt-1 space-y-1">
-                  {item.subItems?.map((subItem) => (
-                    <Link
-                      key={subItem.href}
-                      href={subItem.href}
-                      className={cn(
-                        'block px-3 py-1.5 text-sm rounded-md',
-                        'text-slate-400 hover:text-white',
-                        'transition-colors duration-200',
-                        isActive(subItem.href) && 'text-blue-400 bg-blue-600/20',
-                        !isActive(subItem.href) && 'hover:bg-slate-700/30'
-                      )}
-                    >
-                      {subItem.label}
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+      <nav className="flex-1 overflow-y-auto py-3 scrollbar-thin scrollbar-thumb-white/20">
+        {renderMenuItems(menuItems)}
       </nav>
 
       {/* ======== 구분선 ======== */}
-      <div className="mx-2 border-t border-slate-700" />
+      <div className="mx-3 border-t border-white/10" />
 
       {/* ======== 하단 메뉴 ======== */}
-      <nav className="py-2">
-        {bottomMenuItems.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(item.href);
-          const hasSubItems = item.subItems && item.subItems.length > 0;
-          const isExpanded = expandedItem === item.id && isHovered;
-
-          return (
-            <div key={item.id}>
-              <Link
-                href={hasSubItems && isHovered ? '#' : item.href}
-                onClick={(e) => {
-                  if (hasSubItems && isHovered) {
-                    e.preventDefault();
-                    handleItemClick(item.id, true);
-                  }
-                }}
-                className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 mx-1 rounded-md',
-                  'text-slate-300 hover:text-white',
-                  'transition-colors duration-200',
-                  active && 'bg-blue-600/30 text-white',
-                  !active && 'hover:bg-slate-700/50'
-                )}
-              >
-                <Icon className="h-5 w-5 flex-shrink-0" />
-                <span
-                  className={cn(
-                    'whitespace-nowrap transition-opacity duration-200',
-                    isHovered ? 'opacity-100' : 'opacity-0 w-0'
-                  )}
-                >
-                  {item.label}
-                </span>
-                {hasSubItems && isHovered && (
-                  <ChevronRight
-                    className={cn(
-                      'ml-auto h-4 w-4 transition-transform duration-200',
-                      isExpanded && 'rotate-90'
-                    )}
-                  />
-                )}
-              </Link>
-
-              {hasSubItems && isExpanded && (
-                <div className="ml-8 mt-1 space-y-1">
-                  {item.subItems?.map((subItem) => (
-                    <Link
-                      key={subItem.href}
-                      href={subItem.href}
-                      className={cn(
-                        'block px-3 py-1.5 text-sm rounded-md',
-                        'text-slate-400 hover:text-white',
-                        'transition-colors duration-200',
-                        isActive(subItem.href) && 'text-blue-400 bg-blue-600/20',
-                        !isActive(subItem.href) && 'hover:bg-slate-700/30'
-                      )}
-                    >
-                      {subItem.label}
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+      <nav className="py-3">
+        {renderMenuItems(bottomMenuItems)}
       </nav>
     </aside>
   );
 }
 
 export default Sidebar;
-
