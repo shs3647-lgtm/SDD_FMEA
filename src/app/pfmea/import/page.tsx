@@ -25,8 +25,9 @@ import {
 } from '@/components/ui/select';
 import { Upload, FileSpreadsheet, Database, Check, Download, Table2 } from 'lucide-react';
 
-import { ImportRowData, GeneratedRelation, COMMON_CATEGORIES } from './types';
-import { importColumns, sampleImportData, generateRelations, calculateStats, commonItems, addCommonItemsToRelation } from './mock-data';
+import { ImportRowData, GeneratedRelation, CommonItem } from './types';
+import { importColumns, sampleImportData, generateRelations, calculateStats, commonItems as defaultCommonItems, addCommonItemsToRelation } from './mock-data';
+import CommonItemManager from './CommonItemManager';
 
 export default function PFMEAImportPage() {
   // 상태 관리
@@ -36,12 +37,13 @@ export default function PFMEAImportPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [importComplete, setImportComplete] = useState(false);
 
-  // 관계형 데이터 자동 생성 (공통 항목 포함)
+  // 공통 기초정보 관리 (추가/수정/삭제 가능)
+  const [commonItemList, setCommonItemList] = useState<CommonItem[]>(defaultCommonItems);
   const [includeCommon, setIncludeCommon] = useState(true);
   const relations = generateRelations(importData);
   const stats = calculateStats(importData);
   const baseRelation = relations.find(r => r.processNo === selectedProcessNo);
-  const selectedRelation = baseRelation && includeCommon ? addCommonItemsToRelation(baseRelation) : baseRelation;
+  const selectedRelation = baseRelation && includeCommon ? addCommonItemsToRelation(baseRelation, commonItemList) : baseRelation;
 
   // 파일 선택
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -112,46 +114,13 @@ export default function PFMEAImportPage() {
             )}
           </div>
 
-          {/* 공통 기초정보 */}
-          <div className="bg-white rounded-lg shadow-sm border p-6">
-            <h2 className="text-lg font-semibold text-[#00587a] mb-4 flex items-center gap-2">
-              🔄 공통 기초정보 (모든 공정에 자동 적용)
-            </h2>
-
-            <div className="space-y-3">
-              {COMMON_CATEGORIES.filter(c => ['MN', 'EN', 'IM'].includes(c.code)).map(cat => {
-                const items = commonItems.filter(i => i.category === cat.code);
-                return (
-                  <div key={cat.code} className="flex items-start gap-2">
-                    <Badge className={`${cat.color} text-white text-xs min-w-[24px] justify-center`}>{cat.code}</Badge>
-                    <div>
-                      <div className="text-xs font-medium text-gray-600">{cat.name}</div>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {items.map(item => (
-                          <Badge key={item.id} variant="outline" className="text-[10px]" title={item.description}>
-                            {item.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="mt-4 pt-3 border-t flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="includeCommon"
-                checked={includeCommon}
-                onChange={(e) => setIncludeCommon(e.target.checked)}
-                className="w-4 h-4"
-              />
-              <label htmlFor="includeCommon" className="text-sm text-gray-600">
-                공통 항목을 모든 공정에 자동 포함
-              </label>
-            </div>
-          </div>
+          {/* 공통 기초정보 (추가/수정/삭제 가능) */}
+          <CommonItemManager
+            items={commonItemList}
+            onItemsChange={setCommonItemList}
+            includeCommon={includeCommon}
+            onIncludeCommonChange={setIncludeCommon}
+          />
 
           {/* 16컬럼 형식 안내 */}
           <div className="bg-white rounded-lg shadow-sm border p-6">

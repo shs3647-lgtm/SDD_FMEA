@@ -174,14 +174,16 @@ export const commonItems: CommonItem[] = [
   { id: 'IM06', category: 'IM', categoryName: 'Indirect Material (부자재)', name: '비닐커버', description: '보호용 비닐커버', failureCauses: ['손상된 커버 사용', '미적용'] },
 ];
 
-/** 공통 항목을 관계형 데이터에 추가 */
-export const addCommonItemsToRelation = (relation: GeneratedRelation): GeneratedRelation => {
-  const commonWorkElements = commonItems.map(item => ({
+/** 공통 항목을 관계형 데이터에 추가 (커스텀 목록 지원) */
+export const addCommonItemsToRelation = (relation: GeneratedRelation, items?: CommonItem[]): GeneratedRelation => {
+  const itemsToUse = items || commonItems;
+  
+  const commonWorkElements = itemsToUse.map(item => ({
     name: `[${item.category}] ${item.name}`,
     func: item.description || ''
   }));
   
-  const commonFailureCauses = commonItems.flatMap(item => 
+  const commonFailureCauses = itemsToUse.flatMap(item => 
     (item.failureCauses || []).map(fc => `[${item.category}] ${fc}`)
   );
 
