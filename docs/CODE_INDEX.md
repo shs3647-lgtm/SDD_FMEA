@@ -44,6 +44,14 @@ src/
 | `app/dashboard/ap-improvement/utils.ts` | 67 | 유틸 함수 | types |
 | `app/dashboard/ap-improvement/APModal.tsx` | 182 | 모달 컴포넌트 | types, shadcn/ui |
 
+### 2.5 PFMEA Import 모듈 (신규 2025-12-26, PRD-026)
+| 파일 | 라인 | 역할 | 의존성 |
+|------|------|------|--------|
+| `app/pfmea/layout.tsx` | 28 | PFMEA 레이아웃 | Sidebar, StatusBar |
+| `app/pfmea/import/page.tsx` | 265 | Excel Import 페이지 | types, mock-data, shadcn/ui |
+| `app/pfmea/import/types.ts` | 118 | 타입 정의 (15개 테이블) | - |
+| `app/pfmea/import/mock-data.ts` | 96 | 목업 데이터 | types |
+
 ### 3. Layout 컴포넌트
 | 파일 | 라인 | 역할 | 의존성 |
 |------|------|------|--------|
@@ -146,6 +154,7 @@ PFMEA (예정)
 |------|------|------|
 | 2025-12-26 | 초기 인덱스 생성 | AI |
 | 2025-12-26 | AP 개선관리 모듈 분리 (607→596행, 5파일) | AI |
+| 2025-12-26 | PFMEA Import 모듈 추가 (PRD-026, 507행, 4파일) | AI |
 
 ---
 
