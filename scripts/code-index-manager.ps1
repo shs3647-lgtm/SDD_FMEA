@@ -1,7 +1,7 @@
 # ============================================
-# Code Index Manager v1.1
+# Code Index Manager v1.2
 # ============================================
-# Purpose: Manage files with 500 +-100 lines
+# Purpose: Manage files with 500 +-200 lines
 # Run: .\scripts\code-index-manager.ps1
 # ============================================
 
@@ -19,12 +19,14 @@ chcp 65001 | Out-Null
 $srcPath = "C:\05_SDD_FMEA\fmea-smart-system\src"
 $docsPath = "C:\05_SDD_FMEA\fmea-smart-system\docs"
 
-# Line count criteria
-$MIN_LINES = 50      # Below = merge review
-$OPTIMAL_MIN = 100   # Optimal min
-$OPTIMAL_MAX = 400   # Optimal max
-$WARN_LINES = 500    # Warning
-$MAX_LINES = 600     # Max allowed
+# Line count criteria (500 +-200, flexible)
+$MIN_LINES = 50      # Below = merge required
+$SMALL_LINES = 150   # Below = merge review
+$OPTIMAL_MIN = 150   # Optimal min
+$OPTIMAL_MAX = 500   # Optimal max
+$ALLOW_LINES = 700   # Allowed if cohesive
+$WARN_LINES = 900    # Split review
+$MAX_LINES = 900     # Max allowed
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "   Code Index Manager v1.1" -ForegroundColor Cyan
@@ -35,11 +37,12 @@ Write-Host ""
 $files = Get-ChildItem -Path $srcPath -Recurse -Include "*.tsx","*.ts" | Where-Object { $_.Name -notmatch "\.d\.ts$" }
 
 $stats = @{
-    TooSmall = @()      # 50 lines or less (merge review)
-    Optimal = @()       # 100-400 lines (optimal)
-    Warning = @()       # 400-500 lines (warning)
-    NeedSplit = @()     # 500-600 lines (split review)
-    Critical = @()      # 600+ lines (split now)
+    TooSmall = @()      # 50 lines or less (merge required)
+    Small = @()         # 50-150 lines (merge review)
+    Optimal = @()       # 150-500 lines (optimal)
+    Allowed = @()       # 500-700 lines (allowed if cohesive)
+    NeedSplit = @()     # 700-900 lines (split review)
+    Critical = @()      # 900+ lines (split now)
 }
 
 $totalLines = 0
