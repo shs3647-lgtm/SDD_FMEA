@@ -40,6 +40,7 @@ import { downloadEmptyTemplate, downloadSampleTemplate } from './excel-template'
 import { parseMultiSheetExcel, ParseResult, ProcessRelation, ProductRelation } from './excel-parser';
 import LevelRelationPopup from './LevelRelationPopup';
 import FailureChainPopup from './FailureChainPopup';
+import ImportPreviewGrid from './ImportPreviewGrid';
 
 export default function PFMEAImportPage() {
   // 상태 관리
@@ -62,6 +63,9 @@ export default function PFMEAImportPage() {
   // Step 3: 고장 인과관계 지정
   const [showFailurePopup, setShowFailurePopup] = useState(false);
   const [failureChains, setFailureChains] = useState<FailureChain[]>([]);
+
+  // 미리보기 그리드 탭
+  const [previewTab, setPreviewTab] = useState<string>('A1');
 
   // 공통 기초정보 관리 (추가/수정/삭제 가능)
   const [commonItemList, setCommonItemList] = useState<CommonItem[]>(defaultCommonItems);
@@ -263,6 +267,16 @@ export default function PFMEAImportPage() {
               </div>
             )}
           </div>
+
+          {/* Import 데이터 미리보기 그리드 */}
+          {flatData.length > 0 && (
+            <ImportPreviewGrid
+              data={flatData}
+              onDataChange={setFlatData}
+              selectedTab={previewTab}
+              onTabChange={setPreviewTab}
+            />
+          )}
 
           {/* 공통 기초정보 (추가/수정/삭제 가능) */}
           <CommonItemManager
