@@ -36,6 +36,7 @@ import { Upload, FileSpreadsheet, Database, Check, Download, Table2 } from 'luci
 import { ImportRowData, GeneratedRelation, CommonItem } from './types';
 import { importColumns, sampleImportData, generateRelations, calculateStats, commonItems as defaultCommonItems, addCommonItemsToRelation } from './mock-data';
 import CommonItemManager from './CommonItemManager';
+import { downloadEmptyTemplate, downloadSampleTemplate } from './excel-template';
 
 export default function PFMEAImportPage() {
   // 상태 관리
@@ -152,11 +153,21 @@ export default function PFMEAImportPage() {
             </div>
 
             <div className="mt-4 flex gap-2">
-              <Button variant="outline" size="sm" className="border-[#00587a] text-[#00587a] hover:bg-[#e0f2fb]">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="border-[#00587a] text-[#00587a] hover:bg-[#e0f2fb]"
+                onClick={() => downloadEmptyTemplate()}
+              >
                 <Download className="h-4 w-4 mr-2" />
                 빈 템플릿 다운로드
               </Button>
-              <Button variant="outline" size="sm" className="border-[#00587a] text-[#00587a] hover:bg-[#e0f2fb]">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="border-[#00587a] text-[#00587a] hover:bg-[#e0f2fb]"
+                onClick={() => downloadSampleTemplate()}
+              >
                 <Download className="h-4 w-4 mr-2" />
                 샘플 데이터 다운로드
               </Button>
