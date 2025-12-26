@@ -8,24 +8,34 @@
 
 import { ImportRowData, ImportColumn, GeneratedRelation, CommonItem } from './types';
 
-/** 16개 컬럼 정의 */
+/** 
+ * 16개 컬럼 정의 (번호 체계)
+ * A: 공정 레벨 (A1-A6)
+ * B: 작업요소 레벨 (B1-B5)
+ * C: 완제품 레벨 (C1-C4)
+ * D: 검사장비 (추가)
+ */
 export const importColumns: ImportColumn[] = [
-  { key: 'processNo', label: '공정번호', level: 'KEY', required: true, width: 80 },
-  { key: 'processName', label: '공정명', level: 'KEY', required: true, width: 100 },
-  { key: 'processDesc', label: '공정기능(설명)', level: 'L2', required: false, width: 200 },
-  { key: 'productChar', label: '제품특성', level: 'L2', required: false, width: 120 },
-  { key: 'workElement', label: '작업요소', level: 'L3', required: false, width: 100 },
-  { key: 'workElementFunc', label: '작업요소기능', level: 'L3', required: false, width: 150 },
-  { key: 'processChar', label: '공정특성', level: 'L3', required: false, width: 100 },
-  { key: 'productFunction', label: '완제품기능', level: 'L1', required: false, width: 120 },
-  { key: 'requirement', label: '요구사항', level: 'L1', required: false, width: 120 },
-  { key: 'failureEffect', label: '고장영향(FE)', level: 'L1', required: false, width: 120 },
-  { key: 'failureMode', label: '고장형태(FM)', level: 'L2', required: false, width: 120 },
-  { key: 'failureCause', label: '고장원인(FC)', level: 'L3', required: false, width: 120 },
-  { key: 'detectionCtrl', label: '검출관리(DC)', level: 'L2', required: false, width: 100 },
-  { key: 'preventionCtrl', label: '예방관리(PC)', level: 'L3', required: false, width: 100 },
-  { key: 'equipment', label: '설비/장비', level: 'L3', required: false, width: 100 },
-  { key: 'inspectionEquip', label: '검사장비(EP)', level: 'L2', required: false, width: 100 },
+  // A: 공정 레벨 (6개)
+  { key: 'processNo', label: 'A1.공정번호', level: 'A', required: true, width: 80 },
+  { key: 'processName', label: 'A2.공정명', level: 'A', required: true, width: 100 },
+  { key: 'processDesc', label: 'A3.공정기능(설명)', level: 'A', required: false, width: 200 },
+  { key: 'productChar', label: 'A4.제품특성', level: 'A', required: false, width: 120 },
+  { key: 'failureMode', label: 'A5.고장형태', level: 'A', required: false, width: 120 },
+  { key: 'detectionCtrl', label: 'A6.검출관리', level: 'A', required: false, width: 100 },
+  // B: 작업요소 레벨 (5개)
+  { key: 'workElement', label: 'B1.작업요소(설비)', level: 'B', required: false, width: 100 },
+  { key: 'workElementFunc', label: 'B2.요소기능', level: 'B', required: false, width: 150 },
+  { key: 'processChar', label: 'B3.공정특성', level: 'B', required: false, width: 100 },
+  { key: 'failureCause', label: 'B4.고장원인', level: 'B', required: false, width: 120 },
+  { key: 'preventionCtrl', label: 'B5.예방관리', level: 'B', required: false, width: 100 },
+  // C: 완제품 레벨 (4개)
+  { key: 'productFunction', label: 'C1.완제품공정명', level: 'C', required: false, width: 120 },
+  { key: 'productFunc', label: 'C2.제품(반)기능', level: 'C', required: false, width: 120 },
+  { key: 'requirement', label: 'C3.제품(반)요구사항', level: 'C', required: false, width: 120 },
+  { key: 'failureEffect', label: 'C4.고장영향', level: 'C', required: false, width: 120 },
+  // D: 검사장비
+  { key: 'inspectionEquip', label: 'D.검사장비', level: 'D', required: false, width: 100 },
 ];
 
 /** 샘플 Import 데이터 (16컬럼 형식) */

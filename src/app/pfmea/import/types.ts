@@ -1,40 +1,47 @@
 /**
  * @file types.ts
- * @description PFMEA 기초정보 Import 타입 정의 (단순화 버전)
+ * @description PFMEA 기초정보 Import 타입 정의 (번호 체계)
  * @author AI Assistant
  * @created 2025-12-26
- * @updated 2025-12-26 - 16컬럼 단일 시트 방식으로 변경
+ * @updated 2025-12-26 - 16컬럼 번호 체계로 변경
  * @prd PRD-026-pfmea-master-data-import.md
  * 
- * 사용자는 1개 시트에 16컬럼만 입력하면
- * 시스템이 공정번호 기준으로 관계형 DB를 자동 생성
+ * 번호 체계:
+ * A: 공정 레벨 (A1-A6)
+ * B: 작업요소 레벨 (B1-B5)
+ * C: 완제품 레벨 (C1-C4)
+ * D: 검사장비
  */
 
 /** 단일 Import 행 데이터 (16컬럼) */
 export interface ImportRowData {
-  processNo: string;           // A: 공정번호 (필수, 연결 KEY)
-  processName: string;         // B: 공정명 (필수)
-  processDesc: string;         // C: 공정기능(설명)
-  productChar: string;         // D: 제품특성 (L2)
-  workElement: string;         // E: 작업요소 (L3)
-  workElementFunc: string;     // F: 작업요소기능
-  processChar: string;         // G: 공정특성 (L3)
-  productFunction: string;     // H: 완제품기능 (L1)
-  requirement: string;         // I: 완제품요구사항 (L1)
-  failureEffect: string;       // J: 고장영향 FE (L1)
-  failureMode: string;         // K: 고장형태 FM (L2)
-  failureCause: string;        // L: 고장원인 FC (L3)
-  detectionCtrl: string;       // M: 검출관리 DC (L2)
-  preventionCtrl: string;      // N: 예방관리 PC (L3)
-  equipment: string;           // O: 설비/장비 (L3)
-  inspectionEquip: string;     // P: 검사장비 EP (L2)
+  // A: 공정 레벨 (6개)
+  processNo: string;           // A1.공정번호 (필수)
+  processName: string;         // A2.공정명 (필수)
+  processDesc: string;         // A3.공정기능(설명)
+  productChar: string;         // A4.제품특성
+  failureMode: string;         // A5.고장형태
+  detectionCtrl: string;       // A6.검출관리
+  // B: 작업요소 레벨 (5개)
+  workElement: string;         // B1.작업요소(설비)
+  workElementFunc: string;     // B2.요소기능
+  processChar: string;         // B3.공정특성
+  failureCause: string;        // B4.고장원인
+  preventionCtrl: string;      // B5.예방관리
+  // C: 완제품 레벨 (4개)
+  productFunction: string;     // C1.완제품공정명
+  productFunc?: string;        // C2.제품(반)기능
+  requirement: string;         // C3.제품(반)요구사항
+  failureEffect: string;       // C4.고장영향
+  // D: 검사장비
+  inspectionEquip: string;     // D.검사장비
 }
 
 /** Import 컬럼 정의 */
 export interface ImportColumn {
   key: keyof ImportRowData;
   label: string;
-  level: 'KEY' | 'L1' | 'L2' | 'L3';
+  level: 'A' | 'B' | 'C' | 'D';  // A:공정, B:작업요소, C:완제품, D:검사장비
   required: boolean;
   width: number;
 }

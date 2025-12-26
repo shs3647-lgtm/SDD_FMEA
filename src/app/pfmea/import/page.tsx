@@ -84,40 +84,49 @@ export default function PFMEAImportPage() {
         </div>
       </div>
 
-      {/* 16개 기초정보 항목 - 컴팩트 한 줄 */}
+      {/* 16개 기초정보 항목 - 번호 부여 */}
       <div className="max-w-[1400px] mx-auto mb-3">
         <div className="bg-white rounded-lg px-4 py-2" style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-          {/* 개별항목 16개 - 텍스트만 한 줄 */}
-          <div className="flex items-center gap-1">
-            <span className="text-xs font-bold text-[#00587a] mr-1 whitespace-nowrap">개별항목:</span>
-            <span className="px-2 py-0.5 rounded bg-gray-100 border border-gray-400 text-xs text-gray-700 whitespace-nowrap">공정번호</span>
-            <span className="px-2 py-0.5 rounded bg-gray-100 border border-gray-400 text-xs text-gray-700 whitespace-nowrap">공정명</span>
-            <span className="px-2 py-0.5 rounded bg-red-50 border border-red-300 text-xs text-red-700 whitespace-nowrap">완제품기능</span>
-            <span className="px-2 py-0.5 rounded bg-red-50 border border-red-300 text-xs text-red-700 whitespace-nowrap">요구사항</span>
-            <span className="px-2 py-0.5 rounded bg-red-50 border border-red-300 text-xs text-red-700 whitespace-nowrap">고장영향</span>
-            <span className="px-2 py-0.5 rounded bg-yellow-50 border border-yellow-400 text-xs text-yellow-700 whitespace-nowrap">공정기능</span>
-            <span className="px-2 py-0.5 rounded bg-yellow-50 border border-yellow-400 text-xs text-yellow-700 whitespace-nowrap">제품특성</span>
-            <span className="px-2 py-0.5 rounded bg-yellow-50 border border-yellow-400 text-xs text-yellow-700 whitespace-nowrap">고장형태</span>
-            <span className="px-2 py-0.5 rounded bg-yellow-50 border border-yellow-400 text-xs text-yellow-700 whitespace-nowrap">검출관리</span>
-            <span className="px-2 py-0.5 rounded bg-yellow-50 border border-yellow-400 text-xs text-yellow-700 whitespace-nowrap">검사장비</span>
-            <span className="px-2 py-0.5 rounded bg-green-50 border border-green-400 text-xs text-green-700 whitespace-nowrap">작업요소</span>
-            <span className="px-2 py-0.5 rounded bg-green-50 border border-green-400 text-xs text-green-700 whitespace-nowrap">요소기능</span>
-            <span className="px-2 py-0.5 rounded bg-green-50 border border-green-400 text-xs text-green-700 whitespace-nowrap">공정특성</span>
-            <span className="px-2 py-0.5 rounded bg-green-50 border border-green-400 text-xs text-green-700 whitespace-nowrap">고장원인</span>
-            <span className="px-2 py-0.5 rounded bg-green-50 border border-green-400 text-xs text-green-700 whitespace-nowrap">예방관리</span>
-            <span className="px-2 py-0.5 rounded bg-green-50 border border-green-400 text-xs text-green-700 whitespace-nowrap">설비</span>
+          {/* A: 공정 레벨 (6개) */}
+          <div className="flex items-center gap-1 flex-wrap">
+            <span className="text-xs font-bold text-[#00587a] mr-1 whitespace-nowrap">A.공정:</span>
+            <span className="px-2 py-0.5 rounded bg-blue-50 border border-blue-400 text-xs text-blue-700 whitespace-nowrap">A1.공정번호</span>
+            <span className="px-2 py-0.5 rounded bg-blue-50 border border-blue-400 text-xs text-blue-700 whitespace-nowrap">A2.공정명</span>
+            <span className="px-2 py-0.5 rounded bg-blue-50 border border-blue-400 text-xs text-blue-700 whitespace-nowrap">A3.공정기능(설명)</span>
+            <span className="px-2 py-0.5 rounded bg-blue-50 border border-blue-400 text-xs text-blue-700 whitespace-nowrap">A4.제품특성</span>
+            <span className="px-2 py-0.5 rounded bg-blue-50 border border-blue-400 text-xs text-blue-700 whitespace-nowrap">A5.고장형태</span>
+            <span className="px-2 py-0.5 rounded bg-blue-50 border border-blue-400 text-xs text-blue-700 whitespace-nowrap">A6.검출관리</span>
+            
+            <span className="mx-2 text-gray-300">|</span>
+            
+            {/* B: 작업요소 레벨 (5개) */}
+            <span className="text-xs font-bold text-green-700 mr-1 whitespace-nowrap">B.작업요소:</span>
+            <span className="px-2 py-0.5 rounded bg-green-50 border border-green-400 text-xs text-green-700 whitespace-nowrap">B1.작업요소(설비)</span>
+            <span className="px-2 py-0.5 rounded bg-green-50 border border-green-400 text-xs text-green-700 whitespace-nowrap">B2.요소기능</span>
+            <span className="px-2 py-0.5 rounded bg-green-50 border border-green-400 text-xs text-green-700 whitespace-nowrap">B3.공정특성</span>
+            <span className="px-2 py-0.5 rounded bg-green-50 border border-green-400 text-xs text-green-700 whitespace-nowrap">B4.고장원인</span>
+            <span className="px-2 py-0.5 rounded bg-green-50 border border-green-400 text-xs text-green-700 whitespace-nowrap">B5.예방관리</span>
+            
+            <span className="mx-2 text-gray-300">|</span>
+            
+            {/* C: 완제품 레벨 (4개) */}
+            <span className="text-xs font-bold text-red-700 mr-1 whitespace-nowrap">C.완제품:</span>
+            <span className="px-2 py-0.5 rounded bg-red-50 border border-red-300 text-xs text-red-700 whitespace-nowrap">C1.완제품공정명</span>
+            <span className="px-2 py-0.5 rounded bg-red-50 border border-red-300 text-xs text-red-700 whitespace-nowrap">C2.제품(반)기능</span>
+            <span className="px-2 py-0.5 rounded bg-red-50 border border-red-300 text-xs text-red-700 whitespace-nowrap">C3.제품(반)요구사항</span>
+            <span className="px-2 py-0.5 rounded bg-red-50 border border-red-300 text-xs text-red-700 whitespace-nowrap">C4.고장영향</span>
           </div>
 
-          {/* 공통항목 - 텍스트만 한 줄 */}
+          {/* 공통항목 (6M) */}
           <div className="flex items-center gap-1 mt-1.5 pt-1.5 border-t border-gray-200">
-            <span className="text-xs font-bold text-purple-700 mr-1 whitespace-nowrap">공통항목:</span>
+            <span className="text-xs font-bold text-purple-700 mr-1 whitespace-nowrap">공통(6M):</span>
             <span className="px-2 py-0.5 rounded bg-purple-50 border border-purple-300 text-xs text-purple-700 whitespace-nowrap">👤사람</span>
             <span className="px-2 py-0.5 rounded bg-purple-50 border border-purple-300 text-xs text-purple-700 whitespace-nowrap">📦자재</span>
             <span className="px-2 py-0.5 rounded bg-purple-50 border border-purple-300 text-xs text-purple-700 whitespace-nowrap">📋방법</span>
             <span className="px-2 py-0.5 rounded bg-purple-50 border border-purple-300 text-xs text-purple-700 whitespace-nowrap">📏측정</span>
             <span className="px-2 py-0.5 rounded bg-purple-50 border border-purple-300 text-xs text-purple-700 whitespace-nowrap">🌡️환경</span>
             <span className="px-2 py-0.5 rounded bg-purple-50 border border-purple-300 text-xs text-purple-700 whitespace-nowrap">🧴부자재</span>
-            <span className="text-[10px] text-gray-500 ml-1">← 모든 공정 자동적용</span>
+            <span className="text-[10px] text-gray-500 ml-1">← 모든 공정 자동적용 (B1.작업요소에 포함)</span>
           </div>
         </div>
       </div>
@@ -190,16 +199,16 @@ export default function PFMEAImportPage() {
                     <tr key={col.key}>
                       {/* 첫 번째 열: row-header 스타일 */}
                       <td className="bg-[#00587a] text-white font-bold px-3 py-2 text-center" style={{ border: '1px solid #999' }}>
-                        {String.fromCharCode(65 + i)}
+                        {col.label.split('.')[0]}
                       </td>
                       <td className={`px-3 py-2 text-left text-black ${i % 2 === 0 ? 'bg-white' : 'bg-[#e0f2fb]'}`} style={{ border: '1px solid #999' }}>
                         {col.label}
                       </td>
                       <td className={`px-3 py-2 text-center ${i % 2 === 0 ? 'bg-white' : 'bg-[#e0f2fb]'}`} style={{ border: '1px solid #999' }}>
                         <Badge className={
-                          col.level === 'KEY' ? 'bg-gray-600' :
-                          col.level === 'L1' ? 'bg-red-500' :
-                          col.level === 'L2' ? 'bg-yellow-500' : 'bg-green-500'
+                          col.level === 'A' ? 'bg-blue-500' :
+                          col.level === 'B' ? 'bg-green-500' :
+                          col.level === 'C' ? 'bg-red-500' : 'bg-gray-500'
                         }>{col.level}</Badge>
                       </td>
                       <td className={`px-3 py-2 text-center text-black ${i % 2 === 0 ? 'bg-white' : 'bg-[#e0f2fb]'}`} style={{ border: '1px solid #999' }}>
@@ -225,18 +234,18 @@ export default function PFMEAImportPage() {
                 <tr>
                   <th className="bg-[#00587a] text-white font-bold px-3 py-2 text-center" style={{ border: '1px solid #999' }}>총 행</th>
                   <th className="bg-[#00587a] text-white font-bold px-3 py-2 text-center" style={{ border: '1px solid #999' }}>공정 수</th>
-                  <th className="bg-[#00587a] text-white font-bold px-3 py-2 text-center" style={{ border: '1px solid #999' }}>L1 항목</th>
-                  <th className="bg-[#00587a] text-white font-bold px-3 py-2 text-center" style={{ border: '1px solid #999' }}>L2 항목</th>
-                  <th className="bg-[#00587a] text-white font-bold px-3 py-2 text-center" style={{ border: '1px solid #999' }}>L3 항목</th>
+                  <th className="bg-[#00587a] text-white font-bold px-3 py-2 text-center" style={{ border: '1px solid #999' }}>A.공정</th>
+                  <th className="bg-[#00587a] text-white font-bold px-3 py-2 text-center" style={{ border: '1px solid #999' }}>B.작업요소</th>
+                  <th className="bg-[#00587a] text-white font-bold px-3 py-2 text-center" style={{ border: '1px solid #999' }}>C.완제품</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td className="bg-white text-center text-black font-bold text-2xl py-3" style={{ border: '1px solid #999' }}>{stats.totalRows}</td>
                   <td className="bg-[#e0f2fb] text-center text-[#00587a] font-bold text-2xl py-3" style={{ border: '1px solid #999' }}>{stats.uniqueProcesses}</td>
-                  <td className="bg-white text-center text-red-600 font-bold text-2xl py-3" style={{ border: '1px solid #999' }}>{stats.l1Items}</td>
-                  <td className="bg-[#e0f2fb] text-center text-yellow-600 font-bold text-2xl py-3" style={{ border: '1px solid #999' }}>{stats.l2Items}</td>
-                  <td className="bg-white text-center text-green-600 font-bold text-2xl py-3" style={{ border: '1px solid #999' }}>{stats.l3Items}</td>
+                  <td className="bg-blue-50 text-center text-blue-600 font-bold text-2xl py-3" style={{ border: '1px solid #999' }}>{stats.l1Items}</td>
+                  <td className="bg-green-50 text-center text-green-600 font-bold text-2xl py-3" style={{ border: '1px solid #999' }}>{stats.l2Items}</td>
+                  <td className="bg-red-50 text-center text-red-600 font-bold text-2xl py-3" style={{ border: '1px solid #999' }}>{stats.l3Items}</td>
                 </tr>
               </tbody>
             </table>
