@@ -1,8 +1,20 @@
 'use client';
 
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import ProcessSelectModal from './ProcessSelectModal';
 import WorkElementSelectModal from './WorkElementSelectModal';
+
+// FMEA 프로젝트 타입
+interface FMEAProject {
+  id: string;
+  fmeaInfo?: {
+    subject?: string;
+  };
+  project?: {
+    productName?: string;
+  };
+}
 
 // ============ 타입 정의 ============
 interface WorkElement {
@@ -112,14 +124,25 @@ const TABS = [
   { id: 'doc', label: '문서화' },
 ];
 
+// 전체보기용 탭 (38열 FMEA 워크시트)
+const ALL_VIEW_TAB = { id: 'all', label: '전체보기' };
+
 const LEVELS = [
-  { id: '1', label: '1 Level' },
-  { id: '2', label: '2 Level' },
-  { id: '3', label: '3 Level' },
-  { id: 'all', label: 'All Level' },
+  { id: '1', label: '1L' },
+  { id: '2', label: '2L' },
+  { id: '3', label: '3L' },
+  { id: 'all', label: 'All' },
 ];
 
 export default function FMEAWorksheetPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const selectedFmeaId = searchParams.get('id');
+
+  // FMEA 프로젝트 목록
+  const [fmeaList, setFmeaList] = useState<FMEAProject[]>([]);
+  const [currentFmea, setCurrentFmea] = useState<FMEAProject | null>(null);
+
   const [state, setState] = useState<State>(() => {
     const initial = { ...INITIAL_STATE };
     // 초기에는 빈 행 하나 (클릭해서 공정 선택)
@@ -133,10 +156,43 @@ export default function FMEAWorksheetPage() {
     return initial;
   });
   const [dirty, setDirty] = useState(false);
-  const [stage, setStage] = useState('2');
   const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
   const [isWorkElementModalOpen, setIsWorkElementModalOpen] = useState(false);
   const [targetL2Id, setTargetL2Id] = useState<string | null>(null); // 작업요소 추가할 공정 ID
+
+  // FMEA 목록 로드
+  useEffect(() => {
+    const stored = localStorage.getItem('pfmea-projects');
+    if (stored) {
+      try {
+        const projects: FMEAProject[] = JSON.parse(stored);
+        setFmeaList(projects);
+        
+        // 선택된 FMEA 찾기
+        if (selectedFmeaId) {
+          const found = projects.find(p => p.id === selectedFmeaId);
+          if (found) {
+            setCurrentFmea(found);
+            // FMEA명 업데이트
+            const fmeaName = found.fmeaInfo?.subject || found.project?.productName || '(FMEA 미선택)';
+            setState(prev => ({ ...prev, l1: { ...prev.l1, name: fmeaName } }));
+          }
+        } else if (projects.length > 0) {
+          // ID가 없으면 첫 번째 프로젝트 선택
+          setCurrentFmea(projects[0]);
+          const fmeaName = projects[0].fmeaInfo?.subject || projects[0].project?.productName || '(FMEA 미선택)';
+          setState(prev => ({ ...prev, l1: { ...prev.l1, name: fmeaName } }));
+        }
+      } catch (e) {
+        console.error('FMEA 목록 로드 실패:', e);
+      }
+    }
+  }, [selectedFmeaId]);
+
+  // FMEA 선택 변경
+  const handleFmeaChange = (fmeaId: string) => {
+    router.push(`/pfmea/worksheet?id=${fmeaId}`);
+  };
 
   // 평탄화된 행 데이터 (구조 + 기능 + 고장 등)
   const rows = useMemo(() => {
@@ -361,87 +417,145 @@ export default function FMEAWorksheetPage() {
   return (
     <div className="h-full flex flex-col" style={{ fontFamily: 'Segoe UI, Malgun Gothic, Arial, sans-serif', background: COLORS.bg, color: COLORS.text }}>
       
-      {/* 상단 바 */}
-      <div className="flex items-center gap-2 px-3 py-2" style={{ background: COLORS.blue }}>
-        <div className="flex items-center gap-2">
-          <button className="px-3 py-1.5 text-xs text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>
-            📁 Level Views
-          </button>
-          <select 
-            value={stage}
-            onChange={(e) => setStage(e.target.value)}
-            className="px-2 py-1.5 text-xs rounded border-0"
-            style={{ background: 'rgba(255,255,255,0.18)', color: '#fff' }}
+      {/* 상단 메뉴 바 - 3개 영역 */}
+      <div className="flex items-center justify-between px-3 py-2" style={{ background: COLORS.blue }}>
+        {/* 영역 1: FMEA명 (드롭다운 + 리스트 이동) */}
+        <div className="flex items-center gap-3">
+          <span 
+            className="text-white text-xs font-bold cursor-pointer hover:underline"
+            onClick={() => router.push('/pfmea/list')}
+            title="FMEA 리스트로 이동"
           >
-            <option value="2">2 단계</option>
-            <option value="3">3 단계</option>
-            <option value="4">4 단계</option>
+            📋 FMEA명:
+          </span>
+          <select
+            value={currentFmea?.id || ''}
+            onChange={(e) => handleFmeaChange(e.target.value)}
+            className="px-3 py-1 text-xs font-semibold rounded border-0"
+            style={{ background: 'rgba(255,255,255,0.25)', color: '#fff', minWidth: '200px' }}
+          >
+            {fmeaList.length === 0 && <option value="">FMEA 미등록</option>}
+            {fmeaList.map(fmea => (
+              <option key={fmea.id} value={fmea.id} style={{ color: '#333' }}>
+                {fmea.fmeaInfo?.subject || fmea.project?.productName || fmea.id}
+              </option>
+            ))}
           </select>
+          <button
+            onClick={() => router.push('/pfmea/list')}
+            className="px-2 py-1 text-xs text-white rounded hover:bg-white/20"
+            title="FMEA 리스트"
+          >
+            📋
+          </button>
         </div>
-        <div className="w-px h-5 bg-white/30" />
+
+        {/* 구분선 */}
+        <div className="w-px h-6 bg-white/40" />
+
+        {/* 영역 2: 저장, Excel Import, Excel Export */}
         <div className="flex items-center gap-2">
-          <button className="px-3 py-1.5 text-xs text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>
-            🔗 고장연결
+          <button 
+            onClick={() => { setDirty(false); alert('저장되었습니다.'); }}
+            className="px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1"
+            style={{ background: dirty ? '#4caf50' : 'rgba(255,255,255,0.18)', color: '#fff' }}
+          >
+            💾 저장
           </button>
-          <button className="px-3 py-1.5 text-xs text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>
-            ⬇ Excel Export
+          <button className="px-3 py-1.5 text-xs font-bold text-white rounded flex items-center gap-1" style={{ background: 'rgba(255,255,255,0.18)' }}>
+            📥 Excel Import
+          </button>
+          <button className="px-3 py-1.5 text-xs font-bold text-white rounded flex items-center gap-1" style={{ background: 'rgba(255,255,255,0.18)' }}>
+            📤 Excel Export
           </button>
         </div>
-        <div className="w-px h-5 bg-white/30" />
-        <span 
-          className="px-2 py-1 text-xs rounded-full"
-          style={{ background: dirty ? 'rgba(255,225,225,0.25)' : 'rgba(255,255,255,0.18)', color: '#fff' }}
-        >
-          {dirty ? '미저장' : '저장됨'}
-        </span>
+
+        {/* 구분선 */}
+        <div className="w-px h-6 bg-white/40" />
+
+        {/* 영역 3: 5AP, 6AP, Top RPN, Lessons Learn */}
+        <div className="flex items-center gap-2">
+          <button className="px-3 py-1.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,100,100,0.5)' }}>
+            🔴 5 AP
+          </button>
+          <button className="px-3 py-1.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,165,0,0.5)' }}>
+            🟠 6 AP
+          </button>
+          <button className="px-3 py-1.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>
+            📊 Top RPN
+          </button>
+          <button className="px-3 py-1.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>
+            📚 Lessons Learn
+          </button>
+        </div>
       </div>
 
       {/* 메인 레이아웃: 좌측 워크시트 + 우측 트리 */}
       <div className="flex-1 flex overflow-hidden" style={{ gap: 0 }}>
         {/* ========== 좌측: 워크시트 ========== */}
         <main className="flex-1 bg-white overflow-auto min-w-0" style={{ marginRight: 0, paddingRight: 0 }}>
-          {/* 탭 + 레벨 메뉴 - 컴팩트 */}
+          {/* 탭 + 레벨 + 전체보기 메뉴 */}
           <div className="flex-shrink-0 bg-white px-2 py-1" style={{ borderBottom: `2px solid ${COLORS.blue}` }}>
-            {/* 탭 + 레벨 한 줄로 */}
-            <div className="flex items-center gap-2">
-              {/* 탭 */}
-              <div className="flex gap-0.5">
-                {TABS.map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setState(prev => ({ ...prev, tab: tab.id }))}
-                    className="px-2 py-1 text-xs font-bold cursor-pointer"
-                    style={{
-                      background: state.tab === tab.id ? COLORS.blue : '#e8f0f8',
-                      border: `1px solid ${state.tab === tab.id ? COLORS.blue : '#c0d0e0'}`,
-                      borderRadius: '3px 3px 0 0',
-                      borderBottom: 0,
-                      color: state.tab === tab.id ? '#fff' : COLORS.text
-                    }}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+            <div className="flex items-center justify-between">
+              {/* 좌측: 탭 + 레벨 */}
+              <div className="flex items-center gap-2">
+                {/* 탭 */}
+                <div className="flex gap-0.5">
+                  {TABS.map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setState(prev => ({ ...prev, tab: tab.id }))}
+                      className="px-2 py-1 text-xs font-bold cursor-pointer"
+                      style={{
+                        background: state.tab === tab.id ? COLORS.blue : '#e8f0f8',
+                        border: `1px solid ${state.tab === tab.id ? COLORS.blue : '#c0d0e0'}`,
+                        borderRadius: '3px 3px 0 0',
+                        borderBottom: 0,
+                        color: state.tab === tab.id ? '#fff' : COLORS.text
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                {/* 구분선 */}
+                <div className="w-px h-5 bg-gray-300" />
+                {/* 레벨 */}
+                <div className="flex gap-0.5">
+                  {LEVELS.map(lv => (
+                    <button
+                      key={lv.id}
+                      onClick={() => setState(prev => ({ ...prev, levelView: lv.id }))}
+                      className="px-2 py-1 text-xs font-bold cursor-pointer"
+                      style={{
+                        background: state.levelView === lv.id ? '#fff' : '#f0f0f0',
+                        border: `1px solid ${state.levelView === lv.id ? COLORS.blue : '#d0d0d0'}`,
+                        borderRadius: '3px',
+                        color: state.levelView === lv.id ? COLORS.blue : '#666'
+                      }}
+                    >
+                      {lv.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              {/* 구분선 */}
-              <div className="w-px h-5 bg-gray-300" />
-              {/* 레벨 */}
-              <div className="flex gap-0.5">
-                {LEVELS.map(lv => (
-                  <button
-                    key={lv.id}
-                    onClick={() => setState(prev => ({ ...prev, levelView: lv.id }))}
-                    className="px-2 py-1 text-xs font-bold cursor-pointer"
-                    style={{
-                      background: state.levelView === lv.id ? '#fff' : '#f0f0f0',
-                      border: `1px solid ${state.levelView === lv.id ? COLORS.blue : '#d0d0d0'}`,
-                      borderRadius: '3px',
-                      color: state.levelView === lv.id ? COLORS.blue : '#666'
-                    }}
-                  >
-                    {lv.label}
-                  </button>
-                ))}
+
+              {/* 우측: 전체보기 */}
+              <div className="flex items-center gap-2">
+                {/* 구분선 */}
+                <div className="w-px h-5 bg-gray-300" />
+                <button
+                  onClick={() => setState(prev => ({ ...prev, tab: 'all', levelView: 'all' }))}
+                  className="px-2 py-1 text-xs font-bold cursor-pointer"
+                  style={{
+                    background: state.tab === 'all' ? COLORS.blue : '#fff',
+                    border: `1px solid ${COLORS.blue}`,
+                    borderRadius: '3px',
+                    color: state.tab === 'all' ? '#fff' : COLORS.blue
+                  }}
+                >
+                  전체보기
+                </button>
               </div>
             </div>
           </div>
@@ -453,7 +567,7 @@ export default function FMEAWorksheetPage() {
               className="text-center font-black py-1 text-sm flex-shrink-0"
               style={{ background: COLORS.sky2, border: `1px solid ${COLORS.line}`, borderBottom: 0 }}
             >
-              P-FMEA {getTabLabel(state.tab)}({stage}단계)
+              P-FMEA {getTabLabel(state.tab)}({state.tab === 'structure' ? 2 : state.tab === 'function' ? 3 : state.tab === 'failure' ? 4 : state.tab === 'risk' ? 5 : state.tab === 'optimization' ? 6 : 7}단계)
             </div>
 
             {/* 테이블 컨테이너 */}
@@ -564,29 +678,130 @@ export default function FMEAWorksheetPage() {
                       </tr>
                     </>
                   )}
-                  {(state.tab !== 'structure' && state.tab !== 'function' && state.tab !== 'failure') && (
+                  {/* 리스크분석 탭 헤더 */}
+                  {state.tab === 'risk' && (
                     <>
                       <tr>
-                        <th style={{ width: '25%', background: COLORS.sky, border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
-                          완제품 공정
+                        <th style={{ width: '20%', background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
+                          현재 예방관리
                         </th>
-                        <th style={{ width: '25%', background: COLORS.sky, border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
-                          메인 공정
+                        <th style={{ width: '20%', background: '#b3e5fc', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
+                          현재 검출관리
                         </th>
-                        <th style={{ width: '50%', background: COLORS.sky, border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
-                          작업 요소
+                        <th style={{ width: '60%', background: '#e1f5fe', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }} colSpan={5}>
+                          리스크 평가
                         </th>
                       </tr>
                       <tr>
-                        <th style={{ background: COLORS.sky2, border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
-                          (개발예정)
+                        <th style={{ background: '#e3f2fd', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>예방관리</th>
+                        <th style={{ background: '#e1f5fe', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>검출관리</th>
+                        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>심각도(S)</th>
+                        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>발생도(O)</th>
+                        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>검출도(D)</th>
+                        <th style={{ background: '#fff3e0', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>AP</th>
+                        <th style={{ background: '#fff3e0', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>RPN</th>
+                      </tr>
+                    </>
+                  )}
+                  {/* 최적화 탭 헤더 */}
+                  {state.tab === 'opt' && (
+                    <>
+                      <tr>
+                        <th style={{ width: '35%', background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }} colSpan={4}>
+                          개선조치 계획
                         </th>
-                        <th style={{ background: COLORS.sky2, border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
-                          (개발예정)
+                        <th style={{ width: '35%', background: '#dcedc8', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }} colSpan={3}>
+                          개선조치 결과
                         </th>
-                        <th style={{ background: COLORS.sky2, border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
-                          (개발예정)
+                        <th style={{ width: '30%', background: '#f1f8e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }} colSpan={4}>
+                          효과 평가
                         </th>
+                      </tr>
+                      <tr>
+                        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>조치유형</th>
+                        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>권고조치사항</th>
+                        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>담당자</th>
+                        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>완료예정일</th>
+                        <th style={{ background: '#f1f8e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>취해진조치</th>
+                        <th style={{ background: '#f1f8e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>완료일자</th>
+                        <th style={{ background: '#f1f8e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>상태</th>
+                        <th style={{ background: '#fffde7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>S</th>
+                        <th style={{ background: '#fffde7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>O</th>
+                        <th style={{ background: '#fffde7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>D</th>
+                        <th style={{ background: '#fff8e1', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>AP</th>
+                      </tr>
+                    </>
+                  )}
+                  {/* 문서화 탭 헤더 */}
+                  {state.tab === 'doc' && (
+                    <>
+                      <tr>
+                        <th style={{ width: '100%', background: '#e0e0e0', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }} colSpan={5}>
+                          문서화 (7단계)
+                        </th>
+                      </tr>
+                      <tr>
+                        <th style={{ background: '#f5f5f5', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>고장형태</th>
+                        <th style={{ background: '#f5f5f5', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>고장원인</th>
+                        <th style={{ background: '#f5f5f5', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>현재관리</th>
+                        <th style={{ background: '#f5f5f5', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>권고조치</th>
+                        <th style={{ background: '#f5f5f5', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>비고</th>
+                      </tr>
+                    </>
+                  )}
+                  {/* 전체보기 탭 헤더 */}
+                  {state.tab === 'all' && (
+                    <>
+                      <tr>
+                        <th style={{ width: '15%', background: COLORS.sky, border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }} colSpan={4}>
+                          구조분석 (2단계)
+                        </th>
+                        <th style={{ width: '20%', background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }} colSpan={6}>
+                          기능분석 (3단계)
+                        </th>
+                        <th style={{ width: '15%', background: '#ffcdd2', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }} colSpan={5}>
+                          고장분석 (4단계)
+                        </th>
+                        <th style={{ width: '20%', background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }} colSpan={7}>
+                          리스크분석 (5단계)
+                        </th>
+                        <th style={{ width: '30%', background: '#fff9c4', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }} colSpan={11}>
+                          최적화 (6단계)
+                        </th>
+                      </tr>
+                      <tr>
+                        <th style={{ background: COLORS.sky2, border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>완제품</th>
+                        <th style={{ background: COLORS.sky2, border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>메인공정</th>
+                        <th style={{ background: COLORS.sky2, border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>4M</th>
+                        <th style={{ background: COLORS.sky2, border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>작업요소</th>
+                        <th style={{ background: '#dcedc8', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>완제품기능</th>
+                        <th style={{ background: '#dcedc8', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>요구사항</th>
+                        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>공정기능</th>
+                        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>제품특성</th>
+                        <th style={{ background: '#f1f8e9', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>작업기능</th>
+                        <th style={{ background: '#f1f8e9', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>공정특성</th>
+                        <th style={{ background: '#ffebee', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>고장영향</th>
+                        <th style={{ background: '#ffebee', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>심각도</th>
+                        <th style={{ background: '#ffcdd2', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>고장형태</th>
+                        <th style={{ background: '#ef9a9a', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>고장원인</th>
+                        <th style={{ background: '#ef9a9a', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>발생도</th>
+                        <th style={{ background: '#e3f2fd', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>예방관리</th>
+                        <th style={{ background: '#e1f5fe', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>검출관리</th>
+                        <th style={{ background: '#e1f5fe', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>검출도</th>
+                        <th style={{ background: '#b3e5fc', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>AP</th>
+                        <th style={{ background: '#b3e5fc', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>RPN</th>
+                        <th style={{ background: '#b3e5fc', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>우선순위</th>
+                        <th style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>조치유형</th>
+                        <th style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>권고조치</th>
+                        <th style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>담당자</th>
+                        <th style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>예정일</th>
+                        <th style={{ background: '#dcedc8', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>조치내용</th>
+                        <th style={{ background: '#dcedc8', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>완료일</th>
+                        <th style={{ background: '#dcedc8', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>상태</th>
+                        <th style={{ background: '#fff9c4', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>S</th>
+                        <th style={{ background: '#fff9c4', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>O</th>
+                        <th style={{ background: '#fff9c4', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>D</th>
+                        <th style={{ background: '#fff59d', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>AP</th>
                       </tr>
                     </>
                   )}

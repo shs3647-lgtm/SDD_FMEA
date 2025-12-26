@@ -68,6 +68,47 @@ function formatFmeaId(id: string, index: number): string {
   return `PFM${year}-${seq}`;
 }
 
+// 기본 샘플 데이터 (DB에 저장할 데이터)
+// 프로젝트명은 APQP 프로젝트 등록에서 가져오며, FMEA 등록에서는 입력하지 않음
+const DEFAULT_SAMPLE_DATA: FMEAProject[] = [
+  {
+    id: 'PFM25-520',
+    project: { projectName: 'New FMEA개발', customer: '현대차', productName: 'New FMEA개발', partNo: 'PART-001', department: '개발팀', leader: '신홍섭', startDate: '2025-12-01', endDate: '2026-01-31' },
+    fmeaInfo: { subject: 'New FMEA개발', fmeaStartDate: '2025-12-01', fmeaRevisionDate: '2026-01-31', modelYear: 'MY2025', designResponsibility: '개발팀', fmeaResponsibleName: '신홍섭' },
+    createdAt: '2025-12-27T09:00:00.000Z', status: 'active', step: 1, revisionNo: 'Rev.00'
+  },
+  {
+    id: 'PFM25-521',
+    project: { projectName: 'EV 배터리 모듈', customer: '삼성SDI', productName: 'EV 배터리 모듈', partNo: 'BAT-2025-001', department: 'EV개발팀', leader: '김영철', startDate: '2025-11-15', endDate: '2026-03-15' },
+    fmeaInfo: { subject: 'EV 배터리 모듈', fmeaStartDate: '2025-11-15', fmeaRevisionDate: '2025-12-20', modelYear: 'MY2026', designResponsibility: 'EV개발팀', fmeaResponsibleName: '김영철' },
+    createdAt: '2025-12-20T10:30:00.000Z', status: 'active', step: 2, revisionNo: 'Rev.01'
+  },
+  {
+    id: 'PFM25-522',
+    project: { projectName: '전동화 부품', customer: 'LG에너지솔루션', productName: '전동화 부품', partNo: 'ELE-2025-002', department: '전동화팀', leader: '이수진', startDate: '2025-10-01', endDate: '2026-02-28' },
+    fmeaInfo: { subject: '전동화 부품', fmeaStartDate: '2025-10-01', fmeaRevisionDate: '2025-12-15', modelYear: 'MY2025', designResponsibility: '전동화팀', fmeaResponsibleName: '이수진' },
+    createdAt: '2025-12-15T14:00:00.000Z', status: 'active', step: 3, revisionNo: 'Rev.02'
+  },
+  {
+    id: 'PFM25-523',
+    project: { projectName: '자율주행 센서', customer: 'SK하이닉스', productName: '자율주행 센서', partNo: 'SEN-2025-003', department: 'ADAS팀', leader: '박민수', startDate: '2025-09-01', endDate: '2026-01-31' },
+    fmeaInfo: { subject: '자율주행 센서', fmeaStartDate: '2025-09-01', fmeaRevisionDate: '2025-12-10', modelYear: 'MY2026', designResponsibility: 'ADAS팀', fmeaResponsibleName: '박민수' },
+    createdAt: '2025-12-10T09:15:00.000Z', status: 'active', step: 4, revisionNo: 'Rev.00'
+  },
+  {
+    id: 'PFM25-524',
+    project: { projectName: '차량용 인포테인먼트', customer: '카카오모빌리티', productName: '차량용 인포테인먼트', partNo: 'INF-2025-004', department: '인포팀', leader: '정다혜', startDate: '2025-08-15', endDate: '2025-12-31' },
+    fmeaInfo: { subject: '차량용 인포테인먼트', fmeaStartDate: '2025-08-15', fmeaRevisionDate: '2025-12-05', modelYear: 'MY2025', designResponsibility: '인포팀', fmeaResponsibleName: '정다혜' },
+    createdAt: '2025-12-05T16:30:00.000Z', status: 'completed', step: 6, revisionNo: 'Rev.03'
+  },
+  {
+    id: 'PFM25-525',
+    project: { projectName: '경량화 샤시', customer: '현대모비스', productName: '경량화 샤시', partNo: 'CHA-2025-005', department: '샤시개발팀', leader: '최재영', startDate: '2025-07-01', endDate: '2025-11-30' },
+    fmeaInfo: { subject: '경량화 샤시', fmeaStartDate: '2025-07-01', fmeaRevisionDate: '2025-11-28', modelYear: 'MY2025', designResponsibility: '샤시개발팀', fmeaResponsibleName: '최재영' },
+    createdAt: '2025-11-28T11:00:00.000Z', status: 'completed', step: 7, revisionNo: 'Rev.05'
+  },
+];
+
 // 단계 배지 렌더링
 function renderStepBadge(step?: number): React.ReactNode {
   const stepNum = step || 1;
@@ -99,6 +140,9 @@ export default function FMEAListPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
+  // 저장 상태
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
   // 데이터 로드
   const loadData = useCallback(() => {
     try {
@@ -111,15 +155,24 @@ export default function FMEAListPage() {
       const fmeaProjects = storedFmea ? JSON.parse(storedFmea) : [];
 
       // 병합
-      const allProjects = [...pfmeaProjects, ...fmeaProjects];
+      let allProjects = [...pfmeaProjects, ...fmeaProjects];
       
+      // 데이터가 없으면 기본 샘플 데이터 저장
       if (!Array.isArray(allProjects) || allProjects.length === 0) {
-        setProjects([]);
-        return;
+        localStorage.setItem('pfmea-projects', JSON.stringify(DEFAULT_SAMPLE_DATA));
+        allProjects = DEFAULT_SAMPLE_DATA;
       }
 
+      // 중복 제거 (ID 기준)
+      const uniqueProjects = allProjects.reduce((acc: FMEAProject[], curr) => {
+        if (!acc.find(p => p.id === curr.id)) {
+          acc.push(curr);
+        }
+        return acc;
+      }, []);
+
       // 최신순 정렬
-      const sorted = allProjects.sort((a: FMEAProject, b: FMEAProject) => 
+      const sorted = uniqueProjects.sort((a: FMEAProject, b: FMEAProject) => 
         (b.createdAt || '').localeCompare(a.createdAt || '')
       );
 
@@ -129,6 +182,20 @@ export default function FMEAListPage() {
       setProjects([]);
     }
   }, []);
+
+  // 데이터 저장
+  const handleSave = useCallback(() => {
+    setSaveStatus('saving');
+    try {
+      localStorage.setItem('pfmea-projects', JSON.stringify(projects));
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (error) {
+      console.error('❌ FMEA 리스트 저장 실패:', error);
+      setSaveStatus('idle');
+      alert('저장에 실패했습니다.');
+    }
+  }, [projects]);
 
   // 초기 로드
   useEffect(() => {
@@ -195,6 +262,20 @@ export default function FMEAListPage() {
     setSelectedRows(new Set());
   };
 
+  // 선택된 항목 수정
+  const handleEditSelected = () => {
+    if (selectedRows.size === 0) {
+      alert('수정할 항목을 선택해주세요.');
+      return;
+    }
+    if (selectedRows.size > 1) {
+      alert('수정은 한 번에 하나의 항목만 가능합니다.');
+      return;
+    }
+    const selectedId = Array.from(selectedRows)[0];
+    window.location.href = `/pfmea/register?id=${selectedId}`;
+  };
+
   return (
     <div className="min-h-screen bg-[#f0f0f0] p-4 font-[Malgun_Gothic]">
       {/* 헤더 */}
@@ -224,6 +305,24 @@ export default function FMEAListPage() {
             className="px-4 py-2 bg-gray-100 border border-gray-400 text-gray-700 text-xs rounded hover:bg-gray-200 flex items-center gap-1"
           >
             🔄 새로고침
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saveStatus === 'saving'}
+            className={`px-4 py-2 text-xs font-bold rounded flex items-center gap-1 ${
+              saveStatus === 'saved' 
+                ? 'bg-green-500 text-white border border-green-600' 
+                : 'bg-blue-100 border border-blue-400 text-blue-700 hover:bg-blue-200'
+            }`}
+          >
+            {saveStatus === 'saved' ? '✓ 저장됨' : saveStatus === 'saving' ? '⏳ 저장중...' : '💾 저장'}
+          </button>
+          <button
+            onClick={handleEditSelected}
+            disabled={selectedRows.size !== 1}
+            className="px-4 py-2 bg-yellow-100 border border-yellow-500 text-yellow-700 text-xs rounded hover:bg-yellow-200 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            ✏️ 수정
           </button>
           <button
             onClick={handleDeleteSelected}
@@ -265,7 +364,7 @@ export default function FMEAListPage() {
             {/* 데이터 행 */}
             {filteredProjects.map((p, index) => (
               <tr
-                key={p.id}
+                key={`${p.id}-${index}`}
                 className={`hover:bg-blue-50 cursor-pointer transition-colors ${
                   index % 2 === 0 ? 'bg-[#e3f2fd]' : 'bg-white'
                 } ${selectedRows.has(p.id) ? 'bg-blue-100' : ''}`}
@@ -287,14 +386,38 @@ export default function FMEAListPage() {
                     {formatFmeaId(p.id, index)}
                   </a>
                 </td>
-                <td className="border border-gray-400 px-2 py-1 text-left align-middle">{p.project?.projectName || '-'}</td>
-                <td className="border border-gray-400 px-2 py-1 text-left align-middle">{p.fmeaInfo?.subject || p.project?.productName || '-'}</td>
-                <td className="border border-gray-400 px-2 py-1 text-center align-middle">{p.project?.customer || '-'}</td>
-                <td className="border border-gray-400 px-2 py-1 text-center align-middle">{p.fmeaInfo?.modelYear || '-'}</td>
-                <td className="border border-gray-400 px-2 py-1 text-center align-middle">{p.fmeaInfo?.designResponsibility || p.project?.department || '-'}</td>
-                <td className="border border-gray-400 px-2 py-1 text-center align-middle">{p.fmeaInfo?.fmeaResponsibleName || p.project?.leader || '-'}</td>
-                <td className="border border-gray-400 px-2 py-1 text-center align-middle">{p.fmeaInfo?.fmeaStartDate || p.project?.startDate || '-'}</td>
-                <td className="border border-gray-400 px-2 py-1 text-center align-middle">{p.fmeaInfo?.fmeaRevisionDate || '-'}</td>
+                <td className="border border-gray-400 px-2 py-1 text-left align-middle">
+                  {p.project?.projectName ? p.project.projectName : <span className="text-gray-400 italic">미입력</span>}
+                </td>
+                <td className="border border-gray-400 px-2 py-1 text-left align-middle">
+                  {p.fmeaInfo?.subject || p.project?.productName ? (
+                    <a 
+                      href={`/pfmea/worksheet?id=${p.id}`} 
+                      className="text-blue-600 hover:underline font-semibold cursor-pointer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {p.fmeaInfo?.subject || p.project?.productName}
+                    </a>
+                  ) : <span className="text-gray-400 italic">미입력</span>}
+                </td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle">
+                  {p.project?.customer ? p.project.customer : <span className="text-gray-400 italic">미입력</span>}
+                </td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle">
+                  {p.fmeaInfo?.modelYear ? p.fmeaInfo.modelYear : <span className="text-gray-400 italic">미입력</span>}
+                </td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle">
+                  {p.fmeaInfo?.designResponsibility || p.project?.department ? (p.fmeaInfo?.designResponsibility || p.project?.department) : <span className="text-gray-400 italic">미입력</span>}
+                </td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle">
+                  {p.fmeaInfo?.fmeaResponsibleName || p.project?.leader ? (p.fmeaInfo?.fmeaResponsibleName || p.project?.leader) : <span className="text-gray-400 italic">미입력</span>}
+                </td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle">
+                  {p.fmeaInfo?.fmeaStartDate || p.project?.startDate ? (p.fmeaInfo?.fmeaStartDate || p.project?.startDate) : <span className="text-gray-400 italic">미입력</span>}
+                </td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle">
+                  {p.fmeaInfo?.fmeaRevisionDate ? p.fmeaInfo.fmeaRevisionDate : <span className="text-gray-400 italic">미입력</span>}
+                </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">{p.revisionNo || 'Rev.00'}</td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
                   {renderStepBadge(p.step)}

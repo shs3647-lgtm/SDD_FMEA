@@ -8,6 +8,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { BizInfoSelectModal } from '@/components/modals/BizInfoSelectModal';
 import { UserSelectModal } from '@/components/modals/UserSelectModal';
 import { CFTAccessLogTable } from '@/components/tables/CFTAccessLogTable';
@@ -62,6 +63,10 @@ function generateFMEAId(): string {
 // 메인 컴포넌트
 // =====================================================
 export default function PFMEARegisterPage() {
+  const searchParams = useSearchParams();
+  const editId = searchParams.get('id'); // 수정 모드일 때 ID
+  const isEditMode = !!editId;
+
   const [fmeaInfo, setFmeaInfo] = useState<FMEAInfo>(INITIAL_FMEA);
   const [cftMembers, setCftMembers] = useState<CFTMember[]>(createInitialCFTMembers());
   const [fmeaId, setFmeaId] = useState('');
@@ -76,23 +81,48 @@ export default function PFMEARegisterPage() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved'>('idle');
   const [cftSaveStatus, setCftSaveStatus] = useState<'idle' | 'saved'>('idle');
 
-  // 초기화
+  // 초기화 및 수정 모드 데이터 로드
   useEffect(() => {
-    setFmeaId(generateFMEAId());
-    
-    // 저장된 CFT 데이터 불러오기
-    const savedCft = localStorage.getItem('pfmea-cft-data');
-    if (savedCft) {
-      try {
-        const parsed = JSON.parse(savedCft);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setCftMembers(parsed);
+    if (isEditMode && editId) {
+      // 수정 모드: 기존 데이터 로드
+      const storedProjects = localStorage.getItem('pfmea-projects');
+      if (storedProjects) {
+        try {
+          const projects = JSON.parse(storedProjects);
+          const existingProject = projects.find((p: { id: string }) => p.id === editId);
+          if (existingProject) {
+            setFmeaId(existingProject.id);
+            if (existingProject.fmeaInfo) {
+              setFmeaInfo(existingProject.fmeaInfo);
+            }
+            if (existingProject.cftMembers && existingProject.cftMembers.length > 0) {
+              setCftMembers(existingProject.cftMembers);
+            }
+          }
+        } catch (e) {
+          console.error('프로젝트 데이터 로드 실패:', e);
         }
-      } catch (e) {
-        console.error('CFT 데이터 로드 실패:', e);
+      }
+    } else {
+      // 신규 등록 모드
+      setFmeaId(generateFMEAId());
+    }
+    
+    // 저장된 CFT 데이터 불러오기 (신규 등록 시에만)
+    if (!isEditMode) {
+      const savedCft = localStorage.getItem('pfmea-cft-data');
+      if (savedCft) {
+        try {
+          const parsed = JSON.parse(savedCft);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setCftMembers(parsed);
+          }
+        } catch (e) {
+          console.error('CFT 데이터 로드 실패:', e);
+        }
       }
     }
-  }, []);
+  }, [isEditMode, editId]);
 
   // 필드 업데이트
   const updateField = (field: keyof FMEAInfo, value: string) => {
@@ -158,34 +188,63 @@ export default function PFMEARegisterPage() {
     }
   };
 
-  // 저장
+  // 저장 (신규 등록 또는 수정)
   const handleSave = () => {
     if (!fmeaInfo.subject.trim()) {
       alert('FMEA명을 입력해주세요.');
       return;
     }
 
-    const data = { 
-      id: fmeaId, 
-      project: {
-        projectName: fmeaInfo.subject,
-        customer: fmeaInfo.customerName,
-        productName: fmeaInfo.subject,
-        partNo: '',
-        department: fmeaInfo.designResponsibility,
-        leader: fmeaInfo.fmeaResponsibleName,
-        startDate: fmeaInfo.fmeaStartDate,
-        endDate: '',
-      },
-      fmeaInfo,
-      cftMembers, 
-      createdAt: new Date().toISOString(),
-      status: 'draft'
-    };
-    
     const existing = JSON.parse(localStorage.getItem('pfmea-projects') || '[]');
-    existing.unshift(data);
-    localStorage.setItem('pfmea-projects', JSON.stringify(existing));
+
+    if (isEditMode) {
+      // 수정 모드: 기존 데이터 업데이트
+      const updatedProjects = existing.map((p: { id: string; createdAt?: string; step?: number; revisionNo?: string }) => {
+        if (p.id === fmeaId) {
+          return {
+            ...p,
+            project: {
+              projectName: fmeaInfo.fmeaProjectName || '',
+              customer: fmeaInfo.customerName,
+              productName: fmeaInfo.subject,
+              partNo: '',
+              department: fmeaInfo.designResponsibility,
+              leader: fmeaInfo.fmeaResponsibleName,
+              startDate: fmeaInfo.fmeaStartDate,
+              endDate: '',
+            },
+            fmeaInfo,
+            cftMembers,
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return p;
+      });
+      localStorage.setItem('pfmea-projects', JSON.stringify(updatedProjects));
+    } else {
+      // 신규 등록 모드
+      const data = { 
+        id: fmeaId, 
+        project: {
+          projectName: fmeaInfo.fmeaProjectName || '',
+          customer: fmeaInfo.customerName,
+          productName: fmeaInfo.subject,
+          partNo: '',
+          department: fmeaInfo.designResponsibility,
+          leader: fmeaInfo.fmeaResponsibleName,
+          startDate: fmeaInfo.fmeaStartDate,
+          endDate: '',
+        },
+        fmeaInfo,
+        cftMembers, 
+        createdAt: new Date().toISOString(),
+        status: 'draft',
+        step: 1,
+        revisionNo: 'Rev.00',
+      };
+      existing.unshift(data);
+      localStorage.setItem('pfmea-projects', JSON.stringify(existing));
+    }
     
     setSaveStatus('saved');
     setTimeout(() => {
@@ -223,9 +282,10 @@ export default function PFMEARegisterPage() {
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-lg">📝</span>
-          <h1 className="text-sm font-bold text-gray-800">P-FMEA 등록</h1>
+          <span className="text-lg">{isEditMode ? '✏️' : '📝'}</span>
+          <h1 className="text-sm font-bold text-gray-800">P-FMEA {isEditMode ? '수정' : '등록'}</h1>
           <span className="text-xs text-gray-500 ml-2">ID: {fmeaId}</span>
+          {isEditMode && <span className="px-2 py-0.5 text-xs bg-yellow-200 text-yellow-800 rounded font-bold">수정모드</span>}
         </div>
         <div className="flex gap-2">
           <button onClick={handleRefresh} className="px-3 py-1.5 bg-gray-100 border border-gray-400 text-gray-700 text-xs rounded hover:bg-gray-200">
