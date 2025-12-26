@@ -31,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Upload, FileSpreadsheet, Database, Check, Download, Table2, Factory, Cog, Box, Users, Wrench, AlertTriangle, ShieldCheck, ClipboardCheck, Gauge, Settings, Package, Thermometer, Zap, Target, Search, Shield } from 'lucide-react';
+import { Upload, FileSpreadsheet, Database, Check, Download, Table2 } from 'lucide-react';
 
 import { ImportRowData, GeneratedRelation, CommonItem } from './types';
 import { importColumns, sampleImportData, generateRelations, calculateStats, commonItems as defaultCommonItems, addCommonItemsToRelation } from './mock-data';
@@ -84,97 +84,40 @@ export default function PFMEAImportPage() {
         </div>
       </div>
 
-      {/* 16개 기초정보 아이콘 영역 - 컴팩트 */}
+      {/* 16개 기초정보 항목 - 컴팩트 한 줄 */}
       <div className="max-w-[1400px] mx-auto mb-3">
         <div className="bg-white rounded-lg px-4 py-2" style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-          {/* 개별항목 16개 - 한 줄로 */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold text-[#00587a] mr-2 whitespace-nowrap">개별항목</span>
-            {/* 16개 아이콘 */}
-            <div className="flex items-center gap-1 px-2 py-1 rounded bg-gray-100 border border-gray-400" title="공정번호">
-              <Factory className="h-4 w-4 text-gray-600" />
-              <span className="text-[9px] text-gray-700">공정번호</span>
-            </div>
-            <div className="flex items-center gap-1 px-2 py-1 rounded bg-gray-100 border border-gray-400" title="공정명">
-              <Cog className="h-4 w-4 text-gray-600" />
-              <span className="text-[9px] text-gray-700">공정명</span>
-            </div>
-            <div className="flex items-center gap-1 px-2 py-1 rounded bg-red-50 border border-red-300" title="완제품기능">
-              <Package className="h-4 w-4 text-red-500" />
-              <span className="text-[9px] text-red-700">완제품기능</span>
-            </div>
-            <div className="flex items-center gap-1 px-2 py-1 rounded bg-red-50 border border-red-300" title="요구사항">
-              <Target className="h-4 w-4 text-red-500" />
-              <span className="text-[9px] text-red-700">요구사항</span>
-            </div>
-            <div className="flex items-center gap-1 px-2 py-1 rounded bg-red-50 border border-red-300" title="고장영향">
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-              <span className="text-[9px] text-red-700">고장영향</span>
-            </div>
-            <div className="flex items-center gap-1 px-2 py-1 rounded bg-yellow-50 border border-yellow-400" title="공정기능">
-              <Settings className="h-4 w-4 text-yellow-600" />
-              <span className="text-[9px] text-yellow-700">공정기능</span>
-            </div>
-            <div className="flex items-center gap-1 px-2 py-1 rounded bg-yellow-50 border border-yellow-400" title="제품특성">
-              <Box className="h-4 w-4 text-yellow-600" />
-              <span className="text-[9px] text-yellow-700">제품특성</span>
-            </div>
-            <div className="flex items-center gap-1 px-2 py-1 rounded bg-yellow-50 border border-yellow-400" title="고장형태">
-              <Zap className="h-4 w-4 text-yellow-600" />
-              <span className="text-[9px] text-yellow-700">고장형태</span>
-            </div>
-            <div className="flex items-center gap-1 px-2 py-1 rounded bg-yellow-50 border border-yellow-400" title="검출관리">
-              <Search className="h-4 w-4 text-yellow-600" />
-              <span className="text-[9px] text-yellow-700">검출관리</span>
-            </div>
-            <div className="flex items-center gap-1 px-2 py-1 rounded bg-yellow-50 border border-yellow-400" title="검사장비">
-              <Gauge className="h-4 w-4 text-yellow-600" />
-              <span className="text-[9px] text-yellow-700">검사장비</span>
-            </div>
-            <div className="flex items-center gap-1 px-2 py-1 rounded bg-green-50 border border-green-400" title="작업요소">
-              <Users className="h-4 w-4 text-green-600" />
-              <span className="text-[9px] text-green-700">작업요소</span>
-            </div>
-            <div className="flex items-center gap-1 px-2 py-1 rounded bg-green-50 border border-green-400" title="요소기능">
-              <ClipboardCheck className="h-4 w-4 text-green-600" />
-              <span className="text-[9px] text-green-700">요소기능</span>
-            </div>
-            <div className="flex items-center gap-1 px-2 py-1 rounded bg-green-50 border border-green-400" title="공정특성">
-              <Thermometer className="h-4 w-4 text-green-600" />
-              <span className="text-[9px] text-green-700">공정특성</span>
-            </div>
-            <div className="flex items-center gap-1 px-2 py-1 rounded bg-green-50 border border-green-400" title="고장원인">
-              <AlertTriangle className="h-4 w-4 text-green-600" />
-              <span className="text-[9px] text-green-700">고장원인</span>
-            </div>
-            <div className="flex items-center gap-1 px-2 py-1 rounded bg-green-50 border border-green-400" title="예방관리">
-              <Shield className="h-4 w-4 text-green-600" />
-              <span className="text-[9px] text-green-700">예방관리</span>
-            </div>
-            <div className="flex items-center gap-1 px-2 py-1 rounded bg-green-50 border border-green-400" title="설비/장비">
-              <Wrench className="h-4 w-4 text-green-600" />
-              <span className="text-[9px] text-green-700">설비</span>
-            </div>
+          {/* 개별항목 16개 - 텍스트만 한 줄 */}
+          <div className="flex items-center gap-1">
+            <span className="text-xs font-bold text-[#00587a] mr-1 whitespace-nowrap">개별항목:</span>
+            <span className="px-2 py-0.5 rounded bg-gray-100 border border-gray-400 text-xs text-gray-700 whitespace-nowrap">공정번호</span>
+            <span className="px-2 py-0.5 rounded bg-gray-100 border border-gray-400 text-xs text-gray-700 whitespace-nowrap">공정명</span>
+            <span className="px-2 py-0.5 rounded bg-red-50 border border-red-300 text-xs text-red-700 whitespace-nowrap">완제품기능</span>
+            <span className="px-2 py-0.5 rounded bg-red-50 border border-red-300 text-xs text-red-700 whitespace-nowrap">요구사항</span>
+            <span className="px-2 py-0.5 rounded bg-red-50 border border-red-300 text-xs text-red-700 whitespace-nowrap">고장영향</span>
+            <span className="px-2 py-0.5 rounded bg-yellow-50 border border-yellow-400 text-xs text-yellow-700 whitespace-nowrap">공정기능</span>
+            <span className="px-2 py-0.5 rounded bg-yellow-50 border border-yellow-400 text-xs text-yellow-700 whitespace-nowrap">제품특성</span>
+            <span className="px-2 py-0.5 rounded bg-yellow-50 border border-yellow-400 text-xs text-yellow-700 whitespace-nowrap">고장형태</span>
+            <span className="px-2 py-0.5 rounded bg-yellow-50 border border-yellow-400 text-xs text-yellow-700 whitespace-nowrap">검출관리</span>
+            <span className="px-2 py-0.5 rounded bg-yellow-50 border border-yellow-400 text-xs text-yellow-700 whitespace-nowrap">검사장비</span>
+            <span className="px-2 py-0.5 rounded bg-green-50 border border-green-400 text-xs text-green-700 whitespace-nowrap">작업요소</span>
+            <span className="px-2 py-0.5 rounded bg-green-50 border border-green-400 text-xs text-green-700 whitespace-nowrap">요소기능</span>
+            <span className="px-2 py-0.5 rounded bg-green-50 border border-green-400 text-xs text-green-700 whitespace-nowrap">공정특성</span>
+            <span className="px-2 py-0.5 rounded bg-green-50 border border-green-400 text-xs text-green-700 whitespace-nowrap">고장원인</span>
+            <span className="px-2 py-0.5 rounded bg-green-50 border border-green-400 text-xs text-green-700 whitespace-nowrap">예방관리</span>
+            <span className="px-2 py-0.5 rounded bg-green-50 border border-green-400 text-xs text-green-700 whitespace-nowrap">설비</span>
           </div>
 
-          {/* 공통항목 - 한 줄로 */}
-          <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-gray-200">
-            <span className="text-xs font-bold text-purple-700 mr-2 whitespace-nowrap">공통항목</span>
-            {[
-              { code: 'MN', name: '사람', icon: '👤' },
-              { code: 'MA', name: '자재', icon: '📦' },
-              { code: 'MT', name: '방법', icon: '📋' },
-              { code: 'ME', name: '측정', icon: '📏' },
-              { code: 'EN', name: '환경', icon: '🌡️' },
-              { code: 'IM', name: '부자재', icon: '🧴' },
-            ].map((item) => (
-              <div key={item.code} className="flex items-center gap-1 px-2 py-1 rounded bg-purple-50 border border-purple-300">
-                <span className="text-sm">{item.icon}</span>
-                <span className="text-[9px] font-bold text-purple-700">{item.code}</span>
-                <span className="text-[9px] text-purple-600">{item.name}</span>
-              </div>
-            ))}
-            <span className="text-[10px] text-gray-500 ml-2">← 모든 공정에 자동 적용</span>
+          {/* 공통항목 - 텍스트만 한 줄 */}
+          <div className="flex items-center gap-1 mt-1.5 pt-1.5 border-t border-gray-200">
+            <span className="text-xs font-bold text-purple-700 mr-1 whitespace-nowrap">공통항목:</span>
+            <span className="px-2 py-0.5 rounded bg-purple-50 border border-purple-300 text-xs text-purple-700 whitespace-nowrap">👤사람</span>
+            <span className="px-2 py-0.5 rounded bg-purple-50 border border-purple-300 text-xs text-purple-700 whitespace-nowrap">📦자재</span>
+            <span className="px-2 py-0.5 rounded bg-purple-50 border border-purple-300 text-xs text-purple-700 whitespace-nowrap">📋방법</span>
+            <span className="px-2 py-0.5 rounded bg-purple-50 border border-purple-300 text-xs text-purple-700 whitespace-nowrap">📏측정</span>
+            <span className="px-2 py-0.5 rounded bg-purple-50 border border-purple-300 text-xs text-purple-700 whitespace-nowrap">🌡️환경</span>
+            <span className="px-2 py-0.5 rounded bg-purple-50 border border-purple-300 text-xs text-purple-700 whitespace-nowrap">🧴부자재</span>
+            <span className="text-[10px] text-gray-500 ml-1">← 모든 공정 자동적용</span>
           </div>
         </div>
       </div>
