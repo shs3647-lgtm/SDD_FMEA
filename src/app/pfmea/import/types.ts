@@ -1,13 +1,14 @@
 /**
  * @file types.ts
- * @description PFMEA Import 타입 정의
+ * @description PFMEA Import 타입 정의 (3단계 프로세스)
  * @author AI Assistant
  * @created 2025-12-26
- * @updated 2025-12-26 - 2단계 프로세스로 변경
+ * @updated 2025-12-26 - 3단계 프로세스로 변경
  * 
  * 프로세스:
  * Step 1: Excel Import → Flat 데이터 저장
- * Step 2: 워크시트 팝업 → 상위-하위 관계 지정 → 관계형 DB 완성
+ * Step 2: L1-L2-L3 관계형 DB 확정 (FMEA 워크시트)
+ * Step 3: 고장 연결 (FC → FM → FE 인과관계)
  */
 
 /** 공통 기초정보 아이템 */
@@ -23,7 +24,7 @@ export interface ImportedFlatData {
   id: string;
   processNo: string;
   category: 'A' | 'B' | 'C';
-  itemCode: string;  // A1, A2, A3, A4, A5, A6, B1, B2, B3, B4, B5, C1, C2, C3, C4
+  itemCode: string;  // A1~A6, B1~B5, C1~C4
   value: string;
   createdAt: Date;
 }
@@ -35,87 +36,114 @@ export interface ProcessMaster {
   processDesc?: string;
 }
 
-/** 관계 매핑 (Step 2에서 사용자가 지정) */
-export interface RelationMapping {
+// ========================================
+// Step 2: L1-L2-L3 관계형 (계층 구조)
+// ========================================
+
+/** L1 완제품 레벨 */
+export interface L1Product {
+  id: string;
+  productProcessName: string;  // C1
+  productFunc: string;         // C2
+  requirement: string;         // C3
+}
+
+/** L2 공정 레벨 */
+export interface L2Process {
+  id: string;
+  processNo: string;           // A1
+  processName: string;         // A2
+  processDesc: string;         // A3
+  productChar: string;         // A4
+}
+
+/** L3 작업요소 레벨 */
+export interface L3WorkElement {
   id: string;
   processNo: string;
+  workElement: string;         // B1
+  elementFunc: string;         // B2
+  processChar: string;         // B3
+}
+
+/** L1-L2-L3 계층 관계 (Step 2에서 사용자가 지정) */
+export interface LevelRelation {
+  id: string;
+  l1Id: string;
+  l2Id: string;
+  l3Id?: string;  // L3는 선택적
+  createdAt: Date;
+  createdBy: string;
+}
+
+// ========================================
+// Step 3: 고장 인과관계 (FC → FM → FE)
+// ========================================
+
+/** 고장형태 (Failure Mode) */
+export interface FailureMode {
+  id: string;
+  processNo: string;
+  code: string;       // FM-001
+  description: string; // A5에서 가져옴
+}
+
+/** 고장원인 (Failure Cause) */
+export interface FailureCause {
+  id: string;
+  processNo: string;
+  code: string;       // FC-001
+  description: string; // B4에서 가져옴
+}
+
+/** 고장영향 (Failure Effect) */
+export interface FailureEffect {
+  id: string;
+  code: string;       // FE-001
+  description: string; // C4에서 가져옴
+  level: 'L1' | 'L2' | 'L3'; // 영향 레벨
+}
+
+/** 고장 인과관계 (Step 3에서 사용자가 지정) */
+export interface FailureChain {
+  id: string;
+  // 인과관계: FC → FM → FE
+  failureCauseId: string;   // 고장원인
+  failureModeId: string;    // 고장형태
+  failureEffectId: string;  // 고장영향
   
-  // 상위 아이템
-  parentItemCode: string;  // A4, B1, C1 등
-  parentItemId: string;
-  parentValue: string;
-  
-  // 하위 아이템
-  childItemCode: string;   // A5, B3, C2 등
-  childItemId: string;
-  childValue: string;
+  // 관련 관리방법
+  preventionCtrlId?: string; // 예방관리 (B5)
+  detectionCtrlId?: string;  // 검출관리 (A6)
   
   createdAt: Date;
   createdBy: string;
 }
 
-/** 관계 지정 팝업용 아이템 */
-export interface RelationItem {
-  id: string;
-  code: string;
-  value: string;
-  selected: boolean;
+// ========================================
+// 팝업 상태 타입
+// ========================================
+
+/** Step 2: L1-L2-L3 관계 지정 팝업 */
+export interface LevelRelationState {
+  selectedL1: L1Product | null;
+  selectedL2: L2Process | null;
+  selectedL3: L3WorkElement | null;
+  existingRelations: LevelRelation[];
 }
 
-/** 관계 지정 팝업 상태 */
-export interface RelationMappingState {
-  processNo: string;
-  processName: string;
-  
-  // 선택 가능한 상위 아이템들
-  parentItems: RelationItem[];
-  parentCode: string;
-  
-  // 선택 가능한 하위 아이템들
-  childItems: RelationItem[];
-  childCode: string;
-  
-  // 이미 연결된 관계
-  existingMappings: RelationMapping[];
+/** Step 3: 고장 인과관계 지정 팝업 */
+export interface FailureChainState {
+  selectedFM: FailureMode | null;
+  selectedFC: FailureCause | null;
+  selectedFE: FailureEffect | null;
+  existingChains: FailureChain[];
 }
 
-/** Import 통계 */
-export interface ImportStats {
-  totalItems: number;
-  byCategory: {
-    A: number;
-    B: number;
-    C: number;
-  };
-  byItemCode: Record<string, number>;
-  processCount: number;
-}
+// ========================================
+// 아이템 코드 라벨
+// ========================================
 
-/** 관계 지정 가능한 쌍 정의 */
-export const RELATION_PAIRS = [
-  // A 레벨: 제품특성 → 고장형태
-  { parent: 'A4', child: 'A5', label: '제품특성 → 고장형태' },
-  { parent: 'A5', child: 'A6', label: '고장형태 → 검출관리' },
-  
-  // B 레벨: 작업요소 → 요소기능 → 공정특성 → 고장원인 → 예방관리
-  { parent: 'B1', child: 'B2', label: '작업요소 → 요소기능' },
-  { parent: 'B2', child: 'B3', label: '요소기능 → 공정특성' },
-  { parent: 'B3', child: 'B4', label: '공정특성 → 고장원인' },
-  { parent: 'B4', child: 'B5', label: '고장원인 → 예방관리' },
-  
-  // C 레벨: 완제품공정 → 기능 → 요구사항 → 고장영향
-  { parent: 'C1', child: 'C2', label: '완제품공정 → 기능' },
-  { parent: 'C2', child: 'C3', label: '기능 → 요구사항' },
-  { parent: 'C3', child: 'C4', label: '요구사항 → 고장영향' },
-  
-  // A-B 연결: 제품특성 → 작업요소
-  { parent: 'A4', child: 'B1', label: '제품특성 → 작업요소' },
-  
-  // A-C 연결: 고장형태 → 고장영향
-  { parent: 'A5', child: 'C4', label: '고장형태 → 고장영향(완제품)' },
-] as const;
-
-/** 아이템 코드 라벨 */
 export const ITEM_CODE_LABELS: Record<string, string> = {
   A1: '공정번호',
   A2: '공정명',
@@ -134,12 +162,43 @@ export const ITEM_CODE_LABELS: Record<string, string> = {
   C4: '고장영향',
 };
 
-// ============ 이전 호환용 타입 (기존 코드 지원) ============
+/** 레벨별 아이템 코드 매핑 */
+export const LEVEL_ITEM_CODES = {
+  L1: ['C1', 'C2', 'C3', 'C4'],  // 완제품 레벨
+  L2: ['A1', 'A2', 'A3', 'A4', 'A5', 'A6'],  // 공정 레벨
+  L3: ['B1', 'B2', 'B3', 'B4', 'B5'],  // 작업요소 레벨
+} as const;
 
-/** 레벨 타입 */
+/** 고장 관련 아이템 코드 */
+export const FAILURE_ITEM_CODES = {
+  FM: 'A5',  // 고장형태 (Failure Mode)
+  FC: 'B4',  // 고장원인 (Failure Cause)
+  FE: 'C4',  // 고장영향 (Failure Effect)
+  PC: 'B5',  // 예방관리 (Prevention Control)
+  DC: 'A6',  // 검출관리 (Detection Control)
+} as const;
+
+// ========================================
+// Import 통계
+// ========================================
+
+export interface ImportStats {
+  totalItems: number;
+  byCategory: {
+    A: number;
+    B: number;
+    C: number;
+  };
+  byItemCode: Record<string, number>;
+  processCount: number;
+}
+
+// ========================================
+// 이전 호환용 타입 (기존 코드 지원)
+// ========================================
+
 export type LevelType = 'A' | 'B' | 'C' | 'D';
 
-/** Import 열 정의 */
 export interface ImportColumn {
   key: string;
   label: string;
@@ -148,7 +207,6 @@ export interface ImportColumn {
   level: LevelType;
 }
 
-/** Import 행 데이터 */
 export interface ImportRowData {
   processNo: string;
   processName: string;
@@ -168,7 +226,6 @@ export interface ImportRowData {
   inspectionEquip: string;
 }
 
-/** 자동 생성된 관계 (L1-L2-L3 구조) */
 export interface GeneratedRelation {
   processNo: string;
   processName: string;
@@ -190,4 +247,18 @@ export interface GeneratedRelation {
     preventionCtrls: string[];
     equipments: string[];
   };
+}
+
+// 이전 호환용 (삭제 예정)
+export interface RelationMapping {
+  id: string;
+  processNo: string;
+  parentItemCode: string;
+  parentItemId: string;
+  parentValue: string;
+  childItemCode: string;
+  childItemId: string;
+  childValue: string;
+  createdAt: Date;
+  createdBy: string;
 }

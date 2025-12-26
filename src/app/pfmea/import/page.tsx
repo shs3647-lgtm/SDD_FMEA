@@ -31,14 +31,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Upload, FileSpreadsheet, Database, Check, Download, Table2, Link2, Settings } from 'lucide-react';
+import { Upload, FileSpreadsheet, Database, Check, Download, Table2, Link2, Layers, AlertTriangle } from 'lucide-react';
 
-import { ImportRowData, GeneratedRelation, CommonItem, ImportedFlatData, RelationMapping, ITEM_CODE_LABELS } from './types';
+import { ImportRowData, GeneratedRelation, CommonItem, ImportedFlatData, LevelRelation, FailureChain, ITEM_CODE_LABELS } from './types';
 import { importColumns, sampleImportData, generateRelations, calculateStats, commonItems as defaultCommonItems, addCommonItemsToRelation } from './mock-data';
 import CommonItemManager from './CommonItemManager';
 import { downloadEmptyTemplate, downloadSampleTemplate } from './excel-template';
 import { parseMultiSheetExcel, ParseResult, ProcessRelation, ProductRelation } from './excel-parser';
-import RelationMappingPopup from './RelationMappingPopup';
+import LevelRelationPopup from './LevelRelationPopup';
+import FailureChainPopup from './FailureChainPopup';
 
 export default function PFMEAImportPage() {
   // 상태 관리
@@ -53,10 +54,14 @@ export default function PFMEAImportPage() {
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [selectedProcess, setSelectedProcess] = useState<ProcessRelation | null>(null);
 
-  // Step 2: 관계 지정 팝업
-  const [showRelationPopup, setShowRelationPopup] = useState(false);
+  // Step 2: L1-L2-L3 관계 지정
+  const [showLevelPopup, setShowLevelPopup] = useState(false);
   const [flatData, setFlatData] = useState<ImportedFlatData[]>([]);
-  const [relationMappings, setRelationMappings] = useState<RelationMapping[]>([]);
+  const [levelRelations, setLevelRelations] = useState<LevelRelation[]>([]);
+
+  // Step 3: 고장 인과관계 지정
+  const [showFailurePopup, setShowFailurePopup] = useState(false);
+  const [failureChains, setFailureChains] = useState<FailureChain[]>([]);
 
   // 공통 기초정보 관리 (추가/수정/삭제 가능)
   const [commonItemList, setCommonItemList] = useState<CommonItem[]>(defaultCommonItems);
@@ -124,21 +129,22 @@ export default function PFMEAImportPage() {
     setSelectedProcess(process || null);
   };
 
-  // 관계 매핑 저장
-  const handleSaveMapping = (mapping: RelationMapping) => {
-    setRelationMappings(prev => [...prev, mapping]);
+  // Step 2: L1-L2-L3 관계 저장/삭제
+  const handleSaveLevelRelation = (relation: LevelRelation) => {
+    setLevelRelations(prev => [...prev, relation]);
   };
 
-  // 관계 매핑 삭제
-  const handleDeleteMapping = (mappingId: string) => {
-    setRelationMappings(prev => prev.filter(m => m.id !== mappingId));
+  const handleDeleteLevelRelation = (relationId: string) => {
+    setLevelRelations(prev => prev.filter(r => r.id !== relationId));
   };
 
-  // Step 2: 관계 지정 팝업 열기
-  const handleOpenRelationPopup = () => {
-    if (selectedProcessNo) {
-      setShowRelationPopup(true);
-    }
+  // Step 3: 고장 인과관계 저장/삭제
+  const handleSaveFailureChain = (chain: FailureChain) => {
+    setFailureChains(prev => [...prev, chain]);
+  };
+
+  const handleDeleteFailureChain = (chainId: string) => {
+    setFailureChains(prev => prev.filter(c => c.id !== chainId));
   };
 
   // Import 실행 (시뮬레이션)
@@ -584,23 +590,51 @@ export default function PFMEAImportPage() {
             </div>
           )}
 
-          {/* Step 2: 관계 지정 버튼 */}
+          {/* Step 2: L1-L2-L3 관계 지정 버튼 */}
           {parseResult && parseResult.processes.length > 0 && (
-            <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
-              <h3 className="font-bold text-yellow-800 mb-2">Step 2: 상위-하위 관계 지정</h3>
-              <p className="text-sm text-yellow-700 mb-3">
-                Import된 데이터 간의 관계를 지정하세요. (예: 제품특성 → 고장형태)
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+              <h3 className="font-bold text-blue-800 mb-2 flex items-center gap-2">
+                <Layers className="h-5 w-5" />
+                Step 2: L1-L2-L3 계층 관계 지정
+              </h3>
+              <p className="text-sm text-blue-700 mb-3">
+                완제품(L1) → 공정(L2) → 작업요소(L3) 계층 구조를 지정하세요.
               </p>
               <Button 
-                onClick={handleOpenRelationPopup}
-                className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                onClick={() => setShowLevelPopup(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Layers className="h-4 w-4 mr-2" />
+                L1-L2-L3 관계 지정
+                {levelRelations.length > 0 && (
+                  <Badge className="ml-2 bg-white text-blue-700">
+                    {levelRelations.length}개 연결
+                  </Badge>
+                )}
+              </Button>
+            </div>
+          )}
+
+          {/* Step 3: 고장 인과관계 지정 버튼 */}
+          {parseResult && parseResult.processes.length > 0 && levelRelations.length > 0 && (
+            <div className="bg-orange-50 border-l-4 border-orange-500 p-4 rounded">
+              <h3 className="font-bold text-orange-800 mb-2 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                Step 3: 고장 인과관계 지정
+              </h3>
+              <p className="text-sm text-orange-700 mb-3">
+                고장원인(FC) → 고장형태(FM) → 고장영향(FE) 인과관계를 지정하세요.
+              </p>
+              <Button 
+                onClick={() => setShowFailurePopup(true)}
+                className="bg-orange-500 hover:bg-orange-600 text-white"
                 disabled={!selectedProcessNo}
               >
-                <Link2 className="h-4 w-4 mr-2" />
-                관계 지정 ({selectedProcessNo || '공정 선택 필요'})
-                {relationMappings.filter(m => m.processNo === selectedProcessNo).length > 0 && (
-                  <Badge className="ml-2 bg-white text-yellow-700">
-                    {relationMappings.filter(m => m.processNo === selectedProcessNo).length}개 연결
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                고장 인과관계 지정 ({selectedProcessNo || '공정 선택 필요'})
+                {failureChains.length > 0 && (
+                  <Badge className="ml-2 bg-white text-orange-700">
+                    {failureChains.length}개 체인
                   </Badge>
                 )}
               </Button>
@@ -612,13 +646,13 @@ export default function PFMEAImportPage() {
             <Button variant="outline" className="border-[#999] text-gray-600 hover:bg-gray-100">취소</Button>
             <Button 
               className="bg-[#00587a] hover:bg-[#004560] text-white font-bold" 
-              disabled={!parseResult || parseResult.processes.length === 0 || relationMappings.length === 0}
+              disabled={!parseResult || levelRelations.length === 0 || failureChains.length === 0}
               onClick={handleImport}
             >
               {isImporting ? '관계형 DB 생성 중...' : (
                 <>
                   <Check className="h-4 w-4 mr-2" />
-                  관계 확정 및 저장 ({relationMappings.length}개 관계)
+                  관계형 DB 완성 (L1-L2-L3: {levelRelations.length}, FC-FM-FE: {failureChains.length})
                 </>
               )}
             </Button>
@@ -650,16 +684,26 @@ export default function PFMEAImportPage() {
         </div>
       </div>
 
-      {/* 관계 지정 팝업 */}
-      <RelationMappingPopup
-        isOpen={showRelationPopup}
-        onClose={() => setShowRelationPopup(false)}
+      {/* Step 2: L1-L2-L3 관계 지정 팝업 */}
+      <LevelRelationPopup
+        isOpen={showLevelPopup}
+        onClose={() => setShowLevelPopup(false)}
+        flatData={flatData}
+        existingRelations={levelRelations}
+        onSaveRelation={handleSaveLevelRelation}
+        onDeleteRelation={handleDeleteLevelRelation}
+      />
+
+      {/* Step 3: 고장 인과관계 지정 팝업 */}
+      <FailureChainPopup
+        isOpen={showFailurePopup}
+        onClose={() => setShowFailurePopup(false)}
         processNo={selectedProcessNo}
         processName={selectedProcess?.processName || ''}
         flatData={flatData}
-        existingMappings={relationMappings}
-        onSaveMapping={handleSaveMapping}
-        onDeleteMapping={handleDeleteMapping}
+        existingChains={failureChains}
+        onSaveChain={handleSaveFailureChain}
+        onDeleteChain={handleDeleteFailureChain}
       />
     </div>
   );
