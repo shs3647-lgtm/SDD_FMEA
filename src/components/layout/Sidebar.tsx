@@ -82,11 +82,10 @@ const ColorIcons = {
   ),
 };
 
-// 공통 하위 메뉴 생성 함수
+// 공통 하위 메뉴 생성 함수 (CFT는 등록 화면에 통합)
 const createSubItems = (basePath: string) => [
   { label: '등록', href: `${basePath}/register` },
   { label: '리스트', href: `${basePath}/list` },
-  { label: 'CFT', href: `${basePath}/cft` },
   { label: '개정관리', href: `${basePath}/revision` },
 ];
 

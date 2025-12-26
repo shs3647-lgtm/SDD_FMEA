@@ -11,8 +11,10 @@
 import { useState, useEffect } from 'react';
 import { BizInfoSelectModal } from '@/components/modals/BizInfoSelectModal';
 import { UserSelectModal } from '@/components/modals/UserSelectModal';
+import { CFTAccessLogTable } from '@/components/tables/CFTAccessLogTable';
 import { BizInfoProject } from '@/types/bizinfo';
 import { UserInfo } from '@/types/user';
+import { CFTAccessLog } from '@/types/project-cft';
 
 // =====================================================
 // 타입 정의
@@ -74,9 +76,11 @@ const INITIAL_PROJECT: ProjectInfo = {
 };
 
 const INITIAL_APPROVERS: ApproverRow[] = [
-  { id: '1', role: 'PM', department: '', name: '', position: '', phone: '', email: '', remark: '' },
-  { id: '2', role: 'CFT(담당자)', department: '', name: '', position: '', phone: '', email: '', remark: '' },
-  { id: '3', role: 'Leader', department: '', name: '', position: '', phone: '', email: '', remark: '' },
+  { id: '1', role: 'Champion', department: '', name: '', position: '', phone: '', email: '', remark: '' },
+  { id: '2', role: 'Leader', department: '', name: '', position: '', phone: '', email: '', remark: '' },
+  { id: '3', role: 'PM', department: '', name: '', position: '', phone: '', email: '', remark: '' },
+  { id: '4', role: 'Moderator', department: '', name: '', position: '', phone: '', email: '', remark: '' },
+  { id: '5', role: 'CFT 팀원', department: '', name: '', position: '', phone: '', email: '', remark: '' },
 ];
 
 function generateFMEAId(): string {
@@ -102,11 +106,15 @@ export default function PFMEARegisterPage() {
   useEffect(() => {
     setFmeaId(generateFMEAId());
     
-    // 저장된 CFT 데이터 불러오기
+    // 저장된 CFT 데이터 불러오기 (삭제할 때까지 유지)
     const savedCft = localStorage.getItem('fmea-cft-data');
     if (savedCft) {
       try {
-        setApprovers(JSON.parse(savedCft));
+        const parsed = JSON.parse(savedCft);
+        // 저장된 데이터가 새 구조와 호환되는지 확인
+        if (Array.isArray(parsed) && parsed.length > 0 && 'role' in parsed[0]) {
+          setApprovers(parsed);
+        }
       } catch {
         // 파싱 오류 시 기본값 유지
       }
@@ -146,62 +154,15 @@ export default function PFMEARegisterPage() {
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved'>('idle');
   
-  // CFT 관련 상태
-  const [cftEditMode, setCftEditMode] = useState(false);
+  // CFT 저장 상태
   const [cftSaveStatus, setCftSaveStatus] = useState<'idle' | 'saved'>('idle');
-  const [cftBackup, setCftBackup] = useState<ApproverRow[]>([]);
 
-  // CFT 새로고침 - 저장된 데이터 불러오기
-  const handleCftRefresh = () => {
-    const savedCft = localStorage.getItem('fmea-cft-data');
-    if (savedCft) {
-      try {
-        setApprovers(JSON.parse(savedCft));
-      } catch {
-        setApprovers([...INITIAL_APPROVERS]);
-      }
-    } else {
-      setApprovers([...INITIAL_APPROVERS]);
-    }
-    setCftEditMode(false);
-  };
-
-  // CFT 수정 모드 토글
-  const handleCftEdit = () => {
-    if (!cftEditMode) {
-      // 수정 시작: 현재 상태 백업
-      setCftBackup([...approvers]);
-    }
-    setCftEditMode(!cftEditMode);
-  };
-
-  // CFT 저장
-  const handleCftSave = () => {
-    localStorage.setItem('fmea-cft-data', JSON.stringify(approvers));
-    setCftSaveStatus('saved');
-    setCftEditMode(false);
-    setTimeout(() => setCftSaveStatus('idle'), 3000);
-  };
-
-  // CFT 취소 - 백업 데이터로 복원
-  const handleCftCancel = () => {
-    if (cftBackup.length > 0) {
-      setApprovers([...cftBackup]);
-    } else {
-      setApprovers([...INITIAL_APPROVERS]);
-    }
-    setCftEditMode(false);
-  };
-
-  // CFT 행 삭제
-  const handleDeleteRow = (index: number) => {
-    if (approvers.length <= 1) {
-      alert('최소 1개 행은 유지해야 합니다.');
-      return;
-    }
-    const updated = approvers.filter((_, i) => i !== index);
-    setApprovers(updated);
-  };
+  // CFT 접속 로그 샘플 데이터
+  const [accessLogs] = useState<CFTAccessLog[]>([
+    { id: 1, projectId: fmeaId, userName: '김철수', loginTime: '2025-12-26 09:00:00', logoutTime: '2025-12-26 12:30:00', action: '수정', itemType: 'FMEA', cellAddress: 'A1:B5', description: 'PFMEA 프로젝트 정보 수정' },
+    { id: 2, projectId: fmeaId, userName: '이영희', loginTime: '2025-12-26 10:15:00', logoutTime: '2025-12-26 11:45:00', action: '추가', itemType: 'CFT', cellAddress: 'C3', description: 'CFT 팀원 추가' },
+    { id: 3, projectId: fmeaId, userName: '박지민', loginTime: '2025-12-26 14:00:00', logoutTime: null, action: '수정', itemType: 'FMEA', cellAddress: 'D10:F15', description: '고장형태 분석 업데이트' },
+  ]);
 
   const handleSave = () => {
     if (!project.projectName) {
@@ -275,31 +236,20 @@ export default function PFMEARegisterPage() {
 
   return (
     <div className="min-h-screen bg-[#f0f0f0] p-4 font-[Malgun_Gothic]">
-      {/* ===== FMEA 등록 헤더 ===== */}
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-lg">📝</span>
-        <h1 className="text-base font-bold text-gray-800">FMEA 등록</h1>
-        <span className="text-xs text-gray-500 ml-2">ID: {fmeaId}</span>
-      </div>
-
-      {/* ===== 기초정보 불러오기 버튼 ===== */}
-      <div className="flex items-center gap-4 mb-4">
-        <button 
-          onClick={openBizInfoModal}
-          className="px-4 py-2 bg-[#fff9c4] border-2 border-[#4caf50] text-[#2e7d32] text-xs font-bold rounded flex items-center gap-2 hover:bg-[#fff59d]"
-        >
-          📂 기초정보에서 불러오기
-        </button>
-        <p className="text-xs text-amber-600 flex items-center gap-1">
-          💡 기초정보를 더블클릭하면 고객/공장/품명/품번이 자동으로 입력됩니다.
-        </p>
-        <div className="ml-auto flex gap-2">
-          <button onClick={handleReset} className="px-4 py-2 bg-gray-100 border border-gray-400 text-gray-700 text-xs rounded hover:bg-gray-200 flex items-center gap-1">
+      {/* ===== 프로젝트 정보 섹션 헤더 + 버튼 ===== */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">📝</span>
+          <h1 className="text-base font-bold text-gray-800">FMEA 등록</h1>
+          <span className="text-xs text-gray-500 ml-2">ID: {fmeaId}</span>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={handleReset} className="px-3 py-1.5 bg-gray-100 border border-gray-400 text-gray-700 text-xs rounded hover:bg-gray-200 flex items-center gap-1">
             🔄 새로고침
           </button>
           <button 
             onClick={handleSave} 
-            className={`px-4 py-2 text-white text-xs font-bold rounded flex items-center gap-1 transition-colors ${
+            className={`px-3 py-1.5 text-white text-xs font-bold rounded flex items-center gap-1 transition-colors ${
               saveStatus === 'saved' 
                 ? 'bg-green-600 hover:bg-green-700' 
                 : 'bg-[#1976d2] hover:bg-[#1565c0]'
@@ -308,12 +258,6 @@ export default function PFMEARegisterPage() {
             {saveStatus === 'saved' ? '✅ 저장됨' : '💾 저장'}
           </button>
         </div>
-      </div>
-
-      {/* ===== 프로젝트 정보 섹션 ===== */}
-      <div className="flex items-center gap-2 mb-2">
-        <span>📋</span>
-        <h2 className="text-sm font-bold text-gray-700">프로젝트 정보</h2>
       </div>
 
       <div className="rounded-lg overflow-hidden border border-gray-400 mb-6 bg-white">
@@ -468,37 +412,48 @@ export default function PFMEARegisterPage() {
       </div>
 
       {/* ===== CFT 등록 섹션 ===== */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-2 mt-6">
         <div className="flex items-center gap-2">
           <span>👥</span>
           <h2 className="text-sm font-bold text-gray-700">CFT 등록</h2>
         </div>
         <div className="flex gap-2">
           <button 
-            onClick={handleCftRefresh}
+            onClick={() => {
+              if (confirm('CFT 데이터를 모두 삭제하고 초기화하시겠습니까?')) {
+                localStorage.removeItem('fmea-cft-data');
+                setApprovers([...INITIAL_APPROVERS]);
+              }
+            }}
             className="px-3 py-1.5 bg-gray-100 border border-gray-400 text-gray-600 text-xs rounded hover:bg-gray-200 flex items-center gap-1"
           >
-            🔄 새로고침
+            🔄 초기화
           </button>
           <button 
-            onClick={handleCftEdit}
-            className={`px-3 py-1.5 text-xs rounded flex items-center gap-1 ${
-              cftEditMode 
-                ? 'bg-amber-500 text-white border border-amber-600' 
-                : 'bg-amber-100 border border-amber-400 text-amber-700 hover:bg-amber-200'
-            }`}
+            onClick={() => {
+              if (approvers.length <= 1) {
+                alert('최소 1개 행은 유지해야 합니다.');
+                return;
+              }
+              const updated = approvers.slice(0, -1);
+              setApprovers(updated);
+            }}
+            className="px-3 py-1.5 bg-red-100 border border-red-400 text-red-600 text-xs rounded hover:bg-red-200 flex items-center gap-1"
           >
-            {cftEditMode ? '✏️ 수정중...' : '✏️ 수정'}
+            − 행삭제
           </button>
           <button 
             onClick={handleAddRow}
-            disabled={!cftEditMode}
-            className="px-3 py-1.5 bg-green-100 border border-green-500 text-green-700 text-xs rounded hover:bg-green-200 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 bg-green-100 border border-green-500 text-green-700 text-xs rounded hover:bg-green-200 flex items-center gap-1"
           >
             + 행추가
           </button>
           <button 
-            onClick={handleCftSave}
+            onClick={() => {
+              localStorage.setItem('fmea-cft-data', JSON.stringify(approvers));
+              setCftSaveStatus('saved');
+              setTimeout(() => setCftSaveStatus('idle'), 3000);
+            }}
             className={`px-3 py-1.5 text-white text-xs font-semibold rounded flex items-center gap-1 ${
               cftSaveStatus === 'saved' 
                 ? 'bg-green-600 hover:bg-green-700' 
@@ -507,13 +462,6 @@ export default function PFMEARegisterPage() {
           >
             {cftSaveStatus === 'saved' ? '✅ 저장됨' : '💾 저장'}
           </button>
-          <button 
-            onClick={handleCftCancel}
-            disabled={!cftEditMode}
-            className="px-3 py-1.5 bg-red-100 border border-red-400 text-red-600 text-xs rounded hover:bg-red-200 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            ✕ 취소
-          </button>
         </div>
       </div>
 
@@ -521,38 +469,23 @@ export default function PFMEARegisterPage() {
         <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="bg-[#00587a] text-white">
-              {cftEditMode && (
-                <th className="border border-white px-2 py-2 text-center align-middle font-semibold w-10">삭제</th>
-              )}
-              <th className="border border-white px-3 py-2 text-center align-middle font-semibold w-24">구분</th>
+              <th className="border border-white px-3 py-2 text-center align-middle font-semibold w-28">CFT역할</th>
               <th className="border border-white px-3 py-2 text-center align-middle font-semibold w-24">성명</th>
-              <th className="border border-white px-3 py-2 text-center align-middle font-semibold w-28">부서</th>
+              <th className="border border-white px-3 py-2 text-center align-middle font-semibold w-24">부서</th>
               <th className="border border-white px-3 py-2 text-center align-middle font-semibold w-20">직급</th>
+              <th className="border border-white px-3 py-2 text-center align-middle font-semibold">담당업무</th>
+              <th className="border border-white px-3 py-2 text-center align-middle font-semibold w-36">Email</th>
               <th className="border border-white px-3 py-2 text-center align-middle font-semibold w-28">전화번호</th>
-              <th className="border border-white px-3 py-2 text-center align-middle font-semibold">Email</th>
               <th className="border border-white px-3 py-2 text-center align-middle font-semibold w-24">비고</th>
             </tr>
           </thead>
           <tbody>
             {approvers.map((row, index) => (
-              <tr 
-                key={row.id} 
-                className="hover:bg-blue-50 transition-colors"
-              >
-                {cftEditMode && (
-                  <td className="border border-gray-400 px-1 py-1 bg-red-50 text-center">
-                    <button 
-                      onClick={() => handleDeleteRow(index)}
-                      className="text-red-500 hover:text-red-700 text-sm"
-                      title="행 삭제"
-                    >
-                      🗑️
-                    </button>
-                  </td>
-                )}
-                <td className="border border-white px-1 py-1 bg-[#bbdefb]">
+              <tr key={row.id} className="hover:bg-blue-50 transition-colors">
+                <td className="border border-white px-1 py-1 bg-[#fff3e0]">
                   <input type="text" value={row.role} onChange={e => handleApproverChange(index, 'role', e.target.value)} 
-                    className="w-full h-7 px-2 text-xs text-center font-semibold border-0 bg-transparent focus:outline-none" />
+                    className="w-full h-7 px-2 text-xs text-center font-semibold border-0 bg-transparent focus:outline-none" 
+                    placeholder="CFT역할" />
                 </td>
                 <td className="border border-gray-400 px-1 py-1 bg-white">
                   <div className="flex items-center">
@@ -570,15 +503,19 @@ export default function PFMEARegisterPage() {
                     className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none text-gray-500" />
                 </td>
                 <td className="border border-gray-400 px-1 py-1 bg-white">
-                  <input type="text" placeholder="전화번호" value={row.phone} readOnly
-                    className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none text-gray-500" />
+                  <input type="text" placeholder="담당업무 입력" value={row.remark} onChange={e => handleApproverChange(index, 'remark', e.target.value)} 
+                    className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none text-gray-600" />
                 </td>
                 <td className="border border-gray-400 px-1 py-1 bg-white">
                   <input type="text" placeholder="Email" value={row.email} readOnly
                     className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none text-gray-500" />
                 </td>
+                <td className="border border-gray-400 px-1 py-1 bg-white">
+                  <input type="text" placeholder="전화번호" value={row.phone} readOnly
+                    className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none text-gray-500" />
+                </td>
                 <td className="border border-gray-400 px-1 py-1 bg-[#fff9c4]">
-                  <input type="text" placeholder="비고" value={row.remark} onChange={e => handleApproverChange(index, 'remark', e.target.value)} 
+                  <input type="text" placeholder="비고" 
                     className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none text-gray-500" />
                 </td>
               </tr>
@@ -587,9 +524,16 @@ export default function PFMEARegisterPage() {
         </table>
       </div>
 
+      {/* ===== CFT 접속 로그 섹션 ===== */}
+      <div className="flex items-center gap-2 mt-6 mb-2">
+        <span>📊</span>
+        <h2 className="text-sm font-bold text-gray-700">CFT 접속 로그</h2>
+      </div>
+      <CFTAccessLogTable accessLogs={accessLogs} maxRows={5} />
+
       {/* 하단 상태바 */}
       <div className="mt-3 px-4 py-2 bg-white rounded border border-gray-300 flex justify-between text-xs text-gray-500">
-        <span>총 {approvers.length}행</span>
+        <span>총 {approvers.length}명의 CFT 멤버 | 접속 로그 {accessLogs.length}건</span>
         <span>버전: FMEA Suite v3.0 | 사용자: FMEA Lead</span>
       </div>
 

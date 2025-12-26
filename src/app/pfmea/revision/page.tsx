@@ -8,7 +8,11 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
+import { BizInfoSelectModal } from '@/components/modals/BizInfoSelectModal';
+import { MeetingMinutesTable } from '@/components/tables/MeetingMinutesTable';
+import { BizInfoProject } from '@/types/bizinfo';
+import { MeetingMinute } from '@/types/project-revision';
 
 // =====================================================
 // 타입 정의
@@ -86,6 +90,21 @@ export default function RevisionManagementPage() {
   // 저장 상태
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved'>('idle');
 
+  // 회의록 상태
+  const [meetingMinutes, setMeetingMinutes] = useState<MeetingMinute[]>([]);
+
+  // 기초정보 모달
+  const [bizInfoModalOpen, setBizInfoModalOpen] = useState(false);
+
+  // 선택된 프로젝트 상세 정보
+  const [selectedInfo, setSelectedInfo] = useState({
+    customer: '',
+    factory: '',
+    projectName: '',
+    productName: '',
+    partNo: '',
+  });
+
   // 프로젝트 목록 로드
   useEffect(() => {
     try {
@@ -152,6 +171,25 @@ export default function RevisionManagementPage() {
       setRevisions(createDefaultRevisions(selectedProjectId));
     }
   }, [selectedProjectId]);
+
+  // 기초정보 선택 처리
+  const handleBizInfoSelect = (info: BizInfoProject) => {
+    setSelectedInfo({
+      customer: info.customerName,
+      factory: info.factory,
+      projectName: info.program || info.productName,
+      productName: info.productName,
+      partNo: info.partNo,
+    });
+    // 해당 고객의 프로젝트 필터링
+    const matched = projectList.find(p => 
+      p.project?.customer === info.customerName && 
+      p.project?.productName === info.productName
+    );
+    if (matched) {
+      setSelectedProjectId(matched.id);
+    }
+  };
 
   // 프로젝트 필터링
   const filteredProjects = projectList.filter(p =>
@@ -277,6 +315,100 @@ export default function RevisionManagementPage() {
     }
   };
 
+  // 회의록 관련 핸들러
+  const handleAddMeeting = () => {
+    const newMeeting: MeetingMinute = {
+      id: `MEETING-${Date.now()}`,
+      no: meetingMinutes.length + 1,
+      date: new Date().toISOString().split('T')[0],
+      projectName: selectedInfo.projectName || '',
+      content: '',
+      author: '',
+      authorPosition: '',
+    };
+    setMeetingMinutes([...meetingMinutes, newMeeting]);
+  };
+
+  const handleUpdateMeetingField = (id: string, field: keyof MeetingMinute, value: unknown) => {
+    setMeetingMinutes(prev => prev.map(m => 
+      m.id === id ? { ...m, [field]: value } : m
+    ));
+  };
+
+  const handleDeleteMeeting = (id: string) => {
+    if (!confirm('회의록을 삭제하시겠습니까?')) return;
+    setMeetingMinutes(prev => {
+      const filtered = prev.filter(m => m.id !== id);
+      // 번호 재정렬
+      const renumbered = filtered.map((m, index) => ({ ...m, no: index + 1 }));
+      // 최소 5개 유지
+      if (renumbered.length < 5) {
+        const additional = Array.from({ length: 5 - renumbered.length }, (_, i) => ({
+          id: `MEETING-${Date.now()}-${i}`,
+          no: renumbered.length + i + 1,
+          date: '',
+          projectName: '',
+          content: '',
+          author: '',
+          authorPosition: '',
+        }));
+        return [...renumbered, ...additional];
+      }
+      return renumbered;
+    });
+  };
+
+  // 기본 5개 빈 회의록 생성
+  const createDefaultMeetings = (): MeetingMinute[] => 
+    Array.from({ length: 5 }, (_, index) => ({
+      id: `MEETING-DEFAULT-${index}`,
+      no: index + 1,
+      date: '',
+      projectName: '',
+      content: '',
+      author: '',
+      authorPosition: '',
+    }));
+
+  // 회의록 로드/저장
+  useEffect(() => {
+    if (!selectedProjectId) {
+      setMeetingMinutes(createDefaultMeetings());
+      return;
+    }
+    try {
+      const saved = localStorage.getItem(`fmea-meetings-${selectedProjectId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // 최소 5개 행 보장
+        if (parsed.length < 5) {
+          const additional = Array.from({ length: 5 - parsed.length }, (_, i) => ({
+            id: `MEETING-${Date.now()}-${i}`,
+            no: parsed.length + i + 1,
+            date: '',
+            projectName: '',
+            content: '',
+            author: '',
+            authorPosition: '',
+          }));
+          setMeetingMinutes([...parsed, ...additional]);
+        } else {
+          setMeetingMinutes(parsed);
+        }
+      } else {
+        setMeetingMinutes(createDefaultMeetings());
+      }
+    } catch {
+      setMeetingMinutes(createDefaultMeetings());
+    }
+  }, [selectedProjectId]);
+
+  // 회의록 자동 저장
+  useEffect(() => {
+    if (!selectedProjectId || meetingMinutes.length === 0) return;
+    localStorage.setItem(`fmea-meetings-${selectedProjectId}`, JSON.stringify(meetingMinutes));
+  }, [meetingMinutes, selectedProjectId]);
+
   return (
     <div className="min-h-screen bg-[#f0f0f0] p-4 font-[Malgun_Gothic]">
       {/* 헤더 */}
@@ -285,41 +417,85 @@ export default function RevisionManagementPage() {
         <h1 className="text-base font-bold text-gray-800">FMEA 개정관리</h1>
       </div>
 
-      {/* 프로젝트 검색 */}
-      <div className="bg-white rounded-lg border border-gray-400 p-3 mb-4">
-        <div className="flex items-center gap-4">
-          <label className="text-xs font-semibold text-gray-700 whitespace-nowrap">
-            🔍 프로젝트 검색:
-          </label>
-          <input
-            type="text"
-            placeholder="프로젝트명, 고객사로 검색..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-          />
-        </div>
-      </div>
-
-      {/* 프로젝트 선택 */}
-      <div className="bg-white rounded-lg border border-gray-400 p-3 mb-4">
-        <div className="flex items-center gap-4">
-          <label className="text-xs font-semibold text-gray-700 whitespace-nowrap">
-            📌 프로젝트 선택:
-          </label>
-          <select
-            value={selectedProjectId}
-            onChange={(e) => setSelectedProjectId(e.target.value)}
-            className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded focus:outline-none focus:border-blue-500 min-w-[300px]"
-          >
-            <option value="">-- 선택 --</option>
-            {filteredProjects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.project?.projectName || p.id} ({p.project?.customer || '-'})
-              </option>
-            ))}
-          </select>
-        </div>
+      {/* 프로젝트 정보 테이블 - 5개 필드 (10영역) */}
+      <div className="rounded-lg overflow-hidden border border-gray-400 mb-4">
+        <table className="w-full border-collapse text-xs">
+          <thead>
+            <tr className="bg-[#00587a] text-white">
+              <th className="border border-white px-3 py-2 text-center font-semibold w-1/5">고객</th>
+              <th className="border border-white px-3 py-2 text-center font-semibold w-1/5">공장</th>
+              <th className="border border-white px-3 py-2 text-center font-semibold w-1/5">프로젝트</th>
+              <th className="border border-white px-3 py-2 text-center font-semibold w-1/5">품명</th>
+              <th className="border border-white px-3 py-2 text-center font-semibold w-1/5">품번</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="bg-white">
+              <td className="border border-gray-400 px-1 py-1">
+                <div className="flex items-center">
+                  <input
+                    type="text"
+                    value={selectedInfo.customer}
+                    readOnly
+                    placeholder="클릭하여 선택"
+                    className="flex-1 h-8 px-2 text-xs text-center border-0 bg-transparent focus:outline-none cursor-pointer"
+                    onClick={() => setBizInfoModalOpen(true)}
+                  />
+                  <button onClick={() => setBizInfoModalOpen(true)} className="p-1 text-blue-500 hover:text-blue-700">🔍</button>
+                </div>
+              </td>
+              <td className="border border-gray-400 px-1 py-1">
+                <input
+                  type="text"
+                  value={selectedInfo.factory}
+                  readOnly
+                  placeholder="-"
+                  className="w-full h-8 px-2 text-xs text-center border-0 bg-gray-50 focus:outline-none"
+                />
+              </td>
+              <td className="border border-gray-400 px-1 py-1">
+                <select
+                  value={selectedProjectId}
+                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                  className="w-full h-8 px-2 text-xs text-center border-0 bg-transparent focus:outline-none"
+                >
+                  <option value="">-- 선택 --</option>
+                  {filteredProjects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.project?.projectName || p.id}
+                    </option>
+                  ))}
+                </select>
+              </td>
+              <td className="border border-gray-400 px-1 py-1">
+                <div className="flex items-center">
+                  <input
+                    type="text"
+                    value={selectedInfo.productName}
+                    onChange={(e) => setSelectedInfo(prev => ({ ...prev, productName: e.target.value }))}
+                    placeholder="클릭 또는 입력"
+                    className="flex-1 h-8 px-2 text-xs text-center border-0 bg-transparent focus:outline-none cursor-pointer"
+                    onClick={() => setBizInfoModalOpen(true)}
+                  />
+                  <button onClick={() => setBizInfoModalOpen(true)} className="p-1 text-blue-500 hover:text-blue-700">🔍</button>
+                </div>
+              </td>
+              <td className="border border-gray-400 px-1 py-1">
+                <div className="flex items-center">
+                  <input
+                    type="text"
+                    value={selectedInfo.partNo}
+                    onChange={(e) => setSelectedInfo(prev => ({ ...prev, partNo: e.target.value }))}
+                    placeholder="클릭 또는 입력"
+                    className="flex-1 h-8 px-2 text-xs text-center border-0 bg-transparent focus:outline-none cursor-pointer"
+                    onClick={() => setBizInfoModalOpen(true)}
+                  />
+                  <button onClick={() => setBizInfoModalOpen(true)} className="p-1 text-blue-500 hover:text-blue-700">🔍</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       {/* 개정 이력 테이블 */}
@@ -330,23 +506,23 @@ export default function RevisionManagementPage() {
           <div className="flex gap-2">
             <button
               onClick={handleAddRevision}
-              className="px-3 py-1.5 bg-white text-[#00587a] text-xs font-semibold rounded hover:bg-gray-100"
+              className="px-3 py-1.5 bg-green-100 border border-green-500 text-green-700 text-xs rounded hover:bg-green-200"
             >
-              ➕ 개정 추가
+              + 추가
             </button>
             <button
               onClick={handleDeleteSelected}
               disabled={selectedRows.size === 0}
-              className="px-3 py-1.5 bg-red-500 text-white text-xs font-semibold rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1.5 bg-red-100 border border-red-400 text-red-600 text-xs rounded hover:bg-red-200 disabled:opacity-50"
             >
-              🗑️ 삭제 ({selectedRows.size})
+              − 삭제
             </button>
             <button
               onClick={handleSave}
               className={`px-3 py-1.5 text-xs font-semibold rounded ${
                 saveStatus === 'saved' 
                   ? 'bg-green-600 text-white hover:bg-green-700' 
-                  : 'bg-white text-[#00587a] hover:bg-gray-100'
+                  : 'bg-[#1976d2] text-white hover:bg-[#1565c0]'
               }`}
             >
               {saveStatus === 'saved' ? '✅ 저장됨' : '💾 저장'}
@@ -544,11 +720,29 @@ export default function RevisionManagementPage() {
         </div>
       </div>
 
+      {/* ===== 회의록 관리 섹션 ===== */}
+      <div className="mt-6">
+        <MeetingMinutesTable
+          meetingMinutes={meetingMinutes}
+          onUpdateField={handleUpdateMeetingField}
+          onDelete={handleDeleteMeeting}
+          onAdd={handleAddMeeting}
+          maxVisibleRows={5}
+        />
+      </div>
+
       {/* 하단 상태바 */}
       <div className="mt-3 px-4 py-2 bg-white rounded border border-gray-300 flex justify-between text-xs text-gray-500">
-        <span>총 {revisions.length}개의 개정 이력</span>
+        <span>총 {revisions.length}개의 개정 이력 | 회의록 {meetingMinutes.length}건</span>
         <span>버전: FMEA Suite v3.0 | 사용자: FMEA Lead</span>
       </div>
+
+      {/* 기초정보 선택 모달 */}
+      <BizInfoSelectModal
+        isOpen={bizInfoModalOpen}
+        onSelect={handleBizInfoSelect}
+        onClose={() => setBizInfoModalOpen(false)}
+      />
     </div>
   );
 }
