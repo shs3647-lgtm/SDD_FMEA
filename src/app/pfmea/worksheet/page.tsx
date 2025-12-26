@@ -397,10 +397,9 @@ export default function FMEAWorksheetPage() {
       </div>
 
       {/* 메인 레이아웃: 좌측 워크시트 + 우측 트리 */}
-      <div className="flex-1 flex overflow-hidden">
-        
+      <div className="flex-1 flex overflow-hidden" style={{ gap: 0 }}>
         {/* ========== 좌측: 워크시트 ========== */}
-        <main className="flex-1 bg-white overflow-auto">
+        <main className="flex-1 bg-white overflow-auto min-w-0" style={{ marginRight: 0, paddingRight: 0 }}>
           {/* 탭 + 레벨 메뉴 - 컴팩트 */}
           <div className="flex-shrink-0 bg-white px-2 py-1" style={{ borderBottom: `2px solid ${COLORS.blue}` }}>
             {/* 탭 + 레벨 한 줄로 */}
@@ -448,7 +447,7 @@ export default function FMEAWorksheetPage() {
           </div>
 
           {/* 워크시트 영역 - 세로 스크롤 */}
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden" style={{ marginRight: 0, paddingRight: 0 }}>
             {/* 테이블 제목 - 고정 */}
             <div 
               className="text-center font-black py-1 text-sm flex-shrink-0"
@@ -717,11 +716,14 @@ export default function FMEAWorksheetPage() {
           </div>
         </main>
 
+        {/* ========== 구분선 (굵은 선) ========== */}
+        <div className="flex-shrink-0" style={{ width: '4px', background: '#00587a', marginLeft: 0 }} />
+
         {/* ========== 우측: 트리 (L1 틀고정) ========== */}
-        <aside className="w-80 bg-white flex flex-col" style={{ borderLeft: '1px solid #d7e1ef' }}>
+        <aside className="flex flex-col flex-shrink-0" style={{ width: '420px', marginLeft: 0, paddingLeft: 0, background: '#fff' }}>
           {/* L1: 완제품공정명 - 틀 고정 */}
           <div className="flex-shrink-0 border-b" style={{ background: '#e3f2fd' }}>
-            <div className="flex items-center gap-2 px-3 py-2">
+            <div className="flex items-center gap-1 px-2 py-1">
               <span className="text-blue-600 text-sm">📦</span>
               <input
                 type="text"

@@ -287,7 +287,7 @@ export function Sidebar() {
         'flex flex-col',
         'transition-all duration-300 ease-in-out',
         'shadow-xl',
-        isHovered ? 'w-[200px]' : 'w-12'
+        isHovered ? 'w-[200px]' : 'w-14'
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => {
@@ -304,7 +304,7 @@ export function Sidebar() {
       </div>
 
       {/* ======== 메인 메뉴 ======== */}
-      <nav className="flex-1 overflow-y-auto py-3 scrollbar-thin scrollbar-thumb-white/20">
+      <nav className="flex-1 overflow-y-auto py-3" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {renderMenuItems(menuItems)}
       </nav>
 
