@@ -82,10 +82,11 @@ const ColorIcons = {
   ),
 };
 
-// 공통 하위 메뉴 생성 함수 (CFT는 등록 화면에 통합)
+// 공통 하위 메뉴 생성 함수 (4개: 등록, 리스트, 작성화면, 개정관리)
 const createSubItems = (basePath: string) => [
   { label: '등록', href: `${basePath}/register` },
   { label: '리스트', href: `${basePath}/list` },
+  { label: '작성화면', href: `${basePath}/worksheet` },
   { label: '개정관리', href: `${basePath}/revision` },
 ];
 
@@ -205,7 +206,7 @@ export function Sidebar() {
       const isExpanded = expandedItem === item.id && isHovered;
 
       return (
-        <div key={item.id} className="mb-1">
+        <div key={item.id} className="mb-0.5">
           <Link
             href={hasSubItems && isHovered ? '#' : item.href}
             onClick={(e) => {
@@ -215,21 +216,21 @@ export function Sidebar() {
               }
             }}
             className={cn(
-              'flex items-center gap-3 px-2.5 py-2.5 mx-1 rounded-lg',
+              'flex items-center gap-2 px-2 py-1.5 mx-0.5 rounded',
               'transition-all duration-200',
               active && 'bg-white/10 shadow-lg',
               !active && 'hover:bg-white/5'
             )}
           >
-            {/* 컬러 아이콘 */}
-            <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center">
-              <Icon className="w-6 h-6" />
+            {/* 컬러 아이콘 - 컴팩트 */}
+            <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center">
+              <Icon className="w-5 h-5" />
             </div>
             
-            {/* 레이블 */}
+            {/* 레이블 - 컴팩트 */}
             <span
               className={cn(
-                'whitespace-nowrap text-sm font-medium text-white/90',
+                'whitespace-nowrap text-xs font-medium text-white/90',
                 'transition-all duration-200',
                 isHovered ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'
               )}
@@ -241,7 +242,7 @@ export function Sidebar() {
             {hasSubItems && isHovered && (
               <svg 
                 className={cn(
-                  'ml-auto w-4 h-4 text-white/60 transition-transform duration-200',
+                  'ml-auto w-3 h-3 text-white/60 transition-transform duration-200',
                   isExpanded && 'rotate-90'
                 )}
                 fill="none" 
@@ -253,15 +254,15 @@ export function Sidebar() {
             )}
           </Link>
 
-          {/* 서브메뉴 */}
+          {/* 서브메뉴 - 컴팩트 */}
           {hasSubItems && isExpanded && (
-            <div className="ml-10 mt-1 space-y-0.5">
+            <div className="ml-7 mt-0.5 space-y-0">
               {item.subItems?.map((subItem) => (
                 <Link
                   key={subItem.href}
                   href={subItem.href}
                   className={cn(
-                    'block px-3 py-1.5 text-xs rounded-md',
+                    'block px-2 py-1 text-[10px] rounded',
                     'transition-colors duration-200',
                     isActive(subItem.href) 
                       ? 'text-cyan-300 bg-cyan-500/20' 
@@ -287,7 +288,7 @@ export function Sidebar() {
         'flex flex-col',
         'transition-all duration-300 ease-in-out',
         'shadow-xl',
-        isHovered ? 'w-[200px]' : 'w-14'
+        isHovered ? 'w-[180px]' : 'w-12'
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => {
@@ -295,24 +296,24 @@ export function Sidebar() {
         setExpandedItem(null);
       }}
     >
-      {/* ======== 회사 로고 영역 (클릭하여 변경 가능) ======== */}
-      <div className="flex items-center justify-center border-b border-white/10 py-3">
+      {/* ======== 회사 로고 영역 - 컴팩트 ======== */}
+      <div className="flex items-center justify-center border-b border-white/10 py-2">
         <CompanyLogo 
-          width={isHovered ? 160 : 40} 
-          height={isHovered ? 50 : 40} 
+          width={isHovered ? 140 : 36} 
+          height={isHovered ? 40 : 36} 
         />
       </div>
 
-      {/* ======== 메인 메뉴 ======== */}
-      <nav className="flex-1 overflow-y-auto py-3" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      {/* ======== 메인 메뉴 - 컴팩트 ======== */}
+      <nav className="flex-1 overflow-y-auto py-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {renderMenuItems(menuItems)}
       </nav>
 
       {/* ======== 구분선 ======== */}
-      <div className="mx-3 border-t border-white/10" />
+      <div className="mx-2 border-t border-white/10" />
 
-      {/* ======== 하단 메뉴 ======== */}
-      <nav className="py-3">
+      {/* ======== 하단 메뉴 - 컴팩트 ======== */}
+      <nav className="py-1">
         {renderMenuItems(bottomMenuItems)}
       </nav>
     </aside>

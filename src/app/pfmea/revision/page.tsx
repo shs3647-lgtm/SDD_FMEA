@@ -53,7 +53,7 @@ interface RevisionRecord {
 // 초기 개정 이력 생성
 // =====================================================
 const createDefaultRevisions = (projectId: string): RevisionRecord[] => 
-  Array.from({ length: 5 }, (_, index) => ({
+  Array.from({ length: 10 }, (_, index) => ({
     id: `REV-${projectId}-${index}`,
     projectId: projectId,
     revisionNumber: `Rev.${index.toString().padStart(2, '0')}`,

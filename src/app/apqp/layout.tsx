@@ -1,13 +1,13 @@
 /**
  * @file layout.tsx
- * @description PFMEA 모듈 레이아웃
+ * @description APQP 모듈 레이아웃
  * @author AI Assistant
- * @created 2025-12-26
+ * @created 2025-12-27
  */
 
 import { Sidebar, StatusBar } from '@/components/layout';
 
-export default function PFMEALayout({
+export default function APQPLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -40,6 +40,4 @@ export default function PFMEALayout({
     </div>
   );
 }
-
-
 

@@ -1,9 +1,9 @@
 /**
  * @file page.tsx
  * @description FMEA 리스트 페이지 - 등록된 FMEA 프로젝트 조회
- * @version 1.0.0
+ * @version 2.0.0
  * @created 2025-12-26
- * @ref C:\01_Next_FMEA\app\fmea\components\list\FMEAListTable.tsx
+ * @updated 2025-12-27
  */
 
 'use client';
@@ -25,27 +25,71 @@ interface FMEAProject {
     startDate: string;
     endDate: string;
   };
+  fmeaInfo?: {
+    subject?: string;
+    fmeaStartDate?: string;
+    fmeaRevisionDate?: string;
+    modelYear?: string;
+    designResponsibility?: string;
+    fmeaResponsibleName?: string;
+  };
   createdAt: string;
   status?: string;
+  step?: number;  // 단계 (1~7)
+  revisionNo?: string;  // 개정번호
 }
 
 // =====================================================
-// 테이블 컬럼 정의
+// 테이블 컬럼 정의 (수정됨)
 // =====================================================
 const COLUMN_HEADERS = [
   'No',
   'FMEA ID',
   '프로젝트명',
-  '품명',
-  '품번',
+  'FMEA명',
   '고객사',
-  '담당부서',
+  '모델명',
+  '공정책임',
   '담당자',
   '시작일자',
-  '종료일자',
-  '작성일자',
-  '상태',
+  '개정일자',
+  '개정번호',
+  '단계',
 ];
+
+// FMEA ID 포맷 생성 (PFM25-001)
+function formatFmeaId(id: string, index: number): string {
+  // 기존 ID가 PFM 형식이면 그대로 반환
+  if (id.startsWith('PFM')) return id;
+  
+  // 년도 추출 (현재 년도 기준)
+  const year = new Date().getFullYear().toString().slice(-2);
+  const seq = (index + 1).toString().padStart(3, '0');
+  return `PFM${year}-${seq}`;
+}
+
+// 단계 배지 렌더링
+function renderStepBadge(step?: number): React.ReactNode {
+  const stepNum = step || 1;
+  
+  const stepColors: Record<number, { bg: string; text: string }> = {
+    1: { bg: 'bg-gray-200', text: 'text-gray-700' },
+    2: { bg: 'bg-blue-200', text: 'text-blue-700' },
+    3: { bg: 'bg-cyan-200', text: 'text-cyan-700' },
+    4: { bg: 'bg-amber-200', text: 'text-amber-700' },
+    5: { bg: 'bg-orange-200', text: 'text-orange-700' },
+    6: { bg: 'bg-green-200', text: 'text-green-700' },
+    7: { bg: 'bg-purple-200', text: 'text-purple-700' },
+  };
+
+  const { bg, text } = stepColors[stepNum] || stepColors[1];
+
+  return (
+    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${bg} ${text}`}>
+      {stepNum}단계
+    </span>
+  );
+}
 
 // =====================================================
 // 메인 컴포넌트
@@ -58,20 +102,24 @@ export default function FMEAListPage() {
   // 데이터 로드
   const loadData = useCallback(() => {
     try {
-      const stored = localStorage.getItem('fmea-projects');
-      if (!stored) {
-        setProjects([]);
-        return;
-      }
+      // PFMEA 프로젝트 로드
+      const storedPfmea = localStorage.getItem('pfmea-projects');
+      const pfmeaProjects = storedPfmea ? JSON.parse(storedPfmea) : [];
+      
+      // 기존 FMEA 프로젝트 로드 (하위 호환)
+      const storedFmea = localStorage.getItem('fmea-projects');
+      const fmeaProjects = storedFmea ? JSON.parse(storedFmea) : [];
 
-      const parsed = JSON.parse(stored);
-      if (!Array.isArray(parsed)) {
+      // 병합
+      const allProjects = [...pfmeaProjects, ...fmeaProjects];
+      
+      if (!Array.isArray(allProjects) || allProjects.length === 0) {
         setProjects([]);
         return;
       }
 
       // 최신순 정렬
-      const sorted = parsed.sort((a: FMEAProject, b: FMEAProject) => 
+      const sorted = allProjects.sort((a: FMEAProject, b: FMEAProject) => 
         (b.createdAt || '').localeCompare(a.createdAt || '')
       );
 
@@ -104,8 +152,8 @@ export default function FMEAListPage() {
       p.id.toLowerCase().includes(query) ||
       p.project?.projectName?.toLowerCase().includes(query) ||
       p.project?.productName?.toLowerCase().includes(query) ||
-      p.project?.customer?.toLowerCase().includes(query) ||
-      p.project?.partNo?.toLowerCase().includes(query)
+      p.fmeaInfo?.subject?.toLowerCase().includes(query) ||
+      p.project?.customer?.toLowerCase().includes(query)
     );
   });
 
@@ -141,27 +189,10 @@ export default function FMEAListPage() {
     }
 
     const remaining = projects.filter(p => !selectedRows.has(p.id));
-    localStorage.setItem('fmea-projects', JSON.stringify(remaining));
+    localStorage.setItem('pfmea-projects', JSON.stringify(remaining.filter(p => p.id.includes('PFMEA'))));
+    localStorage.setItem('fmea-projects', JSON.stringify(remaining.filter(p => !p.id.includes('PFMEA'))));
     setProjects(remaining);
     setSelectedRows(new Set());
-  };
-
-  // 상태 배지 렌더링
-  const renderStatusBadge = (status?: string) => {
-    const statusMap: Record<string, { bg: string; text: string; label: string }> = {
-      draft: { bg: 'bg-gray-200', text: 'text-gray-700', label: '작성중' },
-      review: { bg: 'bg-amber-200', text: 'text-amber-700', label: '검토중' },
-      approved: { bg: 'bg-green-200', text: 'text-green-700', label: '승인' },
-      completed: { bg: 'bg-blue-200', text: 'text-blue-700', label: '완료' },
-    };
-
-    const { bg, text, label } = statusMap[status || 'draft'] || statusMap.draft;
-
-    return (
-      <span className={`px-2 py-0.5 rounded text-xs font-semibold ${bg} ${text}`}>
-        {label}
-      </span>
-    );
   };
 
   return (
@@ -179,7 +210,7 @@ export default function FMEAListPage() {
         <div className="flex-1 max-w-md">
           <input
             type="text"
-            placeholder="🔍 프로젝트명, 품명, 품번, 고객사로 검색..."
+            placeholder="🔍 프로젝트명, FMEA명, 고객사로 검색..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full px-3 py-2 text-xs border border-gray-400 rounded bg-white focus:outline-none focus:border-blue-500"
@@ -214,70 +245,82 @@ export default function FMEAListPage() {
       <div className="rounded-lg overflow-hidden border border-gray-400 bg-white">
         <table className="w-full border-collapse text-xs">
           <thead>
-            <tr className="bg-[#00587a] text-white">
-              <th className="border border-white px-2 py-2 text-center align-middle w-10">
+            <tr className="bg-[#00587a] text-white" style={{ height: '28px' }}>
+              <th className="border border-white px-1 py-1 text-center align-middle w-8">
                 <input
                   type="checkbox"
                   checked={filteredProjects.length > 0 && selectedRows.size === filteredProjects.length}
                   onChange={toggleAllRows}
-                  className="w-4 h-4"
+                  className="w-3.5 h-3.5"
                 />
               </th>
               {COLUMN_HEADERS.map((header, idx) => (
-                <th key={idx} className="border border-white px-3 py-2 text-center align-middle font-semibold whitespace-nowrap">
+                <th key={idx} className="border border-white px-2 py-1 text-center align-middle font-semibold whitespace-nowrap text-xs">
                   {header}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {filteredProjects.length === 0 ? (
-              <tr>
-                <td colSpan={13} className="px-4 py-10 text-center text-gray-500">
-                  등록된 FMEA 프로젝트가 없습니다.
+            {/* 데이터 행 */}
+            {filteredProjects.map((p, index) => (
+              <tr
+                key={p.id}
+                className={`hover:bg-blue-50 cursor-pointer transition-colors ${
+                  index % 2 === 0 ? 'bg-[#e3f2fd]' : 'bg-white'
+                } ${selectedRows.has(p.id) ? 'bg-blue-100' : ''}`}
+                style={{ height: '28px' }}
+                onClick={() => toggleRow(p.id)}
+              >
+                <td className="border border-gray-400 px-1 py-0.5 text-center align-middle">
+                  <input
+                    type="checkbox"
+                    checked={selectedRows.has(p.id)}
+                    onChange={() => toggleRow(p.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-3.5 h-3.5"
+                  />
+                </td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle font-bold text-[#00587a]">{index + 1}</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle font-semibold text-blue-600">
+                  <a href={`/pfmea/worksheet?id=${p.id}`} className="hover:underline">
+                    {formatFmeaId(p.id, index)}
+                  </a>
+                </td>
+                <td className="border border-gray-400 px-2 py-1 text-left align-middle">{p.project?.projectName || '-'}</td>
+                <td className="border border-gray-400 px-2 py-1 text-left align-middle">{p.fmeaInfo?.subject || p.project?.productName || '-'}</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle">{p.project?.customer || '-'}</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle">{p.fmeaInfo?.modelYear || '-'}</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle">{p.fmeaInfo?.designResponsibility || p.project?.department || '-'}</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle">{p.fmeaInfo?.fmeaResponsibleName || p.project?.leader || '-'}</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle">{p.fmeaInfo?.fmeaStartDate || p.project?.startDate || '-'}</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle">{p.fmeaInfo?.fmeaRevisionDate || '-'}</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle">{p.revisionNo || 'Rev.00'}</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle">
+                  {renderStepBadge(p.step)}
                 </td>
               </tr>
-            ) : (
-              filteredProjects.map((p, index) => (
-                <tr
-                  key={p.id}
-                  className={`hover:bg-blue-50 cursor-pointer transition-colors ${
-                    index % 2 === 0 ? 'bg-white' : 'bg-[#e0f2fb]'
-                  } ${selectedRows.has(p.id) ? 'bg-blue-100' : ''}`}
-                  onClick={() => toggleRow(p.id)}
-                >
-                  <td className="border border-gray-400 px-2 py-2 text-center align-middle">
-                    <input
-                      type="checkbox"
-                      checked={selectedRows.has(p.id)}
-                      onChange={() => toggleRow(p.id)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-4 h-4"
-                    />
-                  </td>
-                  <td className="border border-gray-400 px-3 py-2 text-center align-middle">{index + 1}</td>
-                  <td className="border border-gray-400 px-3 py-2 text-center align-middle font-semibold text-blue-600">
-                    <a href={`/pfmea/worksheet?id=${p.id}`} className="hover:underline">
-                      {p.id}
-                    </a>
-                  </td>
-                  <td className="border border-gray-400 px-3 py-2 text-left align-middle">{p.project?.projectName || '-'}</td>
-                  <td className="border border-gray-400 px-3 py-2 text-center align-middle">{p.project?.productName || '-'}</td>
-                  <td className="border border-gray-400 px-3 py-2 text-center align-middle">{p.project?.partNo || '-'}</td>
-                  <td className="border border-gray-400 px-3 py-2 text-center align-middle">{p.project?.customer || '-'}</td>
-                  <td className="border border-gray-400 px-3 py-2 text-center align-middle">{p.project?.department || '-'}</td>
-                  <td className="border border-gray-400 px-3 py-2 text-center align-middle">{p.project?.leader || '-'}</td>
-                  <td className="border border-gray-400 px-3 py-2 text-center align-middle">{p.project?.startDate || '-'}</td>
-                  <td className="border border-gray-400 px-3 py-2 text-center align-middle">{p.project?.endDate || '-'}</td>
-                  <td className="border border-gray-400 px-3 py-2 text-center align-middle">
-                    {p.createdAt ? p.createdAt.split('T')[0] : '-'}
-                  </td>
-                  <td className="border border-gray-400 px-3 py-2 text-center align-middle">
-                    {renderStatusBadge(p.status)}
-                  </td>
-                </tr>
-              ))
-            )}
+            ))}
+            {/* 빈 행 */}
+            {Array.from({ length: Math.max(0, 10 - filteredProjects.length) }).map((_, idx) => (
+              <tr key={`empty-${idx}`} className={`${(filteredProjects.length + idx) % 2 === 0 ? 'bg-[#e3f2fd]' : 'bg-white'}`} style={{ height: '28px' }}>
+                <td className="border border-gray-400 px-1 py-0.5 text-center align-middle">
+                  <input type="checkbox" disabled className="w-3.5 h-3.5 opacity-30" />
+                </td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">{filteredProjects.length + idx + 1}</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -290,4 +333,3 @@ export default function FMEAListPage() {
     </div>
   );
 }
-
