@@ -37,14 +37,20 @@ import { ImportRowData, GeneratedRelation, CommonItem } from './types';
 import { importColumns, sampleImportData, generateRelations, calculateStats, commonItems as defaultCommonItems, addCommonItemsToRelation } from './mock-data';
 import CommonItemManager from './CommonItemManager';
 import { downloadEmptyTemplate, downloadSampleTemplate } from './excel-template';
+import { parseMultiSheetExcel, ParseResult, getParseStats, ProcessRelation, ProductRelation } from './excel-parser';
 
 export default function PFMEAImportPage() {
   // 상태 관리
   const [fileName, setFileName] = useState<string>('');
   const [importData, setImportData] = useState<ImportRowData[]>(sampleImportData);
-  const [selectedProcessNo, setSelectedProcessNo] = useState<string>('80');
+  const [selectedProcessNo, setSelectedProcessNo] = useState<string>('');
   const [isImporting, setIsImporting] = useState(false);
   const [importComplete, setImportComplete] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
+
+  // 다중 시트 파싱 결과
+  const [parseResult, setParseResult] = useState<ParseResult | null>(null);
+  const [selectedProcess, setSelectedProcess] = useState<ProcessRelation | null>(null);
 
   // 공통 기초정보 관리 (추가/수정/삭제 가능)
   const [commonItemList, setCommonItemList] = useState<CommonItem[]>(defaultCommonItems);
@@ -54,13 +60,36 @@ export default function PFMEAImportPage() {
   const baseRelation = relations.find(r => r.processNo === selectedProcessNo);
   const selectedRelation = baseRelation && includeCommon ? addCommonItemsToRelation(baseRelation, commonItemList) : baseRelation;
 
-  // 파일 선택
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 파일 선택 및 파싱
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setFileName(file.name);
       setImportComplete(false);
+      setIsParsing(true);
+
+      try {
+        const result = await parseMultiSheetExcel(file);
+        setParseResult(result);
+        
+        // 첫 번째 공정 선택
+        if (result.processes.length > 0) {
+          setSelectedProcessNo(result.processes[0].processNo);
+          setSelectedProcess(result.processes[0]);
+        }
+      } catch (error) {
+        console.error('파싱 오류:', error);
+      } finally {
+        setIsParsing(false);
+      }
     }
+  };
+
+  // 공정 선택 변경
+  const handleProcessChange = (processNo: string) => {
+    setSelectedProcessNo(processNo);
+    const process = parseResult?.processes.find(p => p.processNo === processNo);
+    setSelectedProcess(process || null);
   };
 
   // Import 실행 (시뮬레이션)
@@ -279,6 +308,28 @@ export default function PFMEAImportPage() {
 
         {/* 우측: 자동 생성된 관계형 데이터 확인 */}
         <div className="space-y-5">
+          {/* 파싱 결과 요약 */}
+          {parseResult && (
+            <div className="bg-white rounded-lg p-5" style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+              <h2 className="text-lg font-bold text-[#00587a] mb-4">
+                시트별 파싱 결과
+              </h2>
+              <div className="grid grid-cols-4 gap-2 text-xs">
+                {parseResult.sheetSummary.filter(s => s.rowCount > 0).map((sheet) => (
+                  <div key={sheet.name} className="px-2 py-1 rounded bg-[#e0f2fb] text-center">
+                    <span className="font-bold text-[#00587a]">{sheet.name}</span>
+                    <span className="text-gray-600 ml-1">({sheet.rowCount})</span>
+                  </div>
+                ))}
+              </div>
+              {parseResult.errors.length > 0 && (
+                <div className="mt-2 p-2 bg-red-50 border border-red-300 rounded text-xs text-red-600">
+                  {parseResult.errors.join(', ')}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* 공정 선택 - 표준 디자인 */}
           <div className="bg-white rounded-lg p-5" style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
             <h2 className="text-lg font-bold text-[#00587a] mb-4">
@@ -290,12 +341,16 @@ export default function PFMEAImportPage() {
                 <tr>
                   <td className="bg-[#00587a] text-white font-bold px-3 py-2 text-center w-24" style={{ border: '1px solid #999' }}>공정번호</td>
                   <td className="bg-white px-3 py-2" style={{ border: '1px solid #999' }}>
-                    <Select value={selectedProcessNo} onValueChange={setSelectedProcessNo}>
+                    <Select value={selectedProcessNo} onValueChange={handleProcessChange}>
                       <SelectTrigger className="w-full border-0 shadow-none">
-                        <SelectValue />
+                        <SelectValue placeholder="공정을 선택하세요" />
                       </SelectTrigger>
                       <SelectContent>
-                        {uniqueProcesses.map((p) => (
+                        {parseResult?.processes.map((p) => (
+                          <SelectItem key={p.processNo} value={p.processNo}>
+                            {p.processNo} - {p.processName}
+                          </SelectItem>
+                        )) || uniqueProcesses.map((p) => (
                           <SelectItem key={p.no} value={p.no}>
                             {p.no} - {p.name}
                           </SelectItem>
@@ -308,147 +363,173 @@ export default function PFMEAImportPage() {
             </table>
           </div>
 
-          {/* 자동 생성된 3레벨 관계 - 표준 테이블 디자인 */}
-          {selectedRelation && (
+          {/* 다중 시트 파싱 결과 표시 */}
+          {selectedProcess && (
             <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-              {/* L1 테이블 */}
+              {/* A 레벨: 공정 */}
               <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
-                    <th colSpan={2} className="bg-red-500 text-white font-bold px-3 py-2 text-left" style={{ border: '1px solid #999' }}>
-                      L1 완제품 레벨 (자동 추출)
+                    <th colSpan={2} className="bg-blue-500 text-white font-bold px-3 py-2 text-left" style={{ border: '1px solid #999' }}>
+                      A.공정 레벨 ({selectedProcess.processNo} - {selectedProcess.processName})
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td className="bg-[#00587a] text-white font-bold px-3 py-2 w-28" style={{ border: '1px solid #999' }}>완제품기능</td>
-                    <td className="bg-white px-3 py-2 text-black" style={{ border: '1px solid #999' }}>{selectedRelation.l1.productFunction}</td>
-                  </tr>
-                  <tr>
-                    <td className="bg-[#00587a] text-white font-bold px-3 py-2" style={{ border: '1px solid #999' }}>요구사항</td>
-                    <td className="bg-[#e0f2fb] px-3 py-2 text-black" style={{ border: '1px solid #999' }}>{selectedRelation.l1.requirement}</td>
-                  </tr>
-                  <tr>
-                    <td className="bg-[#00587a] text-white font-bold px-3 py-2" style={{ border: '1px solid #999' }}>고장영향(FE)</td>
-                    <td className="bg-white px-3 py-2 text-black" style={{ border: '1px solid #999' }}>{selectedRelation.l1.failureEffect}</td>
-                  </tr>
+                  {selectedProcess.processDesc.length > 0 && (
+                    <tr>
+                      <td className="bg-[#00587a] text-white font-bold px-3 py-2 w-28" style={{ border: '1px solid #999' }}>A3.공정기능</td>
+                      <td className="bg-white px-3 py-2 text-black" style={{ border: '1px solid #999' }}>
+                        {selectedProcess.processDesc.join(', ')}
+                      </td>
+                    </tr>
+                  )}
+                  {selectedProcess.productChars.length > 0 && (
+                    <tr>
+                      <td className="bg-[#00587a] text-white font-bold px-3 py-2" style={{ border: '1px solid #999' }}>A4.제품특성</td>
+                      <td className="bg-[#e0f2fb] px-3 py-2" style={{ border: '1px solid #999' }}>
+                        <div className="flex flex-wrap gap-1">
+                          {selectedProcess.productChars.map((item, i) => (
+                            <Badge key={i} variant="outline" className="text-xs border-blue-500 text-blue-600">{item}</Badge>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  {selectedProcess.failureModes.length > 0 && (
+                    <tr>
+                      <td className="bg-[#00587a] text-white font-bold px-3 py-2" style={{ border: '1px solid #999' }}>A5.고장형태</td>
+                      <td className="bg-white px-3 py-2" style={{ border: '1px solid #999' }}>
+                        <div className="flex flex-wrap gap-1">
+                          {selectedProcess.failureModes.map((item, i) => (
+                            <Badge key={i} className="text-xs bg-red-500 text-white">{item}</Badge>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  {selectedProcess.detectionCtrls.length > 0 && (
+                    <tr>
+                      <td className="bg-[#00587a] text-white font-bold px-3 py-2" style={{ border: '1px solid #999' }}>A6.검출관리</td>
+                      <td className="bg-[#e0f2fb] px-3 py-2" style={{ border: '1px solid #999' }}>
+                        <div className="flex flex-wrap gap-1">
+                          {selectedProcess.detectionCtrls.map((item, i) => (
+                            <Badge key={i} variant="outline" className="text-xs border-blue-500 text-blue-600">{item}</Badge>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
 
-              {/* L2 테이블 */}
-              <table className="w-full text-sm mt-0" style={{ borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th colSpan={2} className="bg-yellow-500 text-white font-bold px-3 py-2 text-left" style={{ border: '1px solid #999' }}>
-                      L2 공정 레벨 ({selectedRelation.processNo}-{selectedRelation.processName})
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="bg-[#00587a] text-white font-bold px-3 py-2 w-28" style={{ border: '1px solid #999' }}>제품특성</td>
-                    <td className="bg-white px-3 py-2" style={{ border: '1px solid #999' }}>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedRelation.l2.productChars.map((pc, i) => (
-                          <Badge key={i} variant="outline" className="text-xs border-[#00587a] text-[#00587a]">{pc}</Badge>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="bg-[#00587a] text-white font-bold px-3 py-2" style={{ border: '1px solid #999' }}>고장형태(FM)</td>
-                    <td className="bg-[#e0f2fb] px-3 py-2" style={{ border: '1px solid #999' }}>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedRelation.l2.failureModes.map((fm, i) => (
-                          <Badge key={i} className="text-xs bg-red-500 text-white">{fm}</Badge>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="bg-[#00587a] text-white font-bold px-3 py-2" style={{ border: '1px solid #999' }}>검출관리(DC)</td>
-                    <td className="bg-white px-3 py-2" style={{ border: '1px solid #999' }}>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedRelation.l2.detectionCtrls.map((dc, i) => (
-                          <Badge key={i} variant="outline" className="text-xs border-blue-500 text-blue-600">{dc}</Badge>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="bg-[#00587a] text-white font-bold px-3 py-2" style={{ border: '1px solid #999' }}>검사장비(EP)</td>
-                    <td className="bg-[#e0f2fb] px-3 py-2" style={{ border: '1px solid #999' }}>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedRelation.l2.inspectionEquips.map((ep, i) => (
-                          <Badge key={i} variant="outline" className="text-xs border-gray-500 text-gray-600">{ep}</Badge>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-
-              {/* L3 테이블 */}
+              {/* B 레벨: 작업요소 */}
               <table className="w-full text-sm mt-0" style={{ borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
                     <th colSpan={2} className="bg-green-500 text-white font-bold px-3 py-2 text-left" style={{ border: '1px solid #999' }}>
-                      L3 작업요소 레벨 (자동 추출)
+                      B.작업요소 레벨
                     </th>
                   </tr>
                 </thead>
                 <tbody>
+                  {selectedProcess.workElements.length > 0 && (
+                    <tr>
+                      <td className="bg-[#00587a] text-white font-bold px-3 py-2 w-28" style={{ border: '1px solid #999' }}>B1.작업요소</td>
+                      <td className="bg-white px-3 py-2" style={{ border: '1px solid #999' }}>
+                        <div className="flex flex-wrap gap-1">
+                          {selectedProcess.workElements.map((item, i) => (
+                            <Badge key={i} variant="outline" className="text-xs border-green-500 text-green-600">{item}</Badge>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  {selectedProcess.elementFuncs.length > 0 && (
+                    <tr>
+                      <td className="bg-[#00587a] text-white font-bold px-3 py-2" style={{ border: '1px solid #999' }}>B2.요소기능</td>
+                      <td className="bg-[#e0f2fb] px-3 py-2" style={{ border: '1px solid #999' }}>
+                        <div className="flex flex-wrap gap-1">
+                          {selectedProcess.elementFuncs.map((item, i) => (
+                            <Badge key={i} variant="outline" className="text-xs border-green-500 text-green-600">{item}</Badge>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  {selectedProcess.processChars.length > 0 && (
+                    <tr>
+                      <td className="bg-[#00587a] text-white font-bold px-3 py-2" style={{ border: '1px solid #999' }}>B3.공정특성</td>
+                      <td className="bg-white px-3 py-2" style={{ border: '1px solid #999' }}>
+                        <div className="flex flex-wrap gap-1">
+                          {selectedProcess.processChars.map((item, i) => (
+                            <Badge key={i} variant="outline" className="text-xs border-green-500 text-green-600">{item}</Badge>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  {selectedProcess.failureCauses.length > 0 && (
+                    <tr>
+                      <td className="bg-[#00587a] text-white font-bold px-3 py-2" style={{ border: '1px solid #999' }}>B4.고장원인</td>
+                      <td className="bg-[#e0f2fb] px-3 py-2" style={{ border: '1px solid #999' }}>
+                        <div className="flex flex-wrap gap-1">
+                          {selectedProcess.failureCauses.map((item, i) => (
+                            <Badge key={i} className="text-xs bg-orange-500 text-white">{item}</Badge>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  {selectedProcess.preventionCtrls.length > 0 && (
+                    <tr>
+                      <td className="bg-[#00587a] text-white font-bold px-3 py-2" style={{ border: '1px solid #999' }}>B5.예방관리</td>
+                      <td className="bg-white px-3 py-2" style={{ border: '1px solid #999' }}>
+                        <div className="flex flex-wrap gap-1">
+                          {selectedProcess.preventionCtrls.map((item, i) => (
+                            <Badge key={i} className="text-xs bg-green-600 text-white">{item}</Badge>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* C 레벨: 완제품 */}
+          {parseResult && parseResult.products.length > 0 && (
+            <div className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+              <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+                <thead>
                   <tr>
-                    <td className="bg-[#00587a] text-white font-bold px-3 py-2 w-28" style={{ border: '1px solid #999' }}>작업요소</td>
-                    <td className="bg-white px-3 py-2" style={{ border: '1px solid #999' }}>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedRelation.l3.workElements.map((we, i) => (
-                          <Badge key={i} variant="outline" className="text-xs border-[#00587a] text-[#00587a]" title={we.func}>{we.name}</Badge>
-                        ))}
-                      </div>
-                    </td>
+                    <th colSpan={2} className="bg-red-500 text-white font-bold px-3 py-2 text-left" style={{ border: '1px solid #999' }}>
+                      C.완제품 레벨 (공통)
+                    </th>
                   </tr>
-                  <tr>
-                    <td className="bg-[#00587a] text-white font-bold px-3 py-2" style={{ border: '1px solid #999' }}>공정특성</td>
-                    <td className="bg-[#e0f2fb] px-3 py-2" style={{ border: '1px solid #999' }}>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedRelation.l3.processChars.map((pc, i) => (
-                          <Badge key={i} variant="outline" className="text-xs border-[#00587a] text-[#00587a]">{pc}</Badge>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="bg-[#00587a] text-white font-bold px-3 py-2" style={{ border: '1px solid #999' }}>고장원인(FC)</td>
-                    <td className="bg-white px-3 py-2" style={{ border: '1px solid #999' }}>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedRelation.l3.failureCauses.map((fc, i) => (
-                          <Badge key={i} className="text-xs bg-orange-500 text-white">{fc}</Badge>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="bg-[#00587a] text-white font-bold px-3 py-2" style={{ border: '1px solid #999' }}>예방관리(PC)</td>
-                    <td className="bg-[#e0f2fb] px-3 py-2" style={{ border: '1px solid #999' }}>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedRelation.l3.preventionCtrls.map((pc, i) => (
-                          <Badge key={i} className="text-xs bg-green-600 text-white">{pc}</Badge>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="bg-[#00587a] text-white font-bold px-3 py-2" style={{ border: '1px solid #999' }}>설비/장비</td>
-                    <td className="bg-white px-3 py-2" style={{ border: '1px solid #999' }}>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedRelation.l3.equipments.map((eq, i) => (
-                          <Badge key={i} variant="outline" className="text-xs border-gray-500 text-gray-600">{eq}</Badge>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
+                </thead>
+                <tbody>
+                  {parseResult.products.map((product, idx) => (
+                    <tr key={product.productProcessName}>
+                      <td className="bg-[#00587a] text-white font-bold px-3 py-2 w-28" style={{ border: '1px solid #999' }}>
+                        {product.productProcessName}
+                      </td>
+                      <td className={`px-3 py-2 ${idx % 2 === 0 ? 'bg-white' : 'bg-[#e0f2fb]'}`} style={{ border: '1px solid #999' }}>
+                        <div className="flex flex-wrap gap-1">
+                          {product.productFuncs.map((f, i) => (
+                            <Badge key={`f-${i}`} variant="outline" className="text-xs border-red-400 text-red-600">{f}</Badge>
+                          ))}
+                          {product.requirements.map((r, i) => (
+                            <Badge key={`r-${i}`} variant="outline" className="text-xs border-red-400 text-red-600">{r}</Badge>
+                          ))}
+                          {product.failureEffects.map((e, i) => (
+                            <Badge key={`e-${i}`} className="text-xs bg-red-500 text-white">{e}</Badge>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -457,11 +538,25 @@ export default function PFMEAImportPage() {
           {/* 확정 버튼 */}
           <div className="flex justify-end gap-3">
             <Button variant="outline" className="border-[#999] text-gray-600 hover:bg-gray-100">취소</Button>
-            <Button className="bg-[#00587a] hover:bg-[#004560] text-white font-bold" disabled={!importComplete}>
-              <Check className="h-4 w-4 mr-2" />
-              관계 확정 및 저장
+            <Button 
+              className="bg-[#00587a] hover:bg-[#004560] text-white font-bold" 
+              disabled={!parseResult || parseResult.processes.length === 0}
+              onClick={handleImport}
+            >
+              {isImporting ? '관계형 DB 생성 중...' : (
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  관계 확정 및 저장 ({parseResult?.processes.length || 0}개 공정)
+                </>
+              )}
             </Button>
           </div>
+
+          {importComplete && (
+            <div className="p-3 border-l-4 border-green-500 text-sm text-green-700" style={{ background: '#d1fae5' }}>
+              Import 완료! {parseResult?.processes.length}개 공정, {parseResult?.products.length}개 완제품 관계형 DB 생성됨
+            </div>
+          )}
 
           {/* 색상 범례 */}
           <div className="bg-white rounded-lg p-4 mt-5" style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
