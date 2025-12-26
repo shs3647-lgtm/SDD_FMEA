@@ -1,14 +1,14 @@
 /**
  * @file page.tsx
- * @description PFMEA 기초정보 Excel Import 메인 페이지 (단순화 버전)
+ * @description PFMEA 기초정보 Excel Import 메인 페이지 (2단계 프로세스)
  * @author AI Assistant
  * @created 2025-12-26
- * @updated 2025-12-26 - 1시트 16컬럼 방식으로 변경
- * @updated 2025-12-26 - table-design-reference.html 표준 디자인 적용
+ * @updated 2025-12-26 - 2단계 프로세스로 변경
  * @prd PRD-026-pfmea-master-data-import.md
  * 
- * 사용자는 1개 시트에 16컬럼만 입력하면
- * 시스템이 공정번호 기준으로 관계형 DB를 자동 생성
+ * 프로세스:
+ * Step 1: Excel Import - A1~C4 시트별 Flat 데이터 Import
+ * Step 2: 워크시트 팝업 - 상위-하위 관계 지정 → 관계형 DB 완성
  * 
  * 테이블 디자인 원칙:
  * - 헤더: #00587a (진한 남청색) + 흰색 글자
@@ -31,13 +31,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Upload, FileSpreadsheet, Database, Check, Download, Table2 } from 'lucide-react';
+import { Upload, FileSpreadsheet, Database, Check, Download, Table2, Link2, Settings } from 'lucide-react';
 
-import { ImportRowData, GeneratedRelation, CommonItem } from './types';
+import { ImportRowData, GeneratedRelation, CommonItem, ImportedFlatData, RelationMapping, ITEM_CODE_LABELS } from './types';
 import { importColumns, sampleImportData, generateRelations, calculateStats, commonItems as defaultCommonItems, addCommonItemsToRelation } from './mock-data';
 import CommonItemManager from './CommonItemManager';
 import { downloadEmptyTemplate, downloadSampleTemplate } from './excel-template';
-import { parseMultiSheetExcel, ParseResult, getParseStats, ProcessRelation, ProductRelation } from './excel-parser';
+import { parseMultiSheetExcel, ParseResult, ProcessRelation, ProductRelation } from './excel-parser';
+import RelationMappingPopup from './RelationMappingPopup';
 
 export default function PFMEAImportPage() {
   // 상태 관리
@@ -51,6 +52,11 @@ export default function PFMEAImportPage() {
   // 다중 시트 파싱 결과
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [selectedProcess, setSelectedProcess] = useState<ProcessRelation | null>(null);
+
+  // Step 2: 관계 지정 팝업
+  const [showRelationPopup, setShowRelationPopup] = useState(false);
+  const [flatData, setFlatData] = useState<ImportedFlatData[]>([]);
+  const [relationMappings, setRelationMappings] = useState<RelationMapping[]>([]);
 
   // 공통 기초정보 관리 (추가/수정/삭제 가능)
   const [commonItemList, setCommonItemList] = useState<CommonItem[]>(defaultCommonItems);
@@ -72,6 +78,32 @@ export default function PFMEAImportPage() {
         const result = await parseMultiSheetExcel(file);
         setParseResult(result);
         
+        // Flat 데이터 생성 (Step 2를 위해)
+        const flat: ImportedFlatData[] = [];
+        result.processes.forEach((p) => {
+          // A 레벨
+          flat.push({ id: `${p.processNo}-A1`, processNo: p.processNo, category: 'A', itemCode: 'A1', value: p.processNo, createdAt: new Date() });
+          flat.push({ id: `${p.processNo}-A2`, processNo: p.processNo, category: 'A', itemCode: 'A2', value: p.processName, createdAt: new Date() });
+          p.processDesc.forEach((v, i) => flat.push({ id: `${p.processNo}-A3-${i}`, processNo: p.processNo, category: 'A', itemCode: 'A3', value: v, createdAt: new Date() }));
+          p.productChars.forEach((v, i) => flat.push({ id: `${p.processNo}-A4-${i}`, processNo: p.processNo, category: 'A', itemCode: 'A4', value: v, createdAt: new Date() }));
+          p.failureModes.forEach((v, i) => flat.push({ id: `${p.processNo}-A5-${i}`, processNo: p.processNo, category: 'A', itemCode: 'A5', value: v, createdAt: new Date() }));
+          p.detectionCtrls.forEach((v, i) => flat.push({ id: `${p.processNo}-A6-${i}`, processNo: p.processNo, category: 'A', itemCode: 'A6', value: v, createdAt: new Date() }));
+          // B 레벨
+          p.workElements.forEach((v, i) => flat.push({ id: `${p.processNo}-B1-${i}`, processNo: p.processNo, category: 'B', itemCode: 'B1', value: v, createdAt: new Date() }));
+          p.elementFuncs.forEach((v, i) => flat.push({ id: `${p.processNo}-B2-${i}`, processNo: p.processNo, category: 'B', itemCode: 'B2', value: v, createdAt: new Date() }));
+          p.processChars.forEach((v, i) => flat.push({ id: `${p.processNo}-B3-${i}`, processNo: p.processNo, category: 'B', itemCode: 'B3', value: v, createdAt: new Date() }));
+          p.failureCauses.forEach((v, i) => flat.push({ id: `${p.processNo}-B4-${i}`, processNo: p.processNo, category: 'B', itemCode: 'B4', value: v, createdAt: new Date() }));
+          p.preventionCtrls.forEach((v, i) => flat.push({ id: `${p.processNo}-B5-${i}`, processNo: p.processNo, category: 'B', itemCode: 'B5', value: v, createdAt: new Date() }));
+        });
+        // C 레벨 (완제품)
+        result.products.forEach((p) => {
+          flat.push({ id: `C1-${p.productProcessName}`, processNo: 'ALL', category: 'C', itemCode: 'C1', value: p.productProcessName, createdAt: new Date() });
+          p.productFuncs.forEach((v, i) => flat.push({ id: `C2-${p.productProcessName}-${i}`, processNo: 'ALL', category: 'C', itemCode: 'C2', value: v, createdAt: new Date() }));
+          p.requirements.forEach((v, i) => flat.push({ id: `C3-${p.productProcessName}-${i}`, processNo: 'ALL', category: 'C', itemCode: 'C3', value: v, createdAt: new Date() }));
+          p.failureEffects.forEach((v, i) => flat.push({ id: `C4-${p.productProcessName}-${i}`, processNo: 'ALL', category: 'C', itemCode: 'C4', value: v, createdAt: new Date() }));
+        });
+        setFlatData(flat);
+        
         // 첫 번째 공정 선택
         if (result.processes.length > 0) {
           setSelectedProcessNo(result.processes[0].processNo);
@@ -90,6 +122,23 @@ export default function PFMEAImportPage() {
     setSelectedProcessNo(processNo);
     const process = parseResult?.processes.find(p => p.processNo === processNo);
     setSelectedProcess(process || null);
+  };
+
+  // 관계 매핑 저장
+  const handleSaveMapping = (mapping: RelationMapping) => {
+    setRelationMappings(prev => [...prev, mapping]);
+  };
+
+  // 관계 매핑 삭제
+  const handleDeleteMapping = (mappingId: string) => {
+    setRelationMappings(prev => prev.filter(m => m.id !== mappingId));
+  };
+
+  // Step 2: 관계 지정 팝업 열기
+  const handleOpenRelationPopup = () => {
+    if (selectedProcessNo) {
+      setShowRelationPopup(true);
+    }
   };
 
   // Import 실행 (시뮬레이션)
@@ -535,18 +584,41 @@ export default function PFMEAImportPage() {
             </div>
           )}
 
+          {/* Step 2: 관계 지정 버튼 */}
+          {parseResult && parseResult.processes.length > 0 && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
+              <h3 className="font-bold text-yellow-800 mb-2">Step 2: 상위-하위 관계 지정</h3>
+              <p className="text-sm text-yellow-700 mb-3">
+                Import된 데이터 간의 관계를 지정하세요. (예: 제품특성 → 고장형태)
+              </p>
+              <Button 
+                onClick={handleOpenRelationPopup}
+                className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                disabled={!selectedProcessNo}
+              >
+                <Link2 className="h-4 w-4 mr-2" />
+                관계 지정 ({selectedProcessNo || '공정 선택 필요'})
+                {relationMappings.filter(m => m.processNo === selectedProcessNo).length > 0 && (
+                  <Badge className="ml-2 bg-white text-yellow-700">
+                    {relationMappings.filter(m => m.processNo === selectedProcessNo).length}개 연결
+                  </Badge>
+                )}
+              </Button>
+            </div>
+          )}
+
           {/* 확정 버튼 */}
           <div className="flex justify-end gap-3">
             <Button variant="outline" className="border-[#999] text-gray-600 hover:bg-gray-100">취소</Button>
             <Button 
               className="bg-[#00587a] hover:bg-[#004560] text-white font-bold" 
-              disabled={!parseResult || parseResult.processes.length === 0}
+              disabled={!parseResult || parseResult.processes.length === 0 || relationMappings.length === 0}
               onClick={handleImport}
             >
               {isImporting ? '관계형 DB 생성 중...' : (
                 <>
                   <Check className="h-4 w-4 mr-2" />
-                  관계 확정 및 저장 ({parseResult?.processes.length || 0}개 공정)
+                  관계 확정 및 저장 ({relationMappings.length}개 관계)
                 </>
               )}
             </Button>
@@ -577,6 +649,18 @@ export default function PFMEAImportPage() {
           </div>
         </div>
       </div>
+
+      {/* 관계 지정 팝업 */}
+      <RelationMappingPopup
+        isOpen={showRelationPopup}
+        onClose={() => setShowRelationPopup(false)}
+        processNo={selectedProcessNo}
+        processName={selectedProcess?.processName || ''}
+        flatData={flatData}
+        existingMappings={relationMappings}
+        onSaveMapping={handleSaveMapping}
+        onDeleteMapping={handleDeleteMapping}
+      />
     </div>
   );
 }
