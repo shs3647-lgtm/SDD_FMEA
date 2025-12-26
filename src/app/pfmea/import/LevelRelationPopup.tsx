@@ -42,7 +42,7 @@ export default function LevelRelationPopup({
   const [selectedL2, setSelectedL2] = useState<string>('');
   const [selectedL3, setSelectedL3] = useState<string>('');
 
-  // L1 아이템 (C1: 완제품공정명)
+  // L1 아이템 (C1: 구분 - YOUR PLANT, SHIP TO PLANT, USER)
   const l1Items = useMemo(() => 
     flatData.filter(d => d.itemCode === 'C1'),
     [flatData]

@@ -58,7 +58,7 @@ const TABS = [
     label: 'C 완(반)제품', 
     color: 'red',
     columns: [
-      { code: 'C1', label: '제품명' },
+      { code: 'C1', label: '구분' },  // YOUR PLANT, SHIP TO PLANT, USER
       { code: 'C2', label: '제품기능' },
       { code: 'C3', label: '요구사항' },
       { code: 'C4', label: '고장영향' },
@@ -222,7 +222,7 @@ export default function RelationPreview({ data, onDataChange }: RelationPreviewP
     // C 완제품 시트
     const sheetC = workbook.addWorksheet('C 완제품', { properties: { tabColor: { argb: 'EF4444' } } });
     sheetC.columns = [
-      { header: 'C1.제품명', key: 'C1', width: 15 },
+      { header: 'C1.구분', key: 'C1', width: 15 },  // YOUR PLANT, SHIP TO PLANT, USER
       { header: 'C2.제품기능', key: 'C2', width: 20 },
       { header: 'C3.요구사항', key: 'C3', width: 20 },
       { header: 'C4.고장영향', key: 'C4', width: 20 },

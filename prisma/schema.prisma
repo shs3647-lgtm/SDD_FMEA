@@ -97,6 +97,75 @@ enum ProductType {
 }
 
 // ============================================================================
+// 📋 PFMEA 기초정보 (Import 데이터)
+// ============================================================================
+
+/// PFMEA 기초정보 마스터
+model PFMEAMasterData {
+  id          String   @id @default(cuid())
+  itemCode    String   // A1, A2, A3, A4, A5, A6, B1, B2, B3, B4, B5, C1, C2, C3, C4
+  processNo   String   // 공정번호 (00: 공통, 10, 20, 30...)
+  value       String   // 실제 값
+  sortOrder   Int      @default(0) // 정렬 순서
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([itemCode, processNo, value])
+  @@index([itemCode])
+  @@index([processNo])
+  @@map("pfmea_master_data")
+}
+
+/// PFMEA 관계형 데이터 (A 공정)
+model PFMEARelationA {
+  id          String   @id @default(cuid())
+  processNo   String   // A1 공정번호
+  processName String   // A2 공정명
+  processFunc String?  // A3 공정기능
+  productChar String?  // A4 제품특성
+  failureMode String?  // A5 고장형태
+  detection   String?  // A6 검출관리
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([processNo])
+  @@map("pfmea_relation_a")
+}
+
+/// PFMEA 관계형 데이터 (B 작업요소)
+model PFMEARelationB {
+  id             String   @id @default(cuid())
+  processNo      String   // A1 공정번호
+  workElement    String   // B1 작업요소(설비)
+  elementFunc    String?  // B2 작업요소기능
+  processChar    String?  // B3 공정특성
+  failureCause   String?  // B4 고장원인
+  prevention     String?  // B5 예방관리
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([processNo])
+  @@map("pfmea_relation_b")
+}
+
+/// PFMEA 관계형 데이터 (C 완제품)
+model PFMEARelationC {
+  id            String   @id @default(cuid())
+  category      String   // C1 구분 (Your Plant, Ship to Plant, User)
+  productFunc   String?  // C2 제품(반)기능
+  requirement   String?  // C3 제품(반)요구사항
+  failureEffect String?  // C4 고장영향
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([category])
+  @@map("pfmea_relation_c")
+}
+
+// ============================================================================
 // 📊 FMEA PROJECT & WORKSHEET
 // ============================================================================
 

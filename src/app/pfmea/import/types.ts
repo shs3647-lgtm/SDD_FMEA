@@ -171,11 +171,15 @@ export const ITEM_CODE_LABELS: Record<string, string> = {
   B3: '공정특성',
   B4: '고장원인',
   B5: '예방관리',
-  C1: '완제품공정명',
+  C1: '구분',  // YOUR PLANT, SHIP TO PLANT, USER
   C2: '제품(반)기능',
   C3: '제품(반)요구사항',
   C4: '고장영향',
 };
+
+/** C1 구분 값 (고장영향 수준) */
+export const C1_CATEGORIES = ['YOUR PLANT', 'SHIP TO PLANT', 'USER'] as const;
+export type C1CategoryType = typeof C1_CATEGORIES[number];
 
 /** 레벨별 아이템 코드 매핑 */
 export const LEVEL_ITEM_CODES = {

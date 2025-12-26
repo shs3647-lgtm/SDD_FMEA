@@ -66,7 +66,7 @@ const SUB_TAB_LABELS: Record<string, string> = {
   B4: '4.고장원인',
   B5: '5.예방관리',
   // C.완제품
-  C1: '1.완제품',
+  C1: '1.구분',  // YOUR PLANT, SHIP TO PLANT, USER
   C2: '2.제품기능',
   C3: '3.요구사항',
   C4: '4.고장영향',

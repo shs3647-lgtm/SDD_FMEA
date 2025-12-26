@@ -30,7 +30,7 @@ export const importColumns: ImportColumn[] = [
   { key: 'failureCause', label: 'B4.고장원인', level: 'B', required: false, width: 120 },
   { key: 'preventionCtrl', label: 'B5.예방관리', level: 'B', required: false, width: 100 },
   // C: 완제품 레벨 (4개)
-  { key: 'productFunction', label: 'C1.완제품공정명', level: 'C', required: false, width: 120 },
+  { key: 'category', label: 'C1.구분', level: 'C', required: false, width: 120 },  // YOUR PLANT, SHIP TO PLANT, USER
   { key: 'productFunc', label: 'C2.제품(반)기능', level: 'C', required: false, width: 120 },
   { key: 'requirement', label: 'C3.제품(반)요구사항', level: 'C', required: false, width: 120 },
   { key: 'failureEffect', label: 'C4.고장영향', level: 'C', required: false, width: 120 },
@@ -38,57 +38,40 @@ export const importColumns: ImportColumn[] = [
   { key: 'inspectionEquip', label: 'D.검사장비', level: 'D', required: false, width: 100 },
 ];
 
-/** 샘플 Import 데이터 (16컬럼 형식) */
+/** 
+ * 샘플 Import 데이터 (16컬럼 형식) - 타이어 제조 공정 기반 20행
+ * 공정번호: 10(원료입고), 20(수입검사), 30(정련), 40(압출), 50(압연)
+ */
 export const sampleImportData: ImportRowData[] = [
-  {
-    processNo: '80', processName: '성형', processDesc: '그린타이어 부재료 반제품을 접착하여 그린타이어 생산',
-    productChar: 'Bead To Bead 폭', workElement: '카카스 드럼', workElementFunc: '카카스 드럼 회전 및 반제품 부착',
-    processChar: 'Center Deck 센터링', productFunction: '차량 운행 지지', requirement: 'Air Retention',
-    failureEffect: '공기 누설, 내구성 저하', failureMode: 'Bead To Bead 폭 불만족', failureCause: '장착Tool 규격 상이',
-    detectionCtrl: '육안검사', preventionCtrl: '바코드 스캔', equipment: '카카스 드럼', inspectionEquip: '카메라'
-  },
-  {
-    processNo: '80', processName: '성형', processDesc: '그린타이어 부재료 반제품을 접착하여 그린타이어 생산',
-    productChar: 'G/T 중량', workElement: '비드 드럼', workElementFunc: '비드 고정 및 접착',
-    processChar: '비드 압력', productFunction: '차량 운행 지지', requirement: 'Air Retention',
-    failureEffect: '공기 누설, 내구성 저하', failureMode: 'G/T 중량 불만족', failureCause: '작업지침서 미준수',
-    detectionCtrl: '자동중량', preventionCtrl: 'PDA 확인', equipment: '비드 드럼', inspectionEquip: '저울'
-  },
-  {
-    processNo: '80', processName: '성형', processDesc: '그린타이어 부재료 반제품을 접착하여 그린타이어 생산',
-    productChar: 'PA (IL+SW) 폭', workElement: '빌딩 서버', workElementFunc: '반제품 전달',
-    processChar: '사이드레터 정렬', productFunction: '차량 운행 지지', requirement: 'Air Retention',
-    failureEffect: '공기 누설, 내구성 저하', failureMode: 'PA 폭 불만족', failureCause: '잘못된 반제품 장착',
-    detectionCtrl: '육안검사', preventionCtrl: '작업지침 확인', equipment: '빌딩 서버', inspectionEquip: '줄자'
-  },
-  {
-    processNo: '31', processName: 'MB Mixing', processDesc: '컴파운드 종류에 맞는 마스터배치 조건에 따라 혼련',
-    productChar: 'Mooney Viscosity', workElement: 'MB 믹서', workElementFunc: '고무 혼련 및 배합',
-    processChar: '혼련 온도', productFunction: '타이어 성능 확보', requirement: 'Braking Performance',
-    failureEffect: '제동 성능 불량', failureMode: 'Mooney Viscosity 불만족', failureCause: '계량기 오류',
-    detectionCtrl: '점도 측정', preventionCtrl: '온도 체크', equipment: 'MB 믹서', inspectionEquip: '점도계'
-  },
-  {
-    processNo: '31', processName: 'MB Mixing', processDesc: '컴파운드 종류에 맞는 마스터배치 조건에 따라 혼련',
-    productChar: 'Scorch Time', workElement: 'MB 믹서', workElementFunc: '고무 혼련 및 배합',
-    processChar: '혼련 시간', productFunction: '타이어 성능 확보', requirement: 'Braking Performance',
-    failureEffect: '제동 성능 불량', failureMode: 'Scorch Time 불만족', failureCause: '타이머 설정 오류',
-    detectionCtrl: '시간 측정', preventionCtrl: '파라미터 확인', equipment: 'MB 믹서', inspectionEquip: '타이머'
-  },
-  {
-    processNo: '10', processName: '원료입고', processDesc: '입고된 원재료를 입수하여 지정된 창고에 입고',
-    productChar: '원료 이미지', workElement: '저장탱크', workElementFunc: '원료 저장',
-    processChar: '보관 온도', productFunction: '원료 품질 유지', requirement: '선입선출',
-    failureEffect: '재고 불일치', failureMode: '이미지 누락', failureCause: '저장용액 보관방법 미준수',
-    detectionCtrl: '육안검사', preventionCtrl: 'QR코드 스캔', equipment: '저장탱크', inspectionEquip: '바코드리더'
-  },
-  {
-    processNo: '10', processName: '원료입고', processDesc: '입고된 원재료를 입수하여 지정된 창고에 입고',
-    productChar: '유효기간', workElement: '자동창고', workElementFunc: '자동 입출고 관리',
-    processChar: '습도', productFunction: '원료 품질 유지', requirement: '선입선출',
-    failureEffect: '품질 저하', failureMode: '유효기간 초과', failureCause: '선입선출 미준수',
-    detectionCtrl: '시스템 알람', preventionCtrl: '자동 관리', equipment: '자동창고', inspectionEquip: 'WMS'
-  },
+  // 10 원료입고 (3행) - YOUR PLANT
+  { processNo: '10', processName: '원료입고', processDesc: '입고된 원재료를 입수하여 지정된 창고에 입고', productChar: '원료 외관', workElement: '저장탱크', workElementFunc: '원료 저장', processChar: '보관 온도', productFunction: 'YOUR PLANT', requirement: '선입선출', failureEffect: '원료 혼입, 품질 불량', failureMode: '외관 불량', failureCause: '보관방법 미준수', detectionCtrl: '수입검사 체크시트', preventionCtrl: 'QR코드 스캔', equipment: '저장탱크', inspectionEquip: '바코드리더' },
+  { processNo: '10', processName: '원료입고', processDesc: '입고된 원재료를 입수하여 지정된 창고에 입고', productChar: '유효기간', workElement: '자동창고', workElementFunc: '자동 입출고', processChar: '습도', productFunction: 'YOUR PLANT', requirement: '선입선출', failureEffect: '품질 저하', failureMode: '유효기간 초과', failureCause: 'FIFO 미준수', detectionCtrl: '시스템 알람', preventionCtrl: 'WMS 자동관리', equipment: '자동창고', inspectionEquip: 'WMS' },
+  { processNo: '10', processName: '원료입고', processDesc: '입고된 원재료를 입수하여 지정된 창고에 입고', productChar: 'ID카드', workElement: '계량대', workElementFunc: '입고 계량', processChar: '온습도', productFunction: 'YOUR PLANT', requirement: '선입선출', failureEffect: '원료 불일치', failureMode: 'ID카드 불량', failureCause: '라벨링 오류', detectionCtrl: 'ID 확인', preventionCtrl: '바코드 스캔', equipment: '전자저울', inspectionEquip: '전자저울' },
+  
+  // 20 수입검사 (4행) - YOUR PLANT
+  { processNo: '20', processName: '수입검사', processDesc: '입고자재의 샘플링 수입검사', productChar: 'Mooney Viscosity', workElement: 'MOONEY VISCOMETER', workElementFunc: '점도 측정', processChar: '샘플링', productFunction: 'YOUR PLANT', requirement: '규격 적합', failureEffect: '부적합품 유출', failureMode: 'Mooney 불만족', failureCause: '검사기 오류', detectionCtrl: 'MILL CON', preventionCtrl: '일상점검', equipment: '점도계', inspectionEquip: 'Mooney Viscometer' },
+  { processNo: '20', processName: '수입검사', processDesc: '입고자재의 샘플링 수입검사', productChar: '인장강도', workElement: '인장시험기', workElementFunc: '강도 시험', processChar: '시료 준비', productFunction: 'YOUR PLANT', requirement: '규격 적합', failureEffect: '강도 부족', failureMode: '인장강도 불만족', failureCause: '시험조건 오류', detectionCtrl: '시험성적서', preventionCtrl: '장비 교정', equipment: '인장시험기', inspectionEquip: 'UTM' },
+  { processNo: '20', processName: '수입검사', processDesc: '입고자재의 샘플링 수입검사', productChar: 'DBP Oil', workElement: 'DBP ABSORPMETER', workElementFunc: 'DBP 측정', processChar: '시약 관리', productFunction: 'YOUR PLANT', requirement: '규격 적합', failureEffect: '배합 불량', failureMode: 'DBP 불만족', failureCause: '시약 오염', detectionCtrl: '성적서 확인', preventionCtrl: '시약 교체주기', equipment: 'DBP계', inspectionEquip: 'DBP Meter' },
+  { processNo: '20', processName: '수입검사', processDesc: '입고자재의 샘플링 수입검사', productChar: 'Appearance', workElement: '외관검사대', workElementFunc: '외관 확인', processChar: '조명 환경', productFunction: 'YOUR PLANT', requirement: '규격 적합', failureEffect: '외관 불량 유출', failureMode: 'Appearance 불량', failureCause: '검사자 실수', detectionCtrl: '육안검사', preventionCtrl: '교육 실시', equipment: '조명대', inspectionEquip: '육안' },
+  
+  // 30 정련 (5행) - SHIP TO PLANT
+  { processNo: '30', processName: '정련', processDesc: '고무,카본블랙,오일,화학약품을 믹싱하여 FM컴파운드 생산', productChar: 'Mooney Viscosity', workElement: '혼련설비', workElementFunc: '원료 혼합', processChar: '혼련 온도', productFunction: 'SHIP TO PLANT', requirement: 'Compound Durability', failureEffect: '접착 불량, 크랙 발생', failureMode: 'Mooney 불만족', failureCause: '배합비 오류', detectionCtrl: 'MILL CON검사', preventionCtrl: '온도 모니터링', equipment: 'MB 믹서', inspectionEquip: '점도계' },
+  { processNo: '30', processName: '정련', processDesc: '고무,카본블랙,오일,화학약품을 믹싱하여 FM컴파운드 생산', productChar: 'Scorch Time', workElement: '혼련설비', workElementFunc: '원료 혼합', processChar: '혼련 시간', productFunction: 'SHIP TO PLANT', requirement: 'Compound Durability', failureEffect: '가황 불량', failureMode: 'Scorch Time 불만족', failureCause: '타이머 오류', detectionCtrl: 'Rheometer', preventionCtrl: '파라미터 확인', equipment: 'MB 믹서', inspectionEquip: 'Rheometer' },
+  { processNo: '30', processName: '정련', processDesc: '고무,카본블랙,오일,화학약품을 믹싱하여 FM컴파운드 생산', productChar: 'Rheometer', workElement: 'FB 믹서', workElementFunc: '최종 혼련', processChar: 'Drop Temp', productFunction: 'SHIP TO PLANT', requirement: 'Compound Durability', failureEffect: '물성 불량', failureMode: 'Rheometer 불만족', failureCause: 'Drop 온도 오류', detectionCtrl: '측정 성적서', preventionCtrl: '온도 센서 점검', equipment: 'FB 믹서', inspectionEquip: 'Rheometer' },
+  { processNo: '30', processName: '정련', processDesc: '고무,카본블랙,오일,화학약품을 믹싱하여 FM컴파운드 생산', productChar: 'Specific Gravity', workElement: 'FB 믹서', workElementFunc: '최종 혼련', processChar: 'RPM', productFunction: 'SHIP TO PLANT', requirement: 'Compound Durability', failureEffect: '비중 이탈', failureMode: 'S.G. 불만족', failureCause: '계량 오류', detectionCtrl: '비중 측정', preventionCtrl: '계량기 교정', equipment: 'FB 믹서', inspectionEquip: '비중계' },
+  { processNo: '30', processName: '정련', processDesc: '고무,카본블랙,오일,화학약품을 믹싱하여 FM컴파운드 생산', productChar: '배치 외관', workElement: 'MILL', workElementFunc: '시트화', processChar: '롤 간격', productFunction: 'SHIP TO PLANT', requirement: 'Compound Durability', failureEffect: '이물 혼입', failureMode: '외관 불량', failureCause: '청소 미실시', detectionCtrl: '육안검사', preventionCtrl: '청소 점검표', equipment: 'MILL', inspectionEquip: '육안' },
+  
+  // 40 압출 (4행) - SHIP TO PLANT
+  { processNo: '40', processName: '압출', processDesc: 'FM컴파운드를 압출하여 TREAD, SIDE를 성형', productChar: 'Tread 폭', workElement: 'TREAD 압출기', workElementFunc: 'Tread 압출', processChar: '압출 온도', productFunction: 'SHIP TO PLANT', requirement: 'Uniformity', failureEffect: '외관 불량', failureMode: 'Tread 폭 불만족', failureCause: '다이 마모', detectionCtrl: '온라인 게이지', preventionCtrl: '다이 교체주기', equipment: '압출기', inspectionEquip: '게이지 카메라' },
+  { processNo: '40', processName: '압출', processDesc: 'FM컴파운드를 압출하여 TREAD, SIDE를 성형', productChar: 'Tread 두께', workElement: 'TREAD 압출기', workElementFunc: 'Tread 압출', processChar: '압출 속도', productFunction: 'SHIP TO PLANT', requirement: 'Uniformity', failureEffect: '두께 편차', failureMode: 'Tread 두께 불만족', failureCause: '속도 변동', detectionCtrl: '두께 측정', preventionCtrl: '속도 모니터링', equipment: '압출기', inspectionEquip: '두께 게이지' },
+  { processNo: '40', processName: '압출', processDesc: 'FM컴파운드를 압출하여 TREAD, SIDE를 성형', productChar: 'Side Wall 폭', workElement: 'Side 압출기', workElementFunc: 'Side 압출', processChar: '압출 압력', productFunction: 'SHIP TO PLANT', requirement: 'Uniformity', failureEffect: '접합 불량', failureMode: 'Side 폭 불만족', failureCause: '압력 변동', detectionCtrl: '온라인 게이지', preventionCtrl: '압력 모니터링', equipment: '압출기', inspectionEquip: '게이지 카메라' },
+  { processNo: '40', processName: '압출', processDesc: 'FM컴파운드를 압출하여 TREAD, SIDE를 성형', productChar: 'Side Wall 두께', workElement: 'Side 압출기', workElementFunc: 'Side 압출', processChar: '냉각 온도', productFunction: 'SHIP TO PLANT', requirement: 'Uniformity', failureEffect: '치수 불량', failureMode: 'Side 두께 불만족', failureCause: '냉각 불량', detectionCtrl: '두께 측정', preventionCtrl: '냉각수 점검', equipment: '압출기', inspectionEquip: '두께 게이지' },
+  
+  // 50 압연 (4행) - USER
+  { processNo: '50', processName: '압연', processDesc: '스틸코드, 패브릭코드에 고무를 코팅하여 반제품 생산', productChar: 'Steel Cord 폭', workElement: '스틸 카렌다', workElementFunc: '스틸코드 코팅', processChar: 'EPI', productFunction: 'USER', requirement: 'Structural Integrity', failureEffect: '내구 저하, 분리', failureMode: 'Steel 폭 불만족', failureCause: 'EPI 오류', detectionCtrl: '폭 측정', preventionCtrl: 'EPI 센서 점검', equipment: '카렌다', inspectionEquip: '폭 게이지' },
+  { processNo: '50', processName: '압연', processDesc: '스틸코드, 패브릭코드에 고무를 코팅하여 반제품 생산', productChar: 'Steel Cord 두께', workElement: '스틸 카렌다', workElementFunc: '스틸코드 코팅', processChar: '롤 간격', productFunction: 'USER', requirement: 'Structural Integrity', failureEffect: '접착 불량', failureMode: 'Steel 두께 불만족', failureCause: '롤 간격 오류', detectionCtrl: '두께 측정', preventionCtrl: '롤 간격 점검', equipment: '카렌다', inspectionEquip: '두께 게이지' },
+  { processNo: '50', processName: '압연', processDesc: '스틸코드, 패브릭코드에 고무를 코팅하여 반제품 생산', productChar: 'Fabric Cord 폭', workElement: '텍스타일 카렌다', workElementFunc: '패브릭 코팅', processChar: 'TCU 온도', productFunction: 'USER', requirement: 'Structural Integrity', failureEffect: '분리 발생', failureMode: 'Fabric 폭 불만족', failureCause: '온도 오류', detectionCtrl: '폭 측정', preventionCtrl: 'TCU 점검', equipment: '카렌다', inspectionEquip: '폭 게이지' },
+  { processNo: '50', processName: '압연', processDesc: '스틸코드, 패브릭코드에 고무를 코팅하여 반제품 생산', productChar: 'Fabric Cord 두께', workElement: '텍스타일 카렌다', workElementFunc: '패브릭 코팅', processChar: '드럼 온도', productFunction: 'USER', requirement: 'Structural Integrity', failureEffect: '두께 편차', failureMode: 'Fabric 두께 불만족', failureCause: '드럼 온도 변동', detectionCtrl: '두께 측정', preventionCtrl: '온도 모니터링', equipment: '카렌다', inspectionEquip: '두께 게이지' },
 ];
 
 /** 공정번호로 관계형 데이터 자동 생성 */

@@ -82,6 +82,14 @@ const ColorIcons = {
   ),
 };
 
+// 공통 하위 메뉴 생성 함수
+const createSubItems = (basePath: string) => [
+  { label: '등록', href: `${basePath}/register` },
+  { label: '리스트', href: `${basePath}/list` },
+  { label: 'CFT', href: `${basePath}/cft` },
+  { label: '개정관리', href: `${basePath}/revision` },
+];
+
 // 메뉴 아이템 정의
 const menuItems = [
   {
@@ -89,47 +97,69 @@ const menuItems = [
     label: '대시보드',
     Icon: ColorIcons.Dashboard,
     href: '/dashboard',
-    subItems: [
-      { label: 'Welcome', href: '/dashboard' },
-      { label: 'Top RPN', href: '/dashboard/top-rpn' },
-      { label: 'Lessons Learned', href: '/dashboard/lessons' },
-    ],
   },
   {
-    id: 'worksheet',
-    label: '워크시트',
+    id: 'apqp',
+    label: 'APQP',
     Icon: ColorIcons.Worksheet,
-    href: '/pfmea',
-    subItems: [
-      { label: 'P-FMEA', href: '/pfmea' },
-      { label: 'D-FMEA', href: '/dfmea' },
-      { label: 'PFD', href: '/pfd' },
-      { label: 'Control Plan', href: '/control-plan' },
-    ],
+    href: '/apqp',
+    subItems: createSubItems('/apqp'),
   },
   {
-    id: 'register',
-    label: '등록',
+    id: 'dfmea',
+    label: 'DFMEA',
     Icon: ColorIcons.Register,
-    href: '/project/register',
+    href: '/dfmea',
+    subItems: createSubItems('/dfmea'),
   },
   {
-    id: 'list',
-    label: '리스트',
+    id: 'pfmea',
+    label: 'PFMEA',
     Icon: ColorIcons.List,
-    href: '/project/list',
+    href: '/pfmea',
+    subItems: createSubItems('/pfmea'),
   },
   {
-    id: 'cft',
-    label: 'CFT',
+    id: 'cp',
+    label: 'Control Plan',
     Icon: ColorIcons.CFT,
-    href: '/project/cft',
+    href: '/control-plan',
+    subItems: createSubItems('/control-plan'),
   },
   {
-    id: 'revision',
-    label: '개정',
+    id: 'pfd',
+    label: 'PFD',
     Icon: ColorIcons.Revision,
-    href: '/project/revision',
+    href: '/pfd',
+    subItems: createSubItems('/pfd'),
+  },
+  {
+    id: 'ws',
+    label: 'WS',
+    Icon: ColorIcons.Settings,
+    href: '/ws',
+    subItems: createSubItems('/ws'),
+  },
+  {
+    id: 'pm',
+    label: 'PM',
+    Icon: ColorIcons.User,
+    href: '/pm',
+    subItems: createSubItems('/pm'),
+  },
+  {
+    id: 'spc',
+    label: 'SPC',
+    Icon: ColorIcons.Dashboard,
+    href: '/spc',
+    subItems: createSubItems('/spc'),
+  },
+  {
+    id: 'msa',
+    label: 'MSA',
+    Icon: ColorIcons.Worksheet,
+    href: '/msa',
+    subItems: createSubItems('/msa'),
   },
 ];
 
@@ -141,17 +171,12 @@ const bottomMenuItems = [
     Icon: ColorIcons.Settings,
     href: '/master',
     subItems: [
+      { label: '고객사정보', href: '/master/customer' },
+      { label: '사용자정보', href: '/master/user' },
       { label: 'PFMEA 임포트', href: '/master/pfmea-import' },
       { label: 'DFMEA 임포트', href: '/master/dfmea-import' },
       { label: 'CP 임포트', href: '/master/cp-import' },
-      { label: 'BOM 임포트', href: '/master/bom-import' },
     ],
-  },
-  {
-    id: 'user',
-    label: '사용자정보',
-    Icon: ColorIcons.User,
-    href: '/settings/user',
   },
 ];
 

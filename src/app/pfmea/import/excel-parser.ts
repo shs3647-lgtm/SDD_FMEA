@@ -7,7 +7,7 @@
  * 시트 구조:
  * A1-A6: 공정번호 + 공정 레벨 항목
  * B1-B5: 공정번호 + 작업요소 레벨 항목
- * C1-C4: 완제품공정명 + 완제품 레벨 항목
+ * C1-C4: 구분(YOUR PLANT/SHIP TO PLANT/USER) + 완제품 레벨 항목
  * 
  * 공정번호를 기준으로 모든 시트를 연결하여 관계형 데이터 생성
  */
@@ -56,7 +56,7 @@ export interface ParseResult {
 }
 
 /**
- * Excel 파일 파싱 (다중 시트)
+ * Excel 파일 파싱 (다중 시트) - 모든 열 읽기 지원
  */
 export async function parseMultiSheetExcel(file: File): Promise<ParseResult> {
   const errors: string[] = [];
@@ -69,12 +69,22 @@ export async function parseMultiSheetExcel(file: File): Promise<ParseResult> {
 
     // 시트별 데이터 추출
     const sheetDataMap: Record<string, SheetData> = {};
+    
+    // 디버깅: 모든 시트 이름 출력
+    const allSheetNames: string[] = [];
+    workbook.eachSheet((sheet) => {
+      allSheetNames.push(sheet.name);
+    });
+    console.log('📊 Excel 파일 시트 목록:', allSheetNames);
 
     workbook.eachSheet((sheet) => {
       const sheetName = sheet.name.trim();
       
       // 유효한 시트만 처리 (A1-A6, B1-B5, C1-C4)
-      if (!isValidSheetName(sheetName)) return;
+      if (!isValidSheetName(sheetName)) {
+        console.log(`⏭️ 시트 "${sheetName}" 건너뜀 (유효한 이름: A1~A6, B1~B5, C1~C4)`);
+        return;
+      }
 
       const headers: string[] = [];
       const rows: { key: string; value: string }[] = [];
@@ -85,19 +95,56 @@ export async function parseMultiSheetExcel(file: File): Promise<ParseResult> {
         headers.push(String(cell.value || ''));
       });
 
-      // 데이터 읽기 (3행부터, 2행은 필수/선택 안내)
-      for (let i = 3; i <= sheet.rowCount; i++) {
+      // 데이터 읽기 - 1행부터 시작해서 실제 데이터 찾기
+      let startRow = 1;
+      for (let i = 1; i <= Math.min(5, sheet.rowCount); i++) {
+        const row = sheet.getRow(i);
+        const firstCell = String(row.getCell(1).value || '').trim();
+        // 숫자로 시작하면 데이터 행으로 판단
+        if (firstCell && /^\d+$/.test(firstCell)) {
+          startRow = i;
+          break;
+        }
+        // 공정번호, 번호 등의 헤더가 있으면 다음 행부터
+        if (firstCell && (firstCell.includes('번호') || firstCell.includes('No') || firstCell.includes('공정'))) {
+          startRow = i + 1;
+        }
+      }
+      
+      console.log(`📋 시트 "${sheetName}": 시작행=${startRow}, 총행수=${sheet.rowCount}`);
+      
+      for (let i = startRow; i <= sheet.rowCount; i++) {
         const row = sheet.getRow(i);
         const key = String(row.getCell(1).value || '').trim();
-        const value = String(row.getCell(2).value || '').trim();
-
-        if (key || value) {
-          rows.push({ key, value });
+        
+        // 빈 행이면 건너뛰기
+        if (!key) continue;
+        
+        // 2열부터 모든 열의 값을 읽어서 추가
+        const colCount = Math.max(row.cellCount || 2, 20); // 최대 20열까지 확인
+        let hasValue = false;
+        
+        for (let col = 2; col <= colCount; col++) {
+          const cellValue = row.getCell(col).value;
+          const value = String(cellValue || '').trim();
+          if (value && value !== 'null' && value !== 'undefined') {
+            rows.push({ key, value });
+            hasValue = true;
+          }
+        }
+        
+        // 값이 하나도 없으면 2열 값만이라도 추가 시도
+        if (!hasValue) {
+          const value = String(row.getCell(2).value || '').trim();
+          if (value && value !== 'null' && value !== 'undefined') {
+            rows.push({ key, value });
+          }
         }
       }
 
       sheetDataMap[sheetName] = { sheetName, headers, rows };
       sheetSummary.push({ name: sheetName, rowCount: rows.length });
+      console.log(`✅ 시트 "${sheetName}" 파싱 완료: ${rows.length}건`);
     });
 
     // 공정별 관계형 데이터 구축
@@ -110,7 +157,7 @@ export async function parseMultiSheetExcel(file: File): Promise<ParseResult> {
         if (row.key && !processMap.has(row.key)) {
           processMap.set(row.key, {
             processNo: row.key,
-            processName: row.value,
+            processName: row.value || '', // A1 시트 2열에 공정명이 있을 수 있음
             processDesc: [],
             productChars: [],
             failureModes: [],
@@ -121,6 +168,37 @@ export async function parseMultiSheetExcel(file: File): Promise<ParseResult> {
             failureCauses: [],
             preventionCtrls: [],
           });
+        }
+      });
+    }
+
+    // A2 시트에서 공정명 업데이트 (A2 시트가 별도로 있는 경우)
+    const a2Data = sheetDataMap['A2'];
+    if (a2Data) {
+      a2Data.rows.forEach((row) => {
+        if (row.key) {
+          let process = processMap.get(row.key);
+          if (process) {
+            // 공정명 업데이트
+            if (row.value && !process.processName) {
+              process.processName = row.value;
+            }
+          } else {
+            // A1에 없는 공정이면 새로 생성
+            processMap.set(row.key, {
+              processNo: row.key,
+              processName: row.value || '',
+              processDesc: [],
+              productChars: [],
+              failureModes: [],
+              detectionCtrls: [],
+              workElements: [],
+              elementFuncs: [],
+              processChars: [],
+              failureCauses: [],
+              preventionCtrls: [],
+            });
+          }
         }
       });
     }
@@ -170,7 +248,7 @@ export async function parseMultiSheetExcel(file: File): Promise<ParseResult> {
     // 완제품별 관계형 데이터 구축
     const productMap = new Map<string, ProductRelation>();
 
-    // C1 시트에서 완제품 마스터 생성
+    // C1 시트에서 구분 마스터 생성 (YOUR PLANT, SHIP TO PLANT, USER)
     const c1Data = sheetDataMap['C1'];
     if (c1Data) {
       c1Data.rows.forEach((row) => {

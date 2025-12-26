@@ -15,6 +15,7 @@ services:
       POSTGRES_USER: fmea_user
       POSTGRES_PASSWORD: fmea_password
       POSTGRES_DB: fmea_smart
+    command: ["postgres", "-c", "password_encryption=md5"]
     ports:
       - "5432:5432"
     volumes:

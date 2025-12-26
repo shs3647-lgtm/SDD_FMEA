@@ -70,10 +70,127 @@
 
 ---
 
-## 2-1. 표준 테이블 디자인 (필수)
+## 2-1. 표준 테이블 디자인 (필수) ⭐ CRITICAL
 
 ### 적용 범위
-모든 데이터 테이블에 표준 디자인 적용
+**모든 데이터 테이블에 반드시 적용** - 예외 없음
+
+### 🔴 필수 규격 (반드시 준수)
+
+| 속성 | 값 | 비고 |
+|------|------|------|
+| **행 높이** | `28px` | 모든 행 동일 |
+| **글씨 크기** | `11px` | 모든 셀 동일 |
+| **패딩** | `4px 6px` | 컴팩트 |
+| **테이블 모서리** | `8px` | border-radius |
+| **테두리** | `1px solid #999` | 모든 셀 |
+| **열 정렬** | `colgroup` 사용 | 고정 열 너비 |
+
+### 🔴 정렬 규칙 (반드시 준수)
+
+| 영역 | 가로정렬 | 세로정렬 | 예시 |
+|------|----------|----------|------|
+| **헤더** | `text-align: center` | `vertical-align: middle` | 가운데 정렬 |
+| **행 헤더(첫 열)** | `text-align: center` | `vertical-align: middle` | 가운데 정렬 |
+| **일반 데이터 셀** | `text-align: center` | `vertical-align: middle` | 가운데 정렬 |
+| **긴 텍스트 셀** | `text-align: left` | `vertical-align: middle` | 좌측정렬 |
+| **숫자 셀** | `text-align: center` | `vertical-align: middle` | 가운데 정렬 |
+
+⚠️ **필수 규칙**:
+- 헤더와 행 헤더는 절대 좌측정렬 금지
+- **세로정렬은 항상 중앙 (`vertical-align: middle`)**
+- **긴 텍스트(설명, 주소 등)만 좌측정렬**, 나머지 모든 데이터는 가운데 정렬
+
+### 🔴 열 너비 통일 규칙
+
+```typescript
+// 관련 테이블 간 열 너비 반드시 통일
+// 예: 기초정보 테이블 첫 열 = Excel 파일 선택 첫 열
+
+<table style={{ tableLayout: 'fixed' }}>
+  <colgroup>
+    <col style={{ width: '100px' }} />  {/* 첫 열 고정 */}
+    <col />  {/* 나머지 자동 */}
+  </colgroup>
+</table>
+```
+
+### TypeScript 표준 스타일 객체
+
+```typescript
+// =====================================================
+// 테이블 디자인 표준 - 모든 테이블에 복사하여 사용
+// =====================================================
+const ROW_HEIGHT = '28px';
+const FONT_SIZE = '11px';
+const CELL_PADDING = '4px 6px';
+
+const headerStyle = { 
+  background: '#00587a', 
+  color: 'white', 
+  border: '1px solid #999', 
+  padding: CELL_PADDING, 
+  fontWeight: 'bold', 
+  textAlign: 'center' as const,     // 🔴 가운데 정렬 필수
+  verticalAlign: 'middle' as const, // 🔴 세로 중앙정렬 필수
+  whiteSpace: 'nowrap' as const, 
+  height: ROW_HEIGHT, 
+  fontSize: FONT_SIZE 
+};
+
+const rowHeaderStyle = { 
+  background: '#00587a', 
+  color: 'white', 
+  border: '1px solid #999', 
+  padding: CELL_PADDING, 
+  fontWeight: 'bold', 
+  textAlign: 'center' as const,     // 🔴 가운데 정렬 필수
+  verticalAlign: 'middle' as const, // 🔴 세로 중앙정렬 필수
+  whiteSpace: 'nowrap' as const, 
+  height: ROW_HEIGHT, 
+  fontSize: FONT_SIZE 
+};
+
+const cellStyle = { 
+  background: 'white', 
+  border: '1px solid #999', 
+  padding: CELL_PADDING, 
+  whiteSpace: 'nowrap' as const, 
+  height: ROW_HEIGHT, 
+  fontSize: FONT_SIZE,
+  textAlign: 'center' as const,     // 🔴 가운데 정렬 기본
+  verticalAlign: 'middle' as const  // 🔴 세로 중앙정렬 필수
+};
+
+// 긴 텍스트용 셀 (설명, 주소 등)
+const cellStyleLeft = { 
+  background: 'white', 
+  border: '1px solid #999', 
+  padding: CELL_PADDING, 
+  whiteSpace: 'nowrap' as const, 
+  height: ROW_HEIGHT, 
+  fontSize: FONT_SIZE,
+  textAlign: 'left' as const,       // 🔴 긴 텍스트만 좌측정렬
+  verticalAlign: 'middle' as const  // 🔴 세로 중앙정렬 필수
+};
+
+const lightBlueStyle = { 
+  background: '#e0f2fb', 
+  border: '1px solid #999', 
+  padding: CELL_PADDING, 
+  whiteSpace: 'nowrap' as const, 
+  height: ROW_HEIGHT, 
+  fontSize: FONT_SIZE,
+  textAlign: 'center' as const,     // 🔴 가운데 정렬 기본
+  verticalAlign: 'middle' as const  // 🔴 세로 중앙정렬 필수
+};
+
+const tableWrapperStyle = { 
+  borderRadius: '8px', 
+  overflow: 'hidden', 
+  border: '1px solid #999' 
+};
+```
 
 ### CSS 스타일
 
@@ -82,37 +199,49 @@
 .standard-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;  /* 🔴 필수: 열 너비 고정 */
   font-family: "Malgun Gothic", sans-serif;
+  font-size: 11px;  /* 🔴 필수: 통일된 글씨 크기 */
 }
 
-/* 모든 셀 공통 테두리 */
+/* 모든 셀 공통 */
 .standard-table th,
 .standard-table td {
   border: 1px solid #999;
-  padding: 8px;
-  text-align: center;
+  padding: 4px 6px;  /* 🔴 필수: 컴팩트 패딩 */
+  height: 28px;  /* 🔴 필수: 통일된 행 높이 */
+  white-space: nowrap;
+  text-align: center;  /* 🔴 기본 가운데 정렬 */
+  vertical-align: middle;  /* 🔴 세로 중앙정렬 필수 */
 }
 
-/* 헤더 행 스타일 (1행 전체) */
+/* 긴 텍스트용 (설명, 주소 등) */
+.standard-table td.text-left {
+  text-align: left;
+}
+
+/* 헤더 행 스타일 */
 .standard-table thead th {
   background-color: #00587a;
   color: #ffffff;
   font-weight: bold;
+  text-align: center;  /* 🔴 필수: 가운데 정렬 */
 }
 
-/* 좌측 첫 번째 열 스타일 (전체 행) */
+/* 좌측 첫 번째 열 (row-header) */
 .standard-table .row-header {
   background-color: #00587a;
   color: #ffffff;
   font-weight: bold;
+  text-align: center;  /* 🔴 필수: 가운데 정렬 */
 }
 
-/* 바디 영역 - 짝수 행 (연한 하늘색) */
+/* 바디 영역 - 짝수 행 */
 .standard-table tbody tr:nth-child(even) td:not(.row-header) {
   background-color: #e0f2fb;
 }
 
-/* 바디 영역 - 홀수 행 (흰색) */
+/* 바디 영역 - 홀수 행 */
 .standard-table tbody tr:nth-child(odd) td:not(.row-header) {
   background-color: #ffffff;
 }
@@ -121,18 +250,31 @@
 ### Tailwind 클래스 조합
 
 ```html
-<!-- 헤더 -->
-<th class="bg-[#00587a] text-white font-bold px-3 py-2 text-center" style="border: 1px solid #999">
+<!-- 헤더 (가로/세로 모두 중앙) -->
+<th class="bg-[#00587a] text-white font-bold px-2 py-1.5 text-center align-middle text-xs" style="border: 1px solid #999">
 
 <!-- 좌측 열 (row-header) -->
-<td class="bg-[#00587a] text-white font-bold px-3 py-2" style="border: 1px solid #999">
+<td class="bg-[#00587a] text-white font-bold px-2 py-1.5 text-center align-middle text-xs" style="border: 1px solid #999">
 
-<!-- 홀수 행 셀 -->
-<td class="bg-white px-3 py-2 text-black" style="border: 1px solid #999">
+<!-- 일반 데이터 셀 (가운데 정렬) -->
+<td class="bg-white px-2 py-1.5 text-center align-middle text-xs" style="border: 1px solid #999">
+
+<!-- 긴 텍스트 셀 (좌측 정렬) -->
+<td class="bg-white px-2 py-1.5 text-left align-middle text-xs" style="border: 1px solid #999">
 
 <!-- 짝수 행 셀 -->
-<td class="bg-[#e0f2fb] px-3 py-2 text-black" style="border: 1px solid #999">
+<td class="bg-[#e0f2fb] px-2 py-1.5 text-center align-middle text-xs" style="border: 1px solid #999">
 ```
+
+### 🔴 필수 Tailwind 클래스 요약
+
+| 속성 | 클래스 | 설명 |
+|------|--------|------|
+| 가로 정렬 (일반) | `text-center` | 모든 데이터 기본값 |
+| 가로 정렬 (긴텍스트) | `text-left` | 설명, 주소 등 |
+| **세로 정렬** | `align-middle` | **모든 셀 필수** |
+| 패딩 | `px-2 py-1.5` | 컴팩트 |
+| 글씨 크기 | `text-xs` | 11px |
 
 ### 색상 범례 컴포넌트
 
@@ -339,6 +481,8 @@
 |------|------|----------|
 | 1.0.0 | 2025-12-26 | 초기 디자인 가이드 작성 |
 | 1.1.0 | 2025-12-26 | 표준 테이블 디자인 상세 규격 추가 (table-design-reference.html 기준) |
+| 1.2.0 | 2025-12-26 | **테이블 디자인 표준 강화**: 행높이 28px, 글씨 11px, 가운데정렬 필수, colgroup 열 너비 고정 |
+| 1.3.0 | 2025-12-26 | **정렬 규칙 강화**: 세로정렬 항상 중앙(`align-middle`), 긴 텍스트만 좌측정렬, 나머지 모든 데이터 가운데정렬 |
 
 ---
 
