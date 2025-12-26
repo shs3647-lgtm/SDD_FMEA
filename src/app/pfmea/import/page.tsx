@@ -84,135 +84,97 @@ export default function PFMEAImportPage() {
         </div>
       </div>
 
-      {/* 16개 기초정보 아이콘 영역 */}
-      <div className="max-w-[1400px] mx-auto mb-5">
-        <div className="bg-white rounded-lg p-5" style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-[#00587a]">16개 기초정보 항목</h2>
-            <div className="flex gap-4 text-xs">
-              <span className="flex items-center gap-1"><span className="w-3 h-3 bg-gray-600 rounded"></span> KEY</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 bg-red-500 rounded"></span> L1</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 bg-yellow-500 rounded"></span> L2</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 bg-green-500 rounded"></span> L3</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 bg-purple-500 rounded"></span> 공통</span>
+      {/* 16개 기초정보 아이콘 영역 - 컴팩트 */}
+      <div className="max-w-[1400px] mx-auto mb-3">
+        <div className="bg-white rounded-lg px-4 py-2" style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+          {/* 개별항목 16개 - 한 줄로 */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-[#00587a] mr-2 whitespace-nowrap">개별항목</span>
+            {/* 16개 아이콘 */}
+            <div className="flex items-center gap-1 px-2 py-1 rounded bg-gray-100 border border-gray-400" title="공정번호">
+              <Factory className="h-4 w-4 text-gray-600" />
+              <span className="text-[9px] text-gray-700">공정번호</span>
             </div>
-          </div>
-          
-          {/* 16개 아이콘 그리드 */}
-          <div className="grid grid-cols-8 gap-2">
-            {/* KEY 항목 (1-2) */}
-            <div className="flex flex-col items-center p-2 rounded border-2 border-gray-600 bg-gray-50 hover:bg-gray-100 transition-colors">
-              <Factory className="h-6 w-6 text-gray-600 mb-1" />
-              <span className="text-[10px] font-bold text-gray-700 text-center">공정번호</span>
-              <Badge className="bg-gray-600 text-white text-[8px] mt-1">KEY</Badge>
+            <div className="flex items-center gap-1 px-2 py-1 rounded bg-gray-100 border border-gray-400" title="공정명">
+              <Cog className="h-4 w-4 text-gray-600" />
+              <span className="text-[9px] text-gray-700">공정명</span>
             </div>
-            <div className="flex flex-col items-center p-2 rounded border-2 border-gray-600 bg-gray-50 hover:bg-gray-100 transition-colors">
-              <Cog className="h-6 w-6 text-gray-600 mb-1" />
-              <span className="text-[10px] font-bold text-gray-700 text-center">공정명</span>
-              <Badge className="bg-gray-600 text-white text-[8px] mt-1">KEY</Badge>
+            <div className="flex items-center gap-1 px-2 py-1 rounded bg-red-50 border border-red-300" title="완제품기능">
+              <Package className="h-4 w-4 text-red-500" />
+              <span className="text-[9px] text-red-700">완제품기능</span>
             </div>
-            
-            {/* L1 항목 (8-10) */}
-            <div className="flex flex-col items-center p-2 rounded border-2 border-red-400 bg-red-50 hover:bg-red-100 transition-colors">
-              <Package className="h-6 w-6 text-red-500 mb-1" />
-              <span className="text-[10px] font-bold text-red-700 text-center">완제품기능</span>
-              <Badge className="bg-red-500 text-white text-[8px] mt-1">L1</Badge>
+            <div className="flex items-center gap-1 px-2 py-1 rounded bg-red-50 border border-red-300" title="요구사항">
+              <Target className="h-4 w-4 text-red-500" />
+              <span className="text-[9px] text-red-700">요구사항</span>
             </div>
-            <div className="flex flex-col items-center p-2 rounded border-2 border-red-400 bg-red-50 hover:bg-red-100 transition-colors">
-              <Target className="h-6 w-6 text-red-500 mb-1" />
-              <span className="text-[10px] font-bold text-red-700 text-center">요구사항</span>
-              <Badge className="bg-red-500 text-white text-[8px] mt-1">L1</Badge>
+            <div className="flex items-center gap-1 px-2 py-1 rounded bg-red-50 border border-red-300" title="고장영향">
+              <AlertTriangle className="h-4 w-4 text-red-500" />
+              <span className="text-[9px] text-red-700">고장영향</span>
             </div>
-            <div className="flex flex-col items-center p-2 rounded border-2 border-red-400 bg-red-50 hover:bg-red-100 transition-colors">
-              <AlertTriangle className="h-6 w-6 text-red-500 mb-1" />
-              <span className="text-[10px] font-bold text-red-700 text-center">고장영향</span>
-              <Badge className="bg-red-500 text-white text-[8px] mt-1">L1</Badge>
+            <div className="flex items-center gap-1 px-2 py-1 rounded bg-yellow-50 border border-yellow-400" title="공정기능">
+              <Settings className="h-4 w-4 text-yellow-600" />
+              <span className="text-[9px] text-yellow-700">공정기능</span>
             </div>
-            
-            {/* L2 항목 (3-4, 11, 13, 16) */}
-            <div className="flex flex-col items-center p-2 rounded border-2 border-yellow-400 bg-yellow-50 hover:bg-yellow-100 transition-colors">
-              <Settings className="h-6 w-6 text-yellow-600 mb-1" />
-              <span className="text-[10px] font-bold text-yellow-700 text-center">공정기능</span>
-              <Badge className="bg-yellow-500 text-white text-[8px] mt-1">L2</Badge>
+            <div className="flex items-center gap-1 px-2 py-1 rounded bg-yellow-50 border border-yellow-400" title="제품특성">
+              <Box className="h-4 w-4 text-yellow-600" />
+              <span className="text-[9px] text-yellow-700">제품특성</span>
             </div>
-            <div className="flex flex-col items-center p-2 rounded border-2 border-yellow-400 bg-yellow-50 hover:bg-yellow-100 transition-colors">
-              <Box className="h-6 w-6 text-yellow-600 mb-1" />
-              <span className="text-[10px] font-bold text-yellow-700 text-center">제품특성</span>
-              <Badge className="bg-yellow-500 text-white text-[8px] mt-1">L2</Badge>
+            <div className="flex items-center gap-1 px-2 py-1 rounded bg-yellow-50 border border-yellow-400" title="고장형태">
+              <Zap className="h-4 w-4 text-yellow-600" />
+              <span className="text-[9px] text-yellow-700">고장형태</span>
             </div>
-            <div className="flex flex-col items-center p-2 rounded border-2 border-yellow-400 bg-yellow-50 hover:bg-yellow-100 transition-colors">
-              <Zap className="h-6 w-6 text-yellow-600 mb-1" />
-              <span className="text-[10px] font-bold text-yellow-700 text-center">고장형태</span>
-              <Badge className="bg-yellow-500 text-white text-[8px] mt-1">L2</Badge>
+            <div className="flex items-center gap-1 px-2 py-1 rounded bg-yellow-50 border border-yellow-400" title="검출관리">
+              <Search className="h-4 w-4 text-yellow-600" />
+              <span className="text-[9px] text-yellow-700">검출관리</span>
             </div>
-            
-            {/* 두 번째 줄 */}
-            <div className="flex flex-col items-center p-2 rounded border-2 border-yellow-400 bg-yellow-50 hover:bg-yellow-100 transition-colors">
-              <Search className="h-6 w-6 text-yellow-600 mb-1" />
-              <span className="text-[10px] font-bold text-yellow-700 text-center">검출관리</span>
-              <Badge className="bg-yellow-500 text-white text-[8px] mt-1">L2</Badge>
+            <div className="flex items-center gap-1 px-2 py-1 rounded bg-yellow-50 border border-yellow-400" title="검사장비">
+              <Gauge className="h-4 w-4 text-yellow-600" />
+              <span className="text-[9px] text-yellow-700">검사장비</span>
             </div>
-            <div className="flex flex-col items-center p-2 rounded border-2 border-yellow-400 bg-yellow-50 hover:bg-yellow-100 transition-colors">
-              <Gauge className="h-6 w-6 text-yellow-600 mb-1" />
-              <span className="text-[10px] font-bold text-yellow-700 text-center">검사장비</span>
-              <Badge className="bg-yellow-500 text-white text-[8px] mt-1">L2</Badge>
+            <div className="flex items-center gap-1 px-2 py-1 rounded bg-green-50 border border-green-400" title="작업요소">
+              <Users className="h-4 w-4 text-green-600" />
+              <span className="text-[9px] text-green-700">작업요소</span>
             </div>
-            
-            {/* L3 항목 (5-7, 12, 14-15) */}
-            <div className="flex flex-col items-center p-2 rounded border-2 border-green-400 bg-green-50 hover:bg-green-100 transition-colors">
-              <Users className="h-6 w-6 text-green-600 mb-1" />
-              <span className="text-[10px] font-bold text-green-700 text-center">작업요소</span>
-              <Badge className="bg-green-500 text-white text-[8px] mt-1">L3</Badge>
+            <div className="flex items-center gap-1 px-2 py-1 rounded bg-green-50 border border-green-400" title="요소기능">
+              <ClipboardCheck className="h-4 w-4 text-green-600" />
+              <span className="text-[9px] text-green-700">요소기능</span>
             </div>
-            <div className="flex flex-col items-center p-2 rounded border-2 border-green-400 bg-green-50 hover:bg-green-100 transition-colors">
-              <ClipboardCheck className="h-6 w-6 text-green-600 mb-1" />
-              <span className="text-[10px] font-bold text-green-700 text-center">요소기능</span>
-              <Badge className="bg-green-500 text-white text-[8px] mt-1">L3</Badge>
+            <div className="flex items-center gap-1 px-2 py-1 rounded bg-green-50 border border-green-400" title="공정특성">
+              <Thermometer className="h-4 w-4 text-green-600" />
+              <span className="text-[9px] text-green-700">공정특성</span>
             </div>
-            <div className="flex flex-col items-center p-2 rounded border-2 border-green-400 bg-green-50 hover:bg-green-100 transition-colors">
-              <Thermometer className="h-6 w-6 text-green-600 mb-1" />
-              <span className="text-[10px] font-bold text-green-700 text-center">공정특성</span>
-              <Badge className="bg-green-500 text-white text-[8px] mt-1">L3</Badge>
+            <div className="flex items-center gap-1 px-2 py-1 rounded bg-green-50 border border-green-400" title="고장원인">
+              <AlertTriangle className="h-4 w-4 text-green-600" />
+              <span className="text-[9px] text-green-700">고장원인</span>
             </div>
-            <div className="flex flex-col items-center p-2 rounded border-2 border-green-400 bg-green-50 hover:bg-green-100 transition-colors">
-              <AlertTriangle className="h-6 w-6 text-green-600 mb-1" />
-              <span className="text-[10px] font-bold text-green-700 text-center">고장원인</span>
-              <Badge className="bg-green-500 text-white text-[8px] mt-1">L3</Badge>
+            <div className="flex items-center gap-1 px-2 py-1 rounded bg-green-50 border border-green-400" title="예방관리">
+              <Shield className="h-4 w-4 text-green-600" />
+              <span className="text-[9px] text-green-700">예방관리</span>
             </div>
-            <div className="flex flex-col items-center p-2 rounded border-2 border-green-400 bg-green-50 hover:bg-green-100 transition-colors">
-              <Shield className="h-6 w-6 text-green-600 mb-1" />
-              <span className="text-[10px] font-bold text-green-700 text-center">예방관리</span>
-              <Badge className="bg-green-500 text-white text-[8px] mt-1">L3</Badge>
-            </div>
-            <div className="flex flex-col items-center p-2 rounded border-2 border-green-400 bg-green-50 hover:bg-green-100 transition-colors">
-              <Wrench className="h-6 w-6 text-green-600 mb-1" />
-              <span className="text-[10px] font-bold text-green-700 text-center">설비/장비</span>
-              <Badge className="bg-green-500 text-white text-[8px] mt-1">L3</Badge>
+            <div className="flex items-center gap-1 px-2 py-1 rounded bg-green-50 border border-green-400" title="설비/장비">
+              <Wrench className="h-4 w-4 text-green-600" />
+              <span className="text-[9px] text-green-700">설비</span>
             </div>
           </div>
 
-          {/* 공통항목 (6M) */}
-          <div className="mt-4 pt-3 border-t border-[#999]">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm font-bold text-purple-700">공통항목 (작업요소에 자동 포함)</span>
-              <span className="text-xs text-gray-500">- 모든 공정에 공통 적용</span>
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {[
-                { code: 'MN', name: '사람(Man)', icon: '👤' },
-                { code: 'MA', name: '자재(Material)', icon: '📦' },
-                { code: 'MT', name: '방법(Method)', icon: '📋' },
-                { code: 'ME', name: '측정(Measure)', icon: '📏' },
-                { code: 'EN', name: '환경(Environ)', icon: '🌡️' },
-                { code: 'IM', name: '부자재(Indirect)', icon: '🧴' },
-              ].map((item) => (
-                <div key={item.code} className="flex items-center gap-1 px-3 py-1.5 rounded border-2 border-purple-400 bg-purple-50">
-                  <span>{item.icon}</span>
-                  <span className="text-xs font-bold text-purple-700">{item.code}</span>
-                  <span className="text-[10px] text-purple-600">{item.name}</span>
-                </div>
-              ))}
-            </div>
+          {/* 공통항목 - 한 줄로 */}
+          <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-gray-200">
+            <span className="text-xs font-bold text-purple-700 mr-2 whitespace-nowrap">공통항목</span>
+            {[
+              { code: 'MN', name: '사람', icon: '👤' },
+              { code: 'MA', name: '자재', icon: '📦' },
+              { code: 'MT', name: '방법', icon: '📋' },
+              { code: 'ME', name: '측정', icon: '📏' },
+              { code: 'EN', name: '환경', icon: '🌡️' },
+              { code: 'IM', name: '부자재', icon: '🧴' },
+            ].map((item) => (
+              <div key={item.code} className="flex items-center gap-1 px-2 py-1 rounded bg-purple-50 border border-purple-300">
+                <span className="text-sm">{item.icon}</span>
+                <span className="text-[9px] font-bold text-purple-700">{item.code}</span>
+                <span className="text-[9px] text-purple-600">{item.name}</span>
+              </div>
+            ))}
+            <span className="text-[10px] text-gray-500 ml-2">← 모든 공정에 자동 적용</span>
           </div>
         </div>
       </div>
