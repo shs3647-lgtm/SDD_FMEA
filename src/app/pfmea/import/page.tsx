@@ -266,6 +266,46 @@ export default function PFMEAImportPage() {
                 파일 로드됨: {fileName}
               </div>
             )}
+
+            {/* Import 결과 통계 - 파일 선택 바로 아래 */}
+            {flatData.length > 0 && (
+              <div className="mt-4">
+                <h3 className="text-sm font-bold text-[#00587a] mb-2 flex items-center gap-2">
+                  <Database className="h-4 w-4" />
+                  Import 미리보기
+                </h3>
+                <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th className="bg-[#00587a] text-white font-bold px-3 py-2 text-center" style={{ border: '1px solid #999' }}>총 행</th>
+                      <th className="bg-[#00587a] text-white font-bold px-3 py-2 text-center" style={{ border: '1px solid #999' }}>공정 수</th>
+                      <th className="bg-[#00587a] text-white font-bold px-3 py-2 text-center" style={{ border: '1px solid #999' }}>A.공정</th>
+                      <th className="bg-[#00587a] text-white font-bold px-3 py-2 text-center" style={{ border: '1px solid #999' }}>B.작업요소</th>
+                      <th className="bg-[#00587a] text-white font-bold px-3 py-2 text-center" style={{ border: '1px solid #999' }}>C.완제품</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="bg-white text-center text-black font-bold text-xl py-2" style={{ border: '1px solid #999' }}>
+                        {flatData.length}
+                      </td>
+                      <td className="bg-[#e0f2fb] text-center text-[#00587a] font-bold text-xl py-2" style={{ border: '1px solid #999' }}>
+                        {new Set(flatData.filter(d => d.itemCode === 'A1').map(d => d.processNo)).size}
+                      </td>
+                      <td className="bg-blue-50 text-center text-blue-600 font-bold text-xl py-2" style={{ border: '1px solid #999' }}>
+                        {flatData.filter(d => d.itemCode.startsWith('A')).length}
+                      </td>
+                      <td className="bg-green-50 text-center text-green-600 font-bold text-xl py-2" style={{ border: '1px solid #999' }}>
+                        {flatData.filter(d => d.itemCode.startsWith('B')).length}
+                      </td>
+                      <td className="bg-red-50 text-center text-red-600 font-bold text-xl py-2" style={{ border: '1px solid #999' }}>
+                        {flatData.filter(d => d.itemCode.startsWith('C')).length}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* Import 데이터 미리보기 그리드 */}
@@ -273,8 +313,10 @@ export default function PFMEAImportPage() {
             <ImportPreviewGrid
               data={flatData}
               onDataChange={setFlatData}
-              selectedTab={previewTab}
-              onTabChange={setPreviewTab}
+              onSave={() => {
+                setImportComplete(true);
+                console.log('저장 완료:', flatData.length, '개 항목');
+              }}
             />
           )}
 

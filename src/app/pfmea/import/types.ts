@@ -11,6 +11,21 @@
  * Step 3: 고장 연결 (FC → FM → FE 인과관계)
  */
 
+/** 공통 기초정보 카테고리 */
+export interface CommonCategory {
+  code: 'MN' | 'EN' | 'IM';
+  name: string;
+  icon: string;
+  description: string;
+}
+
+/** 공통 카테고리 정의 */
+export const COMMON_CATEGORIES: CommonCategory[] = [
+  { code: 'MN', name: '사람(Man)', icon: '👤', description: '작업자, 엔지니어 등' },
+  { code: 'EN', name: '환경(Environment)', icon: '🌡️', description: '온도, 습도, 이물 등' },
+  { code: 'IM', name: '부자재(Indirect Material)', icon: '🧴', description: '그리스, 윤활유 등' },
+];
+
 /** 공통 기초정보 아이템 */
 export interface CommonItem {
   id: string;
