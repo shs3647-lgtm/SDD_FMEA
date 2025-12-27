@@ -211,7 +211,7 @@ function EditableL3Cell({
  */
 export function StructureColgroup() {
   return (
-    <colgroup><col style={{ width: '150px' }} /><col style={{ width: '150px' }} /><col style={{ width: '25px' }} /><col /></colgroup>
+    <colgroup><col style={{ width: '33.33%' }} /><col style={{ width: '33.33%' }} /><col style={{ width: '25px' }} /><col /></colgroup>
   );
 }
 
@@ -234,9 +234,9 @@ export function StructureHeader({
     <>
       {/* 메인 헤더 - 진한 색상 */}
       <tr>
-        <th style={{ ...stickyFirstColStyle, zIndex: 15, width: '150px', background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>1. 완제품 공정명</th>
-        <th onClick={onProcessModalOpen} className="cursor-pointer hover:bg-green-600" style={{ width: '150px', background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>2. 메인 공정명 🔍</th>
-        <th colSpan={2} style={{ background: '#f57c00', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>3. 작업 요소명</th>
+        <th style={{ ...stickyFirstColStyle, zIndex: 15, width: '33.33%', background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>1. 완제품 공정명</th>
+        <th onClick={onProcessModalOpen} className="cursor-pointer hover:bg-green-600" style={{ width: '33.33%', background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>2. 메인 공정명 🔍</th>
+        <th colSpan={2} style={{ width: '33.33%', background: '#f57c00', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>3. 작업 요소명</th>
       </tr>
       {/* 서브 헤더 - 중간 색상 */}
       <tr>
