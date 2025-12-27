@@ -222,9 +222,16 @@ export default function WorkElementSelectModal({
   
   // 선택된 항목 삭제
   const deleteSelected = () => {
-    if (selectedIds.size === 0) return;
-    if (!confirm(`선택된 ${selectedIds.size}개 항목을 삭제하시겠습니까?`)) return;
+    if (selectedIds.size === 0) {
+      alert('삭제할 항목을 선택해주세요.');
+      return;
+    }
     
+    // 삭제할 항목 이름 먼저 추출 (상태 변경 전에)
+    const deletedNames = elements.filter(e => selectedIds.has(e.id)).map(e => e.name);
+    const deleteCount = selectedIds.size;
+    
+    // 상태에서 삭제
     setElements(prev => prev.filter(e => !selectedIds.has(e.id)));
     setSelectedIds(new Set());
     
@@ -233,7 +240,6 @@ export default function WorkElementSelectModal({
       const savedData = localStorage.getItem('pfmea_master_data');
       if (savedData) {
         const flatData = JSON.parse(savedData);
-        const deletedNames = elements.filter(e => selectedIds.has(e.id)).map(e => e.name);
         const updatedData = flatData.filter((item: any) => 
           item.code !== 'A5' || !deletedNames.includes(item.value)
         );
@@ -242,6 +248,9 @@ export default function WorkElementSelectModal({
     } catch (e) {
       console.error('Failed to update localStorage:', e);
     }
+    
+    // 삭제 완료 알림
+    alert(`${deleteCount}개 항목이 삭제되었습니다.`);
   };
   
   // 수정 시작
