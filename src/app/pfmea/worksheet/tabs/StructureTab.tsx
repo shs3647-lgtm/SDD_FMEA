@@ -7,7 +7,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { WorksheetState, Process, L1Data, COLORS } from '../constants';
 
 interface FlatRow {
@@ -34,6 +34,176 @@ interface StructureTabProps {
   setIsProcessModalOpen: (open: boolean) => void;
   setIsWorkElementModalOpen: (open: boolean) => void;
   setTargetL2Id: (id: string | null) => void;
+}
+
+const M4_OPTIONS = ['MN', 'MC', 'MT', 'EN'];
+
+/**
+ * 4M 셀 - 클릭하여 수정 가능
+ */
+function EditableM4Cell({ 
+  value, l3Id, state, setState, setDirty 
+}: { 
+  value: string; 
+  l3Id: string; 
+  state: WorksheetState; 
+  setState: React.Dispatch<React.SetStateAction<WorksheetState>>; 
+  setDirty: (dirty: boolean) => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(value);
+
+  const handleSave = () => {
+    setState(prev => ({
+      ...prev,
+      l2: prev.l2.map(p => ({
+        ...p,
+        l3: p.l3.map(w => w.id === l3Id ? { ...w, m4: editValue } : w)
+      }))
+    }));
+    setDirty(true);
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <td style={{ 
+        borderTop: `1px solid ${COLORS.line}`,
+        borderRight: `1px solid ${COLORS.line}`,
+        borderBottom: `1px solid ${COLORS.line}`,
+        borderLeft: `1px solid ${COLORS.line}`,
+        padding: '0', 
+        background: '#fffde7' 
+      }}>
+        <select
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={handleSave}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false); }}
+          autoFocus
+          className="w-full text-center text-xs font-bold"
+          style={{ border: 'none', outline: '2px solid #ffc107', background: '#fffde7' }}
+        >
+          <option value="">-</option>
+          {M4_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+        </select>
+      </td>
+    );
+  }
+
+  return (
+    <td 
+      className="text-center text-xs font-bold cursor-pointer hover:bg-yellow-200" 
+      style={{ 
+        borderTop: `1px solid ${COLORS.line}`,
+        borderRight: `1px solid ${COLORS.line}`,
+        borderBottom: `1px solid ${COLORS.line}`,
+        borderLeft: `1px solid ${COLORS.line}`,
+        padding: '0', 
+        background: '#fff8e1' 
+      }}
+      onClick={() => { setEditValue(value); setIsEditing(true); }}
+      title="클릭하여 수정"
+    >
+      {value || <span style={{ color: '#999' }}>-</span>}
+    </td>
+  );
+}
+
+/**
+ * 작업요소(L3) 셀 - 클릭하여 수정 가능
+ */
+function EditableL3Cell({ 
+  value, l3Id, l2Id, state, setState, setDirty, handleSelect, setTargetL2Id, setIsWorkElementModalOpen 
+}: { 
+  value: string; 
+  l3Id: string;
+  l2Id: string;
+  state: WorksheetState; 
+  setState: React.Dispatch<React.SetStateAction<WorksheetState>>; 
+  setDirty: (dirty: boolean) => void;
+  handleSelect: (type: 'L1' | 'L2' | 'L3', id: string | null) => void;
+  setTargetL2Id: (id: string | null) => void;
+  setIsWorkElementModalOpen: (open: boolean) => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(value);
+  
+  const isPlaceholder = value.includes('추가') || value.includes('클릭');
+
+  const handleSave = () => {
+    if (editValue.trim() && editValue !== value) {
+      setState(prev => ({
+        ...prev,
+        l2: prev.l2.map(p => ({
+          ...p,
+          l3: p.l3.map(w => w.id === l3Id ? { ...w, name: editValue.trim() } : w)
+        }))
+      }));
+      setDirty(true);
+    }
+    setIsEditing(false);
+  };
+
+  // 플레이스홀더면 모달 열기
+  const handleClick = () => {
+    if (isPlaceholder) {
+      handleSelect('L3', l3Id);
+      setTargetL2Id(l2Id);
+      setIsWorkElementModalOpen(true);
+    } else {
+      setEditValue(value);
+      setIsEditing(true);
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <td style={{ 
+        borderTop: `1px solid ${COLORS.line}`,
+        borderRight: `1px solid ${COLORS.line}`,
+        borderBottom: `1px solid ${COLORS.line}`,
+        borderLeft: `1px solid ${COLORS.line}`,
+        padding: '2px', 
+        background: '#fff3e0' 
+      }}>
+        <input
+          type="text"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={handleSave}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false); }}
+          autoFocus
+          className="w-full text-xs px-1"
+          style={{ border: 'none', outline: '2px solid #ff9800', background: '#fff', borderRadius: '2px' }}
+        />
+      </td>
+    );
+  }
+
+  return (
+    <td 
+      className="cursor-pointer hover:bg-orange-100 text-xs"
+      style={{ 
+        borderTop: `1px solid ${COLORS.line}`,
+        borderRight: `1px solid ${COLORS.line}`,
+        borderBottom: `1px solid ${COLORS.line}`,
+        borderLeft: `1px solid ${COLORS.line}`,
+        padding: '2px 4px', 
+        background: isPlaceholder 
+          ? 'repeating-linear-gradient(45deg, #fff, #fff 4px, #fff3e0 4px, #fff3e0 8px)' 
+          : '#fff3e0', 
+        wordBreak: 'break-word' 
+      }}
+      onClick={handleClick}
+      title={isPlaceholder ? '클릭하여 작업요소 추가' : '클릭하여 수정'}
+    >
+      {isPlaceholder 
+        ? <span className="text-orange-600 font-bold">🔍 클릭</span> 
+        : <span>{value} ✏️</span>
+      }
+    </td>
+  );
 }
 
 /**
@@ -165,46 +335,27 @@ export function StructureRow({
         </td>
       )}
       
-      {/* 4M */}
-      <td 
-        className="text-center text-xs font-bold" 
-        style={{ 
-          borderTop: `1px solid ${COLORS.line}`,
-          borderRight: `1px solid ${COLORS.line}`,
-          borderBottom: `1px solid ${COLORS.line}`,
-          borderLeft: `1px solid ${COLORS.line}`,
-          padding: '0', 
-          background: '#fff8e1' 
-        }}
-      >
-        {row.m4}
-      </td>
+      {/* 4M - 클릭하여 수정 */}
+      <EditableM4Cell
+        value={row.m4}
+        l3Id={row.l3Id}
+        state={state}
+        setState={setState}
+        setDirty={setDirty}
+      />
       
-      {/* L3: 작업요소 */}
-      <td 
-        className="cursor-pointer hover:bg-orange-100 text-xs"
-        style={{ 
-          borderTop: `1px solid ${COLORS.line}`,
-          borderRight: `1px solid ${COLORS.line}`,
-          borderBottom: `1px solid ${COLORS.line}`,
-          borderLeft: `1px solid ${COLORS.line}`,
-          padding: '2px 4px', 
-          background: row.l3Name.includes('추가') || row.l3Name.includes('클릭') 
-            ? 'repeating-linear-gradient(45deg, #fff, #fff 4px, #fff3e0 4px, #fff3e0 8px)' 
-            : '#fff3e0', 
-          wordBreak: 'break-word' 
-        }}
-        onClick={() => { 
-          handleSelect('L3', row.l3Id); 
-          setTargetL2Id(row.l2Id); 
-          setIsWorkElementModalOpen(true); 
-        }}
-      >
-        {row.l3Name.includes('추가') || row.l3Name.includes('클릭') 
-          ? <span className="text-orange-600 font-bold">🔍 클릭</span> 
-          : <span>{row.l3Name} 🔍</span>
-        }
-      </td>
+      {/* L3: 작업요소 - 클릭하여 수정 */}
+      <EditableL3Cell
+        value={row.l3Name}
+        l3Id={row.l3Id}
+        l2Id={row.l2Id}
+        state={state}
+        setState={setState}
+        setDirty={setDirty}
+        handleSelect={handleSelect}
+        setTargetL2Id={setTargetL2Id}
+        setIsWorkElementModalOpen={setIsWorkElementModalOpen}
+      />
     </>
   );
 }
