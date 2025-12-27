@@ -211,3 +211,241 @@ export async function exportFMEAWorksheet(state: WorksheetState, fmeaName: strin
   URL.revokeObjectURL(url);
 }
 
+// ============ 구조분석 전용 Excel Export/Import ============
+
+// 구조분석 컬럼 정의
+const STRUCTURE_COLUMNS = [
+  { id: 'l1Name', label: '완제품공정명', width: 20 },
+  { id: 'l2No', label: '공정번호', width: 10 },
+  { id: 'l2Name', label: '공정명', width: 20 },
+  { id: 'm4', label: '4M', width: 6 },
+  { id: 'l3Name', label: '작업요소', width: 25 },
+];
+
+/**
+ * 구조분석 데이터 Excel 내보내기
+ */
+export async function exportStructureAnalysis(state: WorksheetState, fmeaName: string) {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'FMEA Smart System';
+  workbook.created = new Date();
+
+  const worksheet = workbook.addWorksheet('구조분석', {
+    properties: { tabColor: { argb: '1976D2' } },
+    views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }],
+  });
+
+  // 컬럼 너비 설정
+  worksheet.columns = STRUCTURE_COLUMNS.map(col => ({
+    key: col.id,
+    width: col.width,
+  }));
+
+  // 헤더 행
+  const headerRow = worksheet.getRow(1);
+  STRUCTURE_COLUMNS.forEach((col, idx) => {
+    const cell = headerRow.getCell(idx + 1);
+    cell.value = col.label;
+    applyHeaderStyle(cell, '1976D2');
+  });
+  headerRow.height = 25;
+
+  // 데이터 행
+  let rowNum = 2;
+  state.l2.forEach(proc => {
+    if (proc.name.includes('클릭') || proc.name.includes('선택')) return;
+
+    proc.l3.forEach(elem => {
+      if (elem.name.includes('추가') || elem.name.includes('클릭')) return;
+
+      const row = worksheet.getRow(rowNum);
+      const isEvenRow = (rowNum - 2) % 2 === 0;
+
+      const values = [
+        state.l1.name,
+        proc.no,
+        proc.name,
+        elem.m4,
+        elem.name,
+      ];
+
+      values.forEach((val, idx) => {
+        const cell = row.getCell(idx + 1);
+        cell.value = val || '';
+        applyDataStyle(cell, isEvenRow);
+      });
+
+      row.height = 22;
+      rowNum++;
+    });
+  });
+
+  // 파일 다운로드
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { 
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+  });
+  
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  link.download = `${fmeaName || 'PFMEA'}_구조분석_${date}.xlsx`;
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * 빈 구조분석 템플릿 다운로드
+ */
+export async function downloadStructureTemplate() {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'FMEA Smart System';
+  workbook.created = new Date();
+
+  const worksheet = workbook.addWorksheet('구조분석_템플릿', {
+    properties: { tabColor: { argb: '1976D2' } },
+  });
+
+  // 컬럼 너비 설정
+  worksheet.columns = STRUCTURE_COLUMNS.map(col => ({
+    key: col.id,
+    width: col.width,
+  }));
+
+  // 헤더 행
+  const headerRow = worksheet.getRow(1);
+  STRUCTURE_COLUMNS.forEach((col, idx) => {
+    const cell = headerRow.getCell(idx + 1);
+    cell.value = col.label;
+    applyHeaderStyle(cell, '1976D2');
+  });
+  headerRow.height = 25;
+
+  // 안내 행
+  const guideRow = worksheet.getRow(2);
+  ['(예: 타이어 제조공정)', '(예: 10)', '(예: 자재입고)', '(MN/MC/MT/EN)', '(예: 작업자)'].forEach((guide, idx) => {
+    const cell = guideRow.getCell(idx + 1);
+    cell.value = guide;
+    cell.font = { italic: true, color: { argb: '666666' }, size: 9 };
+    cell.alignment = { horizontal: 'center' };
+  });
+
+  // 파일 다운로드
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { 
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+  });
+  
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'PFMEA_구조분석_템플릿.xlsx';
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * 구조분석 Excel 가져오기
+ */
+export async function importStructureAnalysis(
+  file: File,
+  setState: React.Dispatch<React.SetStateAction<WorksheetState>>,
+  setDirty: (dirty: boolean) => void
+): Promise<{ success: boolean; message: string; count: number }> {
+  try {
+    const workbook = new ExcelJS.Workbook();
+    const arrayBuffer = await file.arrayBuffer();
+    await workbook.xlsx.load(arrayBuffer);
+
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) {
+      return { success: false, message: '워크시트를 찾을 수 없습니다.', count: 0 };
+    }
+
+    // 데이터 파싱
+    const rows: Array<{
+      l1Name: string;
+      l2No: string;
+      l2Name: string;
+      m4: string;
+      l3Name: string;
+    }> = [];
+
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return; // 헤더 스킵
+
+      const l1Name = row.getCell(1).value?.toString() || '';
+      const l2No = row.getCell(2).value?.toString() || '';
+      const l2Name = row.getCell(3).value?.toString() || '';
+      const m4 = row.getCell(4).value?.toString() || '';
+      const l3Name = row.getCell(5).value?.toString() || '';
+
+      // 빈 행 스킵
+      if (!l2Name && !l3Name) return;
+      // 안내 행 스킵
+      if (l1Name.includes('예:') || l2No.includes('예:')) return;
+
+      rows.push({ l1Name, l2No, l2Name, m4, l3Name });
+    });
+
+    if (rows.length === 0) {
+      return { success: false, message: '가져올 데이터가 없습니다.', count: 0 };
+    }
+
+    // 상태 업데이트
+    setState(prev => {
+      const newL1Name = rows[0]?.l1Name || prev.l1.name;
+      
+      // 공정별로 그룹화
+      const processMap = new Map<string, { no: string; name: string; elements: Array<{ m4: string; name: string }> }>();
+      
+      rows.forEach(row => {
+        const key = `${row.l2No}_${row.l2Name}`;
+        if (!processMap.has(key)) {
+          processMap.set(key, { no: row.l2No, name: row.l2Name, elements: [] });
+        }
+        if (row.l3Name) {
+          processMap.get(key)!.elements.push({ m4: row.m4, name: row.l3Name });
+        }
+      });
+
+      // 새 L2 배열 생성
+      const newL2 = Array.from(processMap.values()).map((proc, pIdx) => ({
+        id: `proc_${Date.now()}_${pIdx}`,
+        no: proc.no,
+        name: proc.name,
+        order: (pIdx + 1) * 10,
+        l3: proc.elements.length > 0 
+          ? proc.elements.map((elem, eIdx) => ({
+              id: `elem_${Date.now()}_${pIdx}_${eIdx}`,
+              m4: elem.m4,
+              name: elem.name,
+              order: (eIdx + 1) * 10,
+            }))
+          : [{ id: `elem_${Date.now()}_${pIdx}_0`, m4: '', name: '(작업요소 추가)', order: 10 }]
+      }));
+
+      return {
+        ...prev,
+        l1: { ...prev.l1, name: newL1Name },
+        l2: newL2,
+      };
+    });
+
+    setDirty(true);
+
+    return { success: true, message: `${rows.length}개 항목을 가져왔습니다.`, count: rows.length };
+  } catch (error) {
+    console.error('Import error:', error);
+    return { success: false, message: '파일 읽기 오류가 발생했습니다.', count: 0 };
+  }
+}
+

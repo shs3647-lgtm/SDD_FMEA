@@ -25,7 +25,12 @@ import {
   OptTab, OptHeader, OptRow,
   DocTab, DocHeader, DocRow,
 } from './tabs';
-import { exportFMEAWorksheet } from './excel-export';
+import { 
+  exportFMEAWorksheet, 
+  exportStructureAnalysis, 
+  importStructureAnalysis,
+  downloadStructureTemplate 
+} from './excel-export';
 
 /**
  * FMEA 워크시트 메인 페이지
@@ -73,6 +78,44 @@ export default function FMEAWorksheetPage() {
       }
       return newSet;
     });
+  }, []);
+
+  // Import 모달 상태
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importMessage, setImportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // 구조분석 Import 핸들러
+  const handleImportFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportMessage(null);
+    const result = await importStructureAnalysis(file, setState, setDirty);
+    
+    setImportMessage({
+      type: result.success ? 'success' : 'error',
+      text: result.message
+    });
+
+    // 파일 입력 초기화
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+
+    // 3초 후 메시지 숨기기
+    setTimeout(() => setImportMessage(null), 3000);
+  }, [setState, setDirty]);
+
+  // 구조분석 Export 핸들러
+  const handleStructureExport = useCallback(async () => {
+    const fmeaName = currentFmea?.fmeaInfo?.subject || currentFmea?.project?.productName || 'PFMEA';
+    await exportStructureAnalysis(state, fmeaName);
+  }, [state, currentFmea]);
+
+  // 템플릿 다운로드 핸들러
+  const handleDownloadTemplate = useCallback(async () => {
+    await downloadStructureTemplate();
   }, []);
 
   // 공정 모달 저장 핸들러
@@ -207,10 +250,16 @@ export default function FMEAWorksheetPage() {
           dirty={dirty}
           isSaving={isSaving}
           lastSaved={lastSaved}
+          currentTab={state.tab}
+          importMessage={importMessage}
+          fileInputRef={fileInputRef}
           onFmeaChange={handleFmeaChange}
           onSave={saveToLocalStorage}
           onNavigateToList={() => router.push('/pfmea/list')}
-          onExport={() => exportFMEAWorksheet(state, currentFmea?.fmeaInfo?.subject || 'PFMEA')}
+          onExport={state.tab === 'structure' ? handleStructureExport : () => exportFMEAWorksheet(state, currentFmea?.fmeaInfo?.subject || 'PFMEA')}
+          onImportClick={() => fileInputRef.current?.click()}
+          onImportFile={handleImportFile}
+          onDownloadTemplate={handleDownloadTemplate}
         />
 
         {/* ========== 메인 레이아웃 (좌측:워크시트 / 우측:트리 완전 분리) ========== */}
@@ -481,13 +530,24 @@ interface TopMenuBarProps {
   dirty: boolean;
   isSaving: boolean;
   lastSaved: string;
+  currentTab: string;
+  importMessage: { type: 'success' | 'error'; text: string } | null;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   onFmeaChange: (id: string) => void;
   onSave: () => void;
   onNavigateToList: () => void;
   onExport: () => void;
+  onImportClick: () => void;
+  onImportFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onDownloadTemplate: () => void;
 }
 
-function TopMenuBar({ fmeaList, currentFmea, dirty, isSaving, lastSaved, onFmeaChange, onSave, onNavigateToList, onExport }: TopMenuBarProps) {
+function TopMenuBar({ 
+  fmeaList, currentFmea, dirty, isSaving, lastSaved, currentTab, importMessage, fileInputRef,
+  onFmeaChange, onSave, onNavigateToList, onExport, onImportClick, onImportFile, onDownloadTemplate 
+}: TopMenuBarProps) {
+  const [showImportMenu, setShowImportMenu] = React.useState(false);
+
   return (
     <div className="flex items-center py-1 gap-2 flex-wrap" style={{ background: COLORS.blue, paddingLeft: '4px', paddingRight: '8px' }}>
       {/* FMEA명 */}
@@ -512,13 +572,72 @@ function TopMenuBar({ fmeaList, currentFmea, dirty, isSaving, lastSaved, onFmeaC
       <div className="w-px h-5 bg-white/40" />
 
       {/* 저장/Import/Export */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 relative">
         <button onClick={onSave} disabled={isSaving} className="px-1.5 py-0.5 text-xs font-bold rounded"
           style={{ background: isSaving ? '#ff9800' : dirty ? '#4caf50' : 'rgba(255,255,255,0.18)', color: '#fff' }}>
           {isSaving ? '⏳저장중' : dirty ? '💾저장' : '✅저장됨'}
         </button>
-        <button className="px-1.5 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>📥Import</button>
+        
+        {/* Import 버튼 및 드롭다운 */}
+        <div className="relative">
+          <button 
+            onClick={() => setShowImportMenu(!showImportMenu)}
+            className="px-1.5 py-0.5 text-xs font-bold text-white rounded hover:bg-white/30" 
+            style={{ background: 'rgba(255,255,255,0.18)' }}
+          >
+            📥Import▾
+          </button>
+          {showImportMenu && (
+            <div 
+              className="absolute top-full left-0 mt-1 bg-white rounded shadow-lg border z-50"
+              style={{ minWidth: '160px' }}
+              onMouseLeave={() => setShowImportMenu(false)}
+            >
+              <button
+                onClick={() => { 
+                  fileInputRef.current?.click(); 
+                  setShowImportMenu(false); 
+                }}
+                className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 border-b"
+              >
+                📂 Excel 파일 가져오기
+              </button>
+              <button
+                onClick={() => { 
+                  onDownloadTemplate(); 
+                  setShowImportMenu(false); 
+                }}
+                className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50"
+              >
+                📋 템플릿 다운로드
+              </button>
+            </div>
+          )}
+        </div>
+        
+        {/* 숨겨진 파일 입력 */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          onChange={onImportFile}
+          className="hidden"
+        />
+        
         <button onClick={onExport} className="px-1.5 py-0.5 text-xs font-bold text-white rounded hover:bg-white/30" style={{ background: 'rgba(255,255,255,0.18)' }}>📤Export</button>
+        
+        {/* Import 결과 메시지 */}
+        {importMessage && (
+          <span 
+            className="text-xs font-bold px-2 py-0.5 rounded"
+            style={{ 
+              background: importMessage.type === 'success' ? '#4caf50' : '#f44336',
+              color: '#fff'
+            }}
+          >
+            {importMessage.text}
+          </span>
+        )}
       </div>
 
       <div className="w-px h-5 bg-white/40" />
