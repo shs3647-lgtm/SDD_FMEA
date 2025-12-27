@@ -269,7 +269,7 @@ export default function FMEAWorksheetPage() {
                 {state.tab === 'risk' && <RiskTabFull {...tabProps} />}
                 {state.tab === 'opt' && <OptTabFull {...tabProps} />}
                 {state.tab === 'doc' && <DocTabFull {...tabProps} />}
-                {state.tab === 'all' && <AllViewTabFull {...tabProps} />}
+                {state.tab === 'all' && <AllViewTabFull rows={rows} state={state} l1Spans={l1Spans} l2Spans={l2Spans} />}
               </table>
             </div>
           </div>
@@ -718,8 +718,13 @@ function DocTabFull(props: any) {
   );
 }
 
-// 전체보기 탭 - 38열 FMEA 워크시트 (Excel과 동일)
-function AllViewTabFull({ rows, state }: { rows: FlatRow[]; state: WorksheetState }) {
+// 전체보기 탭 - 38열 FMEA 워크시트 (Excel과 동일, 셀합치기 적용)
+function AllViewTabFull({ rows, state, l1Spans, l2Spans }: { 
+  rows: FlatRow[]; 
+  state: WorksheetState; 
+  l1Spans: number[]; 
+  l2Spans: number[]; 
+}) {
   // 38열 컬럼 정의 (Excel "PFMEA 40열.xlsx"와 동일)
   const allViewColumns = [
     // 구조분석 2단계 (4열)
@@ -908,7 +913,7 @@ function AllViewTabFull({ rows, state }: { rows: FlatRow[]; state: WorksheetStat
         </tr>
       </thead>
 
-      {/* 바디 - 데이터 */}
+      {/* 바디 - 데이터 (셀합치기 적용) */}
       <tbody>
         {rows.length === 0 ? (
           <tr>
@@ -917,27 +922,86 @@ function AllViewTabFull({ rows, state }: { rows: FlatRow[]; state: WorksheetStat
             </td>
           </tr>
         ) : (
-          rows.map((row, idx) => (
-            <tr key={row.l3Id} style={{ height: '26px' }}>
-              {allViewColumns.map((col, i) => (
-                <td
-                  key={i}
-                  style={{
-                    border: '1px solid #ddd',
-                    padding: '2px 3px',
-                    fontSize: '9px',
-                    background: idx % 2 === 0 ? '#fff' : '#f9f9f9',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    textAlign: 'center',
-                  }}
-                >
-                  {getCellValue(row, col.id)}
-                </td>
-              ))}
-            </tr>
-          ))
+          rows.map((row, idx) => {
+            const l1Span = l1Spans[idx];
+            const l2Span = l2Spans[idx];
+            
+            // L1 레벨 컬럼 (완제품 기준 병합)
+            const l1Columns = ['l1Name', 'l1Type', 'l1Function', 'l1Requirement', 'feType', 'failureEffect', 'severity'];
+            // L2 레벨 컬럼 (공정 기준 병합)
+            const l2Columns = ['l2Name', 'l2Function', 'l2ProductChar', 'failureMode'];
+            
+            return (
+              <tr key={row.l3Id} style={{ height: '26px' }}>
+                {allViewColumns.map((col, i) => {
+                  // L1 레벨 셀 - 병합 처리
+                  if (l1Columns.includes(col.id)) {
+                    if (l1Span === 0) return null; // 병합된 셀은 렌더링 안함
+                    return (
+                      <td
+                        key={i}
+                        rowSpan={l1Span > 0 ? l1Span : undefined}
+                        style={{
+                          border: '1px solid #ddd',
+                          padding: '2px 3px',
+                          fontSize: '9px',
+                          background: '#e3f2fd',
+                          whiteSpace: 'normal',
+                          wordBreak: 'break-word',
+                          textAlign: 'center',
+                          verticalAlign: 'middle',
+                        }}
+                      >
+                        {getCellValue(row, col.id)}
+                      </td>
+                    );
+                  }
+                  
+                  // L2 레벨 셀 - 병합 처리
+                  if (l2Columns.includes(col.id)) {
+                    if (l2Span === 0) return null; // 병합된 셀은 렌더링 안함
+                    return (
+                      <td
+                        key={i}
+                        rowSpan={l2Span > 0 ? l2Span : undefined}
+                        style={{
+                          border: '1px solid #ddd',
+                          padding: '2px 3px',
+                          fontSize: '9px',
+                          background: '#e8f5e9',
+                          whiteSpace: 'normal',
+                          wordBreak: 'break-word',
+                          textAlign: 'center',
+                          verticalAlign: 'middle',
+                        }}
+                      >
+                        {getCellValue(row, col.id)}
+                      </td>
+                    );
+                  }
+                  
+                  // L3 레벨 셀 (작업요소) - 병합 안함
+                  return (
+                    <td
+                      key={i}
+                      style={{
+                        border: '1px solid #ddd',
+                        padding: '2px 3px',
+                        fontSize: '9px',
+                        background: idx % 2 === 0 ? '#fff' : '#f9f9f9',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        textAlign: 'center',
+                      }}
+                    >
+                      {getCellValue(row, col.id)}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })
         )}
       </tbody>
     </>
