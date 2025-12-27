@@ -402,25 +402,26 @@ export default function FMEAWorksheetPage() {
                           >
                             {/* 4M 배지 */}
                             <span style={{ 
-                              fontSize: '8px', 
+                              fontSize: '9px', 
                               fontWeight: 700, 
-                              padding: '1px 3px', 
+                              padding: '0px 2px', 
                               borderRadius: '2px',
                               background: m4Style.bg,
                               color: m4Style.text,
-                              minWidth: '18px',
+                              minWidth: '16px',
                               textAlign: 'center',
                             }}>
                               {w.m4 || '-'}
                             </span>
-                            {/* 번호 + 이름 */}
-                            <span style={{ fontSize: '10px', color: '#666', minWidth: '28px' }}>{elemNum}</span>
+                            {/* 번호 */}
+                            <span style={{ fontSize: '9px', color: '#888', minWidth: '24px' }}>{elemNum}</span>
+                            {/* 이름 */}
                             <input
                               type="text"
                               value={w.name}
                               onChange={(e) => renameL3(w.id, e.target.value)}
                               onClick={(e) => e.stopPropagation()}
-                              style={{ flex: 1, padding: '2px 4px', fontSize: '10px', border: '1px solid #e0e0e0', borderRadius: '2px', background: '#fff' }}
+                              style={{ flex: 1, padding: '1px 3px', fontSize: '10px', border: '1px solid #e0e0e0', borderRadius: '2px', background: '#fff' }}
                             />
                           </div>
                         );})}

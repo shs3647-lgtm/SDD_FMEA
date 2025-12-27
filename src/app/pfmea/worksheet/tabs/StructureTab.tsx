@@ -81,8 +81,8 @@ function EditableM4Cell({
           onBlur={handleSave}
           onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false); }}
           autoFocus
-          className="w-full text-center text-xs font-bold"
-          style={{ border: 'none', outline: '2px solid #ffc107', background: '#fffde7' }}
+          className="w-full text-center font-bold"
+          style={{ border: 'none', outline: '2px solid #ffc107', background: '#fffde7', fontSize: '9px', padding: '0' }}
         >
           <option value="">-</option>
           {M4_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -93,14 +93,15 @@ function EditableM4Cell({
 
   return (
     <td 
-      className="text-center text-xs font-bold cursor-pointer hover:bg-yellow-200" 
+      className="text-center font-bold cursor-pointer hover:bg-yellow-200" 
       style={{ 
         borderTop: `1px solid ${COLORS.line}`,
         borderRight: `1px solid ${COLORS.line}`,
         borderBottom: `1px solid ${COLORS.line}`,
         borderLeft: `1px solid ${COLORS.line}`,
         padding: '0', 
-        background: '#fff8e1' 
+        background: '#fff8e1',
+        fontSize: '9px',
       }}
       onClick={() => { setEditValue(value); setIsEditing(true); }}
       title="클릭하여 수정"
@@ -211,7 +212,7 @@ function EditableL3Cell({
  */
 export function StructureColgroup() {
   return (
-    <colgroup><col style={{ width: '18%' }} /><col style={{ width: '20%' }} /><col style={{ width: '40px' }} /><col /></colgroup>
+    <colgroup><col style={{ width: '18%' }} /><col style={{ width: '20%' }} /><col style={{ width: '28px' }} /><col /></colgroup>
   );
 }
 
@@ -242,7 +243,7 @@ export function StructureHeader({
       <tr>
         <th style={{ ...stickyFirstColStyle, zIndex: 15, background: '#90caf9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>완제품명+라인</th>
         <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>공정NO+공정명</th>
-        <th style={{ width: '5%', background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '0', height: '22px', fontWeight: 700, fontSize: '10px' }}>4M</th>
+        <th style={{ width: '28px', background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '0', height: '22px', fontWeight: 700, fontSize: '9px' }}>4M</th>
         <th style={{ width: '55%', background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>작업요소</th>
       </tr>
     </>
