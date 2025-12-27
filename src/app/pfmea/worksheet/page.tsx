@@ -1,404 +1,97 @@
 'use client';
 
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+/**
+ * @file page.tsx
+ * @description FMEA 워크시트 메인 페이지
+ * @author AI Assistant
+ * @created 2025-12-27
+ * @refactored 모듈화 - constants, hooks, tabs 분리
+ */
+
+import React, { useState, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import ProcessSelectModal from './ProcessSelectModal';
 import WorkElementSelectModal from './WorkElementSelectModal';
 import PFMEATopNav from '@/components/layout/PFMEATopNav';
 
-// FMEA 프로젝트 타입
-interface FMEAProject {
-  id: string;
-  fmeaInfo?: {
-    subject?: string;
-  };
-  project?: {
-    productName?: string;
-  };
-}
+// 모듈화된 상수, hooks, 탭 컴포넌트
+import { COLORS, TABS, LEVELS, uid, getTabLabel, WorksheetState, WorkElement, Process } from './constants';
+import { useWorksheetState } from './hooks';
+import { 
+  StructureTab, StructureColgroup, StructureHeader, StructureRow,
+  FunctionTab, FunctionHeader, FunctionRow,
+  FailureTab, FailureHeader, FailureRow,
+  RiskTab, RiskHeader, RiskRow,
+  OptTab, OptHeader, OptRow,
+  DocTab, DocHeader, DocRow,
+} from './tabs';
 
-// ============ 타입 정의 ============
-interface WorkElement {
-  id: string;
-  m4: string;
-  name: string;
-  order: number;
-  // 기능분석 (3단계)
-  function?: string;       // 작업요소 기능
-  processChar?: string;    // 공정특성
-  // 고장분석 (4단계)
-  failureCause?: string;   // 고장원인 (FC)
-}
-
-interface Process {
-  id: string;
-  no: string;
-  name: string;
-  order: number;
-  l3: WorkElement[];
-  // 기능분석 (3단계)
-  function?: string;       // 공정기능
-  productChar?: string;    // 제품특성
-  // 고장분석 (4단계)
-  failureMode?: string;    // 고장형태 (FM)
-}
-
-interface L1Data {
-  id: string;
-  name: string;            // 완제품명+라인 (직접 입력)
-  // 기능분석 (3단계)
-  function?: string;       // 완제품 기능
-  requirement?: string;    // 요구사항
-  // 고장분석 (4단계)
-  failureEffect?: string;  // 고장영향 (FE)
-  severity?: number;       // 심각도 (1-10)
-}
-
-interface State {
-  l1: L1Data;
-  l2: Process[];
-  selected: { type: 'L1' | 'L2' | 'L3'; id: string | null };
-  tab: string;
-  levelView: string;
-  search: string;
-}
-
-// ============ 초기 데이터 ============
-const uid = () => 'id_' + Math.random().toString(16).slice(2) + '_' + Date.now().toString(16);
-
-const INITIAL_STATE: State = {
-  l1: { id: uid(), name: '', function: '', requirement: '', failureEffect: '', severity: undefined },  // 완제품명은 직접 입력
-  l2: [
-    {
-      id: uid(), no: '10', name: '자재입고', order: 10,
-      l3: [
-        { id: uid(), m4: 'MN', name: '00셋업 엔지니어', order: 10 },
-        { id: uid(), m4: 'MN', name: '00작업자', order: 20 },
-        { id: uid(), m4: 'MC', name: '10자동창고', order: 30 },
-        { id: uid(), m4: 'EN', name: '00 온도', order: 40 },
-      ]
-    },
-    {
-      id: uid(), no: '11', name: '가온', order: 20,
-      l3: [
-        { id: uid(), m4: 'MN', name: '00작업자', order: 10 },
-        { id: uid(), m4: 'MC', name: '11가온실', order: 20 },
-      ]
-    },
-    {
-      id: uid(), no: '20', name: '수입검사', order: 30,
-      l3: [
-        { id: uid(), m4: 'MN', name: '00검사원', order: 10 },
-        { id: uid(), m4: 'MC', name: '20MOONEY VISCOMETER', order: 20 },
-      ]
-    },
-  ],
-  selected: { type: 'L2', id: null },
-  tab: 'structure',
-  levelView: '2',
-  search: ''
-};
-
-// ============ 색상 정의 ============
-const COLORS = {
-  blue: '#2b78c5',
-  blue2: '#1f63aa',
-  sky: '#bfe0ff',
-  sky2: '#d7ecff',
-  line: '#6f8fb4',
-  bg: '#f5f7fb',
-  warn: '#ffe1e1',
-  text: '#0e223a',
-  // 4M 배지 색상
-  mn: { bg: '#eef7ff', border: '#cfe0f4', color: '#1f4f86' },
-  mc: { bg: '#fff3e6', border: '#ffd2a6', color: '#8a4f00' },
-  im: { bg: '#f0fff2', border: '#bdeac5', color: '#1b6b2a' },
-  en: { bg: '#fef0ff', border: '#f0bdf5', color: '#7a1a88' },
-};
-
-const TABS = [
-  { id: 'structure', label: '구조분석' },
-  { id: 'function', label: '기능분석' },
-  { id: 'failure', label: '고장분석' },
-  { id: 'risk', label: '리스크분석' },
-  { id: 'opt', label: '최적화' },
-  { id: 'doc', label: '문서화' },
-];
-
-// 전체보기용 탭 (38열 FMEA 워크시트)
-const ALL_VIEW_TAB = { id: 'all', label: '전체보기' };
-
-const LEVELS = [
-  { id: '1', label: '1L' },
-  { id: '2', label: '2L' },
-  { id: '3', label: '3L' },
-  { id: 'all', label: 'All' },
-];
-
+/**
+ * FMEA 워크시트 메인 페이지
+ */
 export default function FMEAWorksheetPage() {
-  const searchParams = useSearchParams();
   const router = useRouter();
-  const selectedFmeaId = searchParams.get('id');
-
-  // FMEA 프로젝트 목록
-  const [fmeaList, setFmeaList] = useState<FMEAProject[]>([]);
-  const [currentFmea, setCurrentFmea] = useState<FMEAProject | null>(null);
-
-  const [state, setState] = useState<State>(() => {
-    const initial = { ...INITIAL_STATE };
-    // 초기에는 빈 행 하나 (클릭해서 공정 선택)
-    initial.l2 = [{
-      id: uid(),
-      no: '',
-      name: '(클릭하여 공정 선택)',
-      order: 10,
-      l3: [{ id: uid(), m4: '', name: '(공정 선택 후 작업요소 추가)', order: 10 }]
-    }];
-    return initial;
-  });
-  const [dirty, setDirty] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<string>('');
+  
+  // 워크시트 상태 관리 Hook
+  const {
+    state,
+    setState,
+    dirty,
+    setDirty,
+    isSaving,
+    lastSaved,
+    fmeaList,
+    currentFmea,
+    selectedFmeaId,
+    handleFmeaChange,
+    rows,
+    l1Spans,
+    l2Spans,
+    saveToLocalStorage,
+    handleInputKeyDown,
+    handleInputBlur,
+    handleSelect,
+    addL2,
+  } = useWorksheetState();
+  
+  // 모달 상태
   const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
   const [isWorkElementModalOpen, setIsWorkElementModalOpen] = useState(false);
-  const [targetL2Id, setTargetL2Id] = useState<string | null>(null); // 작업요소 추가할 공정 ID
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [targetL2Id, setTargetL2Id] = useState<string | null>(null);
 
-  // ============ 자동저장 함수 ============
-  const saveToLocalStorage = useCallback(() => {
-    if (!selectedFmeaId) return;
-    
-    setIsSaving(true);
-    try {
-      const worksheetData = {
-        fmeaId: selectedFmeaId,
-        l1: state.l1,
-        l2: state.l2,
-        savedAt: new Date().toISOString(),
-      };
-      localStorage.setItem(`pfmea_worksheet_${selectedFmeaId}`, JSON.stringify(worksheetData));
-      setDirty(false);
-      setLastSaved(new Date().toLocaleTimeString('ko-KR'));
-      console.log('✅ 자동저장 완료:', new Date().toLocaleTimeString());
-    } catch (e) {
-      console.error('저장 오류:', e);
-    } finally {
-      setIsSaving(false);
-    }
-  }, [selectedFmeaId, state.l1, state.l2]);
-
-  // 디바운스 자동저장 (500ms 후 저장)
-  const triggerAutoSave = useCallback(() => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-    saveTimeoutRef.current = setTimeout(() => {
-      saveToLocalStorage();
-    }, 500);
-  }, [saveToLocalStorage]);
-
-  // dirty 상태 변경시 자동저장 트리거
-  useEffect(() => {
-    if (dirty) {
-      triggerAutoSave();
-    }
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, [dirty, triggerAutoSave]);
-
-  // 저장된 데이터 로드
-  useEffect(() => {
-    if (selectedFmeaId) {
-      const savedData = localStorage.getItem(`pfmea_worksheet_${selectedFmeaId}`);
-      if (savedData) {
-        try {
-          const parsed = JSON.parse(savedData);
-          if (parsed.l1 && parsed.l2) {
-            setState(prev => ({
-              ...prev,
-              l1: parsed.l1,
-              l2: parsed.l2,
-            }));
-            console.log('📂 워크시트 데이터 로드됨:', parsed.savedAt);
-          }
-        } catch (e) {
-          console.error('워크시트 데이터 로드 실패:', e);
-        }
-      }
-    }
-  }, [selectedFmeaId]);
-
-  // 엔터키/블러 시 즉시 저장
-  const handleInputKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      saveToLocalStorage();
-    }
-  }, [saveToLocalStorage]);
-
-  const handleInputBlur = useCallback(() => {
-    if (dirty) {
-      saveToLocalStorage();
-    }
-  }, [dirty, saveToLocalStorage]);
-
-  // FMEA 목록 로드 (완제품명은 FMEA명과 별도로 직접 입력)
-  useEffect(() => {
-    const stored = localStorage.getItem('pfmea-projects');
-    if (stored) {
-      try {
-        const projects: FMEAProject[] = JSON.parse(stored);
-        setFmeaList(projects);
-        
-        // 선택된 FMEA 찾기
-        if (selectedFmeaId) {
-          const found = projects.find(p => p.id === selectedFmeaId);
-          if (found) {
-            setCurrentFmea(found);
-            // 완제품명은 FMEA와 연동하지 않음 (직접 입력)
-          }
-        } else if (projects.length > 0) {
-          // ID가 없으면 첫 번째 프로젝트 선택
-          setCurrentFmea(projects[0]);
-        }
-      } catch (e) {
-        console.error('FMEA 목록 로드 실패:', e);
-      }
-    }
-  }, [selectedFmeaId]);
-
-  // FMEA 선택 변경
-  const handleFmeaChange = (fmeaId: string) => {
-    router.push(`/pfmea/worksheet?id=${fmeaId}`);
-  };
-
-  // 평탄화된 행 데이터 (구조 + 기능 + 고장 등)
-  const rows = useMemo(() => {
-    const result: Array<{
-      l1Id: string;
-      l1Name: string;
-      l1Function: string;
-      l1Requirement: string;
-      l1FailureEffect: string;
-      l1Severity: number | undefined;
-      l2Id: string;
-      l2No: string;
-      l2Name: string;
-      l2Function: string;
-      l2ProductChar: string;
-      l2FailureMode: string;
-      l3Id: string;
-      m4: string;
-      l3Name: string;
-      l3Function: string;
-      l3ProcessChar: string;
-      l3FailureCause: string;
-    }> = [];
-
-    [...state.l2].sort((a, b) => a.order - b.order).forEach(proc => {
-      [...proc.l3].sort((a, b) => a.order - b.order).forEach(w => {
-        result.push({
-          l1Id: state.l1.id,
-          l1Name: state.l1.name,
-          l1Function: state.l1.function || '',
-          l1Requirement: state.l1.requirement || '',
-          l1FailureEffect: state.l1.failureEffect || '',
-          l1Severity: state.l1.severity,
-          l2Id: proc.id,
-          l2No: proc.no,
-          l2Name: proc.name,
-          l2Function: proc.function || '',
-          l2ProductChar: proc.productChar || '',
-          l2FailureMode: proc.failureMode || '',
-          l3Id: w.id,
-          m4: w.m4,
-          l3Name: w.name,
-          l3Function: w.function || '',
-          l3ProcessChar: w.processChar || '',
-          l3FailureCause: w.failureCause || ''
-        });
-      });
-    });
-
-    return result;
-  }, [state.l1, state.l2]);
-
-  // rowSpan 계산
-  const computeSpan = useCallback((rows: any[], keyFn: (r: any) => string) => {
-    const spans = new Array(rows.length).fill(0);
-    let i = 0;
-    while (i < rows.length) {
-      const key = keyFn(rows[i]);
-      let j = i + 1;
-      while (j < rows.length && keyFn(rows[j]) === key) j++;
-      spans[i] = j - i;
-      for (let k = i + 1; k < j; k++) spans[k] = 0;
-      i = j;
-    }
-    return spans;
-  }, []);
-
-  // L1과 L2를 함께 그룹화 (L1:L2 = 1:1로 표시)
-  const computeL1L2Span = useCallback((rows: any[]) => {
-    const spans = new Array(rows.length).fill(0);
-    let i = 0;
-    while (i < rows.length) {
-      const l2Key = rows[i].l2Id;
-      let j = i + 1;
-      while (j < rows.length && rows[j].l2Id === l2Key) j++;
-      spans[i] = j - i;
-      for (let k = i + 1; k < j; k++) spans[k] = 0;
-      i = j;
-    }
-    return spans;
-  }, []);
-
-  // L1은 L2와 동일하게 병합 (L2별로 L1 표시)
-  const l1Spans = useMemo(() => computeL1L2Span(rows), [rows, computeL1L2Span]);
-  const l2Spans = useMemo(() => computeSpan(rows, r => r.l2Id), [rows, computeSpan]);
-
-  // 선택 핸들러
-  const handleSelect = useCallback((type: 'L1' | 'L2' | 'L3', id: string) => {
-    setState(prev => ({ ...prev, selected: { type, id } }));
-  }, []);
-
-  // L2(공정) 추가 - 모달 열기
-  const addL2 = useCallback(() => {
-    setIsProcessModalOpen(true);
-  }, []);
-
-  // 모달에서 공정 선택 후 저장
-  const handleProcessSelect = useCallback((selectedProcesses: { id: string; no: string; name: string }[]) => {
+  // 공정 모달 저장 핸들러
+  const handleProcessSave = useCallback((selectedProcesses: { no: string; name: string }[]) => {
     setState(prev => {
-      const existingNames = prev.l2.map(p => p.name);
-      const newProcesses = selectedProcesses
-        .filter(p => !existingNames.includes(p.name))
+      const selectedNames = selectedProcesses.map(p => p.name);
+      const keepL2 = prev.l2.filter(p => !p.name.includes('클릭') && selectedNames.includes(p.name));
+      const keepNames = keepL2.map(p => p.name);
+      
+      const newL2: Process[] = selectedProcesses
+        .filter(p => !keepNames.includes(p.name))
         .map((p, idx) => ({
           id: uid(),
           no: p.no,
           name: p.name,
-          order: (prev.l2.length + idx + 1) * 10,
-          l3: [] as WorkElement[]
+          order: (keepL2.length + idx + 1) * 10,
+          l3: [{ id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10 }]
         }));
       
-      return {
-        ...prev,
-        l2: [...prev.l2, ...newProcesses]
-      };
+      let finalL2 = [...keepL2, ...newL2];
+      if (finalL2.length === 0) {
+        finalL2 = [{
+          id: uid(),
+          no: '',
+          name: '(클릭하여 공정 선택)',
+          order: 10,
+          l3: [{ id: uid(), m4: '', name: '(공정 선택 후 작업요소 추가)', order: 10 }]
+        }];
+      }
+      return { ...prev, l2: finalL2 };
     });
     setDirty(true);
-  }, []);
+  }, [setState, setDirty]);
 
-  // L3(작업요소) 추가 - 모달 열기
-  const addL3 = useCallback((l2Id: string) => {
-    setTargetL2Id(l2Id);
-    setIsWorkElementModalOpen(true);
-  }, []);
-
-  // 작업요소 모달에서 선택 후 저장 (선택한 것으로 교체)
+  // 작업요소 모달 저장 핸들러
   const handleWorkElementSelect = useCallback((selectedElements: { id: string; m4: string; name: string }[]) => {
     if (!targetL2Id) return;
     
@@ -406,51 +99,23 @@ export default function FMEAWorksheetPage() {
       const newL2 = prev.l2.map(proc => {
         if (proc.id !== targetL2Id) return proc;
         
-        // 선택된 작업요소로 교체
-        const newL3 = selectedElements.map((e, idx) => ({
+        const newL3: WorkElement[] = selectedElements.map((e, idx) => ({
           id: uid(),
           m4: e.m4,
           name: e.name,
           order: (idx + 1) * 10
         }));
         
-        // 작업요소가 없으면 빈 행 추가
         if (newL3.length === 0) {
-          newL3.push({
-            id: uid(),
-            m4: '',
-            name: '(클릭하여 작업요소 추가)',
-            order: 10
-          });
+          newL3.push({ id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10 });
         }
-        
         return { ...proc, l3: newL3 };
       });
       return { ...prev, l2: newL2 };
     });
     setDirty(true);
     setTargetL2Id(null);
-  }, [targetL2Id]);
-
-  // 선택된 공정에 작업요소 추가
-  const addWorkRowToSelected = useCallback(() => {
-    let l2Id: string | null = null;
-    if (state.selected.type === 'L2') l2Id = state.selected.id;
-    if (state.selected.type === 'L3') {
-      for (const p of state.l2) {
-        if (p.l3.some(w => w.id === state.selected.id)) {
-          l2Id = p.id;
-          break;
-        }
-      }
-    }
-    if (!l2Id && state.l2[0]) l2Id = state.l2[0].id;
-    if (!l2Id) {
-      alert('먼저 메인공정을 추가하세요.');
-      return;
-    }
-    addL3(l2Id);
-  }, [state.selected, state.l2, addL3]);
+  }, [targetL2Id, setState, setDirty]);
 
   // 작업요소명 수정
   const renameL3 = useCallback((l3Id: string, newName: string) => {
@@ -462,826 +127,515 @@ export default function FMEAWorksheetPage() {
       }))
     }));
     setDirty(true);
-  }, []);
+  }, [setState, setDirty]);
 
   // 검색 필터링된 트리 데이터
   const filteredTree = useMemo(() => {
     const q = state.search.toLowerCase();
     if (!q) return state.l2;
-
     return state.l2.filter(proc => {
       const procLabel = `${proc.no} ${proc.name}`.toLowerCase();
-      const procMatches = procLabel.includes(q);
-      const l3Matches = proc.l3.some(w => 
-        `${w.m4} ${w.name}`.toLowerCase().includes(q)
-      );
-      return procMatches || l3Matches;
+      return procLabel.includes(q) || proc.l3.some(w => `${w.m4} ${w.name}`.toLowerCase().includes(q));
     });
   }, [state.l2, state.search]);
 
-  // 4M 배지 색상
-  const getBadgeStyle = (m4: string) => {
-    const key = m4.toLowerCase() as keyof typeof COLORS;
-    const colors = COLORS[key] || COLORS.mn;
-    return {
-      background: (colors as any).bg || '#eef7ff',
-      borderColor: (colors as any).border || '#cfe0f4',
-      color: (colors as any).color || '#1f4f86',
-    };
-  };
-
-  const getTabLabel = (tab: string) => {
-    const found = TABS.find(t => t.id === tab);
-    return found ? found.label : tab;
+  // 공통 탭 props
+  const tabProps = {
+    state,
+    setState,
+    rows,
+    l1Spans,
+    l2Spans,
+    setDirty,
+    handleInputBlur,
+    handleInputKeyDown,
+    handleSelect,
+    setIsProcessModalOpen,
+    setIsWorkElementModalOpen,
+    setTargetL2Id,
+    saveToLocalStorage,
   };
 
   return (
     <>
-      {/* 상단 고정 바로가기 메뉴 */}
       <PFMEATopNav selectedFmeaId={currentFmea?.id} />
       
       <div className="h-full flex flex-col" style={{ fontFamily: 'Segoe UI, Malgun Gothic, Arial, sans-serif', background: COLORS.bg, color: COLORS.text, paddingTop: '28px' }}>
         
-        {/* 상단 메뉴 바 - 3개 영역 */}
-      <div className="flex items-center justify-between py-1" style={{ background: COLORS.blue, paddingLeft: 0, paddingRight: '8px' }}>
-        {/* 영역 1: FMEA명 (드롭다운 + 리스트 이동) */}
-        <div className="flex items-center gap-2">
-          <span 
-            className="text-white text-xs font-bold cursor-pointer hover:underline"
-            onClick={() => router.push('/pfmea/list')}
-            title="FMEA 리스트로 이동"
-          >
-            📋 FMEA명:
-          </span>
-          <select
-            value={currentFmea?.id || ''}
-            onChange={(e) => handleFmeaChange(e.target.value)}
-            className="px-2 py-0.5 text-xs font-semibold rounded border-0"
-            style={{ background: 'rgba(255,255,255,0.25)', color: '#fff', minWidth: '180px' }}
-          >
-            {fmeaList.length === 0 && <option value="">FMEA 미등록</option>}
-            {fmeaList.map(fmea => (
-              <option key={fmea.id} value={fmea.id} style={{ color: '#333' }}>
-                {fmea.fmeaInfo?.subject || fmea.project?.productName || fmea.id}
-              </option>
+        {/* ========== 상단 메뉴 바 ========== */}
+        <TopMenuBar
+          fmeaList={fmeaList}
+          currentFmea={currentFmea}
+          dirty={dirty}
+          isSaving={isSaving}
+          lastSaved={lastSaved}
+          onFmeaChange={handleFmeaChange}
+          onSave={saveToLocalStorage}
+          onNavigateToList={() => router.push('/pfmea/list')}
+        />
+
+        {/* ========== 메인 레이아웃 ========== */}
+        <div className="flex-1 flex overflow-hidden" style={{ gap: 0 }}>
+          
+          {/* 좌측: 워크시트 */}
+          <main className="flex-1 bg-white overflow-auto min-w-0" style={{ margin: 0, padding: 0 }}>
+            
+            {/* 탭 + 레벨 메뉴 */}
+            <TabMenu state={state} setState={setState} />
+
+            {/* 워크시트 테이블 */}
+            <div className="flex-1 flex flex-col overflow-hidden" style={{ marginRight: 0, paddingRight: 0 }}>
+              
+              {/* 테이블 제목 */}
+              <div 
+                className="text-center font-black py-1 text-sm flex-shrink-0"
+                style={{ 
+                  background: state.tab === 'structure' ? '#1a237e' : COLORS.sky2, 
+                  color: state.tab === 'structure' ? '#fff' : COLORS.text,
+                  border: `1px solid ${COLORS.line}`, 
+                  borderBottom: 0 
+                }}
+              >
+                P-FMEA {getTabLabel(state.tab)}({getStepNumber(state.tab)}단계)
+              </div>
+
+              {/* 테이블 컨테이너 */}
+              <div className="flex-1 overflow-auto" style={{ border: `1px solid ${COLORS.line}` }}>
+                <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
+                  {/* 탭별 테이블 렌더링 */}
+                  {state.tab === 'structure' && <StructureTabContent {...tabProps} />}
+                  {state.tab === 'function' && <FunctionTabContent {...tabProps} />}
+                  {state.tab === 'failure' && <FailureTabContent {...tabProps} />}
+                  {state.tab === 'risk' && <RiskTabContent {...tabProps} />}
+                  {state.tab === 'opt' && <OptTabContent {...tabProps} />}
+                  {state.tab === 'doc' && <DocTabContent {...tabProps} />}
+                  {state.tab === 'all' && <AllViewTabContent {...tabProps} />}
+                </table>
+              </div>
+            </div>
+          </main>
+
+          {/* 구분선 */}
+          <div className="flex-shrink-0" style={{ width: '4px', background: '#00587a', marginLeft: 0 }} />
+
+          {/* 우측: 트리 */}
+          <RightTreePanel
+            state={state}
+            setState={setState}
+            filteredTree={filteredTree}
+            onAddL2={addL2}
+            onSelect={handleSelect}
+            onRenameL3={renameL3}
+            setDirty={setDirty}
+            handleInputBlur={handleInputBlur}
+            handleInputKeyDown={handleInputKeyDown}
+            setIsProcessModalOpen={setIsProcessModalOpen}
+            setIsWorkElementModalOpen={setIsWorkElementModalOpen}
+            setTargetL2Id={setTargetL2Id}
+          />
+        </div>
+
+        {/* 모달 */}
+        <ProcessSelectModal
+          isOpen={isProcessModalOpen}
+          onClose={() => setIsProcessModalOpen(false)}
+          onSave={handleProcessSave}
+          existingProcessNames={state.l2.filter(p => !p.name.includes('클릭')).map(p => p.name)}
+        />
+
+        <WorkElementSelectModal
+          isOpen={isWorkElementModalOpen}
+          onClose={() => { setIsWorkElementModalOpen(false); setTargetL2Id(null); }}
+          onSave={handleWorkElementSelect}
+          processNo={state.l2.find(p => p.id === targetL2Id)?.no || ''}
+          processName={state.l2.find(p => p.id === targetL2Id)?.name || ''}
+          existingElements={state.l2.find(p => p.id === targetL2Id)?.l3.filter(w => !w.name.includes('추가')).map(w => w.name) || []}
+        />
+      </div>
+    </>
+  );
+}
+
+// ============ 하위 컴포넌트들 ============
+
+function getStepNumber(tab: string): number {
+  const map: Record<string, number> = { structure: 2, function: 3, failure: 4, risk: 5, opt: 6, doc: 7, all: 0 };
+  return map[tab] || 0;
+}
+
+interface TopMenuBarProps {
+  fmeaList: any[];
+  currentFmea: any;
+  dirty: boolean;
+  isSaving: boolean;
+  lastSaved: string;
+  onFmeaChange: (id: string) => void;
+  onSave: () => void;
+  onNavigateToList: () => void;
+}
+
+function TopMenuBar({ fmeaList, currentFmea, dirty, isSaving, lastSaved, onFmeaChange, onSave, onNavigateToList }: TopMenuBarProps) {
+  return (
+    <div className="flex items-center justify-between py-1" style={{ background: COLORS.blue, paddingLeft: 0, paddingRight: '8px' }}>
+      {/* FMEA명 */}
+      <div className="flex items-center gap-2">
+        <span className="text-white text-xs font-bold cursor-pointer hover:underline" onClick={onNavigateToList}>📋 FMEA명:</span>
+        <select
+          value={currentFmea?.id || ''}
+          onChange={(e) => onFmeaChange(e.target.value)}
+          className="px-2 py-0.5 text-xs font-semibold rounded border-0"
+          style={{ background: 'rgba(255,255,255,0.25)', color: '#fff', minWidth: '180px' }}
+        >
+          {fmeaList.length === 0 && <option value="">FMEA 미등록</option>}
+          {fmeaList.map((fmea: any) => (
+            <option key={fmea.id} value={fmea.id} style={{ color: '#333' }}>
+              {fmea.fmeaInfo?.subject || fmea.project?.productName || fmea.id}
+            </option>
+          ))}
+        </select>
+        <button onClick={onNavigateToList} className="px-2 py-1 text-xs text-white rounded hover:bg-white/20">📋</button>
+      </div>
+
+      <div className="w-px h-6 bg-white/40" />
+
+      {/* 저장/Import/Export */}
+      <div className="flex items-center gap-1">
+        <button onClick={onSave} disabled={isSaving} className="px-2 py-0.5 text-xs font-bold rounded flex items-center gap-1"
+          style={{ background: isSaving ? '#ff9800' : dirty ? '#4caf50' : 'rgba(255,255,255,0.18)', color: '#fff' }}>
+          {isSaving ? '⏳ 저장중...' : dirty ? '💾 저장' : '✅ 저장됨'}
+        </button>
+        {lastSaved && <span className="text-xs text-white/70">{lastSaved}</span>}
+        <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>📥 Import</button>
+        <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>📤 Export</button>
+      </div>
+
+      <div className="w-px h-6 bg-white/40" />
+
+      {/* 특별특성/AP/RPN/LLD */}
+      <div className="flex items-center gap-1">
+        <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>⭐특별특성</button>
+        <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,100,100,0.5)' }}>🔴5AP</button>
+        <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,165,0,0.5)' }}>🟠6AP</button>
+        <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>📊RPN</button>
+        <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>📚LLD</button>
+      </div>
+    </div>
+  );
+}
+
+interface TabMenuProps {
+  state: WorksheetState;
+  setState: React.Dispatch<React.SetStateAction<WorksheetState>>;
+}
+
+function TabMenu({ state, setState }: TabMenuProps) {
+  return (
+    <div className="flex-shrink-0 bg-white py-0.5" style={{ borderBottom: `2px solid ${COLORS.blue}`, paddingLeft: 0, paddingRight: '8px' }}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1">
+          {/* 탭 */}
+          <div className="flex gap-px">
+            {TABS.map(tab => {
+              const isActive = state.tab === tab.id;
+              const activeColor = tab.id === 'structure' ? '#1a237e' : COLORS.blue;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setState(prev => ({ ...prev, tab: tab.id }))}
+                  className="px-2 py-0.5 text-xs font-bold cursor-pointer"
+                  style={{
+                    background: isActive ? activeColor : '#e8f0f8',
+                    border: `1px solid ${isActive ? activeColor : '#c0d0e0'}`,
+                    borderRadius: '2px 2px 0 0',
+                    borderBottom: 0,
+                    color: isActive ? '#fff' : COLORS.text
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="w-px h-4 bg-gray-300 mx-1" />
+          {/* 레벨 */}
+          <div className="flex gap-px">
+            {LEVELS.map(lv => (
+              <button
+                key={lv.id}
+                onClick={() => setState(prev => ({ ...prev, levelView: lv.id }))}
+                className="px-1.5 py-0.5 text-xs font-bold cursor-pointer"
+                style={{
+                  background: state.levelView === lv.id ? '#fff' : '#f0f0f0',
+                  border: `1px solid ${state.levelView === lv.id ? COLORS.blue : '#d0d0d0'}`,
+                  borderRadius: '3px',
+                  color: state.levelView === lv.id ? COLORS.blue : '#666'
+                }}
+              >
+                {lv.label}
+              </button>
             ))}
-          </select>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <div className="w-px h-4 bg-gray-300" />
           <button
-            onClick={() => router.push('/pfmea/list')}
-            className="px-2 py-1 text-xs text-white rounded hover:bg-white/20"
-            title="FMEA 리스트"
+            onClick={() => setState(prev => ({ ...prev, tab: 'all', levelView: 'all' }))}
+            className="px-1.5 py-0.5 text-xs font-bold cursor-pointer"
+            style={{
+              background: state.tab === 'all' ? COLORS.blue : '#fff',
+              border: `1px solid ${COLORS.blue}`,
+              borderRadius: '3px',
+              color: state.tab === 'all' ? '#fff' : COLORS.blue
+            }}
           >
-            📋
-          </button>
-        </div>
-
-        {/* 구분선 */}
-        <div className="w-px h-6 bg-white/40" />
-
-        {/* 영역 2: 저장, Excel Import, Excel Export */}
-        <div className="flex items-center gap-1">
-          <button 
-            onClick={saveToLocalStorage}
-            disabled={isSaving}
-            className="px-2 py-0.5 text-xs font-bold rounded flex items-center gap-1"
-            style={{ background: isSaving ? '#ff9800' : dirty ? '#4caf50' : 'rgba(255,255,255,0.18)', color: '#fff' }}
-          >
-            {isSaving ? '⏳ 저장중...' : dirty ? '💾 저장' : '✅ 저장됨'}
-          </button>
-          {lastSaved && <span className="text-xs text-white/70">{lastSaved}</span>}
-          <button className="px-2 py-0.5 text-xs font-bold text-white rounded flex items-center gap-1" style={{ background: 'rgba(255,255,255,0.18)' }}>
-            📥 Import
-          </button>
-          <button className="px-2 py-0.5 text-xs font-bold text-white rounded flex items-center gap-1" style={{ background: 'rgba(255,255,255,0.18)' }}>
-            📤 Export
-          </button>
-        </div>
-
-        {/* 구분선 */}
-        <div className="w-px h-6 bg-white/40" />
-
-        {/* 영역 3: 특별특성, 5AP, 6AP, Top RPN, LLD */}
-        <div className="flex items-center gap-1">
-          <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>
-            ⭐특별특성
-          </button>
-          <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,100,100,0.5)' }}>
-            🔴5AP
-          </button>
-          <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,165,0,0.5)' }}>
-            🟠6AP
-          </button>
-          <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>
-            📊RPN
-          </button>
-          <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>
-            📚LLD
+            전체보기
           </button>
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* 메인 레이아웃: 좌측 워크시트 + 우측 트리 */}
-      <div className="flex-1 flex overflow-hidden" style={{ gap: 0 }}>
-        {/* ========== 좌측: 워크시트 ========== */}
-        <main className="flex-1 bg-white overflow-auto min-w-0" style={{ margin: 0, padding: 0 }}>
-          {/* 탭 + 레벨 + 전체보기 메뉴 */}
-          <div className="flex-shrink-0 bg-white py-0.5" style={{ borderBottom: `2px solid ${COLORS.blue}`, paddingLeft: 0, paddingRight: '8px' }}>
-            <div className="flex items-center justify-between">
-              {/* 좌측: 탭 + 레벨 */}
-              <div className="flex items-center gap-1">
-                {/* 탭 */}
-                <div className="flex gap-px">
-                  {TABS.map(tab => {
-                    const isActive = state.tab === tab.id;
-                    // 구조분석 탭은 진한 네이비색
-                    const activeColor = tab.id === 'structure' ? '#1a237e' : COLORS.blue;
-                    return (
-                      <button
-                        key={tab.id}
-                        onClick={() => setState(prev => ({ ...prev, tab: tab.id }))}
-                        className="px-2 py-0.5 text-xs font-bold cursor-pointer"
-                        style={{
-                          background: isActive ? activeColor : '#e8f0f8',
-                          border: `1px solid ${isActive ? activeColor : '#c0d0e0'}`,
-                          borderRadius: '2px 2px 0 0',
-                          borderBottom: 0,
-                          color: isActive ? '#fff' : COLORS.text
-                        }}
-                      >
-                        {tab.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                {/* 구분선 */}
-                <div className="w-px h-4 bg-gray-300 mx-1" />
-                {/* 레벨 */}
-                <div className="flex gap-px">
-                  {LEVELS.map(lv => (
-                    <button
-                      key={lv.id}
-                      onClick={() => setState(prev => ({ ...prev, levelView: lv.id }))}
-                      className="px-1.5 py-0.5 text-xs font-bold cursor-pointer"
-                      style={{
-                        background: state.levelView === lv.id ? '#fff' : '#f0f0f0',
-                        border: `1px solid ${state.levelView === lv.id ? COLORS.blue : '#d0d0d0'}`,
-                        borderRadius: '3px',
-                        color: state.levelView === lv.id ? COLORS.blue : '#666'
-                      }}
-                    >
-                      {lv.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+// 탭별 테이블 콘텐츠 컴포넌트들
+function StructureTabContent(props: any) {
+  const { rows, l1Spans, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown, handleSelect, setIsProcessModalOpen, setIsWorkElementModalOpen, setTargetL2Id } = props;
+  return (
+    <>
+      <StructureColgroup />
+      <thead className="sticky top-0 z-10">
+        <StructureHeader onProcessModalOpen={() => setIsProcessModalOpen(true)} />
+      </thead>
+      <tbody>
+        {rows.map((row: any, idx: number) => (
+          <tr key={row.l3Id} style={{ height: '25px' }}>
+            <StructureRow
+              row={row}
+              idx={idx}
+              state={state}
+              setState={setState}
+              rows={rows}
+              l1Spans={l1Spans}
+              l2Spans={l2Spans}
+              setDirty={setDirty}
+              handleInputBlur={handleInputBlur}
+              handleInputKeyDown={handleInputKeyDown}
+              handleSelect={handleSelect}
+              setIsProcessModalOpen={setIsProcessModalOpen}
+              setIsWorkElementModalOpen={setIsWorkElementModalOpen}
+              setTargetL2Id={setTargetL2Id}
+            />
+          </tr>
+        ))}
+      </tbody>
+    </>
+  );
+}
 
-              {/* 우측: 전체보기 */}
-              <div className="flex items-center gap-1">
-                {/* 구분선 */}
-                <div className="w-px h-4 bg-gray-300" />
-                <button
-                  onClick={() => setState(prev => ({ ...prev, tab: 'all', levelView: 'all' }))}
-                  className="px-1.5 py-0.5 text-xs font-bold cursor-pointer"
-                  style={{
-                    background: state.tab === 'all' ? COLORS.blue : '#fff',
-                    border: `1px solid ${COLORS.blue}`,
-                    borderRadius: '3px',
-                    color: state.tab === 'all' ? '#fff' : COLORS.blue
-                  }}
-                >
-                  전체보기
-                </button>
-              </div>
-            </div>
-          </div>
+function FunctionTabContent(props: any) {
+  const { rows, l1Spans, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown } = props;
+  return (
+    <>
+      <thead className="sticky top-0 z-10"><FunctionHeader /></thead>
+      <tbody>
+        {rows.map((row: any, idx: number) => (
+          <tr key={row.l3Id} style={{ height: '25px' }}>
+            <FunctionRow row={row} idx={idx} state={state} setState={setState} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} setDirty={setDirty} handleInputBlur={handleInputBlur} handleInputKeyDown={handleInputKeyDown} />
+          </tr>
+        ))}
+      </tbody>
+    </>
+  );
+}
 
-          {/* 워크시트 영역 - 세로 스크롤 */}
-          <div className="flex-1 flex flex-col overflow-hidden" style={{ marginRight: 0, paddingRight: 0 }}>
-            {/* 테이블 제목 - 고정 */}
-            <div 
-              className="text-center font-black py-1 text-sm flex-shrink-0"
-              style={{ 
-                background: state.tab === 'structure' ? '#1a237e' : COLORS.sky2, 
-                color: state.tab === 'structure' ? '#fff' : COLORS.text,
-                border: `1px solid ${COLORS.line}`, 
-                borderBottom: 0 
-              }}
-            >
-              P-FMEA {getTabLabel(state.tab)}({state.tab === 'structure' ? 2 : state.tab === 'function' ? 3 : state.tab === 'failure' ? 4 : state.tab === 'risk' ? 5 : state.tab === 'optimization' ? 6 : 7}단계)
-            </div>
+function FailureTabContent(props: any) {
+  const { rows, l1Spans, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown, saveToLocalStorage } = props;
+  return (
+    <>
+      <thead className="sticky top-0 z-10"><FailureHeader /></thead>
+      <tbody>
+        {rows.map((row: any, idx: number) => (
+          <tr key={row.l3Id} style={{ height: '25px' }}>
+            <FailureRow row={row} idx={idx} state={state} setState={setState} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} setDirty={setDirty} handleInputBlur={handleInputBlur} handleInputKeyDown={handleInputKeyDown} saveToLocalStorage={saveToLocalStorage} />
+          </tr>
+        ))}
+      </tbody>
+    </>
+  );
+}
 
-            {/* 테이블 컨테이너 */}
-            <div className="flex-1 overflow-auto" style={{ border: `1px solid ${COLORS.line}` }}>
-              <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
-                {/* 열 폭 - 4M만 고정, 나머지는 자동 */}
-                {state.tab === 'structure' && (
-                  <colgroup>
-                    <col style={{ width: '18%' }} />
-                    <col style={{ width: '20%' }} />
-                    <col style={{ width: '40px' }} />
-                    <col />
-                  </colgroup>
-                )}
-                {/* 헤더 - 탭별로 다른 열 표시 */}
-                <thead className="sticky top-0 z-10">
-                  {state.tab === 'structure' && (
-                    <>
-                      {/* 메인 헤더 - 진한 색상 */}
-                      <tr>
-                        <th style={{ width: '20%', background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
-                          1. 완제품 공정명
-                        </th>
-                        <th 
-                          onClick={() => setIsProcessModalOpen(true)}
-                          className="cursor-pointer hover:bg-green-600"
-                          style={{ width: '25%', background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}
-                        >
-                          2. 메인 공정명 🔍
-                        </th>
-                        <th colSpan={2} style={{ width: '55%', background: '#f57c00', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
-                          3. 작업 요소명
-                        </th>
-                      </tr>
-                      {/* 서브 헤더 - 중간 색상 */}
-                      <tr>
-                        <th style={{ background: '#90caf9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
-                          완제품명+라인
-                        </th>
-                        <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
-                          공정NO+공정명
-                        </th>
-                        <th style={{ width: '5%', background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '0', height: '22px', fontWeight: 700, fontSize: '10px' }}>
-                          4M
-                        </th>
-                        <th style={{ width: '55%', background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
-                          작업요소
-                        </th>
-                      </tr>
-                    </>
-                  )}
-                  {state.tab === 'function' && (
-                    <>
-                      <tr>
-                        <th colSpan={2} style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
-                          1. 완제품 공정기능/요구사항
-                        </th>
-                        <th colSpan={2} style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
-                          2. 메인공정 기능 및 제품특성
-                        </th>
-                        <th colSpan={2} style={{ background: '#81c784', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
-                          3. 작업요소 기능 및 공정특성
-                        </th>
-                      </tr>
-                      <tr>
-                        <th style={{ width: '15%', background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
-                          완제품 기능
-                        </th>
-                        <th style={{ width: '15%', background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
-                          요구사항
-                        </th>
-                        <th style={{ width: '17%', background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
-                          공정 기능
-                        </th>
-                        <th style={{ width: '17%', background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
-                          제품특성
-                        </th>
-                        <th style={{ width: '18%', background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
-                          작업요소 기능
-                        </th>
-                        <th style={{ width: '18%', background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
-                          공정특성
-                        </th>
-                      </tr>
-                    </>
-                  )}
-                  {state.tab === 'failure' && (
-                    <>
-                      <tr>
-                        <th colSpan={2} style={{ background: '#ffcdd2', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
-                          1. 고장영향(FE) / 심각도
-                        </th>
-                        <th style={{ background: '#ef9a9a', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
-                          2. 고장형태(FM)
-                        </th>
-                        <th colSpan={2} style={{ background: '#e57373', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px', color: '#fff' }}>
-                          3. 작업요소 고장원인(FC)
-                        </th>
-                      </tr>
-                      <tr>
-                        <th style={{ width: '22%', background: '#ffebee', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
-                          고장영향(FE)
-                        </th>
-                        <th style={{ width: '10%', background: '#ffebee', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
-                          심각도
-                        </th>
-                        <th style={{ width: '22%', background: '#ffcdd2', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
-                          고장형태(FM)
-                        </th>
-                        <th style={{ width: '20%', background: '#ef9a9a', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
-                          작업요소
-                        </th>
-                        <th style={{ width: '26%', background: '#ef9a9a', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
-                          고장원인(FC)
-                        </th>
-                      </tr>
-                    </>
-                  )}
-                  {/* 리스크분석 탭 헤더 */}
-                  {state.tab === 'risk' && (
-                    <>
-                      <tr>
-                        <th style={{ width: '20%', background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
-                          현재 예방관리
-                        </th>
-                        <th style={{ width: '20%', background: '#b3e5fc', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
-                          현재 검출관리
-                        </th>
-                        <th style={{ width: '60%', background: '#e1f5fe', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }} colSpan={5}>
-                          리스크 평가
-                        </th>
-                      </tr>
-                      <tr>
-                        <th style={{ background: '#e3f2fd', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>예방관리</th>
-                        <th style={{ background: '#e1f5fe', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>검출관리</th>
-                        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>심각도(S)</th>
-                        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>발생도(O)</th>
-                        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>검출도(D)</th>
-                        <th style={{ background: '#fff3e0', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>AP</th>
-                        <th style={{ background: '#fff3e0', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>RPN</th>
-                      </tr>
-                    </>
-                  )}
-                  {/* 최적화 탭 헤더 */}
-                  {state.tab === 'opt' && (
-                    <>
-                      <tr>
-                        <th style={{ width: '35%', background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }} colSpan={4}>
-                          개선조치 계획
-                        </th>
-                        <th style={{ width: '35%', background: '#dcedc8', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }} colSpan={3}>
-                          개선조치 결과
-                        </th>
-                        <th style={{ width: '30%', background: '#f1f8e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }} colSpan={4}>
-                          효과 평가
-                        </th>
-                      </tr>
-                      <tr>
-                        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>조치유형</th>
-                        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>권고조치사항</th>
-                        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>담당자</th>
-                        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>완료예정일</th>
-                        <th style={{ background: '#f1f8e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>취해진조치</th>
-                        <th style={{ background: '#f1f8e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>완료일자</th>
-                        <th style={{ background: '#f1f8e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>상태</th>
-                        <th style={{ background: '#fffde7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>S</th>
-                        <th style={{ background: '#fffde7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>O</th>
-                        <th style={{ background: '#fffde7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>D</th>
-                        <th style={{ background: '#fff8e1', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>AP</th>
-                      </tr>
-                    </>
-                  )}
-                  {/* 문서화 탭 헤더 */}
-                  {state.tab === 'doc' && (
-                    <>
-                      <tr>
-                        <th style={{ width: '100%', background: '#e0e0e0', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }} colSpan={5}>
-                          문서화 (7단계)
-                        </th>
-                      </tr>
-                      <tr>
-                        <th style={{ background: '#f5f5f5', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>고장형태</th>
-                        <th style={{ background: '#f5f5f5', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>고장원인</th>
-                        <th style={{ background: '#f5f5f5', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>현재관리</th>
-                        <th style={{ background: '#f5f5f5', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>권고조치</th>
-                        <th style={{ background: '#f5f5f5', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>비고</th>
-                      </tr>
-                    </>
-                  )}
-                  {/* 전체보기 탭 헤더 */}
-                  {state.tab === 'all' && (
-                    <>
-                      <tr>
-                        <th style={{ width: '15%', background: COLORS.sky, border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }} colSpan={4}>
-                          구조분석 (2단계)
-                        </th>
-                        <th style={{ width: '20%', background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }} colSpan={6}>
-                          기능분석 (3단계)
-                        </th>
-                        <th style={{ width: '15%', background: '#ffcdd2', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }} colSpan={5}>
-                          고장분석 (4단계)
-                        </th>
-                        <th style={{ width: '20%', background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }} colSpan={7}>
-                          리스크분석 (5단계)
-                        </th>
-                        <th style={{ width: '30%', background: '#fff9c4', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }} colSpan={11}>
-                          최적화 (6단계)
-                        </th>
-                      </tr>
-                      <tr>
-                        <th style={{ background: COLORS.sky2, border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>완제품</th>
-                        <th style={{ background: COLORS.sky2, border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>메인공정</th>
-                        <th style={{ background: COLORS.sky2, border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>4M</th>
-                        <th style={{ background: COLORS.sky2, border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>작업요소</th>
-                        <th style={{ background: '#dcedc8', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>완제품기능</th>
-                        <th style={{ background: '#dcedc8', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>요구사항</th>
-                        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>공정기능</th>
-                        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>제품특성</th>
-                        <th style={{ background: '#f1f8e9', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>작업기능</th>
-                        <th style={{ background: '#f1f8e9', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>공정특성</th>
-                        <th style={{ background: '#ffebee', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>고장영향</th>
-                        <th style={{ background: '#ffebee', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>심각도</th>
-                        <th style={{ background: '#ffcdd2', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>고장형태</th>
-                        <th style={{ background: '#ef9a9a', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>고장원인</th>
-                        <th style={{ background: '#ef9a9a', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>발생도</th>
-                        <th style={{ background: '#e3f2fd', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>예방관리</th>
-                        <th style={{ background: '#e1f5fe', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>검출관리</th>
-                        <th style={{ background: '#e1f5fe', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>검출도</th>
-                        <th style={{ background: '#b3e5fc', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>AP</th>
-                        <th style={{ background: '#b3e5fc', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>RPN</th>
-                        <th style={{ background: '#b3e5fc', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>우선순위</th>
-                        <th style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>조치유형</th>
-                        <th style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>권고조치</th>
-                        <th style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>담당자</th>
-                        <th style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>예정일</th>
-                        <th style={{ background: '#dcedc8', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>조치내용</th>
-                        <th style={{ background: '#dcedc8', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>완료일</th>
-                        <th style={{ background: '#dcedc8', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>상태</th>
-                        <th style={{ background: '#fff9c4', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>S</th>
-                        <th style={{ background: '#fff9c4', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>O</th>
-                        <th style={{ background: '#fff9c4', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>D</th>
-                        <th style={{ background: '#fff59d', border: `1px solid ${COLORS.line}`, padding: '1px 2px', height: '22px', fontWeight: 700, fontSize: '9px' }}>AP</th>
-                      </tr>
-                    </>
-                  )}
-                </thead>
-                <tbody>
-                {rows.map((row, idx) => (
-                  <tr key={row.l3Id} style={{ height: '25px' }}>
-                    {/* ========== 구조분석 탭 ========== */}
-                    {state.tab === 'structure' && (
-                      <>
-                        {l1Spans[idx] > 0 && (
-                          <td rowSpan={l1Spans[idx]} className="text-center text-xs"
-                            style={{ 
-                              border: `1px solid ${COLORS.line}`, 
-                              padding: '2px 4px', 
-                              background: 'repeating-linear-gradient(45deg, #fff, #fff 4px, #f0f7ff 4px, #f0f7ff 8px)',
-                              verticalAlign: 'middle', 
-                              wordBreak: 'break-word' 
-                            }}>
-                            <input
-                              type="text"
-                              value={state.l1.name}
-                              onChange={(e) => {
-                                setState(prev => ({ ...prev, l1: { ...prev.l1, name: e.target.value } }));
-                                setDirty(true);
-                              }}
-                              onBlur={handleInputBlur}
-                              onKeyDown={handleInputKeyDown}
-                              placeholder="입력"
-                              className="w-full text-center border-0 outline-none text-xs font-semibold"
-                              style={{ minHeight: '22px', background: 'rgba(255,255,255,0.8)' }}
-                            />
-                          </td>
-                        )}
-                        {l2Spans[idx] > 0 && (
-                          <td rowSpan={l2Spans[idx]} className="text-center cursor-pointer hover:bg-green-200 text-xs"
-                            style={{ 
-                              border: `1px solid ${COLORS.line}`, 
-                              padding: '2px 4px', 
-                              background: row.l2Name.includes('클릭') 
-                                ? 'repeating-linear-gradient(45deg, #fff, #fff 4px, #e8f5e9 4px, #e8f5e9 8px)' 
-                                : '#e8f5e9', 
-                              verticalAlign: 'middle', 
-                              wordBreak: 'break-word' 
-                            }}
-                            onClick={() => { handleSelect('L2', row.l2Id); setIsProcessModalOpen(true); }}>
-                            {row.l2Name.includes('클릭') ? <span className="text-green-600 font-bold">🔍 클릭</span> : <span>{row.l2No} {row.l2Name} 🔍</span>}
-                          </td>
-                        )}
-                        <td className="text-center text-xs font-bold" style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: '#fff8e1' }}>{row.m4}</td>
-                        <td className="cursor-pointer hover:bg-orange-100 text-xs"
-                          style={{ 
-                            border: `1px solid ${COLORS.line}`, 
-                            padding: '2px 4px', 
-                            background: row.l3Name.includes('추가') || row.l3Name.includes('클릭') 
-                              ? 'repeating-linear-gradient(45deg, #fff, #fff 4px, #fff3e0 4px, #fff3e0 8px)' 
-                              : '#fff3e0', 
-                            wordBreak: 'break-word' 
-                          }}
-                          onClick={() => { handleSelect('L3', row.l3Id); setTargetL2Id(row.l2Id); setIsWorkElementModalOpen(true); }}>
-                          {row.l3Name.includes('추가') || row.l3Name.includes('클릭') ? <span className="text-orange-600 font-bold">🔍 클릭</span> : <span>{row.l3Name} 🔍</span>}
-                        </td>
-                      </>
-                    )}
+function RiskTabContent(props: any) {
+  const { rows, l1Spans, l2Spans, state } = props;
+  return (
+    <>
+      <thead className="sticky top-0 z-10"><RiskHeader /></thead>
+      <tbody>
+        {rows.map((row: any, idx: number) => (
+          <tr key={row.l3Id} style={{ height: '25px' }}>
+            <RiskRow row={row} idx={idx} state={state} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} />
+          </tr>
+        ))}
+      </tbody>
+    </>
+  );
+}
 
-                    {/* ========== 기능분석 탭 ========== */}
-                    {state.tab === 'function' && (
-                      <>
-                        {l1Spans[idx] > 0 && (
-                          <td rowSpan={l1Spans[idx]} className="text-xs" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#f1f8e9', verticalAlign: 'middle' }}>
-                            <input type="text" value={row.l1Function} onChange={(e) => { setState(prev => ({ ...prev, l1: { ...prev.l1, function: e.target.value } })); setDirty(true); }}
-                              onBlur={handleInputBlur} onKeyDown={handleInputKeyDown}
-                              placeholder="완제품 기능 입력" className="w-full bg-transparent border-0 outline-none text-xs" style={{ height: '20px' }} />
-                          </td>
-                        )}
-                        {l1Spans[idx] > 0 && (
-                          <td rowSpan={l1Spans[idx]} className="text-xs" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#f1f8e9', verticalAlign: 'middle' }}>
-                            <input type="text" value={row.l1Requirement} onChange={(e) => { setState(prev => ({ ...prev, l1: { ...prev.l1, requirement: e.target.value } })); setDirty(true); }}
-                              onBlur={handleInputBlur} onKeyDown={handleInputKeyDown}
-                              placeholder="요구사항 입력" className="w-full bg-transparent border-0 outline-none text-xs" style={{ height: '20px' }} />
-                          </td>
-                        )}
-                        {l2Spans[idx] > 0 && (
-                          <td rowSpan={l2Spans[idx]} className="text-xs" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#e8f5e9', verticalAlign: 'middle' }}>
-                            <input type="text" value={row.l2Function}
-                              onChange={(e) => { setState(prev => ({ ...prev, l2: prev.l2.map(p => p.id === row.l2Id ? { ...p, function: e.target.value } : p) })); setDirty(true); }}
-                              onBlur={handleInputBlur} onKeyDown={handleInputKeyDown}
-                              placeholder={`${row.l2No} ${row.l2Name} 기능`} className="w-full bg-transparent border-0 outline-none text-xs" style={{ height: '20px' }} />
-                          </td>
-                        )}
-                        {l2Spans[idx] > 0 && (
-                          <td rowSpan={l2Spans[idx]} className="text-xs" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#e8f5e9', verticalAlign: 'middle' }}>
-                            <input type="text" value={row.l2ProductChar}
-                              onChange={(e) => { setState(prev => ({ ...prev, l2: prev.l2.map(p => p.id === row.l2Id ? { ...p, productChar: e.target.value } : p) })); setDirty(true); }}
-                              onBlur={handleInputBlur} onKeyDown={handleInputKeyDown}
-                              placeholder="제품특성 입력" className="w-full bg-transparent border-0 outline-none text-xs" style={{ height: '20px' }} />
-                          </td>
-                        )}
-                        <td className="text-xs" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#dcedc8' }}>
-                          <input type="text" value={row.l3Function}
-                            onChange={(e) => { setState(prev => ({ ...prev, l2: prev.l2.map(p => ({ ...p, l3: p.l3.map(w => w.id === row.l3Id ? { ...w, function: e.target.value } : w) })) })); setDirty(true); }}
-                            onBlur={handleInputBlur} onKeyDown={handleInputKeyDown}
-                            placeholder={`[${row.m4}] ${row.l3Name} 기능`} className="w-full bg-transparent border-0 outline-none text-xs" style={{ height: '20px' }} />
-                        </td>
-                        <td className="text-xs" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#dcedc8' }}>
-                          <input type="text" value={row.l3ProcessChar}
-                            onChange={(e) => { setState(prev => ({ ...prev, l2: prev.l2.map(p => ({ ...p, l3: p.l3.map(w => w.id === row.l3Id ? { ...w, processChar: e.target.value } : w) })) })); setDirty(true); }}
-                            onBlur={handleInputBlur} onKeyDown={handleInputKeyDown}
-                            placeholder="공정특성 입력" className="w-full bg-transparent border-0 outline-none text-xs" style={{ height: '20px' }} />
-                        </td>
-                      </>
-                    )}
+function OptTabContent(props: any) {
+  const { rows, l1Spans, l2Spans, state } = props;
+  return (
+    <>
+      <thead className="sticky top-0 z-10"><OptHeader /></thead>
+      <tbody>
+        {rows.map((row: any, idx: number) => (
+          <tr key={row.l3Id} style={{ height: '25px' }}>
+            <OptRow row={row} idx={idx} state={state} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} />
+          </tr>
+        ))}
+      </tbody>
+    </>
+  );
+}
 
-                    {/* ========== 고장분석 탭 ========== */}
-                    {state.tab === 'failure' && (
-                      <>
-                        {l1Spans[idx] > 0 && (
-                          <td rowSpan={l1Spans[idx]} className="text-xs" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#ffebee', verticalAlign: 'middle' }}>
-                            <input type="text" value={row.l1FailureEffect}
-                              onChange={(e) => { setState(prev => ({ ...prev, l1: { ...prev.l1, failureEffect: e.target.value } })); setDirty(true); }}
-                              onBlur={handleInputBlur} onKeyDown={handleInputKeyDown}
-                              placeholder="고장영향(FE) 입력" className="w-full bg-transparent border-0 outline-none text-xs" style={{ height: '20px' }} />
-                          </td>
-                        )}
-                        {l1Spans[idx] > 0 && (
-                          <td rowSpan={l1Spans[idx]} className="text-xs text-center" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#ffebee', verticalAlign: 'middle' }}>
-                            <select value={row.l1Severity || ''}
-                              onChange={(e) => { setState(prev => ({ ...prev, l1: { ...prev.l1, severity: e.target.value ? Number(e.target.value) : undefined } })); setDirty(true); saveToLocalStorage(); }}
-                              className="w-full bg-transparent border-0 outline-none text-xs text-center" style={{ height: '20px' }}>
-                              <option value="">-</option>
-                              {[1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}
-                            </select>
-                          </td>
-                        )}
-                        {l2Spans[idx] > 0 && (
-                          <td rowSpan={l2Spans[idx]} className="text-xs" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#ffcdd2', verticalAlign: 'middle' }}>
-                            <input type="text" value={row.l2FailureMode}
-                              onChange={(e) => { setState(prev => ({ ...prev, l2: prev.l2.map(p => p.id === row.l2Id ? { ...p, failureMode: e.target.value } : p) })); setDirty(true); }}
-                              onBlur={handleInputBlur} onKeyDown={handleInputKeyDown}
-                              placeholder={`${row.l2No} ${row.l2Name} 고장형태`} className="w-full bg-transparent border-0 outline-none text-xs" style={{ height: '20px' }} />
-                          </td>
-                        )}
-                        <td className="text-xs text-center" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#fce4ec' }}>
-                          [{row.m4}] {row.l3Name}
-                        </td>
-                        <td className="text-xs" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#fce4ec' }}>
-                          <input type="text" value={row.l3FailureCause}
-                            onChange={(e) => { setState(prev => ({ ...prev, l2: prev.l2.map(p => ({ ...p, l3: p.l3.map(w => w.id === row.l3Id ? { ...w, failureCause: e.target.value } : w) })) })); setDirty(true); }}
-                            onBlur={handleInputBlur} onKeyDown={handleInputKeyDown}
-                            placeholder="고장원인(FC) 입력" className="w-full bg-transparent border-0 outline-none text-xs" style={{ height: '20px' }} />
-                        </td>
-                      </>
-                    )}
+function DocTabContent(props: any) {
+  const { rows, l1Spans, l2Spans, state } = props;
+  return (
+    <>
+      <thead className="sticky top-0 z-10"><DocHeader /></thead>
+      <tbody>
+        {rows.map((row: any, idx: number) => (
+          <tr key={row.l3Id} style={{ height: '25px' }}>
+            <DocRow row={row} idx={idx} state={state} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} />
+          </tr>
+        ))}
+      </tbody>
+    </>
+  );
+}
 
-                    {/* ========== 기타 탭 ========== */}
-                    {(state.tab !== 'structure' && state.tab !== 'function' && state.tab !== 'failure') && (
-                      <>
-                        {l1Spans[idx] > 0 && (<td rowSpan={l1Spans[idx]} className="text-center text-xs text-gray-400" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', verticalAlign: 'middle' }}>{row.l1Name}</td>)}
-                        {l2Spans[idx] > 0 && (<td rowSpan={l2Spans[idx]} className="text-center text-xs text-gray-400" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', verticalAlign: 'middle' }}>{row.l2No} {row.l2Name}</td>)}
-                        <td className="text-xs text-gray-400" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px' }}>[{row.m4}] {row.l3Name}</td>
-                      </>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-              </table>
-            </div>
-          </div>
-        </main>
+function AllViewTabContent(props: any) {
+  return (
+    <>
+      <thead className="sticky top-0 z-10">
+        <tr><th colSpan={38} style={{ background: COLORS.sky, padding: '4px', textAlign: 'center' }}>전체보기 (38열 FMEA 워크시트) - 개발예정</th></tr>
+      </thead>
+      <tbody>
+        <tr><td colSpan={38} className="text-center text-gray-400 py-8">전체보기 탭은 개발 예정입니다.</td></tr>
+      </tbody>
+    </>
+  );
+}
 
-        {/* ========== 구분선 (굵은 선) ========== */}
-        <div className="flex-shrink-0" style={{ width: '4px', background: '#00587a', marginLeft: 0 }} />
+interface RightTreePanelProps {
+  state: WorksheetState;
+  setState: React.Dispatch<React.SetStateAction<WorksheetState>>;
+  filteredTree: Process[];
+  onAddL2: () => void;
+  onSelect: (type: 'L1' | 'L2' | 'L3', id: string | null) => void;
+  onRenameL3: (id: string, name: string) => void;
+  setDirty: (dirty: boolean) => void;
+  handleInputBlur: () => void;
+  handleInputKeyDown: (e: React.KeyboardEvent) => void;
+  setIsProcessModalOpen: (open: boolean) => void;
+  setIsWorkElementModalOpen: (open: boolean) => void;
+  setTargetL2Id: (id: string | null) => void;
+}
 
-        {/* ========== 우측: 트리 (L1 틀고정) ========== */}
-        <aside className="flex flex-col flex-shrink-0" style={{ width: '280px', marginLeft: 0, paddingLeft: 0, background: '#fff' }}>
-          {/* L1: 완제품명+라인 - 틀 고정 (직접 입력, FMEA명과 별도) */}
-          <div className="flex-shrink-0 border-b" style={{ background: '#e3f2fd' }}>
-            <div className="flex items-center gap-1 px-1 py-0.5">
-              <span className="text-blue-600 text-sm">📦</span>
-              <input
-                type="text"
-                value={state.l1.name}
-                onChange={(e) => {
-                  setState(prev => ({ ...prev, l1: { ...prev.l1, name: e.target.value } }));
-                  setDirty(true);
-                }}
-                onBlur={handleInputBlur}
-                onKeyDown={handleInputKeyDown}
-                placeholder="완제품명+라인 입력"
-                className="flex-1 px-2 py-1 text-sm font-bold border rounded bg-white hover:border-blue-400 focus:border-blue-500 focus:outline-none"
-                style={{ borderColor: '#90caf9' }}
-              />
-              <button 
-                onClick={addL2}
-                className="px-2 py-1 text-xs font-bold rounded bg-blue-500 text-white hover:bg-blue-600"
-                title="공정 추가"
+function RightTreePanel({ 
+  state, setState, filteredTree, onAddL2, onSelect, onRenameL3, setDirty,
+  handleInputBlur, handleInputKeyDown, setIsProcessModalOpen, setIsWorkElementModalOpen, setTargetL2Id 
+}: RightTreePanelProps) {
+  return (
+    <aside className="flex flex-col flex-shrink-0" style={{ width: '280px', marginLeft: 0, paddingLeft: 0, background: '#fff' }}>
+      {/* L1: 완제품명 */}
+      <div className="flex-shrink-0 border-b" style={{ background: '#e3f2fd' }}>
+        <div className="flex items-center gap-1 px-1 py-0.5">
+          <span className="text-blue-600 text-sm">📦</span>
+          <input
+            type="text"
+            value={state.l1.name}
+            onChange={(e) => { setState(prev => ({ ...prev, l1: { ...prev.l1, name: e.target.value } })); setDirty(true); }}
+            onBlur={handleInputBlur}
+            onKeyDown={handleInputKeyDown}
+            placeholder="완제품명+라인 입력"
+            className="flex-1 px-2 py-1 text-sm font-bold border rounded bg-white hover:border-blue-400 focus:border-blue-500 focus:outline-none"
+            style={{ borderColor: '#90caf9' }}
+          />
+          <button onClick={onAddL2} className="px-2 py-1 text-xs font-bold rounded bg-blue-500 text-white hover:bg-blue-600" title="공정 추가">+</button>
+        </div>
+      </div>
+
+      {/* L2, L3 트리 */}
+      <div className="flex-1 overflow-auto p-2">
+        <div className="ml-2" style={{ borderLeft: '2px solid #90caf9' }}>
+          {filteredTree.sort((a, b) => a.order - b.order).map((proc, pIdx) => (
+            <div key={proc.id} className="mb-0.5">
+              <div 
+                className={`flex items-center gap-1 py-0.5 cursor-pointer hover:bg-blue-50 rounded ${state.selected.type === 'L2' && state.selected.id === proc.id ? 'bg-blue-100' : ''}`}
+                onClick={() => { onSelect('L2', proc.id); setTargetL2Id(proc.id); setIsWorkElementModalOpen(true); }}
               >
-                +
-              </button>
-            </div>
-          </div>
+                <span className="w-5 h-5 flex items-center justify-center text-gray-500 text-xs">{proc.l3.length > 0 ? '▼' : '▷'}</span>
+                <span className="text-gray-400 text-sm">📁</span>
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    value={`1.${pIdx + 1}-${proc.name}`}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/^1\.\d+-/, '');
+                      setState(prev => ({ ...prev, l2: prev.l2.map(p => p.id === proc.id ? { ...p, name: val } : p) }));
+                      setDirty(true);
+                    }}
+                    className="w-full px-2 py-1 text-xs border rounded bg-white hover:border-blue-400 focus:border-blue-500 focus:outline-none"
+                    style={{ borderColor: '#e0e0e0' }}
+                  />
+                </div>
+              </div>
 
-          {/* L2, L3: 하위 트리 - 스크롤 영역 */}
-          <div className="flex-1 overflow-auto p-2">
-            <div className="ml-2" style={{ borderLeft: '2px solid #90caf9' }}>
-                {filteredTree.sort((a, b) => a.order - b.order).map((proc, pIdx) => (
-                  <div key={proc.id} className="mb-0.5">
-                    {/* L2 행 - 클릭하면 작업요소 모달 */}
-                    <div 
-                      className={`flex items-center gap-1 py-0.5 cursor-pointer hover:bg-blue-50 rounded ${
-                        state.selected.type === 'L2' && state.selected.id === proc.id ? 'bg-blue-100' : ''
-                      }`}
-                      onClick={() => {
-                        handleSelect('L2', proc.id);
-                        // 공정 클릭 시 작업요소 모달 열기
-                        setTargetL2Id(proc.id);
-                        setIsWorkElementModalOpen(true);
-                      }}
-                    >
-                      <span 
-                        className="w-5 h-5 flex items-center justify-center text-gray-500 text-xs cursor-pointer"
-                        onClick={(e) => { e.stopPropagation(); /* 접기/펼치기 */ }}
-                      >
-                        {proc.l3.length > 0 ? '▼' : '▷'}
-                      </span>
-                      <span className="text-gray-400 text-sm">📁</span>
-                      <div className="flex-1">
-                        <input
-                          type="text"
-                          value={`1.${pIdx + 1}-${proc.name}`}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/^1\.\d+-/, '');
-                            setState(prev => ({
-                              ...prev,
-                              l2: prev.l2.map(p => p.id === proc.id ? { ...p, name: val } : p)
-                            }));
-                            setDirty(true);
-                          }}
-                          className="w-full px-2 py-1 text-xs border rounded bg-white hover:border-blue-400 focus:border-blue-500 focus:outline-none"
-                          style={{ borderColor: '#e0e0e0' }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* L3: 작업요소들 */}
-                    <div className="ml-4">
-                      {proc.l3
-                        .filter(w => !state.search || `${w.m4} ${w.name}`.toLowerCase().includes(state.search.toLowerCase()))
-                        .sort((a, b) => a.order - b.order)
-                        .map((w, wIdx) => (
-                          <div 
-                            key={w.id} 
-                            className={`flex items-center gap-1 py-0.5 cursor-pointer hover:bg-blue-50 rounded ${
-                              state.selected.type === 'L3' && state.selected.id === w.id ? 'bg-blue-100' : ''
-                            }`}
-                            onClick={() => handleSelect('L3', w.id)}
-                          >
-                            <span className="w-3 h-3"></span>
-                            <span className="text-gray-400 text-xs">📄</span>
-                            <div className="flex-1">
-                              <input
-                                type="text"
-                                value={`1.${pIdx + 1}.${wIdx + 1}-${w.name}`}
-                                onChange={(e) => {
-                                  const val = e.target.value.replace(/^1\.\d+\.\d+-/, '');
-                                  renameL3(w.id, val);
-                                }}
-                                className="w-full px-1 py-0.5 text-xs border rounded bg-white hover:border-blue-400 focus:border-blue-500 focus:outline-none"
-                                style={{ borderColor: '#e0e0e0' }}
-                              />
-                            </div>
-                          </div>
-                        ))
-                      }
-                      {/* 작업요소 추가 버튼 - 모달 열기 */}
-                      <div 
-                        className="flex items-center gap-1 py-0.5 px-1 cursor-pointer hover:bg-green-100 rounded border border-dashed border-green-400 text-green-600 mt-0.5"
-                        onClick={() => {
-                          setTargetL2Id(proc.id);
-                          setIsWorkElementModalOpen(true);
-                        }}
-                      >
-                        <span className="text-xs">➕</span>
-                        <span className="text-xs">작업요소 추가</span>
-                      </div>
+              <div className="ml-4">
+                {proc.l3.filter(w => !state.search || `${w.m4} ${w.name}`.toLowerCase().includes(state.search.toLowerCase())).sort((a, b) => a.order - b.order).map((w, wIdx) => (
+                  <div 
+                    key={w.id} 
+                    className={`flex items-center gap-1 py-0.5 cursor-pointer hover:bg-blue-50 rounded ${state.selected.type === 'L3' && state.selected.id === w.id ? 'bg-blue-100' : ''}`}
+                    onClick={() => onSelect('L3', w.id)}
+                  >
+                    <span className="w-3 h-3"></span>
+                    <span className="text-gray-400 text-xs">📄</span>
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        value={`1.${pIdx + 1}.${wIdx + 1}-${w.name}`}
+                        onChange={(e) => { const val = e.target.value.replace(/^1\.\d+\.\d+-/, ''); onRenameL3(w.id, val); }}
+                        className="w-full px-1 py-0.5 text-xs border rounded bg-white hover:border-blue-400 focus:border-blue-500 focus:outline-none"
+                        style={{ borderColor: '#e0e0e0' }}
+                      />
                     </div>
                   </div>
                 ))}
-
-                {/* 공정 추가 버튼 */}
                 <div 
-                  className="flex items-center gap-1 py-0.5 px-1 ml-1 cursor-pointer hover:bg-green-100 rounded border border-dashed border-green-400 text-green-600 mt-0.5"
-                  onClick={() => setIsProcessModalOpen(true)}
+                  className="flex items-center gap-1 py-0.5 px-1 cursor-pointer hover:bg-green-100 rounded border border-dashed border-green-400 text-green-600 mt-0.5"
+                  onClick={() => { setTargetL2Id(proc.id); setIsWorkElementModalOpen(true); }}
                 >
                   <span className="text-xs">➕</span>
-                  <span className="text-xs">공정 추가</span>
+                  <span className="text-xs">작업요소 추가</span>
                 </div>
+              </div>
             </div>
-          </div>
+          ))}
 
-          {/* 하단 정보 */}
-          <div className="flex-shrink-0 px-3 py-1 border-t text-xs text-gray-500" style={{ background: '#f8f9fa' }}>
-            공정: {state.l2.filter(p => !p.name.includes('클릭')).length}개 | 
-            작업요소: {state.l2.reduce((sum, p) => sum + p.l3.filter(w => !w.name.includes('추가') && !w.name.includes('클릭')).length, 0)}개
+          <div 
+            className="flex items-center gap-1 py-0.5 px-1 ml-1 cursor-pointer hover:bg-green-100 rounded border border-dashed border-green-400 text-green-600 mt-0.5"
+            onClick={() => setIsProcessModalOpen(true)}
+          >
+            <span className="text-xs">➕</span>
+            <span className="text-xs">공정 추가</span>
           </div>
-        </aside>
-
+        </div>
       </div>
 
-      {/* 공정 선택 모달 (L2) */}
-      <ProcessSelectModal
-        isOpen={isProcessModalOpen}
-        onClose={() => setIsProcessModalOpen(false)}
-        onSave={(selectedProcesses) => {
-          // 선택된 공정으로 교체 (기존 작업요소는 유지)
-          setState(prev => {
-            const selectedNames = selectedProcesses.map(p => p.name);
-            
-            // 기존 공정 중 선택된 것만 유지 (작업요소 보존)
-            const keepL2 = prev.l2.filter(p => 
-              !p.name.includes('클릭') && selectedNames.includes(p.name)
-            );
-            const keepNames = keepL2.map(p => p.name);
-            
-            // 새로 추가된 공정
-            const newL2 = selectedProcesses
-              .filter(p => !keepNames.includes(p.name))
-              .map((p, idx) => ({
-                id: uid(),
-                no: p.no,
-                name: p.name,
-                order: (keepL2.length + idx + 1) * 10,
-                l3: [{ id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10 }]
-              }));
-            
-            const finalL2 = [...keepL2, ...newL2];
-            
-            // 공정이 없으면 빈 행 추가
-            if (finalL2.length === 0) {
-              finalL2.push({
-                id: uid(),
-                no: '',
-                name: '(클릭하여 공정 선택)',
-                order: 10,
-                l3: [{ id: uid(), m4: '', name: '(공정 선택 후 작업요소 추가)', order: 10 }]
-              });
-            }
-            
-            return { ...prev, l2: finalL2 };
-          });
-          setDirty(true);
-        }}
-        existingProcessNames={state.l2.filter(p => !p.name.includes('클릭')).map(p => p.name)}
-      />
-
-      {/* 작업요소 선택 모달 (L3) - 공정번호 전달 */}
-      <WorkElementSelectModal
-        isOpen={isWorkElementModalOpen}
-        onClose={() => {
-          setIsWorkElementModalOpen(false);
-          setTargetL2Id(null);
-        }}
-        onSave={handleWorkElementSelect}
-        processNo={state.l2.find(p => p.id === targetL2Id)?.no || ''}
-        processName={state.l2.find(p => p.id === targetL2Id)?.name || ''}
-        existingElements={
-          state.l2.find(p => p.id === targetL2Id)?.l3
-            .filter(w => !w.name.includes('추가'))
-            .map(w => w.name) || []
-        }
-      />
+      {/* 하단 정보 */}
+      <div className="flex-shrink-0 px-3 py-1 border-t text-xs text-gray-500" style={{ background: '#f8f9fa' }}>
+        공정: {state.l2.filter(p => !p.name.includes('클릭')).length}개 | 
+        작업요소: {state.l2.reduce((sum, p) => sum + p.l3.filter(w => !w.name.includes('추가') && !w.name.includes('클릭')).length, 0)}개
       </div>
-    </>
+    </aside>
   );
 }
