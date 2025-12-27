@@ -290,10 +290,16 @@ export default function FMEAWorksheetPage() {
               </div>
             </div>
             
-            {/* 완제품명 입력 */}
+            {/* 완제품명 입력 - 📦 클릭하면 메인공정 모달 */}
             <div style={{ flexShrink: 0, background: '#e3f2fd', padding: '4px 8px', borderBottom: '1px solid #90caf9' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '12px' }}>📦</span>
+                <span 
+                  onClick={() => setIsProcessModalOpen(true)}
+                  style={{ fontSize: '14px', cursor: 'pointer', padding: '2px' }}
+                  title="클릭하여 메인공정 추가/관리"
+                >
+                  📦
+                </span>
                 <input
                   type="text"
                   value={state.l1.name}
@@ -304,8 +310,9 @@ export default function FMEAWorksheetPage() {
                   style={{ flex: 1, padding: '4px 8px', fontSize: '12px', fontWeight: 700, border: '1px solid #90caf9', borderRadius: '4px' }}
                 />
                 <button 
-                  onClick={addL2} 
+                  onClick={() => setIsProcessModalOpen(true)}
                   style={{ padding: '4px 8px', fontSize: '11px', fontWeight: 700, background: '#2196f3', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                  title="공정 추가"
                 >
                   +
                 </button>
@@ -344,7 +351,7 @@ export default function FMEAWorksheetPage() {
                         {isCollapsed ? '▷' : '▼'}
                       </span>
                       
-                      {/* 공정 아이콘 - 클릭하면 모달 열기 */}
+                      {/* 공정 아이콘 + 공정명 - 클릭하면 작업요소 모달 열기 */}
                       <span 
                         onClick={() => { handleSelect('L2', proc.id); setTargetL2Id(proc.id); setIsWorkElementModalOpen(true); }}
                         style={{ fontSize: '12px', cursor: 'pointer' }}
@@ -353,17 +360,14 @@ export default function FMEAWorksheetPage() {
                         📁
                       </span>
                       
-                      {/* 공정명 입력 */}
-                      <input
-                        type="text"
-                        value={`1.${pIdx + 1}-${proc.name}`}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/^1\.\d+-/, '');
-                          setState(prev => ({ ...prev, l2: prev.l2.map(p => p.id === proc.id ? { ...p, name: val } : p) }));
-                          setDirty(true);
-                        }}
-                        style={{ flex: 1, padding: '2px 6px', fontSize: '11px', border: '1px solid #e0e0e0', borderRadius: '3px', background: '#fff' }}
-                      />
+                      {/* 공정명 - 클릭하면 작업요소 모달 */}
+                      <div 
+                        onClick={() => { handleSelect('L2', proc.id); setTargetL2Id(proc.id); setIsWorkElementModalOpen(true); }}
+                        style={{ flex: 1, padding: '2px 6px', fontSize: '11px', border: '1px solid #e0e0e0', borderRadius: '3px', background: '#fff', cursor: 'pointer' }}
+                        title="클릭하여 작업요소 관리"
+                      >
+                        {`1.${pIdx + 1}-${proc.name}`}
+                      </div>
                       
                       {/* 작업요소 개수 표시 */}
                       <span style={{ fontSize: '9px', color: '#888', background: '#e0e0e0', padding: '1px 4px', borderRadius: '8px' }}>
@@ -393,31 +397,10 @@ export default function FMEAWorksheetPage() {
                             />
                           </div>
                         ))}
-                        {/* 작업요소 추가 버튼 */}
-                        <div 
-                          onClick={() => { setTargetL2Id(proc.id); setIsWorkElementModalOpen(true); }}
-                          style={{ 
-                            display: 'flex', alignItems: 'center', gap: '4px', padding: '3px 6px', marginTop: '2px',
-                            cursor: 'pointer', borderRadius: '3px', border: '1px dashed #4caf50', color: '#4caf50', fontSize: '10px',
-                          }}
-                        >
-                          <span>➕</span><span>작업요소 추가</span>
-                        </div>
                       </div>
                     )}
                   </div>
                 );})}
-
-                {/* 공정 추가 버튼 */}
-                <div 
-                  onClick={() => setIsProcessModalOpen(true)}
-                  style={{ 
-                    display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', marginTop: '4px',
-                    cursor: 'pointer', borderRadius: '4px', border: '1px dashed #2196f3', color: '#2196f3', fontSize: '11px',
-                  }}
-                >
-                  <span>➕</span><span>공정 추가</span>
-                </div>
               </div>
             </div>
 
