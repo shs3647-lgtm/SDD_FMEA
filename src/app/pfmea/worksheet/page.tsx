@@ -19,8 +19,8 @@ import { COLORS, TABS, LEVELS, uid, getTabLabel, WorksheetState, WorkElement, Pr
 import { useWorksheetState } from './hooks';
 import { 
   StructureTab, StructureColgroup, StructureHeader, StructureRow,
-  FunctionTab, FunctionHeader, FunctionRow,
-  FailureTab, FailureHeader, FailureRow,
+  FunctionTab, FunctionColgroup, FunctionHeader, FunctionRow,
+  FailureTab, FailureColgroup, FailureHeader, FailureRow,
   RiskTab, RiskHeader, RiskRow,
   OptTab, OptHeader, OptRow,
   DocTab, DocHeader, DocRow,
@@ -821,13 +821,22 @@ function FunctionTabFull(props: any) {
   const { rows, l1Spans, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown } = props;
   return (
     <>
+      <FunctionColgroup />
       <thead style={stickyTheadStyle}><FunctionHeader /></thead>
       <tbody>
-        {rows.map((row: any, idx: number) => (
-          <tr key={row.l3Id} style={{ height: '25px' }}>
-            <FunctionRow row={row} idx={idx} state={state} setState={setState} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} setDirty={setDirty} handleInputBlur={handleInputBlur} handleInputKeyDown={handleInputKeyDown} />
+        {rows.length === 0 ? (
+          <tr>
+            <td colSpan={6} className="text-center text-gray-400 py-8">
+              구조분석 탭에서 데이터를 먼저 입력하세요.
+            </td>
           </tr>
-        ))}
+        ) : (
+          rows.map((row: any, idx: number) => (
+            <tr key={row.l3Id} style={{ height: '28px' }}>
+              <FunctionRow row={row} idx={idx} state={state} setState={setState} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} setDirty={setDirty} handleInputBlur={handleInputBlur} handleInputKeyDown={handleInputKeyDown} />
+            </tr>
+          ))
+        )}
       </tbody>
     </>
   );
@@ -838,13 +847,22 @@ function FailureTabFull(props: any) {
   const { rows, l1Spans, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown, saveToLocalStorage } = props;
   return (
     <>
+      <FailureColgroup />
       <thead style={stickyTheadStyle}><FailureHeader /></thead>
       <tbody>
-        {rows.map((row: any, idx: number) => (
-          <tr key={row.l3Id} style={{ height: '25px' }}>
-            <FailureRow row={row} idx={idx} state={state} setState={setState} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} setDirty={setDirty} handleInputBlur={handleInputBlur} handleInputKeyDown={handleInputKeyDown} saveToLocalStorage={saveToLocalStorage} />
+        {rows.length === 0 ? (
+          <tr>
+            <td colSpan={5} className="text-center text-gray-400 py-8">
+              구조분석 탭에서 데이터를 먼저 입력하세요.
+            </td>
           </tr>
-        ))}
+        ) : (
+          rows.map((row: any, idx: number) => (
+            <tr key={row.l3Id} style={{ height: '28px' }}>
+              <FailureRow row={row} idx={idx} state={state} setState={setState} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} setDirty={setDirty} handleInputBlur={handleInputBlur} handleInputKeyDown={handleInputKeyDown} saveToLocalStorage={saveToLocalStorage} />
+            </tr>
+          ))
+        )}
       </tbody>
     </>
   );
