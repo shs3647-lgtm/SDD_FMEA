@@ -588,6 +588,14 @@ function TabMenu({ state, setState }: TabMenuProps) {
               </button>
             ))}
           </div>
+          
+          {/* 단계별 토글 버튼 - 전체보기(All) 선택 시에만 표시 (All 버튼 바로 옆) */}
+          {state.tab === 'all' && (
+            <>
+              <div className="w-px h-4 bg-gray-300 mx-1" />
+              <StepToggleButtons state={state} setState={setState} />
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-1">
@@ -604,14 +612,6 @@ function TabMenu({ state, setState }: TabMenuProps) {
           >
             전체보기
           </button>
-          
-          {/* 단계별 토글 버튼 - 전체보기(All) 선택 시에만 표시 */}
-          {state.tab === 'all' && (
-            <>
-              <div className="w-px h-4 bg-gray-300 mx-1" />
-              <StepToggleButtons state={state} setState={setState} />
-            </>
-          )}
         </div>
       </div>
     </div>
