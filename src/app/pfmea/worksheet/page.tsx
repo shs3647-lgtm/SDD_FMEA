@@ -718,60 +718,113 @@ function DocTabFull(props: any) {
   );
 }
 
-// 전체보기 탭 - 38열 FMEA 워크시트
+// 전체보기 탭 - 38열 FMEA 워크시트 (Excel과 동일)
 function AllViewTabFull({ rows, state }: { rows: FlatRow[]; state: WorksheetState }) {
-  // 전체보기 컬럼 정의 (구조+기능+고장+리스크+최적화)
+  // 38열 컬럼 정의 (Excel "PFMEA 40열.xlsx"와 동일)
   const allViewColumns = [
-    // 구조분석 (4열)
-    { id: 'l1Name', label: '완제품공정', width: '80px', group: '구조분석', bg: '#1976d2' },
-    { id: 'l2Name', label: '메인공정', width: '100px', group: '구조분석', bg: '#388e3c' },
-    { id: 'm4', label: '4M', width: '20px', group: '구조분석', bg: '#f57c00' },
-    { id: 'l3Name', label: '작업요소', width: '100px', group: '구조분석', bg: '#f57c00' },
-    // 기능분석 (3열)
-    { id: 'function', label: '공정기능', width: '120px', group: '기능분석', bg: '#7b1fa2' },
-    { id: 'productChar', label: '제품특성', width: '80px', group: '기능분석', bg: '#7b1fa2' },
-    { id: 'processChar', label: '공정특성', width: '80px', group: '기능분석', bg: '#7b1fa2' },
-    // 고장분석 (7열)
-    { id: 'failureEffect', label: '고장영향', width: '100px', group: '고장분석', bg: '#c62828' },
-    { id: 'severity', label: 'S', width: '25px', group: '고장분석', bg: '#c62828' },
-    { id: 'failureMode', label: '고장모드', width: '100px', group: '고장분석', bg: '#c62828' },
-    { id: 'failureCause', label: '고장원인', width: '100px', group: '고장분석', bg: '#c62828' },
-    { id: 'prevention', label: '예방관리', width: '80px', group: '고장분석', bg: '#c62828' },
-    { id: 'occurrence', label: 'O', width: '25px', group: '고장분석', bg: '#c62828' },
-    { id: 'detection', label: '검출관리', width: '80px', group: '고장분석', bg: '#c62828' },
-    { id: 'detectability', label: 'D', width: '25px', group: '고장분석', bg: '#c62828' },
-    // 리스크분석 (3열)
-    { id: 'ap', label: 'AP', width: '30px', group: '리스크', bg: '#1565c0' },
-    { id: 'action', label: '권장조치', width: '120px', group: '리스크', bg: '#1565c0' },
-    { id: 'responsible', label: '책임/일정', width: '80px', group: '리스크', bg: '#1565c0' },
-    // 최적화 (6열)
-    { id: 'actionTaken', label: '조치내용', width: '100px', group: '최적화', bg: '#00695c' },
-    { id: 'completionDate', label: '완료일', width: '60px', group: '최적화', bg: '#00695c' },
-    { id: 'newS', label: 'S\'', width: '25px', group: '최적화', bg: '#00695c' },
-    { id: 'newO', label: 'O\'', width: '25px', group: '최적화', bg: '#00695c' },
-    { id: 'newD', label: 'D\'', width: '25px', group: '최적화', bg: '#00695c' },
-    { id: 'newAP', label: 'AP\'', width: '30px', group: '최적화', bg: '#00695c' },
+    // 구조분석 2단계 (4열)
+    { id: 'l1Name', label: '완제품 공정명', width: '80px', step: 2 },
+    { id: 'l2Name', label: 'NO+공정명', width: '90px', step: 2 },
+    { id: 'm4', label: '4M', width: '22px', step: 2 },
+    { id: 'l3Name', label: '작업요소', width: '80px', step: 2 },
+    // 기능분석 3단계 (8열)
+    { id: 'l1Type', label: '구분', width: '40px', step: 3 },
+    { id: 'l1Function', label: '완제품기능', width: '80px', step: 3 },
+    { id: 'l1Requirement', label: '요구사항', width: '80px', step: 3 },
+    { id: 'l2Function', label: '공정기능', width: '80px', step: 3 },
+    { id: 'l2ProductChar', label: '제품특성', width: '60px', step: 3 },
+    { id: 'l3Type', label: '작업요소', width: '40px', step: 3 },
+    { id: 'l3Function', label: '작업요소기능', width: '80px', step: 3 },
+    { id: 'l3ProcessChar', label: '공정특성', width: '60px', step: 3 },
+    // 고장분석 4단계 (6열)
+    { id: 'feType', label: '구분', width: '40px', step: 4 },
+    { id: 'failureEffect', label: '고장영향(FE)', width: '80px', step: 4 },
+    { id: 'severity', label: '심각도', width: '35px', step: 4 },
+    { id: 'failureMode', label: '고장형태(FM)', width: '80px', step: 4 },
+    { id: 'fcType', label: '작업요소', width: '40px', step: 4 },
+    { id: 'failureCause', label: '고장원인(FC)', width: '80px', step: 4 },
+    // 리스크분석 5단계 (7열)
+    { id: 'prevention', label: '예방관리(PC)', width: '80px', step: 5 },
+    { id: 'occurrence', label: '발생도', width: '35px', step: 5 },
+    { id: 'detection', label: '검출관리(DC)', width: '80px', step: 5 },
+    { id: 'detectability', label: '검출도', width: '35px', step: 5 },
+    { id: 'ap', label: 'AP', width: '30px', step: 5 },
+    { id: 'specialChar', label: '특별특성', width: '50px', step: 5 },
+    { id: 'lessonLearned', label: '습득교훈', width: '80px', step: 5 },
+    // 최적화 6단계 (13열)
+    { id: 'preventionImprove', label: '예방관리개선', width: '80px', step: 6 },
+    { id: 'detectionImprove', label: '검출관리개선', width: '80px', step: 6 },
+    { id: 'responsible', label: '책임자성명', width: '60px', step: 6 },
+    { id: 'targetDate', label: '목표완료일자', width: '70px', step: 6 },
+    { id: 'status', label: '상태', width: '40px', step: 6 },
+    { id: 'resultEvidence', label: '개선결과근거', width: '80px', step: 6 },
+    { id: 'completionDate', label: '완료일자', width: '70px', step: 6 },
+    { id: 'newSeverity', label: '심각도', width: '35px', step: 6 },
+    { id: 'newOccurrence', label: '발생도', width: '35px', step: 6 },
+    { id: 'newDetectability', label: '검출도', width: '35px', step: 6 },
+    { id: 'newSpecialChar', label: '특별특성', width: '50px', step: 6 },
+    { id: 'newAP', label: 'AP', width: '30px', step: 6 },
+    { id: 'remarks', label: '비고', width: '80px', step: 6 },
   ];
 
-  // 그룹별 헤더 생성
-  const groups = [
-    { name: '구조분석', count: 4, bg: '#1565c0' },
-    { name: '기능분석', count: 3, bg: '#7b1fa2' },
-    { name: '고장분석', count: 8, bg: '#c62828' },
-    { name: '리스크', count: 3, bg: '#1565c0' },
-    { name: '최적화', count: 6, bg: '#00695c' },
+  // 단계별 그룹 정의
+  const stepGroups = [
+    { step: 2, name: 'P-FMEA 구조분석(2단계)', count: 4, bg: '#1565c0' },
+    { step: 3, name: 'P-FMEA 기능분석(3단계)', count: 8, bg: '#7b1fa2' },
+    { step: 4, name: 'P-FMEA 고장분석(4단계)', count: 6, bg: '#c62828' },
+    { step: 5, name: 'P-FMEA 리스크분석(5단계)', count: 7, bg: '#00695c' },
+    { step: 6, name: 'P-FMEA 최적화(6단계)', count: 13, bg: '#ff6f00' },
   ];
+
+  // 서브 그룹 정의 (3행)
+  const subGroups = [
+    // 구조분석
+    { label: '1. 완제품 공정명', cols: 1, step: 2 },
+    { label: '2. 메인 공정명', cols: 1, step: 2 },
+    { label: '3. 작업 요소명', cols: 2, step: 2 },
+    // 기능분석
+    { label: '1. 완제품 공정기능/요구사항', cols: 3, step: 3 },
+    { label: '2. 메인공정기능 및 제품특성', cols: 2, step: 3 },
+    { label: '3. 작업요소의 기능 및 공정특성', cols: 3, step: 3 },
+    // 고장분석
+    { label: '1. 자사/고객/사용자 고장영향(FE)', cols: 3, step: 4 },
+    { label: '2. 메인공정 고장형태(FM)', cols: 1, step: 4 },
+    { label: '3. 작업요소 고장원인(FC)', cols: 2, step: 4 },
+    // 리스크분석
+    { label: '현재 예방관리', cols: 2, step: 5 },
+    { label: '현재 검출관리', cols: 2, step: 5 },
+    { label: '리스크 평가', cols: 3, step: 5 },
+    // 최적화
+    { label: '계획', cols: 4, step: 6 },
+    { label: '결과 모니터링', cols: 3, step: 6 },
+    { label: '효과 평가', cols: 6, step: 6 },
+  ];
+
+  // 단계별 색상
+  const getStepColor = (step: number) => {
+    const colors: Record<number, string> = {
+      2: '#1565c0', // 구조 - 파랑
+      3: '#7b1fa2', // 기능 - 보라
+      4: '#c62828', // 고장 - 빨강
+      5: '#00695c', // 리스크 - 청록
+      6: '#ff6f00', // 최적화 - 주황
+    };
+    return colors[step] || '#666';
+  };
 
   // 데이터 가져오기 함수
   const getCellValue = (row: FlatRow, colId: string): string => {
     switch (colId) {
       case 'l1Name': return row.l1Name || '';
-      case 'l2Name': return `${row.l2No} ${row.l2Name}`;
+      case 'l2Name': return row.l2No ? `${row.l2No} ${row.l2Name}` : row.l2Name;
       case 'm4': return row.m4 || '';
       case 'l3Name': return row.l3Name || '';
-      case 'function': return row.l2Function || row.l3Function || '';
-      case 'productChar': return row.l2ProductChar || '';
-      case 'processChar': return row.l3ProcessChar || '';
+      case 'l1Function': return row.l1Function || '';
+      case 'l1Requirement': return row.l1Requirement || '';
+      case 'l2Function': return row.l2Function || '';
+      case 'l2ProductChar': return row.l2ProductChar || '';
+      case 'l3Function': return row.l3Function || '';
+      case 'l3ProcessChar': return row.l3ProcessChar || '';
       case 'failureEffect': return row.l1FailureEffect || '';
       case 'severity': return row.l1Severity?.toString() || '';
       case 'failureMode': return row.l2FailureMode || '';
@@ -784,24 +837,24 @@ function AllViewTabFull({ rows, state }: { rows: FlatRow[]; state: WorksheetStat
     <>
       {/* Colgroup - 컬럼 너비 정의 */}
       <colgroup>
-        {allViewColumns.map(col => (
-          <col key={col.id} style={{ width: col.width }} />
+        {allViewColumns.map((col, i) => (
+          <col key={i} style={{ width: col.width }} />
         ))}
       </colgroup>
 
       {/* 헤더 - sticky 고정 */}
       <thead style={{ position: 'sticky', top: 0, zIndex: 20, background: '#fff' }}>
-        {/* 그룹 헤더 */}
+        {/* 1행: 단계별 그룹 헤더 */}
         <tr>
-          {groups.map(g => (
+          {stepGroups.map(g => (
             <th
-              key={g.name}
+              key={g.step}
               colSpan={g.count}
               style={{
                 background: g.bg,
                 color: '#fff',
-                border: `1px solid ${COLORS.line}`,
-                padding: '4px',
+                border: '1px solid #fff',
+                padding: '6px 4px',
                 fontWeight: 900,
                 fontSize: '11px',
                 textAlign: 'center',
@@ -811,20 +864,42 @@ function AllViewTabFull({ rows, state }: { rows: FlatRow[]; state: WorksheetStat
             </th>
           ))}
         </tr>
-        {/* 컬럼 헤더 */}
+        {/* 2행: 서브 그룹 헤더 */}
         <tr>
-          {allViewColumns.map(col => (
+          {subGroups.map((sg, i) => (
             <th
-              key={col.id}
+              key={i}
+              colSpan={sg.cols}
               style={{
-                background: col.bg,
+                background: getStepColor(sg.step),
                 color: '#fff',
-                border: `1px solid ${COLORS.line}`,
-                padding: '2px 4px',
+                border: '1px solid #fff',
+                padding: '4px 2px',
                 fontWeight: 700,
                 fontSize: '9px',
                 textAlign: 'center',
+                opacity: 0.85,
+              }}
+            >
+              {sg.label}
+            </th>
+          ))}
+        </tr>
+        {/* 3행: 컬럼 헤더 */}
+        <tr>
+          {allViewColumns.map((col, i) => (
+            <th
+              key={i}
+              style={{
+                background: getStepColor(col.step),
+                color: '#fff',
+                border: '1px solid #ccc',
+                padding: '3px 2px',
+                fontWeight: 600,
+                fontSize: '8px',
+                textAlign: 'center',
                 whiteSpace: 'nowrap',
+                opacity: 0.75,
               }}
             >
               {col.label}
@@ -837,24 +912,25 @@ function AllViewTabFull({ rows, state }: { rows: FlatRow[]; state: WorksheetStat
       <tbody>
         {rows.length === 0 ? (
           <tr>
-            <td colSpan={allViewColumns.length} className="text-center text-gray-400 py-8">
+            <td colSpan={38} className="text-center text-gray-400 py-8">
               구조분석 탭에서 데이터를 먼저 입력하세요.
             </td>
           </tr>
         ) : (
           rows.map((row, idx) => (
-            <tr key={row.l3Id} style={{ height: '28px' }}>
-              {allViewColumns.map(col => (
+            <tr key={row.l3Id} style={{ height: '26px' }}>
+              {allViewColumns.map((col, i) => (
                 <td
-                  key={col.id}
+                  key={i}
                   style={{
-                    border: `1px solid ${COLORS.line}`,
-                    padding: '2px 4px',
+                    border: '1px solid #ddd',
+                    padding: '2px 3px',
                     fontSize: '9px',
                     background: idx % 2 === 0 ? '#fff' : '#f9f9f9',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
+                    textAlign: 'center',
                   }}
                 >
                   {getCellValue(row, col.id)}
