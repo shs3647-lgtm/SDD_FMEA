@@ -92,3 +92,4 @@ export const cellInputStyle = (rowIndex: number): React.CSSProperties => ({
   textAlign: 'center' as const,
 });
 
+

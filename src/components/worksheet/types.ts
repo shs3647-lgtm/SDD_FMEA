@@ -100,3 +100,4 @@ export const SCOPE_INFO: Record<ScopeType, { label: string; color: string }> = {
   'User': { label: '최종사용자', color: '#2e7d32' },
 };
 
+

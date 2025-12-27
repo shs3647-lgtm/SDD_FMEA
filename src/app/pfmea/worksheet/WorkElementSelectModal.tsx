@@ -99,10 +99,10 @@ const loadWorkElementsForProcess = (processNo: string): WorkElement[] => {
   // 해당 공정 작업요소
   const processElements = WORK_ELEMENTS_BY_PROCESS[processNo] || [];
   
-  // LocalStorage에서 추가 데이터 로드
+  // LocalStorage에서 엑셀 임포트 데이터 로드 (pfmea_master_data)
   if (typeof window !== 'undefined') {
     try {
-      const savedData = localStorage.getItem('pfmea-flat-data');
+      const savedData = localStorage.getItem('pfmea_master_data');
       if (savedData) {
         const flatData = JSON.parse(savedData);
         const additionalElements: WorkElement[] = [];

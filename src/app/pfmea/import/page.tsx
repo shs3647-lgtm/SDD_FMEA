@@ -16,7 +16,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { GripVertical, Save, Upload, CheckCircle } from 'lucide-react';
+import PFMEATopNav from '@/components/layout/PFMEATopNav';
 import { COLORS, SIZES, TABLE_STYLES, BUTTON_STYLES, LAYOUT_STYLES } from '@/styles/design-tokens';
 import { ImportedFlatData } from './types';
 import { parseMultiSheetExcel, ParseResult } from './excel-parser';
@@ -119,11 +121,30 @@ const PREVIEW_OPTIONS = [
   { value: 'C4', label: 'C4 고장영향' },
 ];
 
+// FMEA 프로젝트 타입
+interface FMEAProject {
+  id: string;
+  fmeaInfo?: {
+    subject?: string;
+  };
+  project?: {
+    productName?: string;
+  };
+}
+
 export default function PFMEAImportPage() {
-  // 상태 관리 - 샘플 데이터로 초기화
+  const searchParams = useSearchParams();
+  const idFromUrl = searchParams.get('id');
+  
+  // FMEA 선택 상태
+  const [fmeaList, setFmeaList] = useState<FMEAProject[]>([]);
+  const [selectedFmeaId, setSelectedFmeaId] = useState<string>(idFromUrl || '');
+  
+  // 상태 관리 - 빈 배열로 초기화 (저장된 데이터 우선 로드)
   const [importType, setImportType] = useState<'full' | 'partial'>('full');
-  const [fileName, setFileName] = useState<string>('샘플데이터.xlsx');
-  const [flatData, setFlatData] = useState<ImportedFlatData[]>(SAMPLE_DATA);
+  const [fileName, setFileName] = useState<string>('');
+  const [flatData, setFlatData] = useState<ImportedFlatData[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false); // 데이터 로드 완료 여부
   const [isParsing, setIsParsing] = useState(false);
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   
@@ -567,8 +588,27 @@ export default function PFMEAImportPage() {
     }
   };
 
-  // 페이지 로드 시 저장된 데이터 불러오기
+  // 페이지 로드 시 FMEA 목록 및 저장된 데이터 불러오기
   useEffect(() => {
+    // FMEA 목록 로드
+    const storedProjects = localStorage.getItem('pfmea-projects');
+    if (storedProjects) {
+      try {
+        const projects: FMEAProject[] = JSON.parse(storedProjects);
+        setFmeaList(projects);
+        // URL에서 id 파라미터가 있으면 해당 FMEA 선택 (등록화면에서 넘어온 경우)
+        if (idFromUrl) {
+          setSelectedFmeaId(idFromUrl);
+        } else if (!selectedFmeaId && projects.length > 0) {
+          // URL 파라미터 없고, 선택된 FMEA도 없으면 첫 번째 선택
+          setSelectedFmeaId(projects[0].id);
+        }
+      } catch (e) {
+        console.error('FMEA 목록 로드 실패:', e);
+      }
+    }
+    
+    // 저장된 데이터 불러오기
     const savedData = localStorage.getItem('pfmea_master_data');
     if (savedData) {
       try {
@@ -576,13 +616,15 @@ export default function PFMEAImportPage() {
         if (Array.isArray(parsed) && parsed.length > 0) {
           setFlatData(parsed);
           const savedAt = localStorage.getItem('pfmea_saved_at');
+          setFileName(`저장된 데이터 (${savedAt ? new Date(savedAt).toLocaleString('ko-KR') : ''})`);
           console.log('📂 저장된 데이터 불러옴:', parsed.length, '건', savedAt ? `(${savedAt})` : '');
         }
       } catch (e) {
         console.error('저장된 데이터 파싱 오류:', e);
       }
     }
-  }, []);
+    setIsLoaded(true);
+  }, [idFromUrl, selectedFmeaId]);
 
   // 파일 선택 핸들러 (파싱 후 pendingData에 저장, Import 버튼 클릭 시 DB 저장)
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -793,11 +835,15 @@ export default function PFMEAImportPage() {
   const sectionTitleStyle = { fontSize: '13px', fontWeight: 'bold', marginBottom: '6px', color: '#00587a' };
 
   return (
-    <div style={{ padding: '20px', background: '#f5f5f5', minHeight: '100vh', fontFamily: '"Malgun Gothic", sans-serif' }}>
-      {/* 제목 */}
-      <h1 style={{ fontSize: '20px', fontWeight: 'bold', color: '#00587a', marginBottom: '16px' }}>
-        PFMEA 기초정보 Excel Import
-      </h1>
+    <>
+      {/* 상단 고정 바로가기 메뉴 */}
+      <PFMEATopNav selectedFmeaId={selectedFmeaId} />
+      
+      <div style={{ paddingTop: '36px', padding: '36px 20px 20px 20px', background: '#f5f5f5', minHeight: '100vh', fontFamily: '"Malgun Gothic", sans-serif' }}>
+        {/* 제목 */}
+        <h1 style={{ fontSize: '20px', fontWeight: 'bold', color: '#00587a', marginBottom: '16px' }}>
+          PFMEA 기초정보 Excel Import
+        </h1>
 
       {/* 상단: 기초정보 테이블 */}
       <div style={tableWrapperStyle}>
@@ -888,11 +934,34 @@ export default function PFMEAImportPage() {
       {/* 상단과 메인 영역 사이 간격 */}
       <div style={{ height: '15px' }}></div>
 
-      {/* 블록 1: Excel 파일 선택 + 입포트 현황 (행 높이 동일) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'start', marginBottom: '20px' }}>
-        {/* 좌측: Excel 파일 선택 */}
-        <div>
-          <h3 style={sectionTitleStyle}>Excel 파일 선택</h3>
+      {/* FMEA 명 선택 (필수) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px', padding: '10px 15px', background: '#fff3cd', border: '1px solid #ffc107', borderRadius: '4px' }}>
+        <span style={{ fontWeight: 'bold', color: '#dc3545', fontSize: '12px', whiteSpace: 'nowrap' }}>⚠️ FMEA 명 입력 필수 :</span>
+        <select
+          value={selectedFmeaId}
+          onChange={(e) => setSelectedFmeaId(e.target.value)}
+          style={{ flex: 1, padding: '6px 10px', border: '1px solid #999', borderRadius: '4px', fontSize: '12px', background: 'white', fontWeight: 'bold' }}
+        >
+          {fmeaList.length === 0 && <option value="">FMEA 미등록 - 먼저 FMEA를 등록하세요</option>}
+          {fmeaList.map(fmea => (
+            <option key={fmea.id} value={fmea.id}>
+              {fmea.fmeaInfo?.subject || fmea.project?.productName || fmea.id}
+            </option>
+          ))}
+        </select>
+        <button 
+          onClick={() => window.location.href = '/pfmea/register'}
+          style={{ padding: '6px 12px', background: '#1976d2', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}
+        >
+          + 신규 등록
+        </button>
+      </div>
+
+      {/* 블록 1: FMEA 기초정보 입력 + FMEA 분석 데이타 입력 */}
+      <div style={{ display: 'flex', gap: '20px', alignItems: 'start', marginBottom: '20px' }}>
+        {/* 좌측: FMEA 기초정보 입력 - 400px 고정 (입포트 미리보기와 동일) */}
+        <div style={{ width: '400px', flexShrink: 0 }}>
+          <h3 style={sectionTitleStyle}>FMEA 기초정보 입력</h3>
           <div style={tableWrapperStyle}>
             <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
               <colgroup>
@@ -1016,27 +1085,53 @@ export default function PFMEAImportPage() {
           </div>
         </div>
 
-        {/* 우측: 입포트 현황 */}
-        <div>
-          <h3 style={sectionTitleStyle}>입포트 현황</h3>
+        {/* 우측: FMEA 분석 데이타 입력 */}
+        <div style={{ flex: 1 }}>
+          <h3 style={sectionTitleStyle}>FMEA 분석 데이타 입력</h3>
           <div style={tableWrapperStyle}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  <th style={headerStyle}>총행</th>
-                  <th style={headerStyle}>공정항목수</th>
-                  <th style={headerStyle}>작업요소수</th>
-                  <th style={headerStyle}>완제품수</th>
-                  <th style={headerStyle}>누락</th>
-                </tr>
-              </thead>
+            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+              <colgroup>
+                <col style={{ width: '100px' }} />
+                <col />
+                <col style={{ width: '80px' }} />
+                <col style={{ width: '80px' }} />
+              </colgroup>
               <tbody>
+                {/* 전체 입포트 */}
                 <tr>
-                  <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 'bold', fontSize: '18px' }}>{stats.total || ''}</td>
-                  <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 'bold', fontSize: '18px' }}>{stats.aCount || ''}</td>
-                  <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 'bold', fontSize: '18px' }}>{stats.bCount || ''}</td>
-                  <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 'bold', fontSize: '18px' }}>{stats.cCount || ''}</td>
-                  <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 'bold', fontSize: '18px', color: stats.missing > 0 ? 'red' : 'inherit' }}>{stats.missing || ''}</td>
+                  <td style={{ ...rowHeaderStyle, textAlign: 'center' }}>전체 입포트</td>
+                  <td style={cellStyle}>고장형태, 영향 및 원인분석 자료</td>
+                  <td style={{ ...cellStyle, textAlign: 'center' }}>
+                    <label style={{ cursor: 'pointer' }}>
+                      <input type="file" accept=".xlsx,.xls" style={{ display: 'none' }} />
+                      <span style={{ padding: '4px 12px', background: '#f0f0f0', border: '1px solid #999', borderRadius: '4px', fontSize: '11px' }}>찾아보기</span>
+                    </label>
+                  </td>
+                  <td style={{ ...cellStyle, textAlign: 'center' }}>
+                    <button style={{ padding: '4px 12px', background: '#4caf50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Import</button>
+                  </td>
+                </tr>
+                {/* 개별 입포트 */}
+                <tr>
+                  <td style={{ ...rowHeaderStyle, textAlign: 'center' }}>개별 입포트</td>
+                  <td style={cellStyle}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <select style={{ padding: '4px 8px', border: '1px solid #999', borderRadius: '4px', fontSize: '11px', background: '#fff3e0' }}>
+                        <option value="C">고장영향 분석 자료</option>
+                        <option value="A">고장형태 분석 자료</option>
+                        <option value="B">고장원인 분석 자료</option>
+                      </select>
+                    </div>
+                  </td>
+                  <td style={{ ...cellStyle, textAlign: 'center' }}>
+                    <label style={{ cursor: 'pointer' }}>
+                      <input type="file" accept=".xlsx,.xls" style={{ display: 'none' }} />
+                      <span style={{ padding: '4px 12px', background: '#f0f0f0', border: '1px solid #999', borderRadius: '4px', fontSize: '11px' }}>찾아보기</span>
+                    </label>
+                  </td>
+                  <td style={{ ...cellStyle, textAlign: 'center' }}>
+                    <button style={{ padding: '4px 12px', background: '#4caf50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Import</button>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -1044,7 +1139,7 @@ export default function PFMEAImportPage() {
         </div>
       </div>
 
-      {/* 블록 2: 입포트 미리보기 + 관계형 DATA 미리보기 - 고정 너비 */}
+      {/* 블록 2: 입포트 미리보기 + FMEA 분석 DATA 미리 보기 */}
       <div style={{ display: 'flex', gap: '20px', alignItems: 'start' }}>
         {/* 좌측: 입포트 미리보기 - 고정 400px */}
         <div style={{ width: '400px', flexShrink: 0 }}>
@@ -1203,84 +1298,46 @@ export default function PFMEAImportPage() {
           </div>
         </div>
 
-        {/* 우측: 관계형 DATA 미리보기 - 나머지 영역 */}
+        {/* 우측: FMEA 분석 DATA 미리 보기 - 나머지 영역 */}
         <div style={{ flex: 1 }}>
-          {/* 관계형 DATA 미리보기 */}
-          <h3 style={sectionTitleStyle}>관계형 DATA 미리보기</h3>
+          {/* FMEA 분석 DATA 미리 보기 */}
+          <h3 style={sectionTitleStyle}>FMEA 분석 DATA 미리 보기</h3>
           
-          {/* 탭 + 테이블 통합 wrapper - 왼쪽과 동일한 디자인 표준 */}
+          {/* 탭 + 테이블 통합 wrapper - 입포트 미리보기와 동일한 디자인 */}
           <div style={tableWrapperStyle}>
-            {/* 탭 - 테이블 헤더와 동일한 너비 */}
+            {/* 탭 - 드롭다운 + 버튼 (입포트 미리보기와 동일) */}
             <div style={{ display: 'flex', width: '100%', borderBottom: '1px solid #999' }}>
-              <button 
-                onClick={() => setRelationTab('A')}
-                style={{ 
-                  flex: 1,
-                  padding: '8px 8px', 
-                  background: relationTab === 'A' ? '#00587a' : '#e0f2fb', 
-                  color: relationTab === 'A' ? 'white' : '#00587a',
-                  border: 'none',
-                  borderRight: '1px solid #999',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                  fontSize: '11px'
-                }}
+              <select 
+                value={relationTab}
+                onChange={(e) => setRelationTab(e.target.value as 'A' | 'B' | 'C')}
+                style={{ flex: 1, padding: '8px 8px', border: 'none', fontWeight: 'bold', background: '#e0f2fb', color: '#00587a', fontSize: '12px' }}
               >
-                A 공정
-              </button>
-              <button 
-                onClick={() => setRelationTab('B')}
-                style={{ 
-                  flex: 1,
-                  padding: '8px 8px', 
-                  background: relationTab === 'B' ? '#90EE90' : '#e8f5e9', 
-                  color: relationTab === 'B' ? 'black' : '#2e7d32',
-                  border: 'none',
-                  borderRight: '1px solid #999',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                  fontSize: '11px'
-                }}
-              >
-                B 작업요소
-              </button>
-              <button 
-                onClick={() => setRelationTab('C')}
-                style={{ 
-                  flex: 1,
-                  padding: '8px 8px', 
-                  background: relationTab === 'C' ? '#FFCCCB' : '#ffebee', 
-                  color: relationTab === 'C' ? 'black' : '#c62828',
-                  border: 'none',
-                  borderRight: '1px solid #999',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                  fontSize: '11px'
-                }}
-              >
-                C 완(반)제품
-              </button>
+                <option value="A">고장형태 분석(2L)</option>
+                <option value="B">고장원인 분석(3L)</option>
+                <option value="C">고장영향 분석(1L)</option>
+              </select>
               <button 
                 onClick={handleRelationDownload}
-                style={{ padding: '8px 10px', background: '#fff9c4', border: 'none', borderRight: '1px solid #999', cursor: 'pointer', fontWeight: 'bold', fontSize: '11px' }}
+                style={{ padding: '8px 10px', background: '#e3f2fd', color: '#1565c0', border: 'none', borderLeft: '1px solid #999', cursor: 'pointer', fontWeight: 'bold', fontSize: '11px' }}
               >다운로드</button>
-              <label style={{ display: 'flex', alignItems: 'center', padding: '8px 10px', background: '#fff9c4', border: 'none', borderRight: '1px solid #999', cursor: 'pointer', fontWeight: 'bold', fontSize: '11px' }}>
-                <input 
-                  type="file" 
-                  accept=".xlsx,.xls" 
-                  style={{ display: 'none' }} 
-                  ref={relationFileInputRef}
-                  onChange={handleRelationImport}
-                />
-                입포트
-              </label>
-              <button onClick={handleSaveRelation} style={{ padding: '8px 10px', background: '#e1bee7', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '11px' }}>저장</button>
+              <button 
+                style={{ padding: '8px 10px', background: '#ffebee', color: '#c62828', border: 'none', borderLeft: '1px solid #999', cursor: 'pointer', fontWeight: 'bold', fontSize: '11px' }}
+              >All Del.</button>
+              <button 
+                style={{ padding: '8px 10px', background: '#fff9c4', color: '#f57f17', border: 'none', borderLeft: '1px solid #999', cursor: 'pointer', fontWeight: 'bold', fontSize: '11px' }}
+              >Del.</button>
+              <button 
+                onClick={handleSaveRelation} 
+                style={{ padding: '8px 12px', background: '#e1bee7', color: '#6a1b9a', border: 'none', borderLeft: '1px solid #999', cursor: 'pointer', fontWeight: 'bold', fontSize: '11px' }}
+              >저장</button>
             </div>
 
-            {/* 관계형 테이블 - 10행 고정 (28px * 10 = 280px) + 헤더(28px) = 308px */}
+            {/* 분석 DATA 테이블 - 탭별 다른 구조 */}
             <div style={{ maxHeight: '308px', overflowY: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
               <colgroup>
+                <col style={{ width: '30px' }} />
+                <col style={{ width: '50px' }} />
                 <col style={{ width: '50px' }} />
                 <col />
                 <col />
@@ -1290,34 +1347,34 @@ export default function PFMEAImportPage() {
               </colgroup>
               <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                 <tr>
+                  <th style={headerStyle}><input type="checkbox" /></th>
+                  <th style={headerStyle}>NO</th>
+                  <th style={headerStyle}>순서</th>
                   {relationTab === 'A' && (
                     <>
-                      <th style={{ ...headerStyle, background: '#e0f2fb', color: '#00587a' }}>A1 No</th>
+                      <th style={{ ...headerStyle, background: '#e0f2fb', color: '#00587a' }}>A1 공정No</th>
                       <th style={{ ...headerStyle, background: '#e0f2fb', color: '#00587a' }}>A2 공정명</th>
                       <th style={{ ...headerStyle, background: '#e0f2fb', color: '#00587a' }}>A3 기능</th>
                       <th style={{ ...headerStyle, background: '#e0f2fb', color: '#00587a' }}>A4 특성</th>
-                      <th style={{ ...headerStyle, background: '#e0f2fb', color: '#00587a' }}>A5 고장</th>
-                      <th style={{ ...headerStyle, background: '#e0f2fb', color: '#00587a' }}>A6 검출</th>
+                      <th style={{ ...headerStyle, background: '#e0f2fb', color: '#00587a' }}>A5 고장형태</th>
                     </>
                   )}
                   {relationTab === 'B' && (
                     <>
-                      <th style={{ ...headerStyle, background: '#e0f2fb', color: '#00587a' }}>A1 No</th>
-                      <th style={{ ...headerStyle, background: '#e8f5e9', color: '#2e7d32' }}>B1 요소</th>
+                      <th style={{ ...headerStyle, background: '#e8f5e9', color: '#2e7d32' }}>A1 공정No</th>
+                      <th style={{ ...headerStyle, background: '#e8f5e9', color: '#2e7d32' }}>B1 작업요소</th>
                       <th style={{ ...headerStyle, background: '#e8f5e9', color: '#2e7d32' }}>B2 기능</th>
                       <th style={{ ...headerStyle, background: '#e8f5e9', color: '#2e7d32' }}>B3 특성</th>
-                      <th style={{ ...headerStyle, background: '#e8f5e9', color: '#2e7d32' }}>B4 원인</th>
-                      <th style={{ ...headerStyle, background: '#e8f5e9', color: '#2e7d32' }}>B5 예방</th>
+                      <th style={{ ...headerStyle, background: '#e8f5e9', color: '#2e7d32' }}>B4 고장원인</th>
                     </>
                   )}
                   {relationTab === 'C' && (
                     <>
-                      <th style={{ ...headerStyle, background: '#e0f2fb', color: '#00587a' }}>A1 No</th>
                       <th style={{ ...headerStyle, background: '#ffebee', color: '#c62828' }}>C1 구분</th>
-                      <th style={{ ...headerStyle, background: '#ffebee', color: '#c62828' }}>C2 기능</th>
-                      <th style={{ ...headerStyle, background: '#ffebee', color: '#c62828' }}>C3 요구</th>
-                      <th style={{ ...headerStyle, background: '#ffebee', color: '#c62828' }}>C4 영향</th>
-                      <th style={headerStyle}>비고</th>
+                      <th style={{ ...headerStyle, background: '#ffebee', color: '#c62828' }}>C2 제품기능</th>
+                      <th style={{ ...headerStyle, background: '#ffebee', color: '#c62828' }}>C3 요구사항</th>
+                      <th style={{ ...headerStyle, background: '#ffebee', color: '#c62828' }}>C4 고장영향</th>
+                      <th style={{ ...headerStyle, background: '#ffebee', color: '#c62828' }}>심각도</th>
                     </>
                   )}
                 </tr>
@@ -1326,15 +1383,23 @@ export default function PFMEAImportPage() {
                 {relationData.length === 0 ? (
                   Array.from({ length: 10 }).map((_, i) => (
                     <tr key={i}>
-                      {Array.from({ length: 6 }).map((_, j) => (
-                        <td key={j} style={cellStyle}></td>
-                      ))}
+                      <td style={{ ...cellStyle, textAlign: 'center' }}><input type="checkbox" /></td>
+                      <td style={{ ...cellStyle, textAlign: 'center' }}>{i + 1}</td>
+                      <td style={{ ...cellStyle, textAlign: 'center' }}>⋮</td>
+                      <td style={cellStyle}></td>
+                      <td style={cellStyle}></td>
+                      <td style={cellStyle}></td>
+                      <td style={cellStyle}></td>
+                      <td style={cellStyle}></td>
                     </tr>
                   ))
                 ) : (
                   relationData.map((row, i) => (
                     <tr key={i}>
-                      {Object.values(row).map((val, j) => (
+                      <td style={{ ...cellStyle, textAlign: 'center' }}><input type="checkbox" /></td>
+                      <td style={{ ...cellStyle, textAlign: 'center' }}>{i + 1}</td>
+                      <td style={{ ...cellStyle, textAlign: 'center' }}>⋮</td>
+                      {Object.values(row).slice(0, 5).map((val, j) => (
                         <td key={j} style={cellStyle}>{val}</td>
                       ))}
                     </tr>
@@ -1346,6 +1411,7 @@ export default function PFMEAImportPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

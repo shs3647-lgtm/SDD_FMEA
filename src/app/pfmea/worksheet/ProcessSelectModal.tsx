@@ -20,7 +20,7 @@ const loadProcessesFromBasicInfo = (): ProcessItem[] => {
   if (typeof window === 'undefined') return [];
   
   try {
-    const savedData = localStorage.getItem('pfmea-flat-data');
+    const savedData = localStorage.getItem('pfmea_master_data');
     if (savedData) {
       const flatData = JSON.parse(savedData);
       const processSet = new Map<string, ProcessItem>();

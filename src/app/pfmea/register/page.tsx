@@ -16,6 +16,7 @@ import { CFTRegistrationTable, CFTMember, createInitialCFTMembers } from '@/comp
 import { BizInfoProject } from '@/types/bizinfo';
 import { UserInfo } from '@/types/user';
 import { CFTAccessLog } from '@/types/project-cft';
+import PFMEATopNav from '@/components/layout/PFMEATopNav';
 
 // =====================================================
 // 타입 정의
@@ -278,15 +279,19 @@ export default function PFMEARegisterPage() {
   const cftNames = cftMembers.filter(m => m.name).map(m => m.name).join(', ');
 
   return (
-    <div className="min-h-screen bg-[#f0f0f0] p-3 font-[Malgun_Gothic]">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{isEditMode ? '✏️' : '📝'}</span>
-          <h1 className="text-sm font-bold text-gray-800">P-FMEA {isEditMode ? '수정' : '등록'}</h1>
-          <span className="text-xs text-gray-500 ml-2">ID: {fmeaId}</span>
-          {isEditMode && <span className="px-2 py-0.5 text-xs bg-yellow-200 text-yellow-800 rounded font-bold">수정모드</span>}
-        </div>
+    <>
+      {/* 상단 고정 바로가기 메뉴 */}
+      <PFMEATopNav selectedFmeaId={fmeaId} />
+      
+      <div className="min-h-screen bg-[#f0f0f0] p-3 pt-12 font-[Malgun_Gothic]">
+        {/* 헤더 */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">{isEditMode ? '✏️' : '📝'}</span>
+            <h1 className="text-sm font-bold text-gray-800">P-FMEA {isEditMode ? '수정' : '등록'}</h1>
+            <span className="text-xs text-gray-500 ml-2">ID: {fmeaId}</span>
+            {isEditMode && <span className="px-2 py-0.5 text-xs bg-yellow-200 text-yellow-800 rounded font-bold">수정모드</span>}
+          </div>
         <div className="flex gap-2">
           <button onClick={handleRefresh} className="px-3 py-1.5 bg-gray-100 border border-gray-400 text-gray-700 text-xs rounded hover:bg-gray-200">
             🔄 새로고침
@@ -398,6 +403,47 @@ export default function PFMEARegisterPage() {
         </table>
       </div>
 
+      {/* ===== FMEA 기초정보 등록 옵션 (테이블) ===== */}
+      <div className="mb-3 mt-4">
+        <table className="border-collapse text-xs" style={{ tableLayout: 'auto' }}>
+          <tbody>
+            <tr style={{ height: '32px' }}>
+              <td className="bg-[#00587a] text-white px-3 py-1.5 border border-gray-400 font-bold text-center whitespace-nowrap">
+                FMEA 기초 정보등록
+              </td>
+              <td 
+                onClick={() => window.location.href = `/pfmea/import?id=${fmeaId}&mode=master`}
+                className="px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-blue-200 whitespace-nowrap font-semibold text-blue-700"
+                style={{ background: '#e3f2fd' }}
+              >
+                Master Data 사용
+              </td>
+              <td 
+                onClick={() => window.location.href = `/pfmea/import?id=${fmeaId}&mode=new`}
+                className="px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-green-200 whitespace-nowrap font-semibold text-green-700"
+                style={{ background: '#e8f5e9' }}
+              >
+                신규 기초정보 Data 입력
+              </td>
+              <td 
+                onClick={() => window.location.href = `/pfmea/worksheet?id=${fmeaId}`}
+                className="px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-gray-200 whitespace-nowrap font-semibold text-gray-700"
+                style={{ background: '#f5f5f5' }}
+              >
+                기초 정보 없이 사용
+              </td>
+              <td 
+                onClick={() => window.location.href = `/pfmea/import?id=${fmeaId}`}
+                className="px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-yellow-300 whitespace-nowrap font-semibold"
+                style={{ background: '#fff3cd', color: '#dc3545' }}
+              >
+                ➡️ 기초정보 입력창으로 이동
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
       {/* ===== CFT 등록 (표준 컴포넌트) ===== */}
       <div className="mt-6">
         <CFTRegistrationTable
@@ -433,12 +479,13 @@ export default function PFMEARegisterPage() {
         />
       )}
 
-      {userModalOpen && (
-        <UserSelectModal
-          onClose={() => { setUserModalOpen(false); setSelectedMemberIndex(null); }}
-          onSelect={handleUserSelect}
-        />
-      )}
-    </div>
+        {userModalOpen && (
+          <UserSelectModal
+            onClose={() => { setUserModalOpen(false); setSelectedMemberIndex(null); }}
+            onSelect={handleUserSelect}
+          />
+        )}
+      </div>
+    </>
   );
 }
