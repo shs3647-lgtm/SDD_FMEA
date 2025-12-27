@@ -97,29 +97,28 @@ export function StructureRow({
   setIsWorkElementModalOpen,
   setTargetL2Id,
 }: StructureTabProps & { row: FlatRow; idx: number }) {
-  // 첫 번째 행인지 확인 (입력 필드 표시 여부 결정)
-  const isFirstL1Row = l1Spans[idx] > 0;
-  const isFirstL2Row = l2Spans[idx] > 0;
+  // L2 기준으로 셀 합치기 (L1과 L2는 1:1 매칭)
+  const spanCount = l2Spans[idx];
+  const showMergedCells = spanCount > 0;
   
   return (
     <>
-      {/* L1: 완제품명 (모든 행에 표시 - 스크롤해도 항상 보임) */}
-      <td 
-        className="text-center text-xs"
-        style={{ 
-          position: 'sticky',
-          left: 0,
-          zIndex: 5,
-          border: `1px solid ${COLORS.line}`, 
-          padding: '2px 4px', 
-          background: isFirstL1Row ? '#bbdefb' : '#e3f2fd', // 첫 행은 진하게
-          verticalAlign: 'middle', 
-          wordBreak: 'break-word',
-          borderTop: isFirstL1Row ? '2px solid #1976d2' : undefined, // 그룹 구분선
-        }}
-      >
-        {isFirstL1Row ? (
-          // 첫 번째 행: 입력 필드
+      {/* L1: 완제품명 (L2와 1:1 매칭, 작업요소 추가 시 셀 합치기) */}
+      {showMergedCells && (
+        <td 
+          rowSpan={spanCount}
+          className="text-center text-xs"
+          style={{ 
+            position: 'sticky',
+            left: 0,
+            zIndex: 5,
+            border: `1px solid ${COLORS.line}`, 
+            padding: '4px', 
+            background: '#e3f2fd',
+            verticalAlign: 'middle', 
+            wordBreak: 'break-word',
+          }}
+        >
           <input
             type="text"
             value={state.l1.name}
@@ -129,46 +128,36 @@ export function StructureRow({
             }}
             onBlur={handleInputBlur}
             onKeyDown={handleInputKeyDown}
-            placeholder="입력"
+            placeholder="완제품명 입력"
             className="w-full text-center border-0 outline-none text-xs font-semibold"
-            style={{ minHeight: '20px', background: 'rgba(255,255,255,0.95)', borderRadius: '3px' }}
+            style={{ minHeight: '24px', background: 'rgba(255,255,255,0.95)', borderRadius: '3px', padding: '4px' }}
           />
-        ) : (
-          // 반복 행: 텍스트만 표시 (연한 색상)
-          <span style={{ color: '#666', fontSize: '10px' }}>
-            {state.l1.name || '↑'}
-          </span>
-        )}
-      </td>
+        </td>
+      )}
       
-      {/* L2: 메인공정 (모든 행에 표시) */}
-      <td 
-        className="text-center cursor-pointer hover:bg-green-200 text-xs"
-        style={{ 
-          border: `1px solid ${COLORS.line}`, 
-          padding: '2px 4px', 
-          background: isFirstL2Row ? '#c8e6c9' : '#e8f5e9', // 첫 행은 진하게
-          verticalAlign: 'middle', 
-          wordBreak: 'break-word',
-          borderTop: isFirstL2Row ? '2px solid #388e3c' : undefined, // 그룹 구분선
-        }}
-        onClick={() => { 
-          handleSelect('L2', row.l2Id); 
-          setIsProcessModalOpen(true); 
-        }}
-      >
-        {isFirstL2Row ? (
-          // 첫 번째 행: 전체 표시
-          row.l2Name.includes('클릭') 
-            ? <span className="text-green-600 font-bold">🔍 클릭</span> 
+      {/* L2: 메인공정 (L1과 1:1 매칭, 작업요소 추가 시 셀 합치기) */}
+      {showMergedCells && (
+        <td 
+          rowSpan={spanCount}
+          className="text-center cursor-pointer hover:bg-green-200 text-xs"
+          style={{ 
+            border: `1px solid ${COLORS.line}`, 
+            padding: '4px', 
+            background: row.l2Name.includes('클릭') ? '#fff' : '#e8f5e9',
+            verticalAlign: 'middle', 
+            wordBreak: 'break-word',
+          }}
+          onClick={() => { 
+            handleSelect('L2', row.l2Id); 
+            setIsProcessModalOpen(true); 
+          }}
+        >
+          {row.l2Name.includes('클릭') 
+            ? <span className="text-green-600 font-bold">🔍 클릭하여 공정 선택</span> 
             : <span style={{ fontWeight: 600 }}>{row.l2No} {row.l2Name} 🔍</span>
-        ) : (
-          // 반복 행: 간략히 표시
-          <span style={{ color: '#666', fontSize: '10px' }}>
-            {row.l2No} {row.l2Name.substring(0, 6)}...
-          </span>
-        )}
-      </td>
+          }
+        </td>
+      )}
       
       {/* 4M */}
       <td 
