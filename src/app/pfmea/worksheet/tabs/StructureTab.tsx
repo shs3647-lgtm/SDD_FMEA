@@ -196,8 +196,8 @@ export default function StructureTab(props: StructureTabProps) {
       {/* Colgroup */}
       <StructureColgroup />
       
-      {/* Header */}
-      <thead className="sticky top-0 z-10">
+      {/* Header - sticky 고정 */}
+      <thead style={{ position: 'sticky', top: 0, zIndex: 20, background: '#fff' }}>
         <StructureHeader onProcessModalOpen={() => setIsProcessModalOpen(true)} />
       </thead>
       

@@ -397,8 +397,8 @@ function TabMenu({ state, setState }: TabMenuProps) {
 
 // ============ 탭별 전체 컴포넌트 (헤더 sticky + 바디) ============
 
-// 공통 sticky thead 스타일
-const stickyTheadStyle: React.CSSProperties = { position: 'sticky', top: 0, zIndex: 10 };
+// 공통 sticky thead 스타일 (반드시 background 있어야 스크롤 시 내용 안 비침)
+const stickyTheadStyle: React.CSSProperties = { position: 'sticky', top: 0, zIndex: 20, background: '#fff' };
 
 // 구조분석 탭
 function StructureTabFull(props: any) {

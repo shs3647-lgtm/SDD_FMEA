@@ -266,7 +266,7 @@ export default function FunctionTab(props: FunctionTabProps) {
   
   return (
     <>
-      <thead className="sticky top-0 z-10">
+      <thead style={{ position: 'sticky', top: 0, zIndex: 20, background: '#fff' }}>
         <FunctionHeader />
       </thead>
       

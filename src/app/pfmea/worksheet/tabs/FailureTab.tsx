@@ -221,7 +221,7 @@ export default function FailureTab(props: FailureTabProps) {
   
   return (
     <>
-      <thead className="sticky top-0 z-10">
+      <thead style={{ position: 'sticky', top: 0, zIndex: 20, background: '#fff' }}>
         <FailureHeader />
       </thead>
       
