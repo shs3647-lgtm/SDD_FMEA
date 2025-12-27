@@ -25,6 +25,7 @@ import {
   OptTab, OptHeader, OptRow,
   DocTab, DocHeader, DocRow,
 } from './tabs';
+import { exportFMEAWorksheet } from './excel-export';
 
 /**
  * FMEA 워크시트 메인 페이지
@@ -209,6 +210,7 @@ export default function FMEAWorksheetPage() {
           onFmeaChange={handleFmeaChange}
           onSave={saveToLocalStorage}
           onNavigateToList={() => router.push('/pfmea/list')}
+          onExport={() => exportFMEAWorksheet(state, currentFmea?.fmeaInfo?.subject || 'PFMEA')}
         />
 
         {/* ========== 메인 레이아웃 (좌측:워크시트 / 우측:트리 완전 분리) ========== */}
@@ -480,9 +482,10 @@ interface TopMenuBarProps {
   onFmeaChange: (id: string) => void;
   onSave: () => void;
   onNavigateToList: () => void;
+  onExport: () => void;
 }
 
-function TopMenuBar({ fmeaList, currentFmea, dirty, isSaving, lastSaved, onFmeaChange, onSave, onNavigateToList }: TopMenuBarProps) {
+function TopMenuBar({ fmeaList, currentFmea, dirty, isSaving, lastSaved, onFmeaChange, onSave, onNavigateToList, onExport }: TopMenuBarProps) {
   return (
     <div className="flex items-center justify-between py-1" style={{ background: COLORS.blue, paddingLeft: 0, paddingRight: '8px' }}>
       {/* FMEA명 */}
@@ -514,7 +517,7 @@ function TopMenuBar({ fmeaList, currentFmea, dirty, isSaving, lastSaved, onFmeaC
         </button>
         {lastSaved && <span className="text-xs text-white/70">{lastSaved}</span>}
         <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>📥 Import</button>
-        <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>📤 Export</button>
+        <button onClick={onExport} className="px-2 py-0.5 text-xs font-bold text-white rounded hover:bg-white/30" style={{ background: 'rgba(255,255,255,0.18)' }}>📤 Export</button>
       </div>
 
       <div className="w-px h-6 bg-white/40" />

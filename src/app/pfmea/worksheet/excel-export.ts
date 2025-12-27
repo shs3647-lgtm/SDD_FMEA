@@ -1,0 +1,213 @@
+/**
+ * @file excel-export.ts
+ * @description FMEA 워크시트 Excel 내보내기
+ * @author AI Assistant
+ * @created 2025-12-27
+ */
+
+import ExcelJS from 'exceljs';
+import { WorksheetState } from './constants';
+
+// 색상 정의
+const COLORS = {
+  structure: '1976D2',   // 파랑
+  function: '7B1FA2',    // 보라
+  failure: 'C62828',     // 빨강
+  risk: '1565C0',        // 청색
+  optimization: '00695C', // 녹색
+  header: '00587A',      // 네이비
+  subHeader: '90CAF9',   // 연한 파랑
+};
+
+// 컬럼 정의
+const EXPORT_COLUMNS = [
+  // 구조분석 (4열)
+  { id: 'l1Name', label: '완제품공정명', width: 15, group: 'structure' },
+  { id: 'l2No', label: '공정번호', width: 10, group: 'structure' },
+  { id: 'l2Name', label: '공정명', width: 18, group: 'structure' },
+  { id: 'm4', label: '4M', width: 5, group: 'structure' },
+  { id: 'l3Name', label: '작업요소', width: 18, group: 'structure' },
+  // 기능분석 (3열)
+  { id: 'l2Function', label: '공정기능', width: 20, group: 'function' },
+  { id: 'l2ProductChar', label: '제품특성', width: 15, group: 'function' },
+  { id: 'l3ProcessChar', label: '공정특성', width: 15, group: 'function' },
+  // 고장분석 (8열)
+  { id: 'l1FailureEffect', label: '고장영향', width: 18, group: 'failure' },
+  { id: 'l1Severity', label: 'S', width: 5, group: 'failure' },
+  { id: 'l2FailureMode', label: '고장모드', width: 18, group: 'failure' },
+  { id: 'l3FailureCause', label: '고장원인', width: 18, group: 'failure' },
+  { id: 'prevention', label: '예방관리', width: 15, group: 'failure' },
+  { id: 'occurrence', label: 'O', width: 5, group: 'failure' },
+  { id: 'detection', label: '검출관리', width: 15, group: 'failure' },
+  { id: 'detectability', label: 'D', width: 5, group: 'failure' },
+  // 리스크 (3열)
+  { id: 'ap', label: 'AP', width: 6, group: 'risk' },
+  { id: 'action', label: '권장조치', width: 20, group: 'risk' },
+  { id: 'responsible', label: '책임/일정', width: 15, group: 'risk' },
+  // 최적화 (6열)
+  { id: 'actionTaken', label: '조치내용', width: 18, group: 'optimization' },
+  { id: 'completionDate', label: '완료일', width: 12, group: 'optimization' },
+  { id: 'newS', label: "S'", width: 5, group: 'optimization' },
+  { id: 'newO', label: "O'", width: 5, group: 'optimization' },
+  { id: 'newD', label: "D'", width: 5, group: 'optimization' },
+  { id: 'newAP', label: "AP'", width: 6, group: 'optimization' },
+];
+
+// 그룹 정의
+const GROUPS = [
+  { name: '구조분석', count: 5, color: COLORS.structure },
+  { name: '기능분석', count: 3, color: COLORS.function },
+  { name: '고장분석', count: 8, color: COLORS.failure },
+  { name: '리스크', count: 3, color: COLORS.risk },
+  { name: '최적화', count: 6, color: COLORS.optimization },
+];
+
+// 헤더 스타일 적용
+function applyHeaderStyle(cell: ExcelJS.Cell, color: string) {
+  cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: color } };
+  cell.font = { bold: true, color: { argb: 'FFFFFF' }, size: 10, name: '맑은 고딕' };
+  cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+  cell.border = {
+    top: { style: 'thin', color: { argb: 'FFFFFF' } },
+    left: { style: 'thin', color: { argb: 'FFFFFF' } },
+    bottom: { style: 'thin', color: { argb: 'FFFFFF' } },
+    right: { style: 'thin', color: { argb: 'FFFFFF' } },
+  };
+}
+
+// 데이터 스타일 적용
+function applyDataStyle(cell: ExcelJS.Cell, isEvenRow: boolean) {
+  cell.fill = { 
+    type: 'pattern', 
+    pattern: 'solid', 
+    fgColor: { argb: isEvenRow ? 'F5F5F5' : 'FFFFFF' } 
+  };
+  cell.font = { size: 9, name: '맑은 고딕' };
+  cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+  cell.border = {
+    top: { style: 'thin', color: { argb: '999999' } },
+    left: { style: 'thin', color: { argb: '999999' } },
+    bottom: { style: 'thin', color: { argb: '999999' } },
+    right: { style: 'thin', color: { argb: '999999' } },
+  };
+}
+
+/**
+ * FMEA 워크시트를 Excel로 내보내기
+ */
+export async function exportFMEAWorksheet(state: WorksheetState, fmeaName: string) {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'FMEA Smart System';
+  workbook.created = new Date();
+
+  // 워크시트 생성
+  const worksheet = workbook.addWorksheet('PFMEA 워크시트', {
+    properties: { tabColor: { argb: COLORS.header } },
+    views: [{ state: 'frozen', xSplit: 0, ySplit: 2 }], // 헤더 2행 고정
+  });
+
+  // 컬럼 너비 설정
+  worksheet.columns = EXPORT_COLUMNS.map(col => ({
+    key: col.id,
+    width: col.width,
+  }));
+
+  // 1행: 그룹 헤더
+  let colIndex = 1;
+  GROUPS.forEach(group => {
+    const startCol = colIndex;
+    const endCol = colIndex + group.count - 1;
+    
+    // 병합
+    worksheet.mergeCells(1, startCol, 1, endCol);
+    const cell = worksheet.getCell(1, startCol);
+    cell.value = group.name;
+    applyHeaderStyle(cell, group.color);
+    
+    colIndex = endCol + 1;
+  });
+  worksheet.getRow(1).height = 22;
+
+  // 2행: 컬럼 헤더
+  const headerRow = worksheet.getRow(2);
+  EXPORT_COLUMNS.forEach((col, idx) => {
+    const cell = headerRow.getCell(idx + 1);
+    cell.value = col.label;
+    const groupColor = COLORS[col.group as keyof typeof COLORS] || COLORS.header;
+    applyHeaderStyle(cell, groupColor);
+  });
+  headerRow.height = 22;
+
+  // 데이터 행 생성
+  let rowNum = 3;
+  state.l2.forEach(proc => {
+    // 공정 필터링 (플레이스홀더 제외)
+    if (proc.name.includes('클릭') || proc.name.includes('선택')) return;
+
+    proc.l3.forEach(elem => {
+      // 작업요소 필터링 (플레이스홀더 제외)
+      if (elem.name.includes('추가') || elem.name.includes('클릭')) return;
+
+      const row = worksheet.getRow(rowNum);
+      const isEvenRow = (rowNum - 3) % 2 === 0;
+
+      // 데이터 매핑
+      const rowData: Record<string, string | number | undefined> = {
+        l1Name: state.l1.name,
+        l2No: proc.no,
+        l2Name: proc.name,
+        m4: elem.m4,
+        l3Name: elem.name,
+        l2Function: proc.function || '',
+        l2ProductChar: proc.productChar || '',
+        l3ProcessChar: elem.processChar || '',
+        l1FailureEffect: state.l1.failureEffect || '',
+        l1Severity: state.l1.severity,
+        l2FailureMode: proc.failureMode || '',
+        l3FailureCause: elem.failureCause || '',
+        prevention: '',
+        occurrence: '',
+        detection: '',
+        detectability: '',
+        ap: '',
+        action: '',
+        responsible: '',
+        actionTaken: '',
+        completionDate: '',
+        newS: '',
+        newO: '',
+        newD: '',
+        newAP: '',
+      };
+
+      EXPORT_COLUMNS.forEach((col, idx) => {
+        const cell = row.getCell(idx + 1);
+        cell.value = rowData[col.id] ?? '';
+        applyDataStyle(cell, isEvenRow);
+      });
+
+      row.height = 20;
+      rowNum++;
+    });
+  });
+
+  // 파일 다운로드
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { 
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+  });
+  
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  
+  // 파일명: FMEA명_날짜.xlsx
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  link.download = `${fmeaName || 'PFMEA'}_워크시트_${date}.xlsx`;
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
