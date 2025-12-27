@@ -161,6 +161,11 @@ export default function WorkElementSelectModal({
   const [manualM4, setManualM4] = useState('MN');
   const [manualName, setManualName] = useState('');
   const [manualElements, setManualElements] = useState<WorkElement[]>([]);
+  
+  // 수정 모드 상태
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [editingM4, setEditingM4] = useState('');
 
   useEffect(() => {
     if (isOpen && processNo) {
@@ -214,6 +219,79 @@ export default function WorkElementSelectModal({
 
   const selectAll = () => setSelectedIds(new Set(filteredElements.map(e => e.id)));
   const deselectAll = () => setSelectedIds(new Set());
+  
+  // 선택된 항목 삭제
+  const deleteSelected = () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`선택된 ${selectedIds.size}개 항목을 삭제하시겠습니까?`)) return;
+    
+    setElements(prev => prev.filter(e => !selectedIds.has(e.id)));
+    setSelectedIds(new Set());
+    
+    // LocalStorage에서도 삭제 (pfmea_master_data 업데이트)
+    try {
+      const savedData = localStorage.getItem('pfmea_master_data');
+      if (savedData) {
+        const flatData = JSON.parse(savedData);
+        const deletedNames = elements.filter(e => selectedIds.has(e.id)).map(e => e.name);
+        const updatedData = flatData.filter((item: any) => 
+          item.code !== 'A5' || !deletedNames.includes(item.value)
+        );
+        localStorage.setItem('pfmea_master_data', JSON.stringify(updatedData));
+      }
+    } catch (e) {
+      console.error('Failed to update localStorage:', e);
+    }
+  };
+  
+  // 수정 시작
+  const startEdit = (elem: WorkElement) => {
+    setEditingId(elem.id);
+    setEditingName(elem.name);
+    setEditingM4(elem.m4);
+  };
+  
+  // 수정 저장
+  const saveEdit = () => {
+    if (!editingId || !editingName.trim()) {
+      setEditingId(null);
+      return;
+    }
+    
+    const oldElem = elements.find(e => e.id === editingId);
+    
+    setElements(prev => prev.map(e => 
+      e.id === editingId ? { ...e, name: editingName.trim(), m4: editingM4 } : e
+    ));
+    
+    // LocalStorage 업데이트
+    if (oldElem) {
+      try {
+        const savedData = localStorage.getItem('pfmea_master_data');
+        if (savedData) {
+          const flatData = JSON.parse(savedData);
+          const updatedData = flatData.map((item: any) => {
+            if (item.code === 'A5' && item.value === oldElem.name) {
+              return { ...item, value: editingName.trim() };
+            }
+            return item;
+          });
+          localStorage.setItem('pfmea_master_data', JSON.stringify(updatedData));
+        }
+      } catch (e) {
+        console.error('Failed to update localStorage:', e);
+      }
+    }
+    
+    setEditingId(null);
+  };
+  
+  // 수정 취소
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingName('');
+    setEditingM4('');
+  };
 
   const addManualElement = () => {
     if (!manualName.trim()) return;
@@ -317,6 +395,13 @@ export default function WorkElementSelectModal({
               </select>
               <button onClick={selectAll} className="px-3 py-2 text-xs font-bold bg-blue-500 text-white rounded">전체</button>
               <button onClick={deselectAll} className="px-3 py-2 text-xs font-bold bg-gray-400 text-white rounded">해제</button>
+              <button 
+                onClick={deleteSelected} 
+                disabled={selectedIds.size === 0}
+                className="px-3 py-2 text-xs font-bold bg-red-500 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                🗑 삭제
+              </button>
             </div>
 
             {/* 작업요소 그리드 */}
@@ -331,11 +416,54 @@ export default function WorkElementSelectModal({
                   {filteredElements.map(elem => {
                     const isCurrent = isAlreadyAdded(elem.name);
                     const isSelected = selectedIds.has(elem.id);
+                    const isEditing = editingId === elem.id;
+                    
+                    if (isEditing) {
+                      // 수정 모드
+                      return (
+                        <div 
+                          key={elem.id}
+                          className="flex items-center gap-1 p-2 border-2 rounded border-yellow-400 bg-yellow-50"
+                        >
+                          <select
+                            value={editingM4}
+                            onChange={(e) => setEditingM4(e.target.value)}
+                            className="px-1 py-1 text-xs border rounded w-14"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {M4_CATEGORIES.map(c => (
+                              <option key={c.code} value={c.code}>{c.code}</option>
+                            ))}
+                          </select>
+                          <input
+                            type="text"
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
+                            className="flex-1 px-2 py-1 text-xs border rounded"
+                            autoFocus
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); saveEdit(); }}
+                            className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                          >
+                            ✓
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); cancelEdit(); }}
+                            className="px-2 py-1 text-xs bg-gray-400 text-white rounded hover:bg-gray-500"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      );
+                    }
+                    
                     return (
                       <div 
                         key={elem.id}
-                        onClick={() => toggleSelect(elem.id)}
-                        className={`flex items-center gap-2 p-2 border rounded cursor-pointer transition-colors ${
+                        className={`flex items-center gap-2 p-2 border rounded cursor-pointer transition-colors group ${
                           isSelected 
                             ? isCurrent 
                               ? 'bg-green-100 border-green-400' 
@@ -344,13 +472,16 @@ export default function WorkElementSelectModal({
                         }`}
                       >
                         {/* 체크박스 */}
-                        <div className={`w-5 h-5 border-2 rounded flex items-center justify-center flex-shrink-0 ${
-                          isSelected 
-                            ? isCurrent 
-                              ? 'bg-green-500 border-green-500'
-                              : 'bg-blue-500 border-blue-500' 
-                            : 'bg-white border-gray-400'
-                        }`}>
+                        <div 
+                          onClick={() => toggleSelect(elem.id)}
+                          className={`w-5 h-5 border-2 rounded flex items-center justify-center flex-shrink-0 ${
+                            isSelected 
+                              ? isCurrent 
+                                ? 'bg-green-500 border-green-500'
+                                : 'bg-blue-500 border-blue-500' 
+                              : 'bg-white border-gray-400'
+                          }`}
+                        >
                           {isSelected && <span className="text-white text-xs font-bold">✓</span>}
                         </div>
                         {/* 공통/공정 표시 */}
@@ -367,10 +498,21 @@ export default function WorkElementSelectModal({
                           {elem.m4}
                         </span>
                         {/* 이름 */}
-                        <span className="text-sm truncate">
+                        <span 
+                          className="flex-1 text-sm truncate"
+                          onClick={() => toggleSelect(elem.id)}
+                        >
                           {elem.name}
                           {isCurrent && <span className="ml-1 text-[10px] text-green-600">(현재)</span>}
                         </span>
+                        {/* 수정 버튼 (호버 시 표시) */}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); startEdit(elem); }}
+                          className="opacity-0 group-hover:opacity-100 px-1.5 py-0.5 text-xs bg-yellow-400 text-yellow-900 rounded hover:bg-yellow-500 transition-opacity"
+                          title="수정"
+                        >
+                          ✏️
+                        </button>
                       </div>
                     );
                   })}
@@ -430,7 +572,17 @@ export default function WorkElementSelectModal({
 
         {/* 푸터 */}
         <div className="px-4 py-3 border-t flex items-center justify-between bg-gray-50">
-          <span className="text-sm text-gray-600 font-bold">✓ {totalSelected}개 선택</span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-600 font-bold">✓ {totalSelected}개 선택</span>
+            {!isManualMode && selectedIds.size > 0 && (
+              <button 
+                onClick={deleteSelected}
+                className="px-3 py-1.5 text-xs font-bold bg-red-500 text-white rounded hover:bg-red-600 flex items-center gap-1"
+              >
+                🗑 선택 삭제 ({selectedIds.size})
+              </button>
+            )}
+          </div>
           <div className="flex gap-2">
             <button onClick={onClose} className="px-4 py-2 text-sm font-bold border rounded hover:bg-gray-100">취소</button>
             <button 
