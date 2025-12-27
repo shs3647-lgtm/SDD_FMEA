@@ -157,9 +157,93 @@ export default function FMEAWorksheetPage() {
     return initial;
   });
   const [dirty, setDirty] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<string>('');
   const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
   const [isWorkElementModalOpen, setIsWorkElementModalOpen] = useState(false);
   const [targetL2Id, setTargetL2Id] = useState<string | null>(null); // 작업요소 추가할 공정 ID
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ============ 자동저장 함수 ============
+  const saveToLocalStorage = useCallback(() => {
+    if (!selectedFmeaId) return;
+    
+    setIsSaving(true);
+    try {
+      const worksheetData = {
+        fmeaId: selectedFmeaId,
+        l1: state.l1,
+        l2: state.l2,
+        savedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(`pfmea_worksheet_${selectedFmeaId}`, JSON.stringify(worksheetData));
+      setDirty(false);
+      setLastSaved(new Date().toLocaleTimeString('ko-KR'));
+      console.log('✅ 자동저장 완료:', new Date().toLocaleTimeString());
+    } catch (e) {
+      console.error('저장 오류:', e);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [selectedFmeaId, state.l1, state.l2]);
+
+  // 디바운스 자동저장 (500ms 후 저장)
+  const triggerAutoSave = useCallback(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      saveToLocalStorage();
+    }, 500);
+  }, [saveToLocalStorage]);
+
+  // dirty 상태 변경시 자동저장 트리거
+  useEffect(() => {
+    if (dirty) {
+      triggerAutoSave();
+    }
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [dirty, triggerAutoSave]);
+
+  // 저장된 데이터 로드
+  useEffect(() => {
+    if (selectedFmeaId) {
+      const savedData = localStorage.getItem(`pfmea_worksheet_${selectedFmeaId}`);
+      if (savedData) {
+        try {
+          const parsed = JSON.parse(savedData);
+          if (parsed.l1 && parsed.l2) {
+            setState(prev => ({
+              ...prev,
+              l1: parsed.l1,
+              l2: parsed.l2,
+            }));
+            console.log('📂 워크시트 데이터 로드됨:', parsed.savedAt);
+          }
+        } catch (e) {
+          console.error('워크시트 데이터 로드 실패:', e);
+        }
+      }
+    }
+  }, [selectedFmeaId]);
+
+  // 엔터키/블러 시 즉시 저장
+  const handleInputKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveToLocalStorage();
+    }
+  }, [saveToLocalStorage]);
+
+  const handleInputBlur = useCallback(() => {
+    if (dirty) {
+      saveToLocalStorage();
+    }
+  }, [dirty, saveToLocalStorage]);
 
   // FMEA 목록 로드 (완제품명은 FMEA명과 별도로 직접 입력)
   useEffect(() => {
@@ -457,12 +541,14 @@ export default function FMEAWorksheetPage() {
         {/* 영역 2: 저장, Excel Import, Excel Export */}
         <div className="flex items-center gap-1">
           <button 
-            onClick={() => { setDirty(false); alert('저장되었습니다.'); }}
+            onClick={saveToLocalStorage}
+            disabled={isSaving}
             className="px-2 py-0.5 text-xs font-bold rounded flex items-center gap-1"
-            style={{ background: dirty ? '#4caf50' : 'rgba(255,255,255,0.18)', color: '#fff' }}
+            style={{ background: isSaving ? '#ff9800' : dirty ? '#4caf50' : 'rgba(255,255,255,0.18)', color: '#fff' }}
           >
-            💾 저장
+            {isSaving ? '⏳ 저장중...' : dirty ? '💾 저장' : '✅ 저장됨'}
           </button>
+          {lastSaved && <span className="text-xs text-white/70">{lastSaved}</span>}
           <button className="px-2 py-0.5 text-xs font-bold text-white rounded flex items-center gap-1" style={{ background: 'rgba(255,255,255,0.18)' }}>
             📥 Import
           </button>
@@ -850,6 +936,8 @@ export default function FMEAWorksheetPage() {
                                 setState(prev => ({ ...prev, l1: { ...prev.l1, name: e.target.value } }));
                                 setDirty(true);
                               }}
+                              onBlur={handleInputBlur}
+                              onKeyDown={handleInputKeyDown}
                               placeholder="입력"
                               className="w-full text-center border-0 outline-none text-xs font-semibold"
                               style={{ minHeight: '22px', background: 'rgba(255,255,255,0.8)' }}
@@ -892,13 +980,15 @@ export default function FMEAWorksheetPage() {
                       <>
                         {l1Spans[idx] > 0 && (
                           <td rowSpan={l1Spans[idx]} className="text-xs" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#f1f8e9', verticalAlign: 'middle' }}>
-                            <input type="text" value={row.l1Function} onChange={(e) => setState(prev => ({ ...prev, l1: { ...prev.l1, function: e.target.value } }))}
+                            <input type="text" value={row.l1Function} onChange={(e) => { setState(prev => ({ ...prev, l1: { ...prev.l1, function: e.target.value } })); setDirty(true); }}
+                              onBlur={handleInputBlur} onKeyDown={handleInputKeyDown}
                               placeholder="완제품 기능 입력" className="w-full bg-transparent border-0 outline-none text-xs" style={{ height: '20px' }} />
                           </td>
                         )}
                         {l1Spans[idx] > 0 && (
                           <td rowSpan={l1Spans[idx]} className="text-xs" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#f1f8e9', verticalAlign: 'middle' }}>
-                            <input type="text" value={row.l1Requirement} onChange={(e) => setState(prev => ({ ...prev, l1: { ...prev.l1, requirement: e.target.value } }))}
+                            <input type="text" value={row.l1Requirement} onChange={(e) => { setState(prev => ({ ...prev, l1: { ...prev.l1, requirement: e.target.value } })); setDirty(true); }}
+                              onBlur={handleInputBlur} onKeyDown={handleInputKeyDown}
                               placeholder="요구사항 입력" className="w-full bg-transparent border-0 outline-none text-xs" style={{ height: '20px' }} />
                           </td>
                         )}
@@ -906,6 +996,7 @@ export default function FMEAWorksheetPage() {
                           <td rowSpan={l2Spans[idx]} className="text-xs" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#e8f5e9', verticalAlign: 'middle' }}>
                             <input type="text" value={row.l2Function}
                               onChange={(e) => { setState(prev => ({ ...prev, l2: prev.l2.map(p => p.id === row.l2Id ? { ...p, function: e.target.value } : p) })); setDirty(true); }}
+                              onBlur={handleInputBlur} onKeyDown={handleInputKeyDown}
                               placeholder={`${row.l2No} ${row.l2Name} 기능`} className="w-full bg-transparent border-0 outline-none text-xs" style={{ height: '20px' }} />
                           </td>
                         )}
@@ -913,17 +1004,20 @@ export default function FMEAWorksheetPage() {
                           <td rowSpan={l2Spans[idx]} className="text-xs" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#e8f5e9', verticalAlign: 'middle' }}>
                             <input type="text" value={row.l2ProductChar}
                               onChange={(e) => { setState(prev => ({ ...prev, l2: prev.l2.map(p => p.id === row.l2Id ? { ...p, productChar: e.target.value } : p) })); setDirty(true); }}
+                              onBlur={handleInputBlur} onKeyDown={handleInputKeyDown}
                               placeholder="제품특성 입력" className="w-full bg-transparent border-0 outline-none text-xs" style={{ height: '20px' }} />
                           </td>
                         )}
                         <td className="text-xs" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#dcedc8' }}>
                           <input type="text" value={row.l3Function}
                             onChange={(e) => { setState(prev => ({ ...prev, l2: prev.l2.map(p => ({ ...p, l3: p.l3.map(w => w.id === row.l3Id ? { ...w, function: e.target.value } : w) })) })); setDirty(true); }}
+                            onBlur={handleInputBlur} onKeyDown={handleInputKeyDown}
                             placeholder={`[${row.m4}] ${row.l3Name} 기능`} className="w-full bg-transparent border-0 outline-none text-xs" style={{ height: '20px' }} />
                         </td>
                         <td className="text-xs" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#dcedc8' }}>
                           <input type="text" value={row.l3ProcessChar}
                             onChange={(e) => { setState(prev => ({ ...prev, l2: prev.l2.map(p => ({ ...p, l3: p.l3.map(w => w.id === row.l3Id ? { ...w, processChar: e.target.value } : w) })) })); setDirty(true); }}
+                            onBlur={handleInputBlur} onKeyDown={handleInputKeyDown}
                             placeholder="공정특성 입력" className="w-full bg-transparent border-0 outline-none text-xs" style={{ height: '20px' }} />
                         </td>
                       </>
@@ -935,14 +1029,15 @@ export default function FMEAWorksheetPage() {
                         {l1Spans[idx] > 0 && (
                           <td rowSpan={l1Spans[idx]} className="text-xs" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#ffebee', verticalAlign: 'middle' }}>
                             <input type="text" value={row.l1FailureEffect}
-                              onChange={(e) => setState(prev => ({ ...prev, l1: { ...prev.l1, failureEffect: e.target.value } }))}
+                              onChange={(e) => { setState(prev => ({ ...prev, l1: { ...prev.l1, failureEffect: e.target.value } })); setDirty(true); }}
+                              onBlur={handleInputBlur} onKeyDown={handleInputKeyDown}
                               placeholder="고장영향(FE) 입력" className="w-full bg-transparent border-0 outline-none text-xs" style={{ height: '20px' }} />
                           </td>
                         )}
                         {l1Spans[idx] > 0 && (
                           <td rowSpan={l1Spans[idx]} className="text-xs text-center" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#ffebee', verticalAlign: 'middle' }}>
                             <select value={row.l1Severity || ''}
-                              onChange={(e) => setState(prev => ({ ...prev, l1: { ...prev.l1, severity: e.target.value ? Number(e.target.value) : undefined } }))}
+                              onChange={(e) => { setState(prev => ({ ...prev, l1: { ...prev.l1, severity: e.target.value ? Number(e.target.value) : undefined } })); setDirty(true); saveToLocalStorage(); }}
                               className="w-full bg-transparent border-0 outline-none text-xs text-center" style={{ height: '20px' }}>
                               <option value="">-</option>
                               {[1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}
@@ -953,6 +1048,7 @@ export default function FMEAWorksheetPage() {
                           <td rowSpan={l2Spans[idx]} className="text-xs" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#ffcdd2', verticalAlign: 'middle' }}>
                             <input type="text" value={row.l2FailureMode}
                               onChange={(e) => { setState(prev => ({ ...prev, l2: prev.l2.map(p => p.id === row.l2Id ? { ...p, failureMode: e.target.value } : p) })); setDirty(true); }}
+                              onBlur={handleInputBlur} onKeyDown={handleInputKeyDown}
                               placeholder={`${row.l2No} ${row.l2Name} 고장형태`} className="w-full bg-transparent border-0 outline-none text-xs" style={{ height: '20px' }} />
                           </td>
                         )}
@@ -962,6 +1058,7 @@ export default function FMEAWorksheetPage() {
                         <td className="text-xs" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#fce4ec' }}>
                           <input type="text" value={row.l3FailureCause}
                             onChange={(e) => { setState(prev => ({ ...prev, l2: prev.l2.map(p => ({ ...p, l3: p.l3.map(w => w.id === row.l3Id ? { ...w, failureCause: e.target.value } : w) })) })); setDirty(true); }}
+                            onBlur={handleInputBlur} onKeyDown={handleInputKeyDown}
                             placeholder="고장원인(FC) 입력" className="w-full bg-transparent border-0 outline-none text-xs" style={{ height: '20px' }} />
                         </td>
                       </>
@@ -999,6 +1096,8 @@ export default function FMEAWorksheetPage() {
                   setState(prev => ({ ...prev, l1: { ...prev.l1, name: e.target.value } }));
                   setDirty(true);
                 }}
+                onBlur={handleInputBlur}
+                onKeyDown={handleInputKeyDown}
                 placeholder="완제품명+라인 입력"
                 className="flex-1 px-2 py-1 text-sm font-bold border rounded bg-white hover:border-blue-400 focus:border-blue-500 focus:outline-none"
                 style={{ borderColor: '#90caf9' }}
