@@ -178,40 +178,36 @@ export default function FMEAWorksheetPage() {
         <div className="flex-1 flex overflow-hidden" style={{ gap: 0 }}>
           
           {/* 좌측: 워크시트 */}
-          <main className="flex-1 bg-white overflow-auto min-w-0" style={{ margin: 0, padding: 0 }}>
+          <main className="flex-1 flex flex-col bg-white min-w-0" style={{ margin: 0, padding: 0, overflow: 'hidden' }}>
             
-            {/* 탭 + 레벨 메뉴 */}
+            {/* 탭 + 레벨 메뉴 - 고정 */}
             <TabMenu state={state} setState={setState} />
 
-            {/* 워크시트 테이블 */}
-            <div className="flex-1 flex flex-col overflow-hidden" style={{ marginRight: 0, paddingRight: 0 }}>
-              
-              {/* 테이블 제목 */}
-              <div 
-                className="text-center font-black py-1 text-sm flex-shrink-0"
-                style={{ 
-                  background: state.tab === 'structure' ? '#1a237e' : COLORS.sky2, 
-                  color: state.tab === 'structure' ? '#fff' : COLORS.text,
-                  border: `1px solid ${COLORS.line}`, 
-                  borderBottom: 0 
-                }}
-              >
-                P-FMEA {getTabLabel(state.tab)}({getStepNumber(state.tab)}단계)
-              </div>
+            {/* 테이블 제목 - 고정 */}
+            <div 
+              className="text-center font-black py-1 text-sm flex-shrink-0"
+              style={{ 
+                background: state.tab === 'structure' ? '#1a237e' : COLORS.sky2, 
+                color: state.tab === 'structure' ? '#fff' : COLORS.text,
+                border: `1px solid ${COLORS.line}`, 
+                borderBottom: 0 
+              }}
+            >
+              P-FMEA {getTabLabel(state.tab)}({getStepNumber(state.tab)}단계)
+            </div>
 
-              {/* 테이블 컨테이너 */}
-              <div className="flex-1 overflow-auto" style={{ border: `1px solid ${COLORS.line}` }}>
-                <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
-                  {/* 탭별 테이블 렌더링 */}
-                  {state.tab === 'structure' && <StructureTabContent {...tabProps} />}
-                  {state.tab === 'function' && <FunctionTabContent {...tabProps} />}
-                  {state.tab === 'failure' && <FailureTabContent {...tabProps} />}
-                  {state.tab === 'risk' && <RiskTabContent {...tabProps} />}
-                  {state.tab === 'opt' && <OptTabContent {...tabProps} />}
-                  {state.tab === 'doc' && <DocTabContent {...tabProps} />}
-                  {state.tab === 'all' && <AllViewTabContent {...tabProps} />}
-                </table>
-              </div>
+            {/* 테이블 컨테이너 - 스크롤 영역 (헤더 고정) */}
+            <div className="flex-1 overflow-auto" style={{ border: `1px solid ${COLORS.line}`, position: 'relative' }}>
+              <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
+                {/* 탭별 테이블 렌더링 */}
+                {state.tab === 'structure' && <StructureTabContent {...tabProps} />}
+                {state.tab === 'function' && <FunctionTabContent {...tabProps} />}
+                {state.tab === 'failure' && <FailureTabContent {...tabProps} />}
+                {state.tab === 'risk' && <RiskTabContent {...tabProps} />}
+                {state.tab === 'opt' && <OptTabContent {...tabProps} />}
+                {state.tab === 'doc' && <DocTabContent {...tabProps} />}
+                {state.tab === 'all' && <AllViewTabContent {...tabProps} />}
+              </table>
             </div>
           </main>
 
@@ -403,7 +399,7 @@ function StructureTabContent(props: any) {
   return (
     <>
       <StructureColgroup />
-      <thead className="sticky top-0 z-10">
+      <thead style={{ position: 'sticky', top: 0, zIndex: 20 }}>
         <StructureHeader onProcessModalOpen={() => setIsProcessModalOpen(true)} />
       </thead>
       <tbody>
@@ -436,7 +432,7 @@ function FunctionTabContent(props: any) {
   const { rows, l1Spans, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown } = props;
   return (
     <>
-      <thead className="sticky top-0 z-10"><FunctionHeader /></thead>
+      <thead style={{ position: 'sticky', top: 0, zIndex: 20 }}><FunctionHeader /></thead>
       <tbody>
         {rows.map((row: any, idx: number) => (
           <tr key={row.l3Id} style={{ height: '25px' }}>
@@ -452,7 +448,7 @@ function FailureTabContent(props: any) {
   const { rows, l1Spans, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown, saveToLocalStorage } = props;
   return (
     <>
-      <thead className="sticky top-0 z-10"><FailureHeader /></thead>
+      <thead style={{ position: 'sticky', top: 0, zIndex: 20 }}><FailureHeader /></thead>
       <tbody>
         {rows.map((row: any, idx: number) => (
           <tr key={row.l3Id} style={{ height: '25px' }}>
@@ -468,7 +464,7 @@ function RiskTabContent(props: any) {
   const { rows, l1Spans, l2Spans, state } = props;
   return (
     <>
-      <thead className="sticky top-0 z-10"><RiskHeader /></thead>
+      <thead style={{ position: 'sticky', top: 0, zIndex: 20 }}><RiskHeader /></thead>
       <tbody>
         {rows.map((row: any, idx: number) => (
           <tr key={row.l3Id} style={{ height: '25px' }}>
@@ -484,7 +480,7 @@ function OptTabContent(props: any) {
   const { rows, l1Spans, l2Spans, state } = props;
   return (
     <>
-      <thead className="sticky top-0 z-10"><OptHeader /></thead>
+      <thead style={{ position: 'sticky', top: 0, zIndex: 20 }}><OptHeader /></thead>
       <tbody>
         {rows.map((row: any, idx: number) => (
           <tr key={row.l3Id} style={{ height: '25px' }}>
@@ -500,7 +496,7 @@ function DocTabContent(props: any) {
   const { rows, l1Spans, l2Spans, state } = props;
   return (
     <>
-      <thead className="sticky top-0 z-10"><DocHeader /></thead>
+      <thead style={{ position: 'sticky', top: 0, zIndex: 20 }}><DocHeader /></thead>
       <tbody>
         {rows.map((row: any, idx: number) => (
           <tr key={row.l3Id} style={{ height: '25px' }}>
@@ -515,7 +511,7 @@ function DocTabContent(props: any) {
 function AllViewTabContent(props: any) {
   return (
     <>
-      <thead className="sticky top-0 z-10">
+      <thead style={{ position: 'sticky', top: 0, zIndex: 20 }}>
         <tr><th colSpan={38} style={{ background: COLORS.sky, padding: '4px', textAlign: 'center' }}>전체보기 (38열 FMEA 워크시트) - 개발예정</th></tr>
       </thead>
       <tbody>
