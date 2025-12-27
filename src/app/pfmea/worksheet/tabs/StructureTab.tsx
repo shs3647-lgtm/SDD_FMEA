@@ -112,7 +112,10 @@ export function StructureRow({
             position: 'sticky',
             left: 0,
             zIndex: 5,
-            border: `1px solid ${COLORS.line}`, 
+            borderTop: `1px solid ${COLORS.line}`,
+            borderRight: `1px solid ${COLORS.line}`,
+            borderBottom: `1px solid ${COLORS.line}`,
+            borderLeft: `1px solid ${COLORS.line}`,
             padding: '4px', 
             background: '#e3f2fd',
             verticalAlign: 'middle', 
@@ -141,7 +144,10 @@ export function StructureRow({
           rowSpan={spanCount}
           className="text-center cursor-pointer hover:bg-green-200 text-xs"
           style={{ 
-            border: `1px solid ${COLORS.line}`, 
+            borderTop: `1px solid ${COLORS.line}`,
+            borderRight: `1px solid ${COLORS.line}`,
+            borderBottom: `1px solid ${COLORS.line}`,
+            borderLeft: `1px solid ${COLORS.line}`,
             padding: '4px', 
             background: row.l2Name.includes('클릭') ? '#fff' : '#e8f5e9',
             verticalAlign: 'middle', 
@@ -163,7 +169,10 @@ export function StructureRow({
       <td 
         className="text-center text-xs font-bold" 
         style={{ 
-          border: `1px solid ${COLORS.line}`, 
+          borderTop: `1px solid ${COLORS.line}`,
+          borderRight: `1px solid ${COLORS.line}`,
+          borderBottom: `1px solid ${COLORS.line}`,
+          borderLeft: `1px solid ${COLORS.line}`,
           padding: '0', 
           background: '#fff8e1' 
         }}
@@ -175,7 +184,10 @@ export function StructureRow({
       <td 
         className="cursor-pointer hover:bg-orange-100 text-xs"
         style={{ 
-          border: `1px solid ${COLORS.line}`, 
+          borderTop: `1px solid ${COLORS.line}`,
+          borderRight: `1px solid ${COLORS.line}`,
+          borderBottom: `1px solid ${COLORS.line}`,
+          borderLeft: `1px solid ${COLORS.line}`,
           padding: '2px 4px', 
           background: row.l3Name.includes('추가') || row.l3Name.includes('클릭') 
             ? 'repeating-linear-gradient(45deg, #fff, #fff 4px, #fff3e0 4px, #fff3e0 8px)' 
