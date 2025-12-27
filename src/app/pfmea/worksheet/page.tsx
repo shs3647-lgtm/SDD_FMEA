@@ -238,7 +238,8 @@ export default function FMEAWorksheetPage() {
               <TabMenu state={state} setState={setState} />
             </div>
 
-            {/* 테이블 제목 - 고정 */}
+            {/* 테이블 제목 - 고정 (전체보기에서는 숨김) */}
+            {state.tab !== 'all' && (
             <div 
               style={{ 
                 flexShrink: 0,
@@ -251,8 +252,9 @@ export default function FMEAWorksheetPage() {
                 borderBottom: `1px solid ${COLORS.line}`,
               }}
             >
-              {state.tab === 'all' ? 'P-FMEA 전체보기 (38열 워크시트)' : `P-FMEA ${getTabLabel(state.tab)}(${getStepNumber(state.tab)}단계)`}
+              P-FMEA {getTabLabel(state.tab)}({getStepNumber(state.tab)}단계)
             </div>
+            )}
 
             {/* 테이블 스크롤 영역 */}
             <div 
