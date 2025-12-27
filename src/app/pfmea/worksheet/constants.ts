@@ -43,6 +43,7 @@ export interface WorksheetState {
   tab: string;
   levelView: string;
   search: string;
+  visibleSteps: number[]; // 전체보기에서 표시할 단계들 [2,3,4,5,6]
 }
 
 export interface FMEAProject {
@@ -125,7 +126,8 @@ export const createInitialState = (): WorksheetState => ({
   selected: { type: 'L2', id: null },
   tab: 'structure',
   levelView: '2',
-  search: ''
+  search: '',
+  visibleSteps: [2, 3, 4, 5, 6] // 기본값: 모든 단계 표시
 });
 
 // ============ 4M 배지 스타일 ============

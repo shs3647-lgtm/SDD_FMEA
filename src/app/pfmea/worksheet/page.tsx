@@ -604,8 +604,69 @@ function TabMenu({ state, setState }: TabMenuProps) {
           >
             전체보기
           </button>
+          
+          {/* 단계별 토글 버튼 (전체보기 선택 시에만 표시) */}
+          {state.tab === 'all' && (
+            <>
+              <div className="w-px h-4 bg-gray-300 mx-1" />
+              <StepToggleButtons state={state} setState={setState} />
+            </>
+          )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ============ 단계별 토글 버튼 ============
+function StepToggleButtons({ state, setState }: { state: WorksheetState; setState: React.Dispatch<React.SetStateAction<WorksheetState>> }) {
+  const steps = [
+    { step: 2, label: '2단계', color: '#1565c0' },
+    { step: 3, label: '3단계', color: '#7b1fa2' },
+    { step: 4, label: '4단계', color: '#c62828' },
+    { step: 5, label: '5단계', color: '#00695c' },
+    { step: 6, label: '6단계', color: '#ff6f00' },
+  ];
+
+  const toggleStep = (step: number) => {
+    setState(prev => {
+      const currentSteps = prev.visibleSteps || [2, 3, 4, 5, 6];
+      const isVisible = currentSteps.includes(step);
+      
+      // 최소 1개는 선택되어야 함
+      if (isVisible && currentSteps.length === 1) return prev;
+      
+      const newSteps = isVisible
+        ? currentSteps.filter(s => s !== step)
+        : [...currentSteps, step].sort((a, b) => a - b);
+      
+      return { ...prev, visibleSteps: newSteps };
+    });
+  };
+
+  const visibleSteps = state.visibleSteps || [2, 3, 4, 5, 6];
+
+  return (
+    <div className="flex gap-px">
+      {steps.map(s => {
+        const isActive = visibleSteps.includes(s.step);
+        return (
+          <button
+            key={s.step}
+            onClick={() => toggleStep(s.step)}
+            className="px-1.5 py-0.5 text-xs font-bold cursor-pointer"
+            style={{
+              background: isActive ? s.color : '#f0f0f0',
+              border: `1px solid ${isActive ? s.color : '#d0d0d0'}`,
+              borderRadius: '3px',
+              color: isActive ? '#fff' : '#999',
+              opacity: isActive ? 1 : 0.6,
+            }}
+          >
+            {s.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -774,16 +835,22 @@ function AllViewTabFull({ rows, state, l1Spans, l2Spans }: {
     { id: 'remarks', label: '비고', width: '80px', step: 6 },
   ];
 
-  // 단계별 그룹 정의
+  // 표시할 단계 목록
+  const visibleSteps = state.visibleSteps || [2, 3, 4, 5, 6];
+
+  // 필터링된 컬럼
+  const filteredColumns = allViewColumns.filter(col => visibleSteps.includes(col.step));
+
+  // 단계별 그룹 정의 (필터링)
   const stepGroups = [
     { step: 2, name: 'P-FMEA 구조분석(2단계)', count: 4, bg: '#1565c0' },
     { step: 3, name: 'P-FMEA 기능분석(3단계)', count: 8, bg: '#7b1fa2' },
     { step: 4, name: 'P-FMEA 고장분석(4단계)', count: 6, bg: '#c62828' },
     { step: 5, name: 'P-FMEA 리스크분석(5단계)', count: 7, bg: '#00695c' },
     { step: 6, name: 'P-FMEA 최적화(6단계)', count: 13, bg: '#ff6f00' },
-  ];
+  ].filter(g => visibleSteps.includes(g.step));
 
-  // 서브 그룹 정의 (3행)
+  // 서브 그룹 정의 (3행) - 필터링
   const subGroups = [
     // 구조분석
     { label: '1. 완제품 공정명', cols: 1, step: 2 },
@@ -805,7 +872,7 @@ function AllViewTabFull({ rows, state, l1Spans, l2Spans }: {
     { label: '계획', cols: 4, step: 6 },
     { label: '결과 모니터링', cols: 3, step: 6 },
     { label: '효과 평가', cols: 6, step: 6 },
-  ];
+  ].filter(sg => visibleSteps.includes(sg.step));
 
   // 단계별 색상
   const getStepColor = (step: number) => {
@@ -844,7 +911,7 @@ function AllViewTabFull({ rows, state, l1Spans, l2Spans }: {
     <>
       {/* Colgroup - 컬럼 너비 정의 */}
       <colgroup>
-        {allViewColumns.map((col, i) => (
+        {filteredColumns.map((col, i) => (
           <col key={i} style={{ width: col.width }} />
         ))}
       </colgroup>
@@ -894,7 +961,7 @@ function AllViewTabFull({ rows, state, l1Spans, l2Spans }: {
         </tr>
         {/* 3행: 컬럼 헤더 */}
         <tr>
-          {allViewColumns.map((col, i) => (
+          {filteredColumns.map((col, i) => (
             <th
               key={i}
               style={{
@@ -919,7 +986,7 @@ function AllViewTabFull({ rows, state, l1Spans, l2Spans }: {
       <tbody>
         {rows.length === 0 ? (
           <tr>
-            <td colSpan={38} className="text-center text-gray-400 py-8">
+            <td colSpan={filteredColumns.length} className="text-center text-gray-400 py-8">
               구조분석 탭에서 데이터를 먼저 입력하세요.
             </td>
           </tr>
@@ -935,7 +1002,7 @@ function AllViewTabFull({ rows, state, l1Spans, l2Spans }: {
             
             return (
               <tr key={row.l3Id} style={{ height: '26px' }}>
-                {allViewColumns.map((col, i) => {
+                {filteredColumns.map((col, i) => {
                   // L1 레벨 셀 - 병합 처리
                   if (l1Columns.includes(col.id)) {
                     if (l1Span === 0) return null; // 병합된 셀은 렌더링 안함
