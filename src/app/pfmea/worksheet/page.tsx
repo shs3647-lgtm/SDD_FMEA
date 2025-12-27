@@ -558,9 +558,11 @@ function TabMenu({ state, setState }: TabMenuProps) {
                   className="px-2 py-0.5 text-xs font-bold cursor-pointer"
                   style={{
                     background: isActive ? activeColor : '#e8f0f8',
-                    border: `1px solid ${isActive ? activeColor : '#c0d0e0'}`,
+                    borderTop: `1px solid ${isActive ? activeColor : '#c0d0e0'}`,
+                    borderRight: `1px solid ${isActive ? activeColor : '#c0d0e0'}`,
+                    borderLeft: `1px solid ${isActive ? activeColor : '#c0d0e0'}`,
+                    borderBottom: 'none',
                     borderRadius: '2px 2px 0 0',
-                    borderBottom: 0,
                     color: isActive ? '#fff' : COLORS.text
                   }}
                 >
