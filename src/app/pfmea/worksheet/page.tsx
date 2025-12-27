@@ -174,11 +174,11 @@ export default function FMEAWorksheetPage() {
           onNavigateToList={() => router.push('/pfmea/list')}
         />
 
-        {/* ========== 메인 레이아웃 ========== */}
-        <div className="flex-1 flex overflow-hidden" style={{ gap: 0 }}>
+        {/* ========== 메인 레이아웃 (좌측:워크시트 / 우측:트리 독립 스크롤) ========== */}
+        <div className="flex-1 flex" style={{ gap: 0, overflow: 'hidden', height: 'calc(100vh - 100px)' }}>
           
-          {/* 좌측: 워크시트 */}
-          <main className="flex-1 flex flex-col bg-white min-w-0" style={{ margin: 0, padding: 0, overflow: 'hidden' }}>
+          {/* 좌측: 워크시트 (독립 스크롤) */}
+          <main className="flex-1 flex flex-col bg-white min-w-0" style={{ margin: 0, padding: 0, height: '100%' }}>
             
             {/* 탭 + 레벨 메뉴 - 고정 */}
             <TabMenu state={state} setState={setState} />
@@ -196,14 +196,10 @@ export default function FMEAWorksheetPage() {
               P-FMEA {getTabLabel(state.tab)}({getStepNumber(state.tab)}단계)
             </div>
 
-            {/* 테이블 영역 - 단일 테이블 + CSS sticky 헤더 */}
+            {/* 테이블 영역 - 독립 스크롤 + sticky 헤더 */}
             <div 
-              className="flex-1" 
-              style={{ 
-                border: `1px solid ${COLORS.line}`, 
-                overflow: 'auto',
-                maxHeight: 'calc(100vh - 180px)'  // 헤더/메뉴 높이 제외
-              }}
+              className="flex-1 overflow-auto" 
+              style={{ border: `1px solid ${COLORS.line}` }}
             >
               <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
                 {state.tab === 'structure' && <StructureTabFull {...tabProps} />}
@@ -543,7 +539,7 @@ function RightTreePanel({
   handleInputBlur, handleInputKeyDown, setIsProcessModalOpen, setIsWorkElementModalOpen, setTargetL2Id 
 }: RightTreePanelProps) {
   return (
-    <aside className="flex flex-col flex-shrink-0" style={{ width: '280px', marginLeft: 0, paddingLeft: 0, background: '#fff' }}>
+    <aside className="flex flex-col flex-shrink-0" style={{ width: '280px', marginLeft: 0, paddingLeft: 0, background: '#fff', height: '100%' }}>
       {/* L1: 완제품명 */}
       <div className="flex-shrink-0 border-b" style={{ background: '#e3f2fd' }}>
         <div className="flex items-center gap-1 px-1 py-0.5">
