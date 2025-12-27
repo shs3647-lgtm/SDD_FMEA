@@ -212,7 +212,7 @@ function EditableL3Cell({
  */
 export function StructureColgroup() {
   return (
-    <colgroup><col style={{ width: '18%' }} /><col style={{ width: '20%' }} /><col style={{ width: '28px' }} /><col /></colgroup>
+    <colgroup><col style={{ width: '18%' }} /><col style={{ width: '20%' }} /><col style={{ width: '25px', maxWidth: '25px', minWidth: '25px' }} /><col /></colgroup>
   );
 }
 
@@ -243,7 +243,7 @@ export function StructureHeader({
       <tr>
         <th style={{ ...stickyFirstColStyle, zIndex: 15, background: '#90caf9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>완제품명+라인</th>
         <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>공정NO+공정명</th>
-        <th style={{ width: '28px', background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '0', height: '22px', fontWeight: 700, fontSize: '9px' }}>4M</th>
+        <th style={{ width: '25px', maxWidth: '25px', background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '0', height: '22px', fontWeight: 700, fontSize: '9px' }}>4M</th>
         <th style={{ width: '55%', background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>작업요소</th>
       </tr>
     </>
