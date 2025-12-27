@@ -3,17 +3,19 @@
  * @description FMEA 워크시트 - 기능분석(3단계) 탭
  * @author AI Assistant
  * @created 2025-12-27
- * @updated 구조분석과 동일한 스타일 적용
+ * @updated 구조분석과 동일한 스타일 적용 + 구분(C1) 컬럼 추가 + 모달 선택 방식 적용
  */
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { WorksheetState, COLORS } from '../constants';
+import DataSelectModal from '@/components/modals/DataSelectModal';
 
 interface FlatRow {
   l1Id: string;
   l1Name: string;
+  l1Type: string;        // C1: 구분 (Your Plant, Ship to Plant, User)
   l1Function: string;
   l1Requirement: string;
   l2Id: string;
@@ -59,71 +61,47 @@ const stickyFirstColStyle: React.CSSProperties = {
   zIndex: 10,
 };
 
+// 모달 타입 정의
+type ModalType = 'l1Type' | 'l1Function' | 'l1Requirement' | 'l2Function' | 'l2ProductChar' | 'l3Function' | 'l3ProcessChar' | null;
+
+// 모달 설정
+const MODAL_CONFIG: Record<string, { title: string; itemCode: string }> = {
+  l1Type: { title: '구분 선택', itemCode: 'C1' },
+  l1Function: { title: '완제품 기능 선택', itemCode: 'C2' },
+  l1Requirement: { title: '요구사항 선택', itemCode: 'C3' },
+  l2Function: { title: '공정 기능 선택', itemCode: 'A3' },
+  l2ProductChar: { title: '제품특성 선택', itemCode: 'A4' },
+  l3Function: { title: '작업요소 기능 선택', itemCode: 'B2' },
+  l3ProcessChar: { title: '공정특성 선택', itemCode: 'B3' },
+};
+
 /**
- * 편집 가능한 텍스트 셀
+ * 선택 가능한 셀 (클릭하면 모달 열림)
  */
-function EditableCell({
+function SelectableCell({
   value,
   placeholder,
   bgColor,
-  onChange,
-  onBlur,
-  onKeyDown,
+  onClick,
 }: {
   value: string;
   placeholder: string;
   bgColor: string;
-  onChange: (val: string) => void;
-  onBlur: () => void;
-  onKeyDown: (e: React.KeyboardEvent) => void;
+  onClick: () => void;
 }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(value);
-
-  const handleSave = () => {
-    onChange(editValue);
-    onBlur();
-    setIsEditing(false);
-  };
-
-  if (isEditing) {
-    return (
-      <input
-        type="text"
-        value={editValue}
-        onChange={(e) => setEditValue(e.target.value)}
-        onBlur={handleSave}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') handleSave();
-          if (e.key === 'Escape') setIsEditing(false);
-          onKeyDown(e);
-        }}
-        autoFocus
-        className="w-full px-1"
-        style={{
-          border: 'none',
-          outline: '2px solid #7b1fa2',
-          background: '#fff',
-          borderRadius: '2px',
-          fontSize: '10px',
-          fontFamily: 'inherit',
-          height: '22px',
-        }}
-      />
-    );
-  }
-
   return (
     <div
-      className="cursor-pointer hover:bg-purple-100 w-full h-full flex items-center"
-      onClick={() => {
-        setEditValue(value);
-        setIsEditing(true);
+      className="cursor-pointer hover:bg-black/5 w-full h-full flex items-center p-1"
+      onClick={onClick}
+      style={{ 
+        minHeight: '24px', 
+        fontSize: '10px', 
+        fontFamily: 'inherit',
+        background: value ? 'transparent' : `repeating-linear-gradient(45deg, ${bgColor}, ${bgColor} 4px, #fff 4px, #fff 8px)`
       }}
-      style={{ minHeight: '22px', fontSize: '10px', fontFamily: 'inherit' }}
-      title="클릭하여 수정"
+      title="클릭하여 선택"
     >
-      {value || <span style={{ color: '#999', fontStyle: 'italic' }}>{placeholder}</span>}
+      {value || <span className="text-gray-400 italic">🔍 {placeholder}</span>}
     </div>
   );
 }
@@ -133,14 +111,7 @@ function EditableCell({
  */
 export function FunctionColgroup() {
   return (
-    <colgroup>
-      <col style={{ width: '15%' }} />
-      <col style={{ width: '15%' }} />
-      <col style={{ width: '17%' }} />
-      <col style={{ width: '17%' }} />
-      <col style={{ width: '18%' }} />
-      <col style={{ width: '18%' }} />
-    </colgroup>
+    <colgroup><col style={{ width: '80px' }} /><col style={{ width: '15%' }} /><col style={{ width: '15%' }} /><col style={{ width: '17%' }} /><col style={{ width: '17%' }} /><col style={{ width: '18%' }} /><col style={{ width: '18%' }} /></colgroup>
   );
 }
 
@@ -153,7 +124,7 @@ export function FunctionHeader() {
       {/* 메인 헤더 - 진한 색상 */}
       <tr>
         <th 
-          colSpan={2} 
+          colSpan={3} 
           style={{ 
             ...stickyFirstColStyle, 
             zIndex: 15, 
@@ -215,6 +186,22 @@ export function FunctionHeader() {
           style={{ 
             ...stickyFirstColStyle, 
             zIndex: 15, 
+            width: '80px',
+            background: FUNC_COLORS.l1Sub, 
+            borderTop: `1px solid ${COLORS.line}`,
+            borderRight: `1px solid ${COLORS.line}`,
+            borderBottom: `1px solid ${COLORS.line}`,
+            borderLeft: `1px solid ${COLORS.line}`,
+            padding: '1px 4px', 
+            height: '22px', 
+            fontWeight: 700, 
+            fontSize: '10px' 
+          }}
+        >
+          구분
+        </th>
+        <th 
+          style={{ 
             background: FUNC_COLORS.l1Sub, 
             borderTop: `1px solid ${COLORS.line}`,
             borderRight: `1px solid ${COLORS.line}`,
@@ -316,25 +303,46 @@ export function FunctionRow({
   idx,
   l1Spans,
   l2Spans,
-  state,
-  setState,
-  setDirty,
-  handleInputBlur,
-  handleInputKeyDown,
-}: FunctionTabProps & { row: FlatRow; idx: number }) {
+  onOpenModal,
+}: FunctionTabProps & { row: FlatRow; idx: number; onOpenModal: (type: ModalType, id: string, processNo?: string) => void }) {
   const spanCount = l2Spans[idx];
   const showL1MergedCell = l1Spans[idx] > 0;
   const showL2MergedCell = spanCount > 0;
 
   return (
     <>
-      {/* L1: 완제품 기능 */}
+      {/* L1: 구분 */}
       {showL1MergedCell && (
         <td 
           rowSpan={l1Spans[idx]} 
           style={{ 
             ...stickyFirstColStyle,
             zIndex: 5,
+            width: '80px',
+            borderTop: `1px solid ${COLORS.line}`,
+            borderRight: `1px solid ${COLORS.line}`,
+            borderBottom: `1px solid ${COLORS.line}`,
+            borderLeft: `1px solid ${COLORS.line}`,
+            padding: '0 4px', 
+            background: FUNC_COLORS.l1Cell, 
+            verticalAlign: 'middle',
+            textAlign: 'center',
+          }}
+        >
+          <SelectableCell
+            value={row.l1Type}
+            placeholder="구분"
+            bgColor={FUNC_COLORS.l1Cell}
+            onClick={() => onOpenModal('l1Type', row.l1Id)}
+          />
+        </td>
+      )}
+
+      {/* L1: 완제품 기능 */}
+      {showL1MergedCell && (
+        <td 
+          rowSpan={l1Spans[idx]} 
+          style={{ 
             borderTop: `1px solid ${COLORS.line}`,
             borderRight: `1px solid ${COLORS.line}`,
             borderBottom: `1px solid ${COLORS.line}`,
@@ -345,16 +353,11 @@ export function FunctionRow({
             wordBreak: 'break-word',
           }}
         >
-          <EditableCell
+          <SelectableCell
             value={row.l1Function}
-            placeholder="완제품 기능 입력"
+            placeholder="완제품 기능"
             bgColor={FUNC_COLORS.l1Cell}
-            onChange={(val) => {
-              setState(prev => ({ ...prev, l1: { ...prev.l1, function: val } }));
-              setDirty(true);
-            }}
-            onBlur={handleInputBlur}
-            onKeyDown={handleInputKeyDown}
+            onClick={() => onOpenModal('l1Function', row.l1Id)}
           />
         </td>
       )}
@@ -374,16 +377,11 @@ export function FunctionRow({
             wordBreak: 'break-word',
           }}
         >
-          <EditableCell
+          <SelectableCell
             value={row.l1Requirement}
-            placeholder="요구사항 입력"
+            placeholder="요구사항"
             bgColor={FUNC_COLORS.l1Cell}
-            onChange={(val) => {
-              setState(prev => ({ ...prev, l1: { ...prev.l1, requirement: val } }));
-              setDirty(true);
-            }}
-            onBlur={handleInputBlur}
-            onKeyDown={handleInputKeyDown}
+            onClick={() => onOpenModal('l1Requirement', row.l1Id)}
           />
         </td>
       )}
@@ -403,19 +401,11 @@ export function FunctionRow({
             wordBreak: 'break-word',
           }}
         >
-          <EditableCell
+          <SelectableCell
             value={row.l2Function}
-            placeholder={`${row.l2No} ${row.l2Name} 기능`}
+            placeholder="공정 기능"
             bgColor={FUNC_COLORS.l2Cell}
-            onChange={(val) => {
-              setState(prev => ({
-                ...prev,
-                l2: prev.l2.map(p => p.id === row.l2Id ? { ...p, function: val } : p)
-              }));
-              setDirty(true);
-            }}
-            onBlur={handleInputBlur}
-            onKeyDown={handleInputKeyDown}
+            onClick={() => onOpenModal('l2Function', row.l2Id, row.l2No)}
           />
         </td>
       )}
@@ -435,19 +425,11 @@ export function FunctionRow({
             wordBreak: 'break-word',
           }}
         >
-          <EditableCell
+          <SelectableCell
             value={row.l2ProductChar}
-            placeholder="제품특성 입력"
+            placeholder="제품특성"
             bgColor={FUNC_COLORS.l2Cell}
-            onChange={(val) => {
-              setState(prev => ({
-                ...prev,
-                l2: prev.l2.map(p => p.id === row.l2Id ? { ...p, productChar: val } : p)
-              }));
-              setDirty(true);
-            }}
-            onBlur={handleInputBlur}
-            onKeyDown={handleInputKeyDown}
+            onClick={() => onOpenModal('l2ProductChar', row.l2Id, row.l2No)}
           />
         </td>
       )}
@@ -464,22 +446,11 @@ export function FunctionRow({
           wordBreak: 'break-word',
         }}
       >
-        <EditableCell
+        <SelectableCell
           value={row.l3Function}
-          placeholder={`[${row.m4}] ${row.l3Name} 기능`}
+          placeholder="작업요소 기능"
           bgColor={FUNC_COLORS.l3Cell}
-          onChange={(val) => {
-            setState(prev => ({
-              ...prev,
-              l2: prev.l2.map(p => ({
-                ...p,
-                l3: p.l3.map(w => w.id === row.l3Id ? { ...w, function: val } : w)
-              }))
-            }));
-            setDirty(true);
-          }}
-          onBlur={handleInputBlur}
-          onKeyDown={handleInputKeyDown}
+          onClick={() => onOpenModal('l3Function', row.l3Id, row.l2No)}
         />
       </td>
       
@@ -495,22 +466,11 @@ export function FunctionRow({
           wordBreak: 'break-word',
         }}
       >
-        <EditableCell
+        <SelectableCell
           value={row.l3ProcessChar}
-          placeholder="공정특성 입력"
+          placeholder="공정특성"
           bgColor={FUNC_COLORS.l3Cell}
-          onChange={(val) => {
-            setState(prev => ({
-              ...prev,
-              l2: prev.l2.map(p => ({
-                ...p,
-                l3: p.l3.map(w => w.id === row.l3Id ? { ...w, processChar: val } : w)
-              }))
-            }));
-            setDirty(true);
-          }}
-          onBlur={handleInputBlur}
-          onKeyDown={handleInputKeyDown}
+          onClick={() => onOpenModal('l3ProcessChar', row.l3Id, row.l2No)}
         />
       </td>
     </>
@@ -521,7 +481,96 @@ export function FunctionRow({
  * 기능분석 탭 - 전체 컴포넌트
  */
 export default function FunctionTab(props: FunctionTabProps) {
-  const { rows } = props;
+  const { rows, state, setState, setDirty } = props;
+
+  // 모달 상태
+  const [modalType, setModalType] = useState<ModalType>(null);
+  const [targetId, setTargetId] = useState<string>('');
+  const [targetProcessNo, setTargetProcessNo] = useState<string>('');
+
+  // 모달 열기
+  const handleOpenModal = useCallback((type: ModalType, id: string, processNo?: string) => {
+    setModalType(type);
+    setTargetId(id);
+    setTargetProcessNo(processNo || '');
+  }, []);
+
+  // 현재 값 가져오기
+  const getCurrentValues = useCallback((): string[] => {
+    if (!modalType || !targetId) return [];
+    
+    const parse = (val: string | undefined) => val ? val.split(',').map(v => v.trim()) : [];
+
+    switch (modalType) {
+      case 'l1Type': return parse(state.l1.type);
+      case 'l1Function': return parse(state.l1.function);
+      case 'l1Requirement': return parse(state.l1.requirement);
+      case 'l2Function': {
+        const proc = state.l2.find(p => p.id === targetId);
+        return parse(proc?.function);
+      }
+      case 'l2ProductChar': {
+        const proc = state.l2.find(p => p.id === targetId);
+        return parse(proc?.productChar);
+      }
+      case 'l3Function': {
+        for (const proc of state.l2) {
+          const we = proc.l3.find(w => w.id === targetId);
+          if (we) return parse(we.function);
+        }
+        return [];
+      }
+      case 'l3ProcessChar': {
+        for (const proc of state.l2) {
+          const we = proc.l3.find(w => w.id === targetId);
+          if (we) return parse(we.processChar);
+        }
+        return [];
+      }
+      default: return [];
+    }
+  }, [modalType, targetId, state]);
+
+  // 모달 저장
+  const handleModalSave = useCallback((selectedValues: string[]) => {
+    const joinedValue = selectedValues.join(', ');
+    
+    setState(prev => {
+      switch (modalType) {
+        case 'l1Type': return { ...prev, l1: { ...prev.l1, type: joinedValue } };
+        case 'l1Function': return { ...prev, l1: { ...prev.l1, function: joinedValue } };
+        case 'l1Requirement': return { ...prev, l1: { ...prev.l1, requirement: joinedValue } };
+        case 'l2Function': return {
+          ...prev,
+          l2: prev.l2.map(p => p.id === targetId ? { ...p, function: joinedValue } : p)
+        };
+        case 'l2ProductChar': return {
+          ...prev,
+          l2: prev.l2.map(p => p.id === targetId ? { ...p, productChar: joinedValue } : p)
+        };
+        case 'l3Function': return {
+          ...prev,
+          l2: prev.l2.map(p => ({
+            ...p,
+            l3: p.l3.map(w => w.id === targetId ? { ...w, function: joinedValue } : w)
+          }))
+        };
+        case 'l3ProcessChar': return {
+          ...prev,
+          l2: prev.l2.map(p => ({
+            ...p,
+            l3: p.l3.map(w => w.id === targetId ? { ...w, processChar: joinedValue } : w)
+          }))
+        };
+        default: return prev;
+      }
+    });
+    
+    setDirty(true);
+    setModalType(null);
+  }, [modalType, targetId, setState, setDirty]);
+
+  const modalConfig = modalType ? MODAL_CONFIG[modalType] : null;
   
   return (
     <>
@@ -533,18 +582,31 @@ export default function FunctionTab(props: FunctionTabProps) {
       <tbody>
         {rows.length === 0 ? (
           <tr>
-            <td colSpan={6} className="text-center text-gray-400 py-8">
+            <td colSpan={7} className="text-center text-gray-400 py-8">
               구조분석 탭에서 데이터를 먼저 입력하세요.
             </td>
           </tr>
         ) : (
           rows.map((row, idx) => (
             <tr key={row.l3Id} style={{ height: '28px' }}>
-              <FunctionRow {...props} row={row} idx={idx} />
+              <FunctionRow {...props} row={row} idx={idx} onOpenModal={handleOpenModal} />
             </tr>
           ))
         )}
       </tbody>
+
+      {/* 데이터 선택 모달 */}
+      {modalType && modalConfig && (
+        <DataSelectModal
+          isOpen={!!modalType}
+          onClose={() => setModalType(null)}
+          onSave={handleModalSave}
+          title={modalConfig.title}
+          itemCode={modalConfig.itemCode}
+          currentValues={getCurrentValues()}
+          processNo={targetProcessNo || undefined}
+        />
+      )}
     </>
   );
 }

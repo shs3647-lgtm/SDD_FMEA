@@ -21,6 +21,7 @@ import {
 interface FlatRow {
   l1Id: string;
   l1Name: string;
+  l1Type: string;       // C1: 구분 (Your Plant, Ship to Plant, User)
   l1Function: string;
   l1Requirement: string;
   l1FailureEffect: string;
@@ -298,6 +299,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         result.push({
           l1Id: state.l1.id,
           l1Name: state.l1.name,
+          l1Type: state.l1.type || '',
           l1Function: state.l1.function || '',
           l1Requirement: state.l1.requirement || '',
           l1FailureEffect: state.l1.failureEffect || '',

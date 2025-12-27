@@ -818,28 +818,7 @@ function StructureTabFull(props: any) {
 
 // 기능분석 탭
 function FunctionTabFull(props: any) {
-  const { rows, l1Spans, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown } = props;
-  return (
-    <>
-      <FunctionColgroup />
-      <thead style={stickyTheadStyle}><FunctionHeader /></thead>
-      <tbody>
-        {rows.length === 0 ? (
-          <tr>
-            <td colSpan={6} className="text-center text-gray-400 py-8">
-              구조분석 탭에서 데이터를 먼저 입력하세요.
-            </td>
-          </tr>
-        ) : (
-          rows.map((row: any, idx: number) => (
-            <tr key={row.l3Id} style={{ height: '28px' }}>
-              <FunctionRow row={row} idx={idx} state={state} setState={setState} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} setDirty={setDirty} handleInputBlur={handleInputBlur} handleInputKeyDown={handleInputKeyDown} />
-            </tr>
-          ))
-        )}
-      </tbody>
-    </>
-  );
+  return <FunctionTab {...props} />;
 }
 
 // 고장분석 탭
@@ -1045,16 +1024,12 @@ function AllViewTabFull({ rows, state, l1Spans, l2Spans }: {
     }
   };
 
-  return (
-    <>
-      {/* Colgroup - 컬럼 너비 정의 */}
-      <colgroup>
-        {filteredColumns.map((col, i) => (
-          <col key={i} style={{ width: col.width }} />
-        ))}
-      </colgroup>
+          return (
+            <>
+              {/* Colgroup - 컬럼 너비 정의 */}
+              <colgroup>{filteredColumns.map((col, i) => (<col key={i} style={{ width: col.width }} />))}</colgroup>
 
-      {/* 헤더 - sticky 고정 */}
+              {/* 헤더 - sticky 고정 */}
       <thead style={{ position: 'sticky', top: 0, zIndex: 20, background: '#fff' }}>
         {/* 1행: 단계별 그룹 헤더 */}
         <tr>

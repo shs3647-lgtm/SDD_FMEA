@@ -173,13 +173,7 @@ function SeverityCell({
  */
 export function FailureColgroup() {
   return (
-    <colgroup>
-      <col style={{ width: '22%' }} />
-      <col style={{ width: '8%' }} />
-      <col style={{ width: '22%' }} />
-      <col style={{ width: '20%' }} />
-      <col style={{ width: '28%' }} />
-    </colgroup>
+    <colgroup><col style={{ width: '22%' }} /><col style={{ width: '8%' }} /><col style={{ width: '22%' }} /><col style={{ width: '20%' }} /><col style={{ width: '28%' }} /></colgroup>
   );
 }
 
