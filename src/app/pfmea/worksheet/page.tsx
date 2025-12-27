@@ -58,6 +58,21 @@ export default function FMEAWorksheetPage() {
   const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
   const [isWorkElementModalOpen, setIsWorkElementModalOpen] = useState(false);
   const [targetL2Id, setTargetL2Id] = useState<string | null>(null);
+  
+  // 트리 접기/펼치기 상태
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  
+  const toggleCollapse = useCallback((procId: string) => {
+    setCollapsedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(procId)) {
+        newSet.delete(procId);
+      } else {
+        newSet.add(procId);
+      }
+      return newSet;
+    });
+  }, []);
 
   // 공정 모달 저장 핸들러
   const handleProcessSave = useCallback((selectedProcesses: { no: string; name: string }[]) => {
@@ -300,18 +315,45 @@ export default function FMEAWorksheetPage() {
             {/* 트리 스크롤 영역 */}
             <div style={{ flex: 1, overflow: 'auto', padding: '8px' }}>
               <div style={{ marginLeft: '8px', borderLeft: '2px solid #90caf9', paddingLeft: '8px' }}>
-                {filteredTree.sort((a, b) => a.order - b.order).map((proc, pIdx) => (
+                {filteredTree.sort((a, b) => a.order - b.order).map((proc, pIdx) => {
+                  const isCollapsed = collapsedIds.has(proc.id);
+                  const hasChildren = proc.l3.filter(w => !w.name.includes('추가') && !w.name.includes('클릭')).length > 0;
+                  
+                  return (
                   <div key={proc.id} style={{ marginBottom: '4px' }}>
-                    {/* L2: 공정 */}
+                    {/* L2: 공정 헤더 */}
                     <div 
-                      onClick={() => { handleSelect('L2', proc.id); setTargetL2Id(proc.id); setIsWorkElementModalOpen(true); }}
                       style={{ 
-                        display: 'flex', alignItems: 'center', gap: '4px', padding: '4px', cursor: 'pointer', borderRadius: '4px',
+                        display: 'flex', alignItems: 'center', gap: '4px', padding: '4px', borderRadius: '4px',
                         background: state.selected.type === 'L2' && state.selected.id === proc.id ? '#bbdefb' : 'transparent',
                       }}
                     >
-                      <span style={{ fontSize: '10px', color: '#666' }}>{proc.l3.length > 0 ? '▼' : '▷'}</span>
-                      <span style={{ fontSize: '12px' }}>📁</span>
+                      {/* 접기/펼치기 토글 버튼 */}
+                      <span 
+                        onClick={() => toggleCollapse(proc.id)}
+                        style={{ 
+                          fontSize: '10px', 
+                          color: hasChildren ? '#1976d2' : '#ccc', 
+                          cursor: hasChildren ? 'pointer' : 'default',
+                          width: '14px',
+                          textAlign: 'center',
+                          fontWeight: 'bold',
+                        }}
+                        title={isCollapsed ? '펼치기' : '접기'}
+                      >
+                        {isCollapsed ? '▷' : '▼'}
+                      </span>
+                      
+                      {/* 공정 아이콘 - 클릭하면 모달 열기 */}
+                      <span 
+                        onClick={() => { handleSelect('L2', proc.id); setTargetL2Id(proc.id); setIsWorkElementModalOpen(true); }}
+                        style={{ fontSize: '12px', cursor: 'pointer' }}
+                        title="클릭하여 작업요소 관리"
+                      >
+                        📁
+                      </span>
+                      
+                      {/* 공정명 입력 */}
                       <input
                         type="text"
                         value={`1.${pIdx + 1}-${proc.name}`}
@@ -320,45 +362,51 @@ export default function FMEAWorksheetPage() {
                           setState(prev => ({ ...prev, l2: prev.l2.map(p => p.id === proc.id ? { ...p, name: val } : p) }));
                           setDirty(true);
                         }}
-                        onClick={(e) => e.stopPropagation()}
                         style={{ flex: 1, padding: '2px 6px', fontSize: '11px', border: '1px solid #e0e0e0', borderRadius: '3px', background: '#fff' }}
                       />
+                      
+                      {/* 작업요소 개수 표시 */}
+                      <span style={{ fontSize: '9px', color: '#888', background: '#e0e0e0', padding: '1px 4px', borderRadius: '8px' }}>
+                        {proc.l3.filter(w => !w.name.includes('추가') && !w.name.includes('클릭')).length}
+                      </span>
                     </div>
 
-                    {/* L3: 작업요소 */}
-                    <div style={{ marginLeft: '20px' }}>
-                      {proc.l3.filter(w => !state.search || `${w.m4} ${w.name}`.toLowerCase().includes(state.search.toLowerCase())).sort((a, b) => a.order - b.order).map((w, wIdx) => (
+                    {/* L3: 작업요소 (접힌 상태면 숨김) */}
+                    {!isCollapsed && (
+                      <div style={{ marginLeft: '20px' }}>
+                        {proc.l3.filter(w => !state.search || `${w.m4} ${w.name}`.toLowerCase().includes(state.search.toLowerCase())).sort((a, b) => a.order - b.order).map((w, wIdx) => (
+                          <div 
+                            key={w.id} 
+                            onClick={() => handleSelect('L3', w.id)}
+                            style={{ 
+                              display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 4px', cursor: 'pointer', borderRadius: '3px',
+                              background: state.selected.type === 'L3' && state.selected.id === w.id ? '#c8e6c9' : 'transparent',
+                            }}
+                          >
+                            <span style={{ fontSize: '10px' }}>📄</span>
+                            <input
+                              type="text"
+                              value={`1.${pIdx + 1}.${wIdx + 1}-${w.name}`}
+                              onChange={(e) => { const val = e.target.value.replace(/^1\.\d+\.\d+-/, ''); renameL3(w.id, val); }}
+                              onClick={(e) => e.stopPropagation()}
+                              style={{ flex: 1, padding: '2px 4px', fontSize: '10px', border: '1px solid #e0e0e0', borderRadius: '2px', background: '#fff' }}
+                            />
+                          </div>
+                        ))}
+                        {/* 작업요소 추가 버튼 */}
                         <div 
-                          key={w.id} 
-                          onClick={() => handleSelect('L3', w.id)}
+                          onClick={() => { setTargetL2Id(proc.id); setIsWorkElementModalOpen(true); }}
                           style={{ 
-                            display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 4px', cursor: 'pointer', borderRadius: '3px',
-                            background: state.selected.type === 'L3' && state.selected.id === w.id ? '#c8e6c9' : 'transparent',
+                            display: 'flex', alignItems: 'center', gap: '4px', padding: '3px 6px', marginTop: '2px',
+                            cursor: 'pointer', borderRadius: '3px', border: '1px dashed #4caf50', color: '#4caf50', fontSize: '10px',
                           }}
                         >
-                          <span style={{ fontSize: '10px' }}>📄</span>
-                          <input
-                            type="text"
-                            value={`1.${pIdx + 1}.${wIdx + 1}-${w.name}`}
-                            onChange={(e) => { const val = e.target.value.replace(/^1\.\d+\.\d+-/, ''); renameL3(w.id, val); }}
-                            onClick={(e) => e.stopPropagation()}
-                            style={{ flex: 1, padding: '2px 4px', fontSize: '10px', border: '1px solid #e0e0e0', borderRadius: '2px', background: '#fff' }}
-                          />
+                          <span>➕</span><span>작업요소 추가</span>
                         </div>
-                      ))}
-                      {/* 작업요소 추가 버튼 */}
-                      <div 
-                        onClick={() => { setTargetL2Id(proc.id); setIsWorkElementModalOpen(true); }}
-                        style={{ 
-                          display: 'flex', alignItems: 'center', gap: '4px', padding: '3px 6px', marginTop: '2px',
-                          cursor: 'pointer', borderRadius: '3px', border: '1px dashed #4caf50', color: '#4caf50', fontSize: '10px',
-                        }}
-                      >
-                        <span>➕</span><span>작업요소 추가</span>
                       </div>
-                    </div>
+                    )}
                   </div>
-                ))}
+                );})}
 
                 {/* 공정 추가 버튼 */}
                 <div 
