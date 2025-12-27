@@ -65,24 +65,31 @@ function EditableM4Cell({
     setIsEditing(false);
   };
 
+  // 4M 셀 고정 스타일
+  const m4CellStyle: React.CSSProperties = {
+    width: '25px',
+    maxWidth: '25px',
+    minWidth: '25px',
+    borderTop: `1px solid ${COLORS.line}`,
+    borderRight: `1px solid ${COLORS.line}`,
+    borderBottom: `1px solid ${COLORS.line}`,
+    borderLeft: `1px solid ${COLORS.line}`,
+    padding: '0',
+    textAlign: 'center',
+    fontSize: '9px',
+    fontWeight: 700,
+  };
+
   if (isEditing) {
     return (
-      <td style={{ 
-        borderTop: `1px solid ${COLORS.line}`,
-        borderRight: `1px solid ${COLORS.line}`,
-        borderBottom: `1px solid ${COLORS.line}`,
-        borderLeft: `1px solid ${COLORS.line}`,
-        padding: '0', 
-        background: '#fffde7' 
-      }}>
+      <td style={{ ...m4CellStyle, background: '#fffde7' }}>
         <select
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
           onBlur={handleSave}
           onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false); }}
           autoFocus
-          className="w-full text-center font-bold"
-          style={{ border: 'none', outline: '2px solid #ffc107', background: '#fffde7', fontSize: '9px', padding: '0' }}
+          style={{ width: '100%', border: 'none', outline: '2px solid #ffc107', background: '#fffde7', fontSize: '9px', padding: '0', textAlign: 'center' }}
         >
           <option value="">-</option>
           {M4_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -93,16 +100,8 @@ function EditableM4Cell({
 
   return (
     <td 
-      className="text-center font-bold cursor-pointer hover:bg-yellow-200" 
-      style={{ 
-        borderTop: `1px solid ${COLORS.line}`,
-        borderRight: `1px solid ${COLORS.line}`,
-        borderBottom: `1px solid ${COLORS.line}`,
-        borderLeft: `1px solid ${COLORS.line}`,
-        padding: '0', 
-        background: '#fff8e1',
-        fontSize: '9px',
-      }}
+      className="cursor-pointer hover:bg-yellow-200" 
+      style={{ ...m4CellStyle, background: '#fff8e1' }}
       onClick={() => { setEditValue(value); setIsEditing(true); }}
       title="클릭하여 수정"
     >
@@ -212,7 +211,7 @@ function EditableL3Cell({
  */
 export function StructureColgroup() {
   return (
-    <colgroup><col style={{ width: '18%' }} /><col style={{ width: '20%' }} /><col style={{ width: '25px', maxWidth: '25px', minWidth: '25px' }} /><col /></colgroup>
+    <colgroup><col style={{ width: '150px' }} /><col style={{ width: '150px' }} /><col style={{ width: '25px' }} /><col /></colgroup>
   );
 }
 
@@ -235,16 +234,16 @@ export function StructureHeader({
     <>
       {/* 메인 헤더 - 진한 색상 */}
       <tr>
-        <th style={{ ...stickyFirstColStyle, zIndex: 15, width: '20%', background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>1. 완제품 공정명</th>
-        <th onClick={onProcessModalOpen} className="cursor-pointer hover:bg-green-600" style={{ width: '25%', background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>2. 메인 공정명 🔍</th>
-        <th colSpan={2} style={{ width: '55%', background: '#f57c00', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>3. 작업 요소명</th>
+        <th style={{ ...stickyFirstColStyle, zIndex: 15, width: '150px', background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>1. 완제품 공정명</th>
+        <th onClick={onProcessModalOpen} className="cursor-pointer hover:bg-green-600" style={{ width: '150px', background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>2. 메인 공정명 🔍</th>
+        <th colSpan={2} style={{ background: '#f57c00', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>3. 작업 요소명</th>
       </tr>
       {/* 서브 헤더 - 중간 색상 */}
       <tr>
         <th style={{ ...stickyFirstColStyle, zIndex: 15, background: '#90caf9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>완제품명+라인</th>
         <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>공정NO+공정명</th>
-        <th style={{ width: '25px', maxWidth: '25px', background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '0', height: '22px', fontWeight: 700, fontSize: '9px' }}>4M</th>
-        <th style={{ width: '55%', background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>작업요소</th>
+        <th style={{ width: '25px', maxWidth: '25px', minWidth: '25px', background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '0', height: '22px', fontWeight: 700, fontSize: '9px' }}>4M</th>
+        <th style={{ background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>작업요소</th>
       </tr>
     </>
   );
