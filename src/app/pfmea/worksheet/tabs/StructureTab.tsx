@@ -175,8 +175,8 @@ function EditableL3Cell({
           onBlur={handleSave}
           onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false); }}
           autoFocus
-          className="w-full text-xs px-1"
-          style={{ border: 'none', outline: '2px solid #ff9800', background: '#fff', borderRadius: '2px' }}
+          className="w-full px-1"
+          style={{ border: 'none', outline: '2px solid #ff9800', background: '#fff', borderRadius: '2px', fontSize: '10px', fontFamily: 'inherit' }}
         />
       </td>
     );
@@ -184,7 +184,7 @@ function EditableL3Cell({
 
   return (
     <td 
-      className="cursor-pointer hover:bg-orange-100 text-xs"
+      className="cursor-pointer hover:bg-orange-100"
       style={{ 
         borderTop: `1px solid ${COLORS.line}`,
         borderRight: `1px solid ${COLORS.line}`,
@@ -194,14 +194,16 @@ function EditableL3Cell({
         background: isPlaceholder 
           ? 'repeating-linear-gradient(45deg, #fff, #fff 4px, #fff3e0 4px, #fff3e0 8px)' 
           : '#fff3e0', 
-        wordBreak: 'break-word' 
+        wordBreak: 'break-word',
+        fontSize: '10px',
+        fontFamily: 'inherit',
       }}
       onClick={handleClick}
       title={isPlaceholder ? '클릭하여 작업요소 추가' : '클릭하여 수정'}
     >
       {isPlaceholder 
-        ? <span className="text-orange-600 font-bold">🔍 클릭</span> 
-        : <span>{value} ✏️</span>
+        ? <span style={{ color: '#e65100', fontWeight: 700 }}>🔍 클릭</span> 
+        : <span style={{ fontWeight: 400 }}>{value} ✏️</span>
       }
     </td>
   );
