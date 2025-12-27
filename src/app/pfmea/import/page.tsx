@@ -849,12 +849,7 @@ export default function PFMEAImportPage() {
       {/* 상단: 기초정보 테이블 */}
       <div style={tableWrapperStyle}>
       <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-        <colgroup>
-          <col style={{ width: '100px' }} />
-          <col /><col /><col /><col /><col /><col />
-          <col style={{ width: '80px' }} />
-          <col style={{ width: '80px' }} />
-        </colgroup>
+        <colgroup><col style={{ width: '100px' }} /><col /><col /><col /><col /><col /><col /><col style={{ width: '80px' }} /><col style={{ width: '80px' }} /></colgroup>
         <thead>
           <tr>
             <th style={{ ...headerStyle, textAlign: 'center' }}>구분</th>
@@ -965,12 +960,7 @@ export default function PFMEAImportPage() {
           <h3 style={sectionTitleStyle}>FMEA 기초정보 입력</h3>
           <div style={tableWrapperStyle}>
             <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-              <colgroup>
-                <col style={{ width: '100px' }} />
-                <col />
-                <col style={{ width: '80px' }} />
-                <col style={{ width: '80px' }} />
-              </colgroup>
+              <colgroup><col style={{ width: '100px' }} /><col /><col style={{ width: '80px' }} /><col style={{ width: '80px' }} /></colgroup>
               <tbody>
                 <tr>
                   <td style={{ ...rowHeaderStyle, textAlign: 'center' }}>전체 입포트</td>
@@ -1091,12 +1081,7 @@ export default function PFMEAImportPage() {
           <h3 style={sectionTitleStyle}>FMEA 분석 데이타 입력</h3>
           <div style={tableWrapperStyle}>
             <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-              <colgroup>
-                <col style={{ width: '100px' }} />
-                <col />
-                <col style={{ width: '80px' }} />
-                <col style={{ width: '80px' }} />
-              </colgroup>
+              <colgroup><col style={{ width: '100px' }} /><col /><col style={{ width: '80px' }} /><col style={{ width: '80px' }} /></colgroup>
               <tbody>
                 {/* 전체 입포트 */}
                 <tr>
@@ -1195,13 +1180,7 @@ export default function PFMEAImportPage() {
             {/* 테이블 - 10행 고정 (28px * 10 = 280px) + 헤더(28px) = 308px */}
             <div style={{ maxHeight: '308px', overflowY: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                <colgroup>
-                  <col style={{ width: '30px' }} />
-                  <col style={{ width: '35px' }} />
-                  <col style={{ width: '35px' }} />
-                  <col style={{ width: '60px' }} />
-                  <col />
-                </colgroup>
+                <colgroup><col style={{ width: '30px' }} /><col style={{ width: '35px' }} /><col style={{ width: '35px' }} /><col style={{ width: '60px' }} /><col /></colgroup>
                 <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                   <tr>
                     <th style={headerStyle}>
@@ -1427,16 +1406,7 @@ export default function PFMEAImportPage() {
             {/* 분석 DATA 테이블 - 탭별 다른 구조 */}
             <div style={{ maxHeight: '308px', overflowY: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-              <colgroup>
-                <col style={{ width: '25px' }} />  {/* 체크 */}
-                <col style={{ width: '35px' }} />  {/* NO */}
-                <col style={{ width: '35px' }} />  {/* 순서 */}
-                <col style={{ width: '50px' }} />  {/* A1 공정No - 좁게 */}
-                <col style={{ width: '80px' }} />  {/* A2 공정명 - 중간 */}
-                <col style={{ width: '35%' }} />   {/* A3 기능 - 넓게 */}
-                <col style={{ width: '15%' }} />   {/* A4 특성 */}
-                <col style={{ width: '15%' }} />   {/* A5 고장형태 */}
-              </colgroup>
+              <colgroup><col style={{ width: '25px' }} /><col style={{ width: '35px' }} /><col style={{ width: '35px' }} /><col style={{ width: '50px' }} /><col style={{ width: '80px' }} /><col style={{ width: '35%' }} /><col style={{ width: '15%' }} /><col style={{ width: '15%' }} /></colgroup>
               <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                 <tr>
                   <th style={{ ...headerStyle, background: '#00587a', color: 'white' }}><input type="checkbox" /></th>
