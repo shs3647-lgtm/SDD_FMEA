@@ -9,6 +9,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import PFMEATopNav from '@/components/layout/PFMEATopNav';
 
 // =====================================================
 // 타입 정의
@@ -277,11 +278,15 @@ export default function FMEAListPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f0f0f0] p-4 font-[Malgun_Gothic]">
-      {/* 헤더 */}
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-lg">📋</span>
-        <h1 className="text-base font-bold text-gray-800">FMEA 리스트</h1>
+    <>
+      {/* 상단 고정 바로가기 메뉴 */}
+      <PFMEATopNav />
+      
+      <div className="min-h-screen bg-[#f0f0f0] px-3 py-3 pt-9 font-[Malgun_Gothic]">
+        {/* 헤더 */}
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-lg">📋</span>
+          <h1 className="text-base font-bold text-gray-800">FMEA 리스트</h1>
         <span className="text-xs text-gray-500 ml-2">총 {filteredProjects.length}건</span>
       </div>
 
@@ -448,11 +453,12 @@ export default function FMEAListPage() {
         </table>
       </div>
 
-      {/* 하단 상태바 */}
-      <div className="mt-3 px-4 py-2 bg-white rounded border border-gray-300 flex justify-between text-xs text-gray-500">
-        <span>조회 결과: {filteredProjects.length}건 / 전체: {projects.length}건</span>
-        <span>버전: FMEA Suite v3.0 | 사용자: FMEA Lead</span>
+        {/* 하단 상태바 */}
+        <div className="mt-3 px-4 py-2 bg-white rounded border border-gray-300 flex justify-between text-xs text-gray-500">
+          <span>조회 결과: {filteredProjects.length}건 / 전체: {projects.length}건</span>
+          <span>버전: FMEA Suite v3.0 | 사용자: FMEA Lead</span>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

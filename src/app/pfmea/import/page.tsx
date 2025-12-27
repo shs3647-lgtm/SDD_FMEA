@@ -17,7 +17,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { GripVertical, Save, Upload, CheckCircle } from 'lucide-react';
+import { ChevronUp, ChevronDown, Save, Upload, CheckCircle } from 'lucide-react';
 import PFMEATopNav from '@/components/layout/PFMEATopNav';
 import { COLORS, SIZES, TABLE_STYLES, BUTTON_STYLES, LAYOUT_STYLES } from '@/styles/design-tokens';
 import { ImportedFlatData } from './types';
@@ -170,6 +170,7 @@ export default function PFMEAImportPage() {
   // 저장 상태
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);  // 데이터 변경 여부
   
   // 관계형 데이터 입포트
   const relationFileInputRef = useRef<HTMLInputElement>(null);
@@ -181,7 +182,7 @@ export default function PFMEAImportPage() {
   // 삭제 및 드래그앤드랍 핸들러
   // =====================================================
 
-  /** 입포트 미리보기 데이터 다운로드 */
+  /** FMEA 기초정보 미리 보기 데이터 다운로드 */
   const handleDownloadPreview = async () => {
     const ExcelJS = (await import('exceljs')).default;
     const workbook = new ExcelJS.Workbook();
@@ -839,10 +840,10 @@ export default function PFMEAImportPage() {
       {/* 상단 고정 바로가기 메뉴 */}
       <PFMEATopNav selectedFmeaId={selectedFmeaId} />
       
-      <div style={{ paddingTop: '36px', padding: '36px 20px 20px 20px', background: '#f5f5f5', minHeight: '100vh', fontFamily: '"Malgun Gothic", sans-serif' }}>
+      <div style={{ padding: '36px 12px 12px 12px', background: '#f5f5f5', minHeight: '100vh', fontFamily: '"Malgun Gothic", sans-serif' }}>
         {/* 제목 */}
-        <h1 style={{ fontSize: '20px', fontWeight: 'bold', color: '#00587a', marginBottom: '16px' }}>
-          PFMEA 기초정보 Excel Import
+        <h1 style={{ fontSize: '16px', fontWeight: 'bold', color: '#00587a', marginBottom: '12px' }}>
+          📥 PFMEA 기초정보 Excel Import
         </h1>
 
       {/* 상단: 기초정보 테이블 */}
@@ -959,7 +960,7 @@ export default function PFMEAImportPage() {
 
       {/* 블록 1: FMEA 기초정보 입력 + FMEA 분석 데이타 입력 */}
       <div style={{ display: 'flex', gap: '20px', alignItems: 'start', marginBottom: '20px' }}>
-        {/* 좌측: FMEA 기초정보 입력 - 400px 고정 (입포트 미리보기와 동일) */}
+        {/* 좌측: FMEA 기초정보 입력 - 400px 고정 */}
         <div style={{ width: '400px', flexShrink: 0 }}>
           <h3 style={sectionTitleStyle}>FMEA 기초정보 입력</h3>
           <div style={tableWrapperStyle}>
@@ -1139,13 +1140,13 @@ export default function PFMEAImportPage() {
         </div>
       </div>
 
-      {/* 블록 2: 입포트 미리보기 + FMEA 분석 DATA 미리 보기 */}
+      {/* 블록 2: FMEA 기초정보 미리 보기 + FMEA 분석 DATA 미리 보기 */}
       <div style={{ display: 'flex', gap: '20px', alignItems: 'start' }}>
-        {/* 좌측: 입포트 미리보기 - 고정 400px */}
+        {/* 좌측: FMEA 기초정보 미리 보기 - 고정 400px */}
         <div style={{ width: '400px', flexShrink: 0 }}>
 
-          {/* 입포트 미리보기 */}
-          <h3 style={sectionTitleStyle}>입포트 미리보기</h3>
+          {/* FMEA 기초정보 미리 보기 */}
+          <h3 style={sectionTitleStyle}>FMEA 기초정보 미리 보기</h3>
           
           {/* 탭 + 테이블 통합 wrapper */}
           <div style={tableWrapperStyle}>
@@ -1237,11 +1238,55 @@ export default function PFMEAImportPage() {
                         <tr key={i}>
                           <td style={{ ...cellStyle, textAlign: 'center' }}></td>
                           <td style={{ ...cellStyle, textAlign: 'center' }}>{i + 1}</td>
-                          <td style={{ ...cellStyle, textAlign: 'center' }}>
-                            <GripVertical style={{ width: '12px', height: '12px', color: '#ccc' }} />
+                          <td style={{ ...cellStyle, textAlign: 'center', verticalAlign: 'middle' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0' }}>
+                              <ChevronUp style={{ width: '10px', height: '10px', color: '#ccc' }} />
+                              <ChevronDown style={{ width: '10px', height: '10px', color: '#ccc' }} />
+                            </div>
                           </td>
-                          <td style={cellStyle}></td>
-                          <td style={cellStyle}></td>
+                          <td style={{ ...cellStyle, padding: '2px' }}>
+                            <input 
+                              type="text" 
+                              placeholder="공정번호"
+                              style={{ 
+                                width: '100%', 
+                                border: '1px solid #e0e0e0', 
+                                borderRadius: '2px', 
+                                padding: '2px 4px', 
+                                fontSize: '11px',
+                                background: '#fffef0',
+                                textAlign: 'center'
+                              }}
+                              onBlur={(e) => {
+                                if (e.target.value) {
+                                  const row = e.target.closest('tr');
+                                  const valueInput = row?.querySelector('input[placeholder="값 입력"]') as HTMLInputElement;
+                                  const newData: ImportedFlatData = {
+                                    id: `new-init-${Date.now()}-${i}`,
+                                    processNo: e.target.value,
+                                    itemCode: previewColumn,
+                                    value: valueInput?.value || ''
+                                  };
+                                  setFlatData(prev => [...prev, newData]);
+                                  setDirty(true);
+                                }
+                              }}
+                            />
+                          </td>
+                          <td style={{ ...cellStyle, padding: '2px' }}>
+                            <input 
+                              type="text" 
+                              placeholder="값 입력"
+                              style={{ 
+                                width: '100%', 
+                                border: '1px solid #e0e0e0', 
+                                borderRadius: '2px', 
+                                padding: '2px 4px', 
+                                fontSize: '11px',
+                                background: '#fffef0'
+                              }}
+                            />
+                          </td>
                         </tr>
                       ));
                     }
@@ -1269,24 +1314,71 @@ export default function PFMEAImportPage() {
                           />
                         </td>
                         <td style={{ ...cellStyle, textAlign: 'center' }}>{i + 1}</td>
-                        <td style={{ ...cellStyle, textAlign: 'center' }}>
-                          <GripVertical style={{ width: '12px', height: '12px', color: '#666', cursor: 'grab' }} />
+                        <td style={{ ...cellStyle, textAlign: 'center', verticalAlign: 'middle' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0', cursor: 'grab' }}>
+                            <ChevronUp style={{ width: '10px', height: '10px', color: '#666' }} />
+                            <ChevronDown style={{ width: '10px', height: '10px', color: '#666' }} />
+                          </div>
                         </td>
                         <td style={{ ...cellStyle, textAlign: 'center' }}>{item.processNo}</td>
                         <td style={cellStyle}>{item.value}</td>
                       </tr>
                     ));
                     
-                    // 10행 미만이면 빈 행 추가
+                    // 10행 미만이면 빈 행 추가 (입력 가능)
                     const emptyRows = Array.from({ length: Math.max(0, 10 - selectedData.length) }).map((_, i) => (
                       <tr key={`empty-${i}`}>
-                        <td style={{ ...cellStyle, textAlign: 'center' }}></td>
+                        <td style={{ ...cellStyle, textAlign: 'center' }}><input type="checkbox" /></td>
                         <td style={{ ...cellStyle, textAlign: 'center' }}>{selectedData.length + i + 1}</td>
-                        <td style={{ ...cellStyle, textAlign: 'center' }}>
-                          <GripVertical style={{ width: '12px', height: '12px', color: '#ccc' }} />
+                        <td style={{ ...cellStyle, textAlign: 'center', verticalAlign: 'middle' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0' }}>
+                            <ChevronUp style={{ width: '10px', height: '10px', color: '#ccc' }} />
+                            <ChevronDown style={{ width: '10px', height: '10px', color: '#ccc' }} />
+                          </div>
                         </td>
-                        <td style={cellStyle}></td>
-                        <td style={cellStyle}></td>
+                        <td style={{ ...cellStyle, padding: '2px' }}>
+                          <input 
+                            type="text" 
+                            placeholder="공정번호"
+                            style={{ 
+                              width: '100%', 
+                              border: '1px solid #e0e0e0', 
+                              borderRadius: '2px', 
+                              padding: '2px 4px', 
+                              fontSize: '11px',
+                              background: '#fffef0',
+                              textAlign: 'center'
+                            }}
+                            onBlur={(e) => {
+                              if (e.target.value) {
+                                const row = e.target.closest('tr');
+                                const valueInput = row?.querySelector('input[placeholder="값 입력"]') as HTMLInputElement;
+                                const newData: ImportedFlatData = {
+                                  id: `new-left-${Date.now()}-${i}`,
+                                  processNo: e.target.value,
+                                  itemCode: previewColumn,
+                                  value: valueInput?.value || ''
+                                };
+                                setFlatData(prev => [...prev, newData]);
+                                setDirty(true);
+                              }
+                            }}
+                          />
+                        </td>
+                        <td style={{ ...cellStyle, padding: '2px' }}>
+                          <input 
+                            type="text" 
+                            placeholder="값 입력"
+                            style={{ 
+                              width: '100%', 
+                              border: '1px solid #e0e0e0', 
+                              borderRadius: '2px', 
+                              padding: '2px 4px', 
+                              fontSize: '11px',
+                              background: '#fffef0'
+                            }}
+                          />
+                        </td>
                       </tr>
                     ));
                     
@@ -1303,9 +1395,9 @@ export default function PFMEAImportPage() {
           {/* FMEA 분석 DATA 미리 보기 */}
           <h3 style={sectionTitleStyle}>FMEA 분석 DATA 미리 보기</h3>
           
-          {/* 탭 + 테이블 통합 wrapper - 입포트 미리보기와 동일한 디자인 */}
+          {/* 탭 + 테이블 통합 wrapper - FMEA 기초정보 미리 보기와 동일한 디자인 */}
           <div style={tableWrapperStyle}>
-            {/* 탭 - 드롭다운 + 버튼 (입포트 미리보기와 동일) */}
+            {/* 탭 - 드롭다운 + 버튼 */}
             <div style={{ display: 'flex', width: '100%', borderBottom: '1px solid #999' }}>
               <select 
                 value={relationTab}
@@ -1336,74 +1428,146 @@ export default function PFMEAImportPage() {
             <div style={{ maxHeight: '308px', overflowY: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
               <colgroup>
-                <col style={{ width: '30px' }} />
-                <col style={{ width: '50px' }} />
-                <col style={{ width: '50px' }} />
-                <col />
-                <col />
-                <col />
-                <col />
-                <col />
+                <col style={{ width: '25px' }} />  {/* 체크 */}
+                <col style={{ width: '35px' }} />  {/* NO */}
+                <col style={{ width: '35px' }} />  {/* 순서 */}
+                <col style={{ width: '50px' }} />  {/* A1 공정No - 좁게 */}
+                <col style={{ width: '80px' }} />  {/* A2 공정명 - 중간 */}
+                <col style={{ width: '35%' }} />   {/* A3 기능 - 넓게 */}
+                <col style={{ width: '15%' }} />   {/* A4 특성 */}
+                <col style={{ width: '15%' }} />   {/* A5 고장형태 */}
               </colgroup>
               <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                 <tr>
-                  <th style={headerStyle}><input type="checkbox" /></th>
-                  <th style={headerStyle}>NO</th>
-                  <th style={headerStyle}>순서</th>
+                  <th style={{ ...headerStyle, background: '#00587a', color: 'white' }}><input type="checkbox" /></th>
+                  <th style={{ ...headerStyle, background: '#00587a', color: 'white' }}>NO</th>
+                  <th style={{ ...headerStyle, background: '#00587a', color: 'white' }}>순서</th>
                   {relationTab === 'A' && (
                     <>
-                      <th style={{ ...headerStyle, background: '#e0f2fb', color: '#00587a' }}>A1 공정No</th>
-                      <th style={{ ...headerStyle, background: '#e0f2fb', color: '#00587a' }}>A2 공정명</th>
-                      <th style={{ ...headerStyle, background: '#e0f2fb', color: '#00587a' }}>A3 기능</th>
-                      <th style={{ ...headerStyle, background: '#e0f2fb', color: '#00587a' }}>A4 특성</th>
-                      <th style={{ ...headerStyle, background: '#e0f2fb', color: '#00587a' }}>A5 고장형태</th>
+                      <th style={{ ...headerStyle, background: '#00587a', color: 'white', wordBreak: 'break-word' }}>공정번호</th>
+                      <th style={{ ...headerStyle, background: '#00587a', color: 'white', wordBreak: 'break-word' }}>공정명</th>
+                      <th style={{ ...headerStyle, background: '#00587a', color: 'white', wordBreak: 'break-word' }}>A3 기능</th>
+                      <th style={{ ...headerStyle, background: '#00587a', color: 'white', wordBreak: 'break-word' }}>A4 특성</th>
+                      <th style={{ ...headerStyle, background: '#00587a', color: 'white', wordBreak: 'break-word' }}>A5 고장형태</th>
                     </>
                   )}
                   {relationTab === 'B' && (
                     <>
-                      <th style={{ ...headerStyle, background: '#e8f5e9', color: '#2e7d32' }}>A1 공정No</th>
-                      <th style={{ ...headerStyle, background: '#e8f5e9', color: '#2e7d32' }}>B1 작업요소</th>
-                      <th style={{ ...headerStyle, background: '#e8f5e9', color: '#2e7d32' }}>B2 기능</th>
-                      <th style={{ ...headerStyle, background: '#e8f5e9', color: '#2e7d32' }}>B3 특성</th>
-                      <th style={{ ...headerStyle, background: '#e8f5e9', color: '#2e7d32' }}>B4 고장원인</th>
+                      <th style={{ ...headerStyle, background: '#00587a', color: 'white', wordBreak: 'break-word' }}>공정번호</th>
+                      <th style={{ ...headerStyle, background: '#00587a', color: 'white', wordBreak: 'break-word' }}>작업요소</th>
+                      <th style={{ ...headerStyle, background: '#00587a', color: 'white', wordBreak: 'break-word' }}>B2 기능</th>
+                      <th style={{ ...headerStyle, background: '#00587a', color: 'white', wordBreak: 'break-word' }}>B3 특성</th>
+                      <th style={{ ...headerStyle, background: '#00587a', color: 'white', wordBreak: 'break-word' }}>B4 고장원인</th>
                     </>
                   )}
                   {relationTab === 'C' && (
                     <>
-                      <th style={{ ...headerStyle, background: '#ffebee', color: '#c62828' }}>C1 구분</th>
-                      <th style={{ ...headerStyle, background: '#ffebee', color: '#c62828' }}>C2 제품기능</th>
-                      <th style={{ ...headerStyle, background: '#ffebee', color: '#c62828' }}>C3 요구사항</th>
-                      <th style={{ ...headerStyle, background: '#ffebee', color: '#c62828' }}>C4 고장영향</th>
-                      <th style={{ ...headerStyle, background: '#ffebee', color: '#c62828' }}>심각도</th>
+                      <th style={{ ...headerStyle, background: '#00587a', color: 'white', wordBreak: 'break-word' }}>구분</th>
+                      <th style={{ ...headerStyle, background: '#00587a', color: 'white', wordBreak: 'break-word' }}>제품기능</th>
+                      <th style={{ ...headerStyle, background: '#00587a', color: 'white', wordBreak: 'break-word' }}>C3 요구사항</th>
+                      <th style={{ ...headerStyle, background: '#00587a', color: 'white', wordBreak: 'break-word' }}>C4 고장영향</th>
+                      <th style={{ ...headerStyle, background: '#00587a', color: 'white', wordBreak: 'break-word' }}>심각도</th>
                     </>
                   )}
                 </tr>
               </thead>
               <tbody>
                 {relationData.length === 0 ? (
-                  Array.from({ length: 10 }).map((_, i) => (
-                    <tr key={i}>
-                      <td style={{ ...cellStyle, textAlign: 'center' }}><input type="checkbox" /></td>
-                      <td style={{ ...cellStyle, textAlign: 'center' }}>{i + 1}</td>
-                      <td style={{ ...cellStyle, textAlign: 'center' }}>⋮</td>
-                      <td style={cellStyle}></td>
-                      <td style={cellStyle}></td>
-                      <td style={cellStyle}></td>
-                      <td style={cellStyle}></td>
-                      <td style={cellStyle}></td>
-                    </tr>
-                  ))
+                  Array.from({ length: 10 }).map((_, i) => {
+                    const cols = relationTab === 'A' ? ['A1', 'A2', 'A3', 'A4', 'A5'] : relationTab === 'B' ? ['A1', 'B1', 'B2', 'B3', 'B4'] : ['C1', 'C2', 'C3', 'C4', 'C5'];
+                    return (
+                      <tr key={i}>
+                        <td style={{ ...cellStyle, textAlign: 'center' }}><input type="checkbox" /></td>
+                        <td style={{ ...cellStyle, textAlign: 'center' }}>{i + 1}</td>
+                        <td style={{ ...cellStyle, textAlign: 'center', verticalAlign: 'middle' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0' }}>
+                            <ChevronUp style={{ width: '10px', height: '10px', color: '#ccc' }} />
+                            <ChevronDown style={{ width: '10px', height: '10px', color: '#ccc' }} />
+                          </div>
+                        </td>
+                        {cols.map((col, j) => (
+                          <td key={j} style={{ ...cellStyle, padding: '2px' }}>
+                            <input 
+                              type="text" 
+                              placeholder="클릭하여 입력"
+                              style={{ 
+                                width: '100%', 
+                                border: '1px solid #e0e0e0', 
+                                borderRadius: '2px', 
+                                padding: '2px 4px', 
+                                fontSize: '11px',
+                                background: '#fffef0'
+                              }}
+                              onBlur={(e) => {
+                                if (e.target.value) {
+                                  const newData: ImportedFlatData = {
+                                    id: `new-${Date.now()}-${i}-${j}`,
+                                    processNo: col === 'A1' ? e.target.value : String(i + 1),
+                                    itemCode: col,
+                                    value: e.target.value
+                                  };
+                                  setFlatData(prev => [...prev, newData]);
+                                  setDirty(true);
+                                }
+                              }}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })
                 ) : (
-                  relationData.map((row, i) => (
-                    <tr key={i}>
-                      <td style={{ ...cellStyle, textAlign: 'center' }}><input type="checkbox" /></td>
-                      <td style={{ ...cellStyle, textAlign: 'center' }}>{i + 1}</td>
-                      <td style={{ ...cellStyle, textAlign: 'center' }}>⋮</td>
-                      {Object.values(row).slice(0, 5).map((val, j) => (
-                        <td key={j} style={cellStyle}>{val}</td>
-                      ))}
-                    </tr>
-                  ))
+                  relationData.map((row, i) => {
+                    const keys = Object.keys(row);
+                    return (
+                      <tr key={i}>
+                        <td style={{ ...cellStyle, textAlign: 'center' }}><input type="checkbox" /></td>
+                        <td style={{ ...cellStyle, textAlign: 'center' }}>{i + 1}</td>
+                        <td style={{ ...cellStyle, textAlign: 'center', verticalAlign: 'middle' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0' }}>
+                            <ChevronUp style={{ width: '10px', height: '10px', color: '#666' }} />
+                            <ChevronDown style={{ width: '10px', height: '10px', color: '#666' }} />
+                          </div>
+                        </td>
+                        {keys.slice(0, 5).map((key, j) => {
+                          const val = row[key as keyof typeof row];
+                          return (
+                            <td key={j} style={{ ...cellStyle, padding: '2px' }}>
+                              {val ? (
+                                <span style={{ wordBreak: 'break-word', whiteSpace: 'normal', lineHeight: '1.3', display: 'block', padding: '2px 4px' }}>{val}</span>
+                              ) : (
+                                <input 
+                                  type="text" 
+                                  placeholder="입력"
+                                  style={{ 
+                                    width: '100%', 
+                                    border: '1px solid #e0e0e0', 
+                                    borderRadius: '2px', 
+                                    padding: '2px 4px', 
+                                    fontSize: '11px',
+                                    background: '#fffef0'
+                                  }}
+                                  onBlur={(e) => {
+                                    if (e.target.value) {
+                                      const processNo = row.A1 || row.C1 || String(i + 1);
+                                      const newData: ImportedFlatData = {
+                                        id: `edit-${Date.now()}-${i}-${j}`,
+                                        processNo: String(processNo),
+                                        itemCode: key,
+                                        value: e.target.value
+                                      };
+                                      setFlatData(prev => [...prev, newData]);
+                                      setDirty(true);
+                                    }
+                                  }}
+                                />
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

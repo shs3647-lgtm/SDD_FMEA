@@ -38,28 +38,30 @@ export default function PFMEATopNav({ selectedFmeaId }: PFMEATopNavProps) {
       style={{ 
         position: 'fixed',
         top: 0,
-        left: '56px',  // 사이드바 너비 (w-14 = 56px) 만큼 오른쪽으로
+        left: '53px',  // 사이드바(48px) + 구분선(5px) = 53px
         right: 0,
         zIndex: 999,  // 사이드바보다 낮게
         display: 'flex', 
         alignItems: 'center',
         background: 'linear-gradient(to right, #1a237e, #283593, #1a237e)',  // 사이드바 색상과 동일
-        height: '36px',
+        height: '28px',  // 더 컴팩트하게
         fontFamily: '"Malgun Gothic", sans-serif',
+        paddingLeft: '0',  // 좌측 정렬
+        marginLeft: '0',   // 사이드바와 간격 제거
       }}
     >
       {/* 바로가기 레이블 */}
       <div 
         style={{ 
-          padding: '0 16px', 
-          color: 'white', 
-          fontSize: '12px', 
+          padding: '0 8px 0 4px',  /* 좌측 4px 패딩 추가 */
+          color: 'rgba(255,255,255,0.7)', 
+          fontSize: '10px', 
           fontWeight: 'bold',
-          borderRight: '1px solid rgba(255,255,255,0.3)',
+          borderRight: '1px solid rgba(255,255,255,0.2)',
           height: '100%',
           display: 'flex',
           alignItems: 'center',
-          background: 'rgba(0,0,0,0.2)',
+          minWidth: '50px',
         }}
       >
         바로가기
@@ -71,19 +73,20 @@ export default function PFMEATopNav({ selectedFmeaId }: PFMEATopNavProps) {
           key={item.path}
           onClick={() => handleNavigation(item.path)}
           style={{
-            padding: '0 20px',
+            padding: '0 12px',
             height: '100%',
             background: isActive(item.path) ? 'rgba(255,255,255,0.15)' : 'transparent',
             color: 'white',
             border: 'none',
-            borderRight: index < menuItems.length - 1 ? '1px solid rgba(255,255,255,0.2)' : 'none',
+            borderRight: index < menuItems.length - 1 ? '1px solid rgba(255,255,255,0.15)' : 'none',
             cursor: 'pointer',
-            fontSize: '13px',
+            fontSize: '11px',
             fontWeight: isActive(item.path) ? 'bold' : 'normal',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
+            gap: '4px',
             transition: 'background 0.2s',
+            whiteSpace: 'nowrap',
           }}
           onMouseOver={(e) => {
             if (!isActive(item.path)) {

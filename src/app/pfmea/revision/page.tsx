@@ -13,6 +13,7 @@ import { BizInfoSelectModal } from '@/components/modals/BizInfoSelectModal';
 import { MeetingMinutesTable } from '@/components/tables/MeetingMinutesTable';
 import { BizInfoProject } from '@/types/bizinfo';
 import { MeetingMinute } from '@/types/project-revision';
+import PFMEATopNav from '@/components/layout/PFMEATopNav';
 
 // =====================================================
 // 타입 정의
@@ -410,11 +411,15 @@ export default function RevisionManagementPage() {
   }, [meetingMinutes, selectedProjectId]);
 
   return (
-    <div className="min-h-screen bg-[#f0f0f0] p-4 font-[Malgun_Gothic]">
-      {/* 헤더 */}
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-lg">📝</span>
-        <h1 className="text-base font-bold text-gray-800">FMEA 개정관리</h1>
+    <>
+      {/* 상단 고정 바로가기 메뉴 */}
+      <PFMEATopNav selectedFmeaId={selectedFmea} />
+      
+      <div className="min-h-screen bg-[#f0f0f0] px-3 py-3 pt-9 font-[Malgun_Gothic]">
+        {/* 헤더 */}
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-lg">📝</span>
+          <h1 className="text-base font-bold text-gray-800">FMEA 개정관리</h1>
       </div>
 
       {/* 프로젝트 정보 테이블 - 5개 필드 (10영역) */}
@@ -737,13 +742,14 @@ export default function RevisionManagementPage() {
         <span>버전: FMEA Suite v3.0 | 사용자: FMEA Lead</span>
       </div>
 
-      {/* 기초정보 선택 모달 */}
-      <BizInfoSelectModal
-        isOpen={bizInfoModalOpen}
-        onSelect={handleBizInfoSelect}
-        onClose={() => setBizInfoModalOpen(false)}
-      />
-    </div>
+        {/* 기초정보 선택 모달 */}
+        <BizInfoSelectModal
+          isOpen={bizInfoModalOpen}
+          onSelect={handleBizInfoSelect}
+          onClose={() => setBizInfoModalOpen(false)}
+        />
+      </div>
+    </>
   );
 }
 

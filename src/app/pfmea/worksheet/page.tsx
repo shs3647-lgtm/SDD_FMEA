@@ -4,6 +4,7 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation';
 import ProcessSelectModal from './ProcessSelectModal';
 import WorkElementSelectModal from './WorkElementSelectModal';
+import PFMEATopNav from '@/components/layout/PFMEATopNav';
 
 // FMEA 프로젝트 타입
 interface FMEAProject {
@@ -411,12 +412,16 @@ export default function FMEAWorksheetPage() {
   };
 
   return (
-    <div className="h-full flex flex-col" style={{ fontFamily: 'Segoe UI, Malgun Gothic, Arial, sans-serif', background: COLORS.bg, color: COLORS.text }}>
+    <>
+      {/* 상단 고정 바로가기 메뉴 */}
+      <PFMEATopNav selectedFmeaId={currentFmea?.id} />
       
-      {/* 상단 메뉴 바 - 3개 영역 */}
-      <div className="flex items-center justify-between px-3 py-2" style={{ background: COLORS.blue }}>
+      <div className="h-full flex flex-col" style={{ fontFamily: 'Segoe UI, Malgun Gothic, Arial, sans-serif', background: COLORS.bg, color: COLORS.text, paddingTop: '28px' }}>
+        
+        {/* 상단 메뉴 바 - 3개 영역 */}
+      <div className="flex items-center justify-between py-1" style={{ background: COLORS.blue, paddingLeft: 0, paddingRight: '8px' }}>
         {/* 영역 1: FMEA명 (드롭다운 + 리스트 이동) */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <span 
             className="text-white text-xs font-bold cursor-pointer hover:underline"
             onClick={() => router.push('/pfmea/list')}
@@ -427,8 +432,8 @@ export default function FMEAWorksheetPage() {
           <select
             value={currentFmea?.id || ''}
             onChange={(e) => handleFmeaChange(e.target.value)}
-            className="px-3 py-1 text-xs font-semibold rounded border-0"
-            style={{ background: 'rgba(255,255,255,0.25)', color: '#fff', minWidth: '200px' }}
+            className="px-2 py-0.5 text-xs font-semibold rounded border-0"
+            style={{ background: 'rgba(255,255,255,0.25)', color: '#fff', minWidth: '180px' }}
           >
             {fmeaList.length === 0 && <option value="">FMEA 미등록</option>}
             {fmeaList.map(fmea => (
@@ -450,19 +455,19 @@ export default function FMEAWorksheetPage() {
         <div className="w-px h-6 bg-white/40" />
 
         {/* 영역 2: 저장, Excel Import, Excel Export */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <button 
             onClick={() => { setDirty(false); alert('저장되었습니다.'); }}
-            className="px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1"
+            className="px-2 py-0.5 text-xs font-bold rounded flex items-center gap-1"
             style={{ background: dirty ? '#4caf50' : 'rgba(255,255,255,0.18)', color: '#fff' }}
           >
             💾 저장
           </button>
-          <button className="px-3 py-1.5 text-xs font-bold text-white rounded flex items-center gap-1" style={{ background: 'rgba(255,255,255,0.18)' }}>
-            📥 Excel Import
+          <button className="px-2 py-0.5 text-xs font-bold text-white rounded flex items-center gap-1" style={{ background: 'rgba(255,255,255,0.18)' }}>
+            📥 Import
           </button>
-          <button className="px-3 py-1.5 text-xs font-bold text-white rounded flex items-center gap-1" style={{ background: 'rgba(255,255,255,0.18)' }}>
-            📤 Excel Export
+          <button className="px-2 py-0.5 text-xs font-bold text-white rounded flex items-center gap-1" style={{ background: 'rgba(255,255,255,0.18)' }}>
+            📤 Export
           </button>
         </div>
 
@@ -470,21 +475,21 @@ export default function FMEAWorksheetPage() {
         <div className="w-px h-6 bg-white/40" />
 
         {/* 영역 3: 특별특성, 5AP, 6AP, Top RPN, LLD */}
-        <div className="flex items-center gap-2">
-          <button className="px-3 py-1.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>
-            ⭐ 특별특성
+        <div className="flex items-center gap-1">
+          <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>
+            ⭐특별특성
           </button>
-          <button className="px-3 py-1.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,100,100,0.5)' }}>
-            🔴 5 AP
+          <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,100,100,0.5)' }}>
+            🔴5AP
           </button>
-          <button className="px-3 py-1.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,165,0,0.5)' }}>
-            🟠 6 AP
+          <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,165,0,0.5)' }}>
+            🟠6AP
           </button>
-          <button className="px-3 py-1.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>
-            📊 Top RPN
+          <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>
+            📊RPN
           </button>
-          <button className="px-3 py-1.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>
-            📚 LLD
+          <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>
+            📚LLD
           </button>
         </div>
       </div>
@@ -492,40 +497,45 @@ export default function FMEAWorksheetPage() {
       {/* 메인 레이아웃: 좌측 워크시트 + 우측 트리 */}
       <div className="flex-1 flex overflow-hidden" style={{ gap: 0 }}>
         {/* ========== 좌측: 워크시트 ========== */}
-        <main className="flex-1 bg-white overflow-auto min-w-0" style={{ marginRight: 0, paddingRight: 0 }}>
+        <main className="flex-1 bg-white overflow-auto min-w-0" style={{ margin: 0, padding: 0 }}>
           {/* 탭 + 레벨 + 전체보기 메뉴 */}
-          <div className="flex-shrink-0 bg-white px-2 py-1" style={{ borderBottom: `2px solid ${COLORS.blue}` }}>
+          <div className="flex-shrink-0 bg-white py-0.5" style={{ borderBottom: `2px solid ${COLORS.blue}`, paddingLeft: 0, paddingRight: '8px' }}>
             <div className="flex items-center justify-between">
               {/* 좌측: 탭 + 레벨 */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 {/* 탭 */}
-                <div className="flex gap-0.5">
-                  {TABS.map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setState(prev => ({ ...prev, tab: tab.id }))}
-                      className="px-2 py-1 text-xs font-bold cursor-pointer"
-                      style={{
-                        background: state.tab === tab.id ? COLORS.blue : '#e8f0f8',
-                        border: `1px solid ${state.tab === tab.id ? COLORS.blue : '#c0d0e0'}`,
-                        borderRadius: '3px 3px 0 0',
-                        borderBottom: 0,
-                        color: state.tab === tab.id ? '#fff' : COLORS.text
-                      }}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
+                <div className="flex gap-px">
+                  {TABS.map(tab => {
+                    const isActive = state.tab === tab.id;
+                    // 구조분석 탭은 진한 네이비색
+                    const activeColor = tab.id === 'structure' ? '#1a237e' : COLORS.blue;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setState(prev => ({ ...prev, tab: tab.id }))}
+                        className="px-2 py-0.5 text-xs font-bold cursor-pointer"
+                        style={{
+                          background: isActive ? activeColor : '#e8f0f8',
+                          border: `1px solid ${isActive ? activeColor : '#c0d0e0'}`,
+                          borderRadius: '2px 2px 0 0',
+                          borderBottom: 0,
+                          color: isActive ? '#fff' : COLORS.text
+                        }}
+                      >
+                        {tab.label}
+                      </button>
+                    );
+                  })}
                 </div>
                 {/* 구분선 */}
-                <div className="w-px h-5 bg-gray-300" />
+                <div className="w-px h-4 bg-gray-300 mx-1" />
                 {/* 레벨 */}
-                <div className="flex gap-0.5">
+                <div className="flex gap-px">
                   {LEVELS.map(lv => (
                     <button
                       key={lv.id}
                       onClick={() => setState(prev => ({ ...prev, levelView: lv.id }))}
-                      className="px-2 py-1 text-xs font-bold cursor-pointer"
+                      className="px-1.5 py-0.5 text-xs font-bold cursor-pointer"
                       style={{
                         background: state.levelView === lv.id ? '#fff' : '#f0f0f0',
                         border: `1px solid ${state.levelView === lv.id ? COLORS.blue : '#d0d0d0'}`,
@@ -540,12 +550,12 @@ export default function FMEAWorksheetPage() {
               </div>
 
               {/* 우측: 전체보기 */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 {/* 구분선 */}
-                <div className="w-px h-5 bg-gray-300" />
+                <div className="w-px h-4 bg-gray-300" />
                 <button
                   onClick={() => setState(prev => ({ ...prev, tab: 'all', levelView: 'all' }))}
-                  className="px-2 py-1 text-xs font-bold cursor-pointer"
+                  className="px-1.5 py-0.5 text-xs font-bold cursor-pointer"
                   style={{
                     background: state.tab === 'all' ? COLORS.blue : '#fff',
                     border: `1px solid ${COLORS.blue}`,
@@ -564,7 +574,12 @@ export default function FMEAWorksheetPage() {
             {/* 테이블 제목 - 고정 */}
             <div 
               className="text-center font-black py-1 text-sm flex-shrink-0"
-              style={{ background: COLORS.sky2, border: `1px solid ${COLORS.line}`, borderBottom: 0 }}
+              style={{ 
+                background: state.tab === 'structure' ? '#1a237e' : COLORS.sky2, 
+                color: state.tab === 'structure' ? '#fff' : COLORS.text,
+                border: `1px solid ${COLORS.line}`, 
+                borderBottom: 0 
+              }}
             >
               P-FMEA {getTabLabel(state.tab)}({state.tab === 'structure' ? 2 : state.tab === 'function' ? 3 : state.tab === 'failure' ? 4 : state.tab === 'risk' ? 5 : state.tab === 'optimization' ? 6 : 7}단계)
             </div>
@@ -585,32 +600,34 @@ export default function FMEAWorksheetPage() {
                 <thead className="sticky top-0 z-10">
                   {state.tab === 'structure' && (
                     <>
+                      {/* 메인 헤더 - 진한 색상 */}
                       <tr>
-                        <th style={{ width: '20%', background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
+                        <th style={{ width: '20%', background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
                           1. 완제품 공정명
                         </th>
                         <th 
                           onClick={() => setIsProcessModalOpen(true)}
-                          className="cursor-pointer hover:bg-green-200"
-                          style={{ width: '25%', background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}
+                          className="cursor-pointer hover:bg-green-600"
+                          style={{ width: '25%', background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}
                         >
                           2. 메인 공정명 🔍
                         </th>
-                        <th colSpan={2} style={{ width: '55%', background: '#ffe0b2', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
+                        <th colSpan={2} style={{ width: '55%', background: '#f57c00', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
                           3. 작업 요소명
                         </th>
                       </tr>
+                      {/* 서브 헤더 - 중간 색상 */}
                       <tr>
-                        <th style={{ background: '#e3f2fd', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
+                        <th style={{ background: '#90caf9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
                           완제품명+라인
                         </th>
-                        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
+                        <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
                           공정NO+공정명
                         </th>
-                        <th style={{ width: '5%', background: '#fff3e0', border: `1px solid ${COLORS.line}`, padding: '0', height: '22px', fontWeight: 700, fontSize: '10px' }}>
+                        <th style={{ width: '5%', background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '0', height: '22px', fontWeight: 700, fontSize: '10px' }}>
                           4M
                         </th>
-                        <th style={{ width: '55%', background: '#fff3e0', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
+                        <th style={{ width: '55%', background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>
                           작업요소
                         </th>
                       </tr>
@@ -819,7 +836,13 @@ export default function FMEAWorksheetPage() {
                       <>
                         {l1Spans[idx] > 0 && (
                           <td rowSpan={l1Spans[idx]} className="text-center text-xs"
-                            style={{ border: `1px solid ${COLORS.line}`, padding: '2px 4px', background: '#e3f2fd', verticalAlign: 'middle', wordBreak: 'break-word' }}>
+                            style={{ 
+                              border: `1px solid ${COLORS.line}`, 
+                              padding: '2px 4px', 
+                              background: 'repeating-linear-gradient(45deg, #fff, #fff 4px, #f0f7ff 4px, #f0f7ff 8px)',
+                              verticalAlign: 'middle', 
+                              wordBreak: 'break-word' 
+                            }}>
                             <input
                               type="text"
                               value={state.l1.name}
@@ -827,22 +850,37 @@ export default function FMEAWorksheetPage() {
                                 setState(prev => ({ ...prev, l1: { ...prev.l1, name: e.target.value } }));
                                 setDirty(true);
                               }}
-                              placeholder="완제품명+라인 입력"
-                              className="w-full text-center bg-transparent border-0 outline-none text-xs font-semibold"
-                              style={{ minHeight: '22px' }}
+                              placeholder="입력"
+                              className="w-full text-center border-0 outline-none text-xs font-semibold"
+                              style={{ minHeight: '22px', background: 'rgba(255,255,255,0.8)' }}
                             />
                           </td>
                         )}
                         {l2Spans[idx] > 0 && (
                           <td rowSpan={l2Spans[idx]} className="text-center cursor-pointer hover:bg-green-200 text-xs"
-                            style={{ border: `1px solid ${COLORS.line}`, padding: '2px 4px', background: row.l2Name.includes('클릭') ? '#f1f8e9' : '#e8f5e9', verticalAlign: 'middle', wordBreak: 'break-word' }}
+                            style={{ 
+                              border: `1px solid ${COLORS.line}`, 
+                              padding: '2px 4px', 
+                              background: row.l2Name.includes('클릭') 
+                                ? 'repeating-linear-gradient(45deg, #fff, #fff 4px, #e8f5e9 4px, #e8f5e9 8px)' 
+                                : '#e8f5e9', 
+                              verticalAlign: 'middle', 
+                              wordBreak: 'break-word' 
+                            }}
                             onClick={() => { handleSelect('L2', row.l2Id); setIsProcessModalOpen(true); }}>
                             {row.l2Name.includes('클릭') ? <span className="text-green-600 font-bold">🔍 클릭</span> : <span>{row.l2No} {row.l2Name} 🔍</span>}
                           </td>
                         )}
                         <td className="text-center text-xs font-bold" style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: '#fff8e1' }}>{row.m4}</td>
                         <td className="cursor-pointer hover:bg-orange-100 text-xs"
-                          style={{ border: `1px solid ${COLORS.line}`, padding: '2px 4px', background: row.l3Name.includes('추가') || row.l3Name.includes('클릭') ? '#fff8e1' : '#fff3e0', wordBreak: 'break-word' }}
+                          style={{ 
+                            border: `1px solid ${COLORS.line}`, 
+                            padding: '2px 4px', 
+                            background: row.l3Name.includes('추가') || row.l3Name.includes('클릭') 
+                              ? 'repeating-linear-gradient(45deg, #fff, #fff 4px, #fff3e0 4px, #fff3e0 8px)' 
+                              : '#fff3e0', 
+                            wordBreak: 'break-word' 
+                          }}
                           onClick={() => { handleSelect('L3', row.l3Id); setTargetL2Id(row.l2Id); setIsWorkElementModalOpen(true); }}>
                           {row.l3Name.includes('추가') || row.l3Name.includes('클릭') ? <span className="text-orange-600 font-bold">🔍 클릭</span> : <span>{row.l3Name} 🔍</span>}
                         </td>
@@ -949,10 +987,10 @@ export default function FMEAWorksheetPage() {
         <div className="flex-shrink-0" style={{ width: '4px', background: '#00587a', marginLeft: 0 }} />
 
         {/* ========== 우측: 트리 (L1 틀고정) ========== */}
-        <aside className="flex flex-col flex-shrink-0" style={{ width: '420px', marginLeft: 0, paddingLeft: 0, background: '#fff' }}>
+        <aside className="flex flex-col flex-shrink-0" style={{ width: '280px', marginLeft: 0, paddingLeft: 0, background: '#fff' }}>
           {/* L1: 완제품명+라인 - 틀 고정 (직접 입력, FMEA명과 별도) */}
           <div className="flex-shrink-0 border-b" style={{ background: '#e3f2fd' }}>
-            <div className="flex items-center gap-1 px-2 py-1">
+            <div className="flex items-center gap-1 px-1 py-0.5">
               <span className="text-blue-600 text-sm">📦</span>
               <input
                 type="text"
@@ -979,10 +1017,10 @@ export default function FMEAWorksheetPage() {
           <div className="flex-1 overflow-auto p-2">
             <div className="ml-2" style={{ borderLeft: '2px solid #90caf9' }}>
                 {filteredTree.sort((a, b) => a.order - b.order).map((proc, pIdx) => (
-                  <div key={proc.id} className="mb-1">
+                  <div key={proc.id} className="mb-0.5">
                     {/* L2 행 - 클릭하면 작업요소 모달 */}
                     <div 
-                      className={`flex items-center gap-1 py-1 cursor-pointer hover:bg-blue-50 rounded ${
+                      className={`flex items-center gap-1 py-0.5 cursor-pointer hover:bg-blue-50 rounded ${
                         state.selected.type === 'L2' && state.selected.id === proc.id ? 'bg-blue-100' : ''
                       }`}
                       onClick={() => {
@@ -1018,20 +1056,20 @@ export default function FMEAWorksheetPage() {
                     </div>
 
                     {/* L3: 작업요소들 */}
-                    <div className="ml-6">
+                    <div className="ml-4">
                       {proc.l3
                         .filter(w => !state.search || `${w.m4} ${w.name}`.toLowerCase().includes(state.search.toLowerCase()))
                         .sort((a, b) => a.order - b.order)
                         .map((w, wIdx) => (
                           <div 
                             key={w.id} 
-                            className={`flex items-center gap-1 py-1 cursor-pointer hover:bg-blue-50 rounded ${
+                            className={`flex items-center gap-1 py-0.5 cursor-pointer hover:bg-blue-50 rounded ${
                               state.selected.type === 'L3' && state.selected.id === w.id ? 'bg-blue-100' : ''
                             }`}
                             onClick={() => handleSelect('L3', w.id)}
                           >
-                            <span className="w-5 h-5"></span>
-                            <span className="text-gray-400 text-sm">📄</span>
+                            <span className="w-3 h-3"></span>
+                            <span className="text-gray-400 text-xs">📄</span>
                             <div className="flex-1">
                               <input
                                 type="text"
@@ -1040,7 +1078,7 @@ export default function FMEAWorksheetPage() {
                                   const val = e.target.value.replace(/^1\.\d+\.\d+-/, '');
                                   renameL3(w.id, val);
                                 }}
-                                className="w-full px-2 py-1 text-xs border rounded bg-white hover:border-blue-400 focus:border-blue-500 focus:outline-none"
+                                className="w-full px-1 py-0.5 text-xs border rounded bg-white hover:border-blue-400 focus:border-blue-500 focus:outline-none"
                                 style={{ borderColor: '#e0e0e0' }}
                               />
                             </div>
@@ -1049,14 +1087,14 @@ export default function FMEAWorksheetPage() {
                       }
                       {/* 작업요소 추가 버튼 - 모달 열기 */}
                       <div 
-                        className="flex items-center gap-2 py-1.5 px-2 cursor-pointer hover:bg-green-100 rounded border border-dashed border-green-400 text-green-600 mt-1"
+                        className="flex items-center gap-1 py-0.5 px-1 cursor-pointer hover:bg-green-100 rounded border border-dashed border-green-400 text-green-600 mt-0.5"
                         onClick={() => {
                           setTargetL2Id(proc.id);
                           setIsWorkElementModalOpen(true);
                         }}
                       >
-                        <span className="text-sm">➕</span>
-                        <span className="text-xs font-bold">작업요소 추가 (클릭)</span>
+                        <span className="text-xs">➕</span>
+                        <span className="text-xs">작업요소 추가</span>
                       </div>
                     </div>
                   </div>
@@ -1064,11 +1102,11 @@ export default function FMEAWorksheetPage() {
 
                 {/* 공정 추가 버튼 */}
                 <div 
-                  className="flex items-center gap-2 py-1.5 px-2 ml-2 cursor-pointer hover:bg-green-100 rounded border border-dashed border-green-400 text-green-600 mt-1"
+                  className="flex items-center gap-1 py-0.5 px-1 ml-1 cursor-pointer hover:bg-green-100 rounded border border-dashed border-green-400 text-green-600 mt-0.5"
                   onClick={() => setIsProcessModalOpen(true)}
                 >
-                  <span className="text-sm">➕</span>
-                  <span className="text-xs font-bold">공정 추가</span>
+                  <span className="text-xs">➕</span>
+                  <span className="text-xs">공정 추가</span>
                 </div>
             </div>
           </div>
@@ -1144,6 +1182,7 @@ export default function FMEAWorksheetPage() {
             .map(w => w.name) || []
         }
       />
-    </div>
+      </div>
+    </>
   );
 }

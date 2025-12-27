@@ -283,7 +283,7 @@ export default function PFMEARegisterPage() {
       {/* 상단 고정 바로가기 메뉴 */}
       <PFMEATopNav selectedFmeaId={fmeaId} />
       
-      <div className="min-h-screen bg-[#f0f0f0] p-3 pt-12 font-[Malgun_Gothic]">
+      <div className="min-h-screen bg-[#f0f0f0] px-3 py-3 pt-9 font-[Malgun_Gothic]">
         {/* 헤더 */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
