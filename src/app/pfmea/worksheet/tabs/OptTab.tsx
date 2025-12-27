@@ -28,6 +28,10 @@ interface OptTabProps {
   l2Spans: number[];
 }
 
+// 공통 sticky 스타일
+const stickyRow1 = { position: 'sticky' as const, top: 0, zIndex: 20 };
+const stickyRow2 = { position: 'sticky' as const, top: '25px', zIndex: 20 };
+
 /**
  * 최적화 탭 - 테이블 헤더
  */
@@ -35,64 +39,22 @@ export function OptHeader() {
   return (
     <>
       <tr>
-        <th 
-          style={{ 
-            width: '35%', 
-            background: '#c8e6c9', 
-            border: `1px solid ${COLORS.line}`, 
-            padding: '1px 4px', 
-            height: '25px', 
-            fontWeight: 900, 
-            textAlign: 'center', 
-            fontSize: '11px' 
-          }} 
-          colSpan={4}
-        >
-          개선조치 계획
-        </th>
-        <th 
-          style={{ 
-            width: '35%', 
-            background: '#dcedc8', 
-            border: `1px solid ${COLORS.line}`, 
-            padding: '1px 4px', 
-            height: '25px', 
-            fontWeight: 900, 
-            textAlign: 'center', 
-            fontSize: '11px' 
-          }} 
-          colSpan={3}
-        >
-          개선조치 결과
-        </th>
-        <th 
-          style={{ 
-            width: '30%', 
-            background: '#f1f8e9', 
-            border: `1px solid ${COLORS.line}`, 
-            padding: '1px 4px', 
-            height: '25px', 
-            fontWeight: 900, 
-            textAlign: 'center', 
-            fontSize: '11px' 
-          }} 
-          colSpan={4}
-        >
-          효과 평가
-        </th>
+        <th colSpan={4} style={{ ...stickyRow1, width: '35%', background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>개선조치 계획</th>
+        <th colSpan={3} style={{ ...stickyRow1, width: '35%', background: '#dcedc8', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>개선조치 결과</th>
+        <th colSpan={4} style={{ ...stickyRow1, width: '30%', background: '#f1f8e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>효과 평가</th>
       </tr>
       <tr>
-        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>조치유형</th>
-        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>권고조치사항</th>
-        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>담당자</th>
-        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>완료예정일</th>
-        <th style={{ background: '#f1f8e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>취해진조치</th>
-        <th style={{ background: '#f1f8e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>완료일자</th>
-        <th style={{ background: '#f1f8e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>상태</th>
-        <th style={{ background: '#fffde7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>S</th>
-        <th style={{ background: '#fffde7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>O</th>
-        <th style={{ background: '#fffde7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>D</th>
-        <th style={{ background: '#fff8e1', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>AP</th>
+        <th style={{ ...stickyRow2, background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>조치유형</th>
+        <th style={{ ...stickyRow2, background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>권고조치사항</th>
+        <th style={{ ...stickyRow2, background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>담당자</th>
+        <th style={{ ...stickyRow2, background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>완료예정일</th>
+        <th style={{ ...stickyRow2, background: '#f1f8e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>취해진조치</th>
+        <th style={{ ...stickyRow2, background: '#f1f8e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>완료일자</th>
+        <th style={{ ...stickyRow2, background: '#f1f8e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>상태</th>
+        <th style={{ ...stickyRow2, background: '#fffde7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>S</th>
+        <th style={{ ...stickyRow2, background: '#fffde7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>O</th>
+        <th style={{ ...stickyRow2, background: '#fffde7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>D</th>
+        <th style={{ ...stickyRow2, background: '#fff8e1', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>AP</th>
       </tr>
     </>
   );

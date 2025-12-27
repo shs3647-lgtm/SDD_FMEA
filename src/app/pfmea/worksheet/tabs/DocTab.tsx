@@ -28,6 +28,10 @@ interface DocTabProps {
   l2Spans: number[];
 }
 
+// 공통 sticky 스타일
+const stickyRow1 = { position: 'sticky' as const, top: 0, zIndex: 20 };
+const stickyRow2 = { position: 'sticky' as const, top: '25px', zIndex: 20 };
+
 /**
  * 문서화 탭 - 테이블 헤더
  */
@@ -35,28 +39,14 @@ export function DocHeader() {
   return (
     <>
       <tr>
-        <th 
-          style={{ 
-            width: '100%', 
-            background: '#e0e0e0', 
-            border: `1px solid ${COLORS.line}`, 
-            padding: '1px 4px', 
-            height: '25px', 
-            fontWeight: 900, 
-            textAlign: 'center', 
-            fontSize: '11px' 
-          }} 
-          colSpan={5}
-        >
-          문서화 (7단계)
-        </th>
+        <th colSpan={5} style={{ ...stickyRow1, width: '100%', background: '#e0e0e0', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>문서화 (7단계)</th>
       </tr>
       <tr>
-        <th style={{ background: '#f5f5f5', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>고장형태</th>
-        <th style={{ background: '#f5f5f5', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>고장원인</th>
-        <th style={{ background: '#f5f5f5', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>현재관리</th>
-        <th style={{ background: '#f5f5f5', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>권고조치</th>
-        <th style={{ background: '#f5f5f5', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>비고</th>
+        <th style={{ ...stickyRow2, background: '#f5f5f5', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>고장형태</th>
+        <th style={{ ...stickyRow2, background: '#f5f5f5', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>고장원인</th>
+        <th style={{ ...stickyRow2, background: '#f5f5f5', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>현재관리</th>
+        <th style={{ ...stickyRow2, background: '#f5f5f5', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>권고조치</th>
+        <th style={{ ...stickyRow2, background: '#f5f5f5', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>비고</th>
       </tr>
     </>
   );

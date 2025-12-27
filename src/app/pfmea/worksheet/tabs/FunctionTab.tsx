@@ -38,6 +38,10 @@ interface FunctionTabProps {
   handleInputKeyDown: (e: React.KeyboardEvent) => void;
 }
 
+// 공통 sticky 스타일
+const stickyRow1 = { position: 'sticky' as const, top: 0, zIndex: 20 };
+const stickyRow2 = { position: 'sticky' as const, top: '25px', zIndex: 20 };
+
 /**
  * 기능분석 탭 - 테이블 헤더
  */
@@ -46,6 +50,7 @@ export function FunctionHeader() {
     <>
       <tr>
         <th colSpan={2} style={{ 
+          ...stickyRow1,
           background: '#c8e6c9', 
           border: `1px solid ${COLORS.line}`, 
           padding: '1px 4px', 
@@ -57,6 +62,7 @@ export function FunctionHeader() {
           1. 완제품 공정기능/요구사항
         </th>
         <th colSpan={2} style={{ 
+          ...stickyRow1,
           background: '#a5d6a7', 
           border: `1px solid ${COLORS.line}`, 
           padding: '1px 4px', 
@@ -68,6 +74,7 @@ export function FunctionHeader() {
           2. 메인공정 기능 및 제품특성
         </th>
         <th colSpan={2} style={{ 
+          ...stickyRow1,
           background: '#81c784', 
           border: `1px solid ${COLORS.line}`, 
           padding: '1px 4px', 
@@ -81,6 +88,7 @@ export function FunctionHeader() {
       </tr>
       <tr>
         <th style={{ 
+          ...stickyRow2,
           width: '15%', 
           background: '#e8f5e9', 
           border: `1px solid ${COLORS.line}`, 
@@ -92,6 +100,7 @@ export function FunctionHeader() {
           완제품 기능
         </th>
         <th style={{ 
+          ...stickyRow2,
           width: '15%', 
           background: '#e8f5e9', 
           border: `1px solid ${COLORS.line}`, 
@@ -103,6 +112,7 @@ export function FunctionHeader() {
           요구사항
         </th>
         <th style={{ 
+          ...stickyRow2,
           width: '17%', 
           background: '#c8e6c9', 
           border: `1px solid ${COLORS.line}`, 
@@ -114,6 +124,7 @@ export function FunctionHeader() {
           공정 기능
         </th>
         <th style={{ 
+          ...stickyRow2,
           width: '17%', 
           background: '#c8e6c9', 
           border: `1px solid ${COLORS.line}`, 
@@ -125,6 +136,7 @@ export function FunctionHeader() {
           제품특성
         </th>
         <th style={{ 
+          ...stickyRow2,
           width: '18%', 
           background: '#a5d6a7', 
           border: `1px solid ${COLORS.line}`, 
@@ -136,6 +148,7 @@ export function FunctionHeader() {
           작업요소 기능
         </th>
         <th style={{ 
+          ...stickyRow2,
           width: '18%', 
           background: '#a5d6a7', 
           border: `1px solid ${COLORS.line}`, 
