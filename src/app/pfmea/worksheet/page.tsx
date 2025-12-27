@@ -174,34 +174,56 @@ export default function FMEAWorksheetPage() {
           onNavigateToList={() => router.push('/pfmea/list')}
         />
 
-        {/* ========== 메인 레이아웃 (좌측:워크시트 / 우측:트리 독립 스크롤) ========== */}
-        <div className="flex-1 flex" style={{ gap: 0, overflow: 'hidden', height: 'calc(100vh - 100px)' }}>
-          
-          {/* 좌측: 워크시트 (독립 스크롤) */}
-          <main className="flex-1 flex flex-col bg-white min-w-0" style={{ margin: 0, padding: 0, height: '100%' }}>
-            
-            {/* 탭 + 레벨 메뉴 - 고정 */}
-            <TabMenu state={state} setState={setState} />
+        {/* ========== 메인 레이아웃 (좌측:워크시트 / 우측:트리 완전 분리) ========== */}
+        <div 
+          style={{ 
+            display: 'flex', 
+            flexDirection: 'row',
+            height: 'calc(100vh - 90px)', // 상단 메뉴 높이 제외
+            overflow: 'hidden',
+            border: '2px solid #00587a',
+          }}
+        >
+          {/* ===== 좌측: 워크시트 영역 ===== */}
+          <div 
+            style={{ 
+              flex: 1, 
+              display: 'flex', 
+              flexDirection: 'column',
+              minWidth: 0,
+              borderRight: '4px solid #00587a',
+            }}
+          >
+            {/* 탭 메뉴 - 고정 */}
+            <div style={{ flexShrink: 0 }}>
+              <TabMenu state={state} setState={setState} />
+            </div>
 
             {/* 테이블 제목 - 고정 */}
             <div 
-              className="text-center font-black py-1 text-sm flex-shrink-0"
               style={{ 
+                flexShrink: 0,
+                textAlign: 'center',
+                fontWeight: 900,
+                padding: '4px 0',
+                fontSize: '13px',
                 background: state.tab === 'structure' ? '#1a237e' : COLORS.sky2, 
                 color: state.tab === 'structure' ? '#fff' : COLORS.text,
-                border: `1px solid ${COLORS.line}`, 
-                borderBottom: 0 
+                borderBottom: `1px solid ${COLORS.line}`,
               }}
             >
               P-FMEA {getTabLabel(state.tab)}({getStepNumber(state.tab)}단계)
             </div>
 
-            {/* 테이블 영역 - 독립 스크롤 + sticky 헤더 */}
+            {/* 테이블 스크롤 영역 */}
             <div 
-              className="flex-1 overflow-auto" 
-              style={{ border: `1px solid ${COLORS.line}` }}
+              style={{ 
+                flex: 1,
+                overflow: 'auto',
+                background: '#fff',
+              }}
             >
-              <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                 {state.tab === 'structure' && <StructureTabFull {...tabProps} />}
                 {state.tab === 'function' && <FunctionTabFull {...tabProps} />}
                 {state.tab === 'failure' && <FailureTabFull {...tabProps} />}
@@ -211,26 +233,130 @@ export default function FMEAWorksheetPage() {
                 {state.tab === 'all' && <AllViewTabFull />}
               </table>
             </div>
-          </main>
+          </div>
 
-          {/* 구분선 */}
-          <div className="flex-shrink-0" style={{ width: '4px', background: '#00587a', marginLeft: 0 }} />
+          {/* ===== 우측: 트리 영역 ===== */}
+          <div 
+            style={{ 
+              width: '280px', 
+              flexShrink: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              background: '#f0f4f8',
+            }}
+          >
+            {/* 트리 헤더 */}
+            <div style={{ flexShrink: 0, background: '#e3f2fd', padding: '6px 8px', borderBottom: '1px solid #90caf9' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '14px' }}>🌳</span>
+                <span style={{ fontWeight: 700, fontSize: '12px', color: '#1565c0' }}>구조 트리</span>
+              </div>
+            </div>
+            
+            {/* 완제품명 입력 */}
+            <div style={{ flexShrink: 0, background: '#e3f2fd', padding: '4px 8px', borderBottom: '1px solid #90caf9' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontSize: '12px' }}>📦</span>
+                <input
+                  type="text"
+                  value={state.l1.name}
+                  onChange={(e) => { setState(prev => ({ ...prev, l1: { ...prev.l1, name: e.target.value } })); setDirty(true); }}
+                  onBlur={handleInputBlur}
+                  onKeyDown={handleInputKeyDown}
+                  placeholder="완제품명+라인"
+                  style={{ flex: 1, padding: '4px 8px', fontSize: '12px', fontWeight: 700, border: '1px solid #90caf9', borderRadius: '4px' }}
+                />
+                <button 
+                  onClick={addL2} 
+                  style={{ padding: '4px 8px', fontSize: '11px', fontWeight: 700, background: '#2196f3', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  +
+                </button>
+              </div>
+            </div>
 
-          {/* 우측: 트리 */}
-          <RightTreePanel
-            state={state}
-            setState={setState}
-            filteredTree={filteredTree}
-            onAddL2={addL2}
-            onSelect={handleSelect}
-            onRenameL3={renameL3}
-            setDirty={setDirty}
-            handleInputBlur={handleInputBlur}
-            handleInputKeyDown={handleInputKeyDown}
-            setIsProcessModalOpen={setIsProcessModalOpen}
-            setIsWorkElementModalOpen={setIsWorkElementModalOpen}
-            setTargetL2Id={setTargetL2Id}
-          />
+            {/* 트리 스크롤 영역 */}
+            <div style={{ flex: 1, overflow: 'auto', padding: '8px' }}>
+              <div style={{ marginLeft: '8px', borderLeft: '2px solid #90caf9', paddingLeft: '8px' }}>
+                {filteredTree.sort((a, b) => a.order - b.order).map((proc, pIdx) => (
+                  <div key={proc.id} style={{ marginBottom: '4px' }}>
+                    {/* L2: 공정 */}
+                    <div 
+                      onClick={() => { handleSelect('L2', proc.id); setTargetL2Id(proc.id); setIsWorkElementModalOpen(true); }}
+                      style={{ 
+                        display: 'flex', alignItems: 'center', gap: '4px', padding: '4px', cursor: 'pointer', borderRadius: '4px',
+                        background: state.selected.type === 'L2' && state.selected.id === proc.id ? '#bbdefb' : 'transparent',
+                      }}
+                    >
+                      <span style={{ fontSize: '10px', color: '#666' }}>{proc.l3.length > 0 ? '▼' : '▷'}</span>
+                      <span style={{ fontSize: '12px' }}>📁</span>
+                      <input
+                        type="text"
+                        value={`1.${pIdx + 1}-${proc.name}`}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/^1\.\d+-/, '');
+                          setState(prev => ({ ...prev, l2: prev.l2.map(p => p.id === proc.id ? { ...p, name: val } : p) }));
+                          setDirty(true);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ flex: 1, padding: '2px 6px', fontSize: '11px', border: '1px solid #e0e0e0', borderRadius: '3px', background: '#fff' }}
+                      />
+                    </div>
+
+                    {/* L3: 작업요소 */}
+                    <div style={{ marginLeft: '20px' }}>
+                      {proc.l3.filter(w => !state.search || `${w.m4} ${w.name}`.toLowerCase().includes(state.search.toLowerCase())).sort((a, b) => a.order - b.order).map((w, wIdx) => (
+                        <div 
+                          key={w.id} 
+                          onClick={() => handleSelect('L3', w.id)}
+                          style={{ 
+                            display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 4px', cursor: 'pointer', borderRadius: '3px',
+                            background: state.selected.type === 'L3' && state.selected.id === w.id ? '#c8e6c9' : 'transparent',
+                          }}
+                        >
+                          <span style={{ fontSize: '10px' }}>📄</span>
+                          <input
+                            type="text"
+                            value={`1.${pIdx + 1}.${wIdx + 1}-${w.name}`}
+                            onChange={(e) => { const val = e.target.value.replace(/^1\.\d+\.\d+-/, ''); renameL3(w.id, val); }}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ flex: 1, padding: '2px 4px', fontSize: '10px', border: '1px solid #e0e0e0', borderRadius: '2px', background: '#fff' }}
+                          />
+                        </div>
+                      ))}
+                      {/* 작업요소 추가 버튼 */}
+                      <div 
+                        onClick={() => { setTargetL2Id(proc.id); setIsWorkElementModalOpen(true); }}
+                        style={{ 
+                          display: 'flex', alignItems: 'center', gap: '4px', padding: '3px 6px', marginTop: '2px',
+                          cursor: 'pointer', borderRadius: '3px', border: '1px dashed #4caf50', color: '#4caf50', fontSize: '10px',
+                        }}
+                      >
+                        <span>➕</span><span>작업요소 추가</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* 공정 추가 버튼 */}
+                <div 
+                  onClick={() => setIsProcessModalOpen(true)}
+                  style={{ 
+                    display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', marginTop: '4px',
+                    cursor: 'pointer', borderRadius: '4px', border: '1px dashed #2196f3', color: '#2196f3', fontSize: '11px',
+                  }}
+                >
+                  <span>➕</span><span>공정 추가</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 하단 정보 */}
+            <div style={{ flexShrink: 0, padding: '6px 10px', borderTop: '1px solid #ccc', background: '#e8eaed', fontSize: '11px', color: '#666' }}>
+              공정: {state.l2.filter(p => !p.name.includes('클릭')).length}개 | 
+              작업요소: {state.l2.reduce((sum, p) => sum + p.l3.filter(w => !w.name.includes('추가') && !w.name.includes('클릭')).length, 0)}개
+            </div>
+          </div>
         </div>
 
         {/* 모달 */}
@@ -519,117 +645,3 @@ function AllViewTabFull() {
   );
 }
 
-interface RightTreePanelProps {
-  state: WorksheetState;
-  setState: React.Dispatch<React.SetStateAction<WorksheetState>>;
-  filteredTree: Process[];
-  onAddL2: () => void;
-  onSelect: (type: 'L1' | 'L2' | 'L3', id: string | null) => void;
-  onRenameL3: (id: string, name: string) => void;
-  setDirty: (dirty: boolean) => void;
-  handleInputBlur: () => void;
-  handleInputKeyDown: (e: React.KeyboardEvent) => void;
-  setIsProcessModalOpen: (open: boolean) => void;
-  setIsWorkElementModalOpen: (open: boolean) => void;
-  setTargetL2Id: (id: string | null) => void;
-}
-
-function RightTreePanel({ 
-  state, setState, filteredTree, onAddL2, onSelect, onRenameL3, setDirty,
-  handleInputBlur, handleInputKeyDown, setIsProcessModalOpen, setIsWorkElementModalOpen, setTargetL2Id 
-}: RightTreePanelProps) {
-  return (
-    <aside className="flex flex-col flex-shrink-0" style={{ width: '280px', marginLeft: 0, paddingLeft: 0, background: '#fff', height: '100%' }}>
-      {/* L1: 완제품명 */}
-      <div className="flex-shrink-0 border-b" style={{ background: '#e3f2fd' }}>
-        <div className="flex items-center gap-1 px-1 py-0.5">
-          <span className="text-blue-600 text-sm">📦</span>
-          <input
-            type="text"
-            value={state.l1.name}
-            onChange={(e) => { setState(prev => ({ ...prev, l1: { ...prev.l1, name: e.target.value } })); setDirty(true); }}
-            onBlur={handleInputBlur}
-            onKeyDown={handleInputKeyDown}
-            placeholder="완제품명+라인 입력"
-            className="flex-1 px-2 py-1 text-sm font-bold border rounded bg-white hover:border-blue-400 focus:border-blue-500 focus:outline-none"
-            style={{ borderColor: '#90caf9' }}
-          />
-          <button onClick={onAddL2} className="px-2 py-1 text-xs font-bold rounded bg-blue-500 text-white hover:bg-blue-600" title="공정 추가">+</button>
-        </div>
-      </div>
-
-      {/* L2, L3 트리 */}
-      <div className="flex-1 overflow-auto p-2">
-        <div className="ml-2" style={{ borderLeft: '2px solid #90caf9' }}>
-          {filteredTree.sort((a, b) => a.order - b.order).map((proc, pIdx) => (
-            <div key={proc.id} className="mb-0.5">
-              <div 
-                className={`flex items-center gap-1 py-0.5 cursor-pointer hover:bg-blue-50 rounded ${state.selected.type === 'L2' && state.selected.id === proc.id ? 'bg-blue-100' : ''}`}
-                onClick={() => { onSelect('L2', proc.id); setTargetL2Id(proc.id); setIsWorkElementModalOpen(true); }}
-              >
-                <span className="w-5 h-5 flex items-center justify-center text-gray-500 text-xs">{proc.l3.length > 0 ? '▼' : '▷'}</span>
-                <span className="text-gray-400 text-sm">📁</span>
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    value={`1.${pIdx + 1}-${proc.name}`}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/^1\.\d+-/, '');
-                      setState(prev => ({ ...prev, l2: prev.l2.map(p => p.id === proc.id ? { ...p, name: val } : p) }));
-                      setDirty(true);
-                    }}
-                    className="w-full px-2 py-1 text-xs border rounded bg-white hover:border-blue-400 focus:border-blue-500 focus:outline-none"
-                    style={{ borderColor: '#e0e0e0' }}
-                  />
-                </div>
-              </div>
-
-              <div className="ml-4">
-                {proc.l3.filter(w => !state.search || `${w.m4} ${w.name}`.toLowerCase().includes(state.search.toLowerCase())).sort((a, b) => a.order - b.order).map((w, wIdx) => (
-                  <div 
-                    key={w.id} 
-                    className={`flex items-center gap-1 py-0.5 cursor-pointer hover:bg-blue-50 rounded ${state.selected.type === 'L3' && state.selected.id === w.id ? 'bg-blue-100' : ''}`}
-                    onClick={() => onSelect('L3', w.id)}
-                  >
-                    <span className="w-3 h-3"></span>
-                    <span className="text-gray-400 text-xs">📄</span>
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={`1.${pIdx + 1}.${wIdx + 1}-${w.name}`}
-                        onChange={(e) => { const val = e.target.value.replace(/^1\.\d+\.\d+-/, ''); onRenameL3(w.id, val); }}
-                        className="w-full px-1 py-0.5 text-xs border rounded bg-white hover:border-blue-400 focus:border-blue-500 focus:outline-none"
-                        style={{ borderColor: '#e0e0e0' }}
-                      />
-                    </div>
-                  </div>
-                ))}
-                <div 
-                  className="flex items-center gap-1 py-0.5 px-1 cursor-pointer hover:bg-green-100 rounded border border-dashed border-green-400 text-green-600 mt-0.5"
-                  onClick={() => { setTargetL2Id(proc.id); setIsWorkElementModalOpen(true); }}
-                >
-                  <span className="text-xs">➕</span>
-                  <span className="text-xs">작업요소 추가</span>
-                </div>
-              </div>
-            </div>
-          ))}
-
-          <div 
-            className="flex items-center gap-1 py-0.5 px-1 ml-1 cursor-pointer hover:bg-green-100 rounded border border-dashed border-green-400 text-green-600 mt-0.5"
-            onClick={() => setIsProcessModalOpen(true)}
-          >
-            <span className="text-xs">➕</span>
-            <span className="text-xs">공정 추가</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 하단 정보 */}
-      <div className="flex-shrink-0 px-3 py-1 border-t text-xs text-gray-500" style={{ background: '#f8f9fa' }}>
-        공정: {state.l2.filter(p => !p.name.includes('클릭')).length}개 | 
-        작업요소: {state.l2.reduce((sum, p) => sum + p.l3.filter(w => !w.name.includes('추가') && !w.name.includes('클릭')).length, 0)}개
-      </div>
-    </aside>
-  );
-}
