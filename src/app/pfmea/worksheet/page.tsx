@@ -360,13 +360,13 @@ export default function FMEAWorksheetPage() {
                         📁
                       </span>
                       
-                      {/* 공정명 - 클릭하면 작업요소 모달 */}
+                      {/* 공정명 - 클릭하면 작업요소 모달 (공정번호는 팝업에서 입력한 번호) */}
                       <div 
                         onClick={() => { handleSelect('L2', proc.id); setTargetL2Id(proc.id); setIsWorkElementModalOpen(true); }}
                         style={{ flex: 1, padding: '2px 6px', fontSize: '11px', border: '1px solid #e0e0e0', borderRadius: '3px', background: '#fff', cursor: 'pointer' }}
                         title="클릭하여 작업요소 관리"
                       >
-                        {`1.${pIdx + 1}-${proc.name}`}
+                        {proc.no ? `${proc.no}-${proc.name}` : `${pIdx + 1}-${proc.name}`}
                       </div>
                       
                       {/* 작업요소 개수 표시 */}
@@ -390,8 +390,8 @@ export default function FMEAWorksheetPage() {
                             <span style={{ fontSize: '10px' }}>📄</span>
                             <input
                               type="text"
-                              value={`1.${pIdx + 1}.${wIdx + 1}-${w.name}`}
-                              onChange={(e) => { const val = e.target.value.replace(/^1\.\d+\.\d+-/, ''); renameL3(w.id, val); }}
+                              value={proc.no ? `${proc.no}.${wIdx + 1}-${w.name}` : `${pIdx + 1}.${wIdx + 1}-${w.name}`}
+                              onChange={(e) => { const val = e.target.value.replace(/^[\d.]+\.\d+-/, '').replace(/^\d+-/, ''); renameL3(w.id, val); }}
                               onClick={(e) => e.stopPropagation()}
                               style={{ flex: 1, padding: '2px 4px', fontSize: '10px', border: '1px solid #e0e0e0', borderRadius: '2px', background: '#fff' }}
                             />
