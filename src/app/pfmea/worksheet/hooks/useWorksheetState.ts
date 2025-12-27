@@ -198,13 +198,13 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     if (fmeaId === '__NEW__') {
       // 빈화면으로 초기화
       setState(createInitialState());
+      setCurrentFmea(null);
       setDirty(false);
-      setSelectedFmeaId(null);
       router.push('/pfmea/worksheet');
     } else {
       router.push(`/pfmea/worksheet?id=${fmeaId}`);
     }
-  }, [router, setState, setDirty, setSelectedFmeaId]);
+  }, [router]);
 
   const handleSelect = useCallback((type: 'L1' | 'L2' | 'L3', id: string | null) => {
     setState(prev => ({ ...prev, selected: { type, id } }));
