@@ -212,7 +212,7 @@ function EditableL3Cell({
  */
 export function StructureColgroup() {
   return (
-    <colgroup><col style={{ width: '30%' }} /><col style={{ width: '30%' }} /><col style={{ width: '20px' }} /><col style={{ width: '40%' }} /></colgroup>
+    <colgroup><col style={{ width: '30%' }} /><col style={{ width: '30%' }} /><col style={{ width: '20px' }} /><col /></colgroup>
   );
 }
 
