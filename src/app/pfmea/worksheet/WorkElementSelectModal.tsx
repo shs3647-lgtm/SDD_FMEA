@@ -13,6 +13,7 @@ interface WorkElementSelectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (selectedElements: WorkElement[]) => void;
+  onDelete?: (deletedNames: string[]) => void; // 워크시트에서 실제 삭제
   processNo?: string;
   processName?: string;
   existingElements?: string[];
@@ -147,6 +148,7 @@ export default function WorkElementSelectModal({
   isOpen, 
   onClose, 
   onSave,
+  onDelete,
   processNo = '',
   processName = '',
   existingElements = []
@@ -220,37 +222,34 @@ export default function WorkElementSelectModal({
   const selectAll = () => setSelectedIds(new Set(filteredElements.map(e => e.id)));
   const deselectAll = () => setSelectedIds(new Set());
   
-  // 선택된 항목 삭제
+  // 선택된 항목 삭제 (워크시트에서도 삭제)
   const deleteSelected = (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
     
-    console.log('[DELETE] 삭제 버튼 클릭됨');
-    console.log('[DELETE] selectedIds:', Array.from(selectedIds));
-    console.log('[DELETE] elements count:', elements.length);
-    
     if (selectedIds.size === 0) {
       alert('삭제할 항목을 선택해주세요.');
       return;
     }
     
-    // 삭제할 항목 이름 먼저 추출 (상태 변경 전에)
-    const toDelete = elements.filter(e => selectedIds.has(e.id));
-    const deletedNames = toDelete.map(e => e.name);
+    // 삭제할 항목 이름 추출
+    const toDelete = elements.filter(el => selectedIds.has(el.id));
+    const deletedNames = toDelete.map(el => el.name);
     const deleteCount = toDelete.length;
     
-    console.log('[DELETE] 삭제 대상:', deletedNames);
-    
-    // 상태에서 삭제
-    const remaining = elements.filter(e => !selectedIds.has(e.id));
-    console.log('[DELETE] 남은 항목 수:', remaining.length);
-    
+    // 모달 내부 상태에서 삭제
+    const remaining = elements.filter(el => !selectedIds.has(el.id));
     setElements(remaining);
     setSelectedIds(new Set());
     
-    // LocalStorage에서도 삭제 (pfmea_master_data 업데이트)
+    // 워크시트 상태에서도 삭제 (부모 컴포넌트에 알림)
+    if (onDelete && deletedNames.length > 0) {
+      onDelete(deletedNames);
+    }
+    
+    // LocalStorage에서도 삭제
     try {
       const savedData = localStorage.getItem('pfmea_master_data');
       if (savedData) {
@@ -259,14 +258,12 @@ export default function WorkElementSelectModal({
           item.code !== 'A5' || !deletedNames.includes(item.value)
         );
         localStorage.setItem('pfmea_master_data', JSON.stringify(updatedData));
-        console.log('[DELETE] localStorage 업데이트 완료');
       }
     } catch (err) {
-      console.error('[DELETE] localStorage 업데이트 실패:', err);
+      console.error('localStorage 업데이트 실패:', err);
     }
     
-    // 삭제 완료 알림
-    alert(`${deleteCount}개 항목이 삭제되었습니다.`);
+    alert(`${deleteCount}개 항목이 워크시트에서 삭제되었습니다.`);
   };
   
   // 수정 시작

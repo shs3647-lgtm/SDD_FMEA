@@ -114,7 +114,29 @@ export default function FMEAWorksheetPage() {
       return { ...prev, l2: newL2 };
     });
     setDirty(true);
-    setTargetL2Id(null);
+  }, [targetL2Id, setState, setDirty]);
+
+  // 작업요소 모달 삭제 핸들러 (워크시트에서 실제 삭제)
+  const handleWorkElementDelete = useCallback((deletedNames: string[]) => {
+    if (!targetL2Id || deletedNames.length === 0) return;
+    
+    setState(prev => {
+      const newL2 = prev.l2.map(proc => {
+        if (proc.id !== targetL2Id) return proc;
+        
+        // 삭제된 이름에 해당하지 않는 작업요소만 유지
+        const remainingL3 = proc.l3.filter(w => !deletedNames.includes(w.name));
+        
+        // 모두 삭제되면 기본 항목 추가
+        if (remainingL3.length === 0) {
+          remainingL3.push({ id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10 });
+        }
+        
+        return { ...proc, l3: remainingL3 };
+      });
+      return { ...prev, l2: newL2 };
+    });
+    setDirty(true);
   }, [targetL2Id, setState, setDirty]);
 
   // 작업요소명 수정
@@ -371,6 +393,7 @@ export default function FMEAWorksheetPage() {
           isOpen={isWorkElementModalOpen}
           onClose={() => { setIsWorkElementModalOpen(false); setTargetL2Id(null); }}
           onSave={handleWorkElementSelect}
+          onDelete={handleWorkElementDelete}
           processNo={state.l2.find(p => p.id === targetL2Id)?.no || ''}
           processName={state.l2.find(p => p.id === targetL2Id)?.name || ''}
           existingElements={state.l2.find(p => p.id === targetL2Id)?.l3.filter(w => !w.name.includes('추가')).map(w => w.name) || []}
