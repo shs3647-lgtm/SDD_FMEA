@@ -65,18 +65,18 @@ function EditableM4Cell({
     setIsEditing(false);
   };
 
-  // 4M 셀 고정 스타일
+  // 4M 셀 고정 스타일 (15px)
   const m4CellStyle: React.CSSProperties = {
-    width: '25px',
-    maxWidth: '25px',
-    minWidth: '25px',
+    width: '15px',
+    maxWidth: '15px',
+    minWidth: '15px',
     borderTop: `1px solid ${COLORS.line}`,
     borderRight: `1px solid ${COLORS.line}`,
     borderBottom: `1px solid ${COLORS.line}`,
     borderLeft: `1px solid ${COLORS.line}`,
     padding: '0',
     textAlign: 'center',
-    fontSize: '9px',
+    fontSize: '8px',
     fontWeight: 700,
   };
 
@@ -211,7 +211,7 @@ function EditableL3Cell({
  */
 export function StructureColgroup() {
   return (
-    <colgroup><col style={{ width: '33.33%' }} /><col style={{ width: '33.33%' }} /><col style={{ width: '25px' }} /><col /></colgroup>
+    <colgroup><col style={{ width: '30%' }} /><col style={{ width: '30%' }} /><col style={{ width: '15px' }} /><col /></colgroup>
   );
 }
 
@@ -234,15 +234,15 @@ export function StructureHeader({
     <>
       {/* 메인 헤더 - 진한 색상 */}
       <tr>
-        <th style={{ ...stickyFirstColStyle, zIndex: 15, width: '33.33%', background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>1. 완제품 공정명</th>
-        <th onClick={onProcessModalOpen} className="cursor-pointer hover:bg-green-600" style={{ width: '33.33%', background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>2. 메인 공정명 🔍</th>
-        <th colSpan={2} style={{ width: '33.33%', background: '#f57c00', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>3. 작업 요소명</th>
+        <th style={{ ...stickyFirstColStyle, zIndex: 15, width: '30%', background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>1. 완제품 공정명</th>
+        <th onClick={onProcessModalOpen} className="cursor-pointer hover:bg-green-600" style={{ width: '30%', background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>2. 메인 공정명 🔍</th>
+        <th colSpan={2} style={{ width: '40%', background: '#f57c00', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>3. 작업 요소명</th>
       </tr>
       {/* 서브 헤더 - 중간 색상 */}
       <tr>
         <th style={{ ...stickyFirstColStyle, zIndex: 15, background: '#90caf9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>완제품명+라인</th>
         <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>공정NO+공정명</th>
-        <th style={{ width: '25px', maxWidth: '25px', minWidth: '25px', background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '0', height: '22px', fontWeight: 700, fontSize: '9px' }}>4M</th>
+        <th style={{ width: '15px', maxWidth: '15px', minWidth: '15px', background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '0', height: '22px', fontWeight: 700, fontSize: '8px' }}>4M</th>
         <th style={{ background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>작업요소</th>
       </tr>
     </>
