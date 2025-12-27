@@ -48,10 +48,6 @@ export function StructureColgroup() {
 /**
  * 구조분석 탭 - 테이블 헤더
  */
-// 공통 sticky 스타일
-const stickyRow1 = { position: 'sticky' as const, top: 0, zIndex: 20 };
-const stickyRow2 = { position: 'sticky' as const, top: '25px', zIndex: 20 };
-
 export function StructureHeader({
   onProcessModalOpen
 }: {
@@ -59,106 +55,18 @@ export function StructureHeader({
 }) {
   return (
     <>
-      {/* 메인 헤더 - 진한 색상 (1행 고정) */}
+      {/* 메인 헤더 - 진한 색상 */}
       <tr>
-        <th style={{ 
-          ...stickyRow1,
-          width: '20%', 
-          background: '#1976d2', 
-          color: 'white', 
-          border: `1px solid ${COLORS.line}`, 
-          padding: '1px 4px', 
-          height: '25px', 
-          fontWeight: 900, 
-          textAlign: 'center', 
-          fontSize: '11px' 
-        }}>
-          1. 완제품 공정명
-        </th>
-        <th 
-          onClick={onProcessModalOpen}
-          className="cursor-pointer hover:bg-green-600"
-          style={{ 
-            ...stickyRow1,
-            width: '25%', 
-            background: '#388e3c', 
-            color: 'white', 
-            border: `1px solid ${COLORS.line}`, 
-            padding: '1px 4px', 
-            height: '25px', 
-            fontWeight: 900, 
-            textAlign: 'center', 
-            fontSize: '11px' 
-          }}
-        >
-          2. 메인 공정명 🔍
-        </th>
-        <th 
-          colSpan={2} 
-          style={{ 
-            ...stickyRow1,
-            width: '55%', 
-            background: '#f57c00', 
-            color: 'white', 
-            border: `1px solid ${COLORS.line}`, 
-            padding: '1px 4px', 
-            height: '25px', 
-            fontWeight: 900, 
-            textAlign: 'center', 
-            fontSize: '11px' 
-          }}
-        >
-          3. 작업 요소명
-        </th>
+        <th style={{ width: '20%', background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>1. 완제품 공정명</th>
+        <th onClick={onProcessModalOpen} className="cursor-pointer hover:bg-green-600" style={{ width: '25%', background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>2. 메인 공정명 🔍</th>
+        <th colSpan={2} style={{ width: '55%', background: '#f57c00', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>3. 작업 요소명</th>
       </tr>
-      {/* 서브 헤더 - 중간 색상 (2행 고정) */}
+      {/* 서브 헤더 - 중간 색상 */}
       <tr>
-        <th style={{ 
-          ...stickyRow2,
-          background: '#90caf9', 
-          border: `1px solid ${COLORS.line}`, 
-          padding: '1px 4px', 
-          height: '22px', 
-          fontWeight: 700, 
-          fontSize: '10px' 
-        }}>
-          완제품명+라인
-        </th>
-        <th style={{ 
-          ...stickyRow2,
-          background: '#a5d6a7', 
-          border: `1px solid ${COLORS.line}`, 
-          padding: '1px 4px', 
-          height: '22px', 
-          fontWeight: 700, 
-          fontSize: '10px' 
-        }}>
-          공정NO+공정명
-        </th>
-        <th style={{ 
-          ...stickyRow2,
-          width: '5%', 
-          background: '#ffcc80', 
-          border: `1px solid ${COLORS.line}`, 
-          padding: '0', 
-          height: '22px', 
-          fontWeight: 700, 
-          fontSize: '10px' 
-        }}>
-          4M
-        </th>
-        <th style={{ 
-          ...stickyRow2,
-          width: '55%', 
-          background: '#ffcc80', 
-          border: `1px solid ${COLORS.line}`, 
-          padding: '1px 4px', 
-          height: '22px', 
-          fontWeight: 700, 
-          fontSize: '10px' 
-        }}>
-          작업요소
-        </th>
+        <th style={{ background: '#90caf9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>완제품명+라인</th>
+        <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>공정NO+공정명</th>
+        <th style={{ width: '5%', background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '0', height: '22px', fontWeight: 700, fontSize: '10px' }}>4M</th>
+        <th style={{ width: '55%', background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>작업요소</th>
       </tr>
     </>
   );

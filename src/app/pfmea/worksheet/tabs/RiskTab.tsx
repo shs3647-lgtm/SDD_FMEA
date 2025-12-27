@@ -28,10 +28,6 @@ interface RiskTabProps {
   l2Spans: number[];
 }
 
-// 공통 sticky 스타일
-const stickyRow1 = { position: 'sticky' as const, top: 0, zIndex: 20 };
-const stickyRow2 = { position: 'sticky' as const, top: '25px', zIndex: 20 };
-
 /**
  * 리스크분석 탭 - 테이블 헤더
  */
@@ -39,18 +35,18 @@ export function RiskHeader() {
   return (
     <>
       <tr>
-        <th style={{ ...stickyRow1, width: '20%', background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>현재 예방관리</th>
-        <th style={{ ...stickyRow1, width: '20%', background: '#b3e5fc', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>현재 검출관리</th>
-        <th colSpan={5} style={{ ...stickyRow1, width: '60%', background: '#e1f5fe', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>리스크 평가</th>
+        <th style={{ width: '20%', background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>현재 예방관리</th>
+        <th style={{ width: '20%', background: '#b3e5fc', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>현재 검출관리</th>
+        <th colSpan={5} style={{ width: '60%', background: '#e1f5fe', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>리스크 평가</th>
       </tr>
       <tr>
-        <th style={{ ...stickyRow2, background: '#e3f2fd', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>예방관리</th>
-        <th style={{ ...stickyRow2, background: '#e1f5fe', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>검출관리</th>
-        <th style={{ ...stickyRow2, background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>심각도(S)</th>
-        <th style={{ ...stickyRow2, background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>발생도(O)</th>
-        <th style={{ ...stickyRow2, background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>검출도(D)</th>
-        <th style={{ ...stickyRow2, background: '#fff3e0', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>AP</th>
-        <th style={{ ...stickyRow2, background: '#fff3e0', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>RPN</th>
+        <th style={{ background: '#e3f2fd', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>예방관리</th>
+        <th style={{ background: '#e1f5fe', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>검출관리</th>
+        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>심각도(S)</th>
+        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>발생도(O)</th>
+        <th style={{ background: '#e8f5e9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>검출도(D)</th>
+        <th style={{ background: '#fff3e0', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>AP</th>
+        <th style={{ background: '#fff3e0', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>RPN</th>
       </tr>
     </>
   );

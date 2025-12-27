@@ -36,10 +36,6 @@ interface FailureTabProps {
   saveToLocalStorage: () => void;
 }
 
-// 공통 sticky 스타일
-const stickyRow1 = { position: 'sticky' as const, top: 0, zIndex: 20 };
-const stickyRow2 = { position: 'sticky' as const, top: '25px', zIndex: 20 };
-
 /**
  * 고장분석 탭 - 테이블 헤더
  */
@@ -47,105 +43,16 @@ export function FailureHeader() {
   return (
     <>
       <tr>
-        <th colSpan={2} style={{ 
-          ...stickyRow1,
-          background: '#ffcdd2', 
-          border: `1px solid ${COLORS.line}`, 
-          padding: '1px 4px', 
-          height: '25px', 
-          fontWeight: 900, 
-          textAlign: 'center', 
-          fontSize: '11px' 
-        }}>
-          1. 고장영향(FE) / 심각도
-        </th>
-        <th style={{ 
-          ...stickyRow1,
-          background: '#ef9a9a', 
-          border: `1px solid ${COLORS.line}`, 
-          padding: '1px 4px', 
-          height: '25px', 
-          fontWeight: 900, 
-          textAlign: 'center', 
-          fontSize: '11px' 
-        }}>
-          2. 고장형태(FM)
-        </th>
-        <th colSpan={2} style={{ 
-          ...stickyRow1,
-          background: '#e57373', 
-          border: `1px solid ${COLORS.line}`, 
-          padding: '1px 4px', 
-          height: '25px', 
-          fontWeight: 900, 
-          textAlign: 'center', 
-          fontSize: '11px', 
-          color: '#fff' 
-        }}>
-          3. 작업요소 고장원인(FC)
-        </th>
+        <th colSpan={2} style={{ background: '#ffcdd2', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>1. 고장영향(FE) / 심각도</th>
+        <th style={{ background: '#ef9a9a', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>2. 고장형태(FM)</th>
+        <th colSpan={2} style={{ background: '#e57373', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px', color: '#fff' }}>3. 작업요소 고장원인(FC)</th>
       </tr>
       <tr>
-        <th style={{ 
-          ...stickyRow2,
-          width: '22%', 
-          background: '#ffebee', 
-          border: `1px solid ${COLORS.line}`, 
-          padding: '1px 4px', 
-          height: '22px', 
-          fontWeight: 700, 
-          fontSize: '10px' 
-        }}>
-          고장영향(FE)
-        </th>
-        <th style={{ 
-          ...stickyRow2,
-          width: '10%', 
-          background: '#ffebee', 
-          border: `1px solid ${COLORS.line}`, 
-          padding: '1px 4px', 
-          height: '22px', 
-          fontWeight: 700, 
-          fontSize: '10px' 
-        }}>
-          심각도
-        </th>
-        <th style={{ 
-          ...stickyRow2,
-          width: '22%', 
-          background: '#ffcdd2', 
-          border: `1px solid ${COLORS.line}`, 
-          padding: '1px 4px', 
-          height: '22px', 
-          fontWeight: 700, 
-          fontSize: '10px' 
-        }}>
-          고장형태(FM)
-        </th>
-        <th style={{ 
-          ...stickyRow2,
-          width: '20%', 
-          background: '#ef9a9a', 
-          border: `1px solid ${COLORS.line}`, 
-          padding: '1px 4px', 
-          height: '22px', 
-          fontWeight: 700, 
-          fontSize: '10px' 
-        }}>
-          작업요소
-        </th>
-        <th style={{ 
-          ...stickyRow2,
-          width: '26%', 
-          background: '#ef9a9a', 
-          border: `1px solid ${COLORS.line}`, 
-          padding: '1px 4px', 
-          height: '22px', 
-          fontWeight: 700, 
-          fontSize: '10px' 
-        }}>
-          고장원인(FC)
-        </th>
+        <th style={{ width: '22%', background: '#ffebee', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>고장영향(FE)</th>
+        <th style={{ width: '10%', background: '#ffebee', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>심각도</th>
+        <th style={{ width: '22%', background: '#ffcdd2', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>고장형태(FM)</th>
+        <th style={{ width: '20%', background: '#ef9a9a', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>작업요소</th>
+        <th style={{ width: '26%', background: '#ef9a9a', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>고장원인(FC)</th>
       </tr>
     </>
   );

@@ -196,18 +196,32 @@ export default function FMEAWorksheetPage() {
               P-FMEA {getTabLabel(state.tab)}({getStepNumber(state.tab)}단계)
             </div>
 
-            {/* 테이블 컨테이너 - 스크롤 영역 (헤더 고정) */}
-            <div className="flex-1 overflow-auto" style={{ border: `1px solid ${COLORS.line}`, position: 'relative' }}>
-              <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
-                {/* 탭별 테이블 렌더링 */}
-                {state.tab === 'structure' && <StructureTabContent {...tabProps} />}
-                {state.tab === 'function' && <FunctionTabContent {...tabProps} />}
-                {state.tab === 'failure' && <FailureTabContent {...tabProps} />}
-                {state.tab === 'risk' && <RiskTabContent {...tabProps} />}
-                {state.tab === 'opt' && <OptTabContent {...tabProps} />}
-                {state.tab === 'doc' && <DocTabContent {...tabProps} />}
-                {state.tab === 'all' && <AllViewTabContent {...tabProps} />}
-              </table>
+            {/* 테이블 영역 - 헤더 고정 + 바디 스크롤 */}
+            <div className="flex-1 flex flex-col" style={{ border: `1px solid ${COLORS.line}`, overflow: 'hidden' }}>
+              {/* 고정 헤더 테이블 */}
+              <div className="flex-shrink-0">
+                <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
+                  {state.tab === 'structure' && <StructureTabHeader {...tabProps} />}
+                  {state.tab === 'function' && <FunctionTabHeader />}
+                  {state.tab === 'failure' && <FailureTabHeader />}
+                  {state.tab === 'risk' && <RiskTabHeader />}
+                  {state.tab === 'opt' && <OptTabHeader />}
+                  {state.tab === 'doc' && <DocTabHeader />}
+                  {state.tab === 'all' && <AllViewTabHeader />}
+                </table>
+              </div>
+              {/* 스크롤 바디 테이블 */}
+              <div className="flex-1 overflow-auto">
+                <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
+                  {state.tab === 'structure' && <StructureTabBody {...tabProps} />}
+                  {state.tab === 'function' && <FunctionTabBody {...tabProps} />}
+                  {state.tab === 'failure' && <FailureTabBody {...tabProps} />}
+                  {state.tab === 'risk' && <RiskTabBody {...tabProps} />}
+                  {state.tab === 'opt' && <OptTabBody {...tabProps} />}
+                  {state.tab === 'doc' && <DocTabBody {...tabProps} />}
+                  {state.tab === 'all' && <AllViewTabBody />}
+                </table>
+              </div>
             </div>
           </main>
 
@@ -393,34 +407,28 @@ function TabMenu({ state, setState }: TabMenuProps) {
   );
 }
 
-// 탭별 테이블 콘텐츠 컴포넌트들
-function StructureTabContent(props: any) {
+// ============ 탭별 헤더/바디 분리 컴포넌트 ============
+
+// 구조분석 탭
+function StructureTabHeader(props: any) {
+  const { setIsProcessModalOpen } = props;
+  return (
+    <>
+      <StructureColgroup />
+      <thead><StructureHeader onProcessModalOpen={() => setIsProcessModalOpen(true)} /></thead>
+    </>
+  );
+}
+
+function StructureTabBody(props: any) {
   const { rows, l1Spans, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown, handleSelect, setIsProcessModalOpen, setIsWorkElementModalOpen, setTargetL2Id } = props;
   return (
     <>
       <StructureColgroup />
-      <thead style={{ position: 'sticky', top: 0, zIndex: 20 }}>
-        <StructureHeader onProcessModalOpen={() => setIsProcessModalOpen(true)} />
-      </thead>
       <tbody>
         {rows.map((row: any, idx: number) => (
           <tr key={row.l3Id} style={{ height: '25px' }}>
-            <StructureRow
-              row={row}
-              idx={idx}
-              state={state}
-              setState={setState}
-              rows={rows}
-              l1Spans={l1Spans}
-              l2Spans={l2Spans}
-              setDirty={setDirty}
-              handleInputBlur={handleInputBlur}
-              handleInputKeyDown={handleInputKeyDown}
-              handleSelect={handleSelect}
-              setIsProcessModalOpen={setIsProcessModalOpen}
-              setIsWorkElementModalOpen={setIsWorkElementModalOpen}
-              setTargetL2Id={setTargetL2Id}
-            />
+            <StructureRow row={row} idx={idx} state={state} setState={setState} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} setDirty={setDirty} handleInputBlur={handleInputBlur} handleInputKeyDown={handleInputKeyDown} handleSelect={handleSelect} setIsProcessModalOpen={setIsProcessModalOpen} setIsWorkElementModalOpen={setIsWorkElementModalOpen} setTargetL2Id={setTargetL2Id} />
           </tr>
         ))}
       </tbody>
@@ -428,96 +436,110 @@ function StructureTabContent(props: any) {
   );
 }
 
-function FunctionTabContent(props: any) {
+// 기능분석 탭
+function FunctionTabHeader() {
+  return <thead><FunctionHeader /></thead>;
+}
+
+function FunctionTabBody(props: any) {
   const { rows, l1Spans, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown } = props;
   return (
-    <>
-      <thead style={{ position: 'sticky', top: 0, zIndex: 20 }}><FunctionHeader /></thead>
-      <tbody>
-        {rows.map((row: any, idx: number) => (
-          <tr key={row.l3Id} style={{ height: '25px' }}>
-            <FunctionRow row={row} idx={idx} state={state} setState={setState} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} setDirty={setDirty} handleInputBlur={handleInputBlur} handleInputKeyDown={handleInputKeyDown} />
-          </tr>
-        ))}
-      </tbody>
-    </>
+    <tbody>
+      {rows.map((row: any, idx: number) => (
+        <tr key={row.l3Id} style={{ height: '25px' }}>
+          <FunctionRow row={row} idx={idx} state={state} setState={setState} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} setDirty={setDirty} handleInputBlur={handleInputBlur} handleInputKeyDown={handleInputKeyDown} />
+        </tr>
+      ))}
+    </tbody>
   );
 }
 
-function FailureTabContent(props: any) {
+// 고장분석 탭
+function FailureTabHeader() {
+  return <thead><FailureHeader /></thead>;
+}
+
+function FailureTabBody(props: any) {
   const { rows, l1Spans, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown, saveToLocalStorage } = props;
   return (
-    <>
-      <thead style={{ position: 'sticky', top: 0, zIndex: 20 }}><FailureHeader /></thead>
-      <tbody>
-        {rows.map((row: any, idx: number) => (
-          <tr key={row.l3Id} style={{ height: '25px' }}>
-            <FailureRow row={row} idx={idx} state={state} setState={setState} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} setDirty={setDirty} handleInputBlur={handleInputBlur} handleInputKeyDown={handleInputKeyDown} saveToLocalStorage={saveToLocalStorage} />
-          </tr>
-        ))}
-      </tbody>
-    </>
+    <tbody>
+      {rows.map((row: any, idx: number) => (
+        <tr key={row.l3Id} style={{ height: '25px' }}>
+          <FailureRow row={row} idx={idx} state={state} setState={setState} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} setDirty={setDirty} handleInputBlur={handleInputBlur} handleInputKeyDown={handleInputKeyDown} saveToLocalStorage={saveToLocalStorage} />
+        </tr>
+      ))}
+    </tbody>
   );
 }
 
-function RiskTabContent(props: any) {
+// 리스크분석 탭
+function RiskTabHeader() {
+  return <thead><RiskHeader /></thead>;
+}
+
+function RiskTabBody(props: any) {
   const { rows, l1Spans, l2Spans, state } = props;
   return (
-    <>
-      <thead style={{ position: 'sticky', top: 0, zIndex: 20 }}><RiskHeader /></thead>
-      <tbody>
-        {rows.map((row: any, idx: number) => (
-          <tr key={row.l3Id} style={{ height: '25px' }}>
-            <RiskRow row={row} idx={idx} state={state} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} />
-          </tr>
-        ))}
-      </tbody>
-    </>
+    <tbody>
+      {rows.map((row: any, idx: number) => (
+        <tr key={row.l3Id} style={{ height: '25px' }}>
+          <RiskRow row={row} idx={idx} state={state} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} />
+        </tr>
+      ))}
+    </tbody>
   );
 }
 
-function OptTabContent(props: any) {
+// 최적화 탭
+function OptTabHeader() {
+  return <thead><OptHeader /></thead>;
+}
+
+function OptTabBody(props: any) {
   const { rows, l1Spans, l2Spans, state } = props;
   return (
-    <>
-      <thead style={{ position: 'sticky', top: 0, zIndex: 20 }}><OptHeader /></thead>
-      <tbody>
-        {rows.map((row: any, idx: number) => (
-          <tr key={row.l3Id} style={{ height: '25px' }}>
-            <OptRow row={row} idx={idx} state={state} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} />
-          </tr>
-        ))}
-      </tbody>
-    </>
+    <tbody>
+      {rows.map((row: any, idx: number) => (
+        <tr key={row.l3Id} style={{ height: '25px' }}>
+          <OptRow row={row} idx={idx} state={state} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} />
+        </tr>
+      ))}
+    </tbody>
   );
 }
 
-function DocTabContent(props: any) {
+// 문서화 탭
+function DocTabHeader() {
+  return <thead><DocHeader /></thead>;
+}
+
+function DocTabBody(props: any) {
   const { rows, l1Spans, l2Spans, state } = props;
   return (
-    <>
-      <thead style={{ position: 'sticky', top: 0, zIndex: 20 }}><DocHeader /></thead>
-      <tbody>
-        {rows.map((row: any, idx: number) => (
-          <tr key={row.l3Id} style={{ height: '25px' }}>
-            <DocRow row={row} idx={idx} state={state} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} />
-          </tr>
-        ))}
-      </tbody>
-    </>
+    <tbody>
+      {rows.map((row: any, idx: number) => (
+        <tr key={row.l3Id} style={{ height: '25px' }}>
+          <DocRow row={row} idx={idx} state={state} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} />
+        </tr>
+      ))}
+    </tbody>
   );
 }
 
-function AllViewTabContent(props: any) {
+// 전체보기 탭
+function AllViewTabHeader() {
   return (
-    <>
-      <thead style={{ position: 'sticky', top: 0, zIndex: 20 }}>
-        <tr><th colSpan={38} style={{ background: COLORS.sky, padding: '4px', textAlign: 'center' }}>전체보기 (38열 FMEA 워크시트) - 개발예정</th></tr>
-      </thead>
-      <tbody>
-        <tr><td colSpan={38} className="text-center text-gray-400 py-8">전체보기 탭은 개발 예정입니다.</td></tr>
-      </tbody>
-    </>
+    <thead>
+      <tr><th colSpan={38} style={{ background: COLORS.sky, padding: '4px', textAlign: 'center' }}>전체보기 (38열 FMEA 워크시트) - 개발예정</th></tr>
+    </thead>
+  );
+}
+
+function AllViewTabBody() {
+  return (
+    <tbody>
+      <tr><td colSpan={38} className="text-center text-gray-400 py-8">전체보기 탭은 개발 예정입니다.</td></tr>
+    </tbody>
   );
 }
 
