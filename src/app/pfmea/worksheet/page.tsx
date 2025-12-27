@@ -554,12 +554,12 @@ function TopMenuBar({
       <div className="flex items-center gap-1">
         <span className="text-white text-xs font-bold cursor-pointer hover:underline" onClick={onNavigateToList}>📋 FMEA명:</span>
         <select
-          value={currentFmea?.id || ''}
+          value={currentFmea?.id || '__NEW__'}
           onChange={(e) => onFmeaChange(e.target.value)}
           className="px-1 py-0.5 text-xs font-semibold rounded border-0"
           style={{ background: 'rgba(255,255,255,0.25)', color: '#fff', minWidth: '140px' }}
         >
-          {fmeaList.length === 0 && <option value="">FMEA 미등록</option>}
+          <option value="__NEW__" style={{ color: '#333', fontWeight: 'bold' }}>📄 빈화면 (새로 작성)</option>
           {fmeaList.map((fmea: any) => (
             <option key={fmea.id} value={fmea.id} style={{ color: '#333' }}>
               {fmea.fmeaInfo?.subject || fmea.project?.productName || fmea.id}
