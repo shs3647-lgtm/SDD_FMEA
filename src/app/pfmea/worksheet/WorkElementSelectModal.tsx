@@ -221,18 +221,33 @@ export default function WorkElementSelectModal({
   const deselectAll = () => setSelectedIds(new Set());
   
   // 선택된 항목 삭제
-  const deleteSelected = () => {
+  const deleteSelected = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    console.log('[DELETE] 삭제 버튼 클릭됨');
+    console.log('[DELETE] selectedIds:', Array.from(selectedIds));
+    console.log('[DELETE] elements count:', elements.length);
+    
     if (selectedIds.size === 0) {
       alert('삭제할 항목을 선택해주세요.');
       return;
     }
     
     // 삭제할 항목 이름 먼저 추출 (상태 변경 전에)
-    const deletedNames = elements.filter(e => selectedIds.has(e.id)).map(e => e.name);
-    const deleteCount = selectedIds.size;
+    const toDelete = elements.filter(e => selectedIds.has(e.id));
+    const deletedNames = toDelete.map(e => e.name);
+    const deleteCount = toDelete.length;
+    
+    console.log('[DELETE] 삭제 대상:', deletedNames);
     
     // 상태에서 삭제
-    setElements(prev => prev.filter(e => !selectedIds.has(e.id)));
+    const remaining = elements.filter(e => !selectedIds.has(e.id));
+    console.log('[DELETE] 남은 항목 수:', remaining.length);
+    
+    setElements(remaining);
     setSelectedIds(new Set());
     
     // LocalStorage에서도 삭제 (pfmea_master_data 업데이트)
@@ -244,9 +259,10 @@ export default function WorkElementSelectModal({
           item.code !== 'A5' || !deletedNames.includes(item.value)
         );
         localStorage.setItem('pfmea_master_data', JSON.stringify(updatedData));
+        console.log('[DELETE] localStorage 업데이트 완료');
       }
-    } catch (e) {
-      console.error('Failed to update localStorage:', e);
+    } catch (err) {
+      console.error('[DELETE] localStorage 업데이트 실패:', err);
     }
     
     // 삭제 완료 알림
@@ -405,11 +421,12 @@ export default function WorkElementSelectModal({
               <button onClick={selectAll} className="px-3 py-2 text-xs font-bold bg-blue-500 text-white rounded">전체</button>
               <button onClick={deselectAll} className="px-3 py-2 text-xs font-bold bg-gray-400 text-white rounded">해제</button>
               <button 
-                onClick={deleteSelected} 
+                type="button"
+                onClick={(e) => deleteSelected(e)} 
                 disabled={selectedIds.size === 0}
                 className="px-3 py-2 text-xs font-bold bg-red-500 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                🗑 삭제
+                🗑 삭제 ({selectedIds.size})
               </button>
             </div>
 
@@ -585,7 +602,8 @@ export default function WorkElementSelectModal({
             <span className="text-sm text-gray-600 font-bold">✓ {totalSelected}개 선택</span>
             {!isManualMode && selectedIds.size > 0 && (
               <button 
-                onClick={deleteSelected}
+                type="button"
+                onClick={(e) => deleteSelected(e)}
                 className="px-3 py-1.5 text-xs font-bold bg-red-500 text-white rounded hover:bg-red-600 flex items-center gap-1"
               >
                 🗑 선택 삭제 ({selectedIds.size})
