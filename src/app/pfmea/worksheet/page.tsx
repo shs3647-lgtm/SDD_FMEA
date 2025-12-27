@@ -489,15 +489,15 @@ interface TopMenuBarProps {
 
 function TopMenuBar({ fmeaList, currentFmea, dirty, isSaving, lastSaved, onFmeaChange, onSave, onNavigateToList, onExport }: TopMenuBarProps) {
   return (
-    <div className="flex items-center justify-between py-1" style={{ background: COLORS.blue, paddingLeft: 0, paddingRight: '8px' }}>
+    <div className="flex items-center py-1 gap-2 flex-wrap" style={{ background: COLORS.blue, paddingLeft: '4px', paddingRight: '8px' }}>
       {/* FMEA명 */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         <span className="text-white text-xs font-bold cursor-pointer hover:underline" onClick={onNavigateToList}>📋 FMEA명:</span>
         <select
           value={currentFmea?.id || ''}
           onChange={(e) => onFmeaChange(e.target.value)}
-          className="px-2 py-0.5 text-xs font-semibold rounded border-0"
-          style={{ background: 'rgba(255,255,255,0.25)', color: '#fff', minWidth: '180px' }}
+          className="px-1 py-0.5 text-xs font-semibold rounded border-0"
+          style={{ background: 'rgba(255,255,255,0.25)', color: '#fff', minWidth: '140px' }}
         >
           {fmeaList.length === 0 && <option value="">FMEA 미등록</option>}
           {fmeaList.map((fmea: any) => (
@@ -506,31 +506,30 @@ function TopMenuBar({ fmeaList, currentFmea, dirty, isSaving, lastSaved, onFmeaC
             </option>
           ))}
         </select>
-        <button onClick={onNavigateToList} className="px-2 py-1 text-xs text-white rounded hover:bg-white/20">📋</button>
+        <button onClick={onNavigateToList} className="px-1 py-0.5 text-xs text-white rounded hover:bg-white/20">📋</button>
       </div>
 
-      <div className="w-px h-6 bg-white/40" />
+      <div className="w-px h-5 bg-white/40" />
 
       {/* 저장/Import/Export */}
       <div className="flex items-center gap-1">
-        <button onClick={onSave} disabled={isSaving} className="px-2 py-0.5 text-xs font-bold rounded flex items-center gap-1"
+        <button onClick={onSave} disabled={isSaving} className="px-1.5 py-0.5 text-xs font-bold rounded"
           style={{ background: isSaving ? '#ff9800' : dirty ? '#4caf50' : 'rgba(255,255,255,0.18)', color: '#fff' }}>
-          {isSaving ? '⏳ 저장중...' : dirty ? '💾 저장' : '✅ 저장됨'}
+          {isSaving ? '⏳저장중' : dirty ? '💾저장' : '✅저장됨'}
         </button>
-        {lastSaved && <span className="text-xs text-white/70">{lastSaved}</span>}
-        <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>📥 Import</button>
-        <button onClick={onExport} className="px-2 py-0.5 text-xs font-bold text-white rounded hover:bg-white/30" style={{ background: 'rgba(255,255,255,0.18)' }}>📤 Export</button>
+        <button className="px-1.5 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>📥Import</button>
+        <button onClick={onExport} className="px-1.5 py-0.5 text-xs font-bold text-white rounded hover:bg-white/30" style={{ background: 'rgba(255,255,255,0.18)' }}>📤Export</button>
       </div>
 
-      <div className="w-px h-6 bg-white/40" />
+      <div className="w-px h-5 bg-white/40" />
 
       {/* 특별특성/AP/RPN/LLD */}
       <div className="flex items-center gap-1">
-        <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>⭐특별특성</button>
-        <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,100,100,0.5)' }}>🔴5AP</button>
-        <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,165,0,0.5)' }}>🟠6AP</button>
-        <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>📊RPN</button>
-        <button className="px-2 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>📚LLD</button>
+        <button className="px-1.5 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>⭐특별특성</button>
+        <button className="px-1.5 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,100,100,0.5)' }}>🔴5AP</button>
+        <button className="px-1.5 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,165,0,0.5)' }}>🟠6AP</button>
+        <button className="px-1.5 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>📊RPN</button>
+        <button className="px-1.5 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>📚LLD</button>
       </div>
     </div>
   );
