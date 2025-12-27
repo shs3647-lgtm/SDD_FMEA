@@ -228,7 +228,7 @@ export default function FMEAWorksheetPage() {
               display: 'flex', 
               flexDirection: 'column',
               minWidth: 0,
-              borderRight: '4px solid #00587a',
+              borderRight: state.tab === 'all' ? 'none' : '4px solid #00587a',
             }}
           >
             {/* 탭 메뉴 - 고정 */}
@@ -267,12 +267,13 @@ export default function FMEAWorksheetPage() {
                 {state.tab === 'risk' && <RiskTabFull {...tabProps} />}
                 {state.tab === 'opt' && <OptTabFull {...tabProps} />}
                 {state.tab === 'doc' && <DocTabFull {...tabProps} />}
-                {state.tab === 'all' && <AllViewTabFull />}
+                {state.tab === 'all' && <AllViewTabFull {...tabProps} />}
               </table>
             </div>
           </div>
 
-          {/* ===== 우측: 트리 영역 ===== */}
+          {/* ===== 우측: 트리 영역 (전체보기에서는 숨김) ===== */}
+          {state.tab !== 'all' && (
           <div 
             style={{ 
               width: '280px', 
@@ -438,6 +439,7 @@ export default function FMEAWorksheetPage() {
               작업요소: {state.l2.reduce((sum, p) => sum + p.l3.filter(w => !w.name.includes('추가') && !w.name.includes('클릭')).length, 0)}개
             </div>
           </div>
+          )}
         </div>
 
         {/* 모달 */}
@@ -713,15 +715,151 @@ function DocTabFull(props: any) {
   );
 }
 
-// 전체보기 탭
-function AllViewTabFull() {
+// 전체보기 탭 - 38열 FMEA 워크시트
+function AllViewTabFull({ rows, state }: { rows: FlatRow[]; state: WorksheetState }) {
+  // 전체보기 컬럼 정의 (구조+기능+고장+리스크+최적화)
+  const allViewColumns = [
+    // 구조분석 (4열)
+    { id: 'l1Name', label: '완제품공정', width: '80px', group: '구조분석', bg: '#1976d2' },
+    { id: 'l2Name', label: '메인공정', width: '100px', group: '구조분석', bg: '#388e3c' },
+    { id: 'm4', label: '4M', width: '20px', group: '구조분석', bg: '#f57c00' },
+    { id: 'l3Name', label: '작업요소', width: '100px', group: '구조분석', bg: '#f57c00' },
+    // 기능분석 (3열)
+    { id: 'function', label: '공정기능', width: '120px', group: '기능분석', bg: '#7b1fa2' },
+    { id: 'productChar', label: '제품특성', width: '80px', group: '기능분석', bg: '#7b1fa2' },
+    { id: 'processChar', label: '공정특성', width: '80px', group: '기능분석', bg: '#7b1fa2' },
+    // 고장분석 (7열)
+    { id: 'failureEffect', label: '고장영향', width: '100px', group: '고장분석', bg: '#c62828' },
+    { id: 'severity', label: 'S', width: '25px', group: '고장분석', bg: '#c62828' },
+    { id: 'failureMode', label: '고장모드', width: '100px', group: '고장분석', bg: '#c62828' },
+    { id: 'failureCause', label: '고장원인', width: '100px', group: '고장분석', bg: '#c62828' },
+    { id: 'prevention', label: '예방관리', width: '80px', group: '고장분석', bg: '#c62828' },
+    { id: 'occurrence', label: 'O', width: '25px', group: '고장분석', bg: '#c62828' },
+    { id: 'detection', label: '검출관리', width: '80px', group: '고장분석', bg: '#c62828' },
+    { id: 'detectability', label: 'D', width: '25px', group: '고장분석', bg: '#c62828' },
+    // 리스크분석 (3열)
+    { id: 'ap', label: 'AP', width: '30px', group: '리스크', bg: '#1565c0' },
+    { id: 'action', label: '권장조치', width: '120px', group: '리스크', bg: '#1565c0' },
+    { id: 'responsible', label: '책임/일정', width: '80px', group: '리스크', bg: '#1565c0' },
+    // 최적화 (6열)
+    { id: 'actionTaken', label: '조치내용', width: '100px', group: '최적화', bg: '#00695c' },
+    { id: 'completionDate', label: '완료일', width: '60px', group: '최적화', bg: '#00695c' },
+    { id: 'newS', label: 'S\'', width: '25px', group: '최적화', bg: '#00695c' },
+    { id: 'newO', label: 'O\'', width: '25px', group: '최적화', bg: '#00695c' },
+    { id: 'newD', label: 'D\'', width: '25px', group: '최적화', bg: '#00695c' },
+    { id: 'newAP', label: 'AP\'', width: '30px', group: '최적화', bg: '#00695c' },
+  ];
+
+  // 그룹별 헤더 생성
+  const groups = [
+    { name: '구조분석', count: 4, bg: '#1565c0' },
+    { name: '기능분석', count: 3, bg: '#7b1fa2' },
+    { name: '고장분석', count: 8, bg: '#c62828' },
+    { name: '리스크', count: 3, bg: '#1565c0' },
+    { name: '최적화', count: 6, bg: '#00695c' },
+  ];
+
+  // 데이터 가져오기 함수
+  const getCellValue = (row: FlatRow, colId: string): string => {
+    switch (colId) {
+      case 'l1Name': return row.l1Name || '';
+      case 'l2Name': return `${row.l2No} ${row.l2Name}`;
+      case 'm4': return row.m4 || '';
+      case 'l3Name': return row.l3Name || '';
+      case 'function': return row.l2Function || row.l3Function || '';
+      case 'productChar': return row.l2ProductChar || '';
+      case 'processChar': return row.l3ProcessChar || '';
+      case 'failureEffect': return row.l1FailureEffect || '';
+      case 'severity': return row.l1Severity?.toString() || '';
+      case 'failureMode': return row.l2FailureMode || '';
+      case 'failureCause': return row.l3FailureCause || '';
+      default: return '';
+    }
+  };
+
   return (
     <>
-      <thead style={stickyTheadStyle}>
-        <tr><th colSpan={38} style={{ background: COLORS.sky, padding: '4px', textAlign: 'center' }}>전체보기 (38열 FMEA 워크시트) - 개발예정</th></tr>
+      {/* Colgroup - 컬럼 너비 정의 */}
+      <colgroup>
+        {allViewColumns.map(col => (
+          <col key={col.id} style={{ width: col.width }} />
+        ))}
+      </colgroup>
+
+      {/* 헤더 - sticky 고정 */}
+      <thead style={{ position: 'sticky', top: 0, zIndex: 20, background: '#fff' }}>
+        {/* 그룹 헤더 */}
+        <tr>
+          {groups.map(g => (
+            <th
+              key={g.name}
+              colSpan={g.count}
+              style={{
+                background: g.bg,
+                color: '#fff',
+                border: `1px solid ${COLORS.line}`,
+                padding: '4px',
+                fontWeight: 900,
+                fontSize: '11px',
+                textAlign: 'center',
+              }}
+            >
+              {g.name}
+            </th>
+          ))}
+        </tr>
+        {/* 컬럼 헤더 */}
+        <tr>
+          {allViewColumns.map(col => (
+            <th
+              key={col.id}
+              style={{
+                background: col.bg,
+                color: '#fff',
+                border: `1px solid ${COLORS.line}`,
+                padding: '2px 4px',
+                fontWeight: 700,
+                fontSize: '9px',
+                textAlign: 'center',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {col.label}
+            </th>
+          ))}
+        </tr>
       </thead>
+
+      {/* 바디 - 데이터 */}
       <tbody>
-        <tr><td colSpan={38} className="text-center text-gray-400 py-8">전체보기 탭은 개발 예정입니다.</td></tr>
+        {rows.length === 0 ? (
+          <tr>
+            <td colSpan={allViewColumns.length} className="text-center text-gray-400 py-8">
+              구조분석 탭에서 데이터를 먼저 입력하세요.
+            </td>
+          </tr>
+        ) : (
+          rows.map((row, idx) => (
+            <tr key={row.l3Id} style={{ height: '28px' }}>
+              {allViewColumns.map(col => (
+                <td
+                  key={col.id}
+                  style={{
+                    border: `1px solid ${COLORS.line}`,
+                    padding: '2px 4px',
+                    fontSize: '9px',
+                    background: idx % 2 === 0 ? '#fff' : '#f9f9f9',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {getCellValue(row, col.id)}
+                </td>
+              ))}
+            </tr>
+          ))
+        )}
       </tbody>
     </>
   );
