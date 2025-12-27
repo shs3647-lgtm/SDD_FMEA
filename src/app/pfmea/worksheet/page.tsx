@@ -605,13 +605,9 @@ function TabMenu({ state, setState }: TabMenuProps) {
             전체보기
           </button>
           
-          {/* 단계별 토글 버튼 (전체보기 선택 시에만 표시) */}
-          {state.tab === 'all' && (
-            <>
-              <div className="w-px h-4 bg-gray-300 mx-1" />
-              <StepToggleButtons state={state} setState={setState} />
-            </>
-          )}
+          {/* 단계별 토글 버튼 - 항상 표시 */}
+          <div className="w-px h-4 bg-gray-300 mx-1" />
+          <StepToggleButtons state={state} setState={setState} />
         </div>
       </div>
     </div>
