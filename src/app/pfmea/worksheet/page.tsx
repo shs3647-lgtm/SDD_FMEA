@@ -378,25 +378,52 @@ export default function FMEAWorksheetPage() {
                     {/* L3: 작업요소 (접힌 상태면 숨김) */}
                     {!isCollapsed && (
                       <div style={{ marginLeft: '20px' }}>
-                        {proc.l3.filter(w => !state.search || `${w.m4} ${w.name}`.toLowerCase().includes(state.search.toLowerCase())).sort((a, b) => a.order - b.order).map((w, wIdx) => (
+                        {proc.l3.filter(w => !state.search || `${w.m4} ${w.name}`.toLowerCase().includes(state.search.toLowerCase())).sort((a, b) => a.order - b.order).map((w, wIdx) => {
+                          // 작업요소 번호: 공정번호.순번 (공통은 00.N)
+                          const procNum = proc.no || '00';
+                          const elemNum = `${procNum}.${wIdx + 1}`;
+                          // 4M 배지 색상
+                          const m4Colors: Record<string, { bg: string; text: string }> = {
+                            MN: { bg: '#e3f2fd', text: '#1565c0' },
+                            MC: { bg: '#fff8e1', text: '#f57c00' },
+                            MT: { bg: '#e8f5e9', text: '#2e7d32' },
+                            EN: { bg: '#fce4ec', text: '#c2185b' },
+                          };
+                          const m4Style = m4Colors[w.m4] || { bg: '#f5f5f5', text: '#666' };
+                          
+                          return (
                           <div 
                             key={w.id} 
                             onClick={() => handleSelect('L3', w.id)}
                             style={{ 
-                              display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 4px', cursor: 'pointer', borderRadius: '3px',
+                              display: 'flex', alignItems: 'center', gap: '3px', padding: '2px 4px', cursor: 'pointer', borderRadius: '3px',
                               background: state.selected.type === 'L3' && state.selected.id === w.id ? '#c8e6c9' : 'transparent',
                             }}
                           >
-                            <span style={{ fontSize: '10px' }}>📄</span>
+                            {/* 4M 배지 */}
+                            <span style={{ 
+                              fontSize: '8px', 
+                              fontWeight: 700, 
+                              padding: '1px 3px', 
+                              borderRadius: '2px',
+                              background: m4Style.bg,
+                              color: m4Style.text,
+                              minWidth: '18px',
+                              textAlign: 'center',
+                            }}>
+                              {w.m4 || '-'}
+                            </span>
+                            {/* 번호 + 이름 */}
+                            <span style={{ fontSize: '10px', color: '#666', minWidth: '28px' }}>{elemNum}</span>
                             <input
                               type="text"
-                              value={proc.no ? `${proc.no}.${wIdx + 1}-${w.name}` : `${pIdx + 1}.${wIdx + 1}-${w.name}`}
-                              onChange={(e) => { const val = e.target.value.replace(/^[\d.]+\.\d+-/, '').replace(/^\d+-/, ''); renameL3(w.id, val); }}
+                              value={w.name}
+                              onChange={(e) => renameL3(w.id, e.target.value)}
                               onClick={(e) => e.stopPropagation()}
                               style={{ flex: 1, padding: '2px 4px', fontSize: '10px', border: '1px solid #e0e0e0', borderRadius: '2px', background: '#fff' }}
                             />
                           </div>
-                        ))}
+                        );})}
                       </div>
                     )}
                   </div>
