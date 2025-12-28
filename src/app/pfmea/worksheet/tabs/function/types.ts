@@ -34,4 +34,5 @@ export interface FunctionTabProps {
   setDirty: (dirty: boolean) => void;
   handleInputBlur: () => void;
   handleInputKeyDown: (e: React.KeyboardEvent) => void;
+  saveToLocalStorage?: () => void;
 }

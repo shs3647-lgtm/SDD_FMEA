@@ -11,7 +11,7 @@ import { COLORS, uid } from '../../constants';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 
-export default function FunctionL2Tab({ state, setState, setDirty }: FunctionTabProps) {
+export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalStorage }: FunctionTabProps) {
   const [modal, setModal] = useState<{ type: string; id: string; title: string; itemCode: string; processNo?: string } | null>(null);
 
   const handleSave = useCallback((selectedValues: string[]) => {
@@ -54,6 +54,45 @@ export default function FunctionL2Tab({ state, setState, setDirty }: FunctionTab
     setDirty(true);
     setModal(null);
   }, [modal, setState, setDirty]);
+
+  // 워크시트 데이터 삭제 핸들러
+  const handleDelete = useCallback((deletedValues: string[]) => {
+    if (!modal) return;
+    
+    setState(prev => {
+      const newState = { ...prev };
+      const { type, id } = modal;
+      const deletedSet = new Set(deletedValues);
+
+      newState.l2 = newState.l2.map(proc => {
+        if (proc.id !== id) return proc;
+        
+        if (type === 'l2Function') {
+          return {
+            ...proc,
+            functions: proc.functions.filter(f => !deletedSet.has(f.name))
+          };
+        } else if (type === 'l2ProductChar') {
+          return {
+            ...proc,
+            productChars: proc.productChars.filter(c => !deletedSet.has(c.name))
+          };
+        } else if (type === 'l2FailureMode') {
+          return { ...proc, failureMode: '' };
+        }
+        return proc;
+      });
+      
+      return newState;
+    });
+    
+    setDirty(true);
+    
+    // 즉시 저장
+    if (saveToLocalStorage) {
+      setTimeout(() => saveToLocalStorage(), 100);
+    }
+  }, [modal, setState, setDirty, saveToLocalStorage]);
 
   return (
     <div style={{ padding: '20px', overflow: 'auto', height: '100%' }}>
@@ -118,6 +157,7 @@ export default function FunctionL2Tab({ state, setState, setDirty }: FunctionTab
           isOpen={!!modal}
           onClose={() => setModal(null)}
           onSave={handleSave}
+          onDelete={handleDelete}
           title={modal.title}
           itemCode={modal.itemCode}
           processNo={modal.processNo}

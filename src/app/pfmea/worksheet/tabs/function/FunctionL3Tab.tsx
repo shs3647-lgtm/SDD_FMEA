@@ -11,7 +11,7 @@ import { COLORS, uid } from '../../constants';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 
-export default function FunctionL3Tab({ state, setState, setDirty }: FunctionTabProps) {
+export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalStorage }: FunctionTabProps) {
   const [modal, setModal] = useState<{ type: string; procId: string; l3Id: string; title: string; itemCode: string; processNo?: string } | null>(null);
 
   const handleSave = useCallback((selectedValues: string[]) => {
@@ -61,6 +61,52 @@ export default function FunctionL3Tab({ state, setState, setDirty }: FunctionTab
     setDirty(true);
     setModal(null);
   }, [modal, setState, setDirty]);
+
+  // 워크시트 데이터 삭제 핸들러
+  const handleDelete = useCallback((deletedValues: string[]) => {
+    if (!modal) return;
+    
+    setState(prev => {
+      const newState = { ...prev };
+      const { type, procId, l3Id } = modal;
+      const deletedSet = new Set(deletedValues);
+
+      newState.l2 = newState.l2.map(proc => {
+        if (proc.id !== procId) return proc;
+        
+        return {
+          ...proc,
+          l3: proc.l3.map(we => {
+            if (we.id !== l3Id) return we;
+            
+            if (type === 'l3Function') {
+              return {
+                ...we,
+                functions: we.functions.filter(f => !deletedSet.has(f.name))
+              };
+            } else if (type === 'l3ProcessChar') {
+              return {
+                ...we,
+                processChars: we.processChars.filter(c => !deletedSet.has(c.name))
+              };
+            } else if (type === 'l3FailureCause') {
+              return { ...we, failureCause: '' };
+            }
+            return we;
+          })
+        };
+      });
+      
+      return newState;
+    });
+    
+    setDirty(true);
+    
+    // 즉시 저장
+    if (saveToLocalStorage) {
+      setTimeout(() => saveToLocalStorage(), 100);
+    }
+  }, [modal, setState, setDirty, saveToLocalStorage]);
 
   return (
     <div style={{ padding: '20px', overflow: 'auto', height: '100%' }}>
@@ -135,6 +181,7 @@ export default function FunctionL3Tab({ state, setState, setDirty }: FunctionTab
           isOpen={!!modal}
           onClose={() => setModal(null)}
           onSave={handleSave}
+          onDelete={handleDelete}
           title={modal.title}
           itemCode={modal.itemCode}
           processNo={modal.processNo}
