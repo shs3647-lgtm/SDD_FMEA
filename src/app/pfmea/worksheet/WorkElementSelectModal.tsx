@@ -148,6 +148,9 @@ export default function WorkElementSelectModal({
   const [manualElements, setManualElements] = useState<WorkElement[]>([]);
   const [deleteMode, setDeleteMode] = useState(false);
 
+  // existingElements를 문자열로 변환해서 안정적인 비교
+  const existingElementsKey = JSON.stringify(existingElements);
+  
   useEffect(() => {
     if (isOpen && processNo) {
       const loaded = loadWorkElementsForProcess(processNo);
@@ -165,8 +168,10 @@ export default function WorkElementSelectModal({
       setFilterType('all');
       setActiveTab('list');
       setManualElements([]);
+      setDeleteMode(false);
     }
-  }, [isOpen, processNo, existingElements]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, processNo, existingElementsKey]);
 
   const filteredElements = useMemo(() => {
     return elements.filter(e => 
@@ -182,47 +187,90 @@ export default function WorkElementSelectModal({
   const processCount = elements.filter(e => e.processNo === processNo).length;
 
   const toggleSelect = useCallback((id: string) => {
+    console.log('[모달] 토글 클릭, id:', id);
     setSelectedIds(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(id)) newSet.delete(id);
-      else newSet.add(id);
+      if (newSet.has(id)) {
+        console.log('[모달] 선택 해제:', id);
+        newSet.delete(id);
+      } else {
+        console.log('[모달] 선택:', id);
+        newSet.add(id);
+      }
+      console.log('[모달] 현재 선택 수:', newSet.size);
       return newSet;
     });
   }, []);
 
   const selectAll = () => setSelectedIds(new Set(filteredElements.map(e => e.id)));
-  const deselectAll = () => setSelectedIds(new Set());
-
-  const handleSave = () => {
-    const selectedFromList = elements.filter(e => selectedIds.has(e.id));
-    onSave([...selectedFromList, ...manualElements]);
+  const deselectAll = () => {
+    console.log('[모달] 전체 해제 클릭');
+    setSelectedIds(new Set());
+  };
+  
+  // 전체 해제 후 바로 저장 (내용 삭제)
+  const clearAndSave = () => {
+    if (!window.confirm('모든 작업요소를 삭제하시겠습니까?\n(행은 유지되고 내용만 삭제됩니다)')) return;
+    console.log('[모달] 전체 삭제 실행');
+    onSave([]); // 빈 배열 전달 → 내용 삭제
     onClose();
   };
 
-  // 선택 삭제 (현재 워크시트에서)
+  const handleSave = () => {
+    // 현재 선택된 ID들 (Set에서 직접 가져옴)
+    const currentSelectedIds = Array.from(selectedIds);
+    console.log('[모달] 저장 클릭, selectedIds 크기:', selectedIds.size, '내용:', currentSelectedIds);
+    
+    const selectedFromList = elements.filter(e => selectedIds.has(e.id));
+    console.log('[모달] 저장할 항목 수:', selectedFromList.length, '이름:', selectedFromList.map(e => e.name));
+    
+    // 선택된 항목이 없으면 빈 배열 전달 (내용 삭제용)
+    const finalList = [...selectedFromList, ...manualElements];
+    console.log('[모달] 최종 전달:', finalList.length, '개');
+    
+    onSave(finalList);
+    onClose();
+  };
+
+  // 선택 삭제 (선택된 항목 해제 후 저장)
   const handleDeleteSelected = () => {
-    const selectedNames = elements
-      .filter(e => selectedIds.has(e.id) && existingElements.includes(e.name))
-      .map(e => e.name);
-    if (selectedNames.length === 0) {
+    const itemsToDelete = elements
+      .filter(e => selectedIds.has(e.id) && existingElements.includes(e.name));
+    
+    if (itemsToDelete.length === 0) {
       alert('삭제할 항목이 없습니다. (현재 워크시트에 있는 항목만 삭제 가능)');
       return;
     }
-    if (!window.confirm(`선택한 ${selectedNames.length}개 작업요소를 삭제하시겠습니까?\n\n${selectedNames.join(', ')}`)) return;
+    if (!window.confirm(`선택한 ${itemsToDelete.length}개 작업요소를 삭제하시겠습니까?\n\n${itemsToDelete.map(e => e.name).join(', ')}`)) return;
     
-    if (onDelete) {
-      onDelete(selectedNames);
-    }
-    setSelectedIds(new Set());
+    // 삭제할 항목들 선택 해제
+    const newSelectedIds = new Set(selectedIds);
+    itemsToDelete.forEach(e => newSelectedIds.delete(e.id));
+    
+    // 선택 해제된 상태로 저장
+    const selectedFromList = elements.filter(e => newSelectedIds.has(e.id));
+    onSave([...selectedFromList, ...manualElements]);
+    
     setDeleteMode(false);
     onClose();
   };
 
-  const handleDeleteSingle = (name: string) => {
+  const handleDeleteSingle = (id: string, name: string) => {
+    console.log('[삭제버튼] 클릭됨, id:', id, 'name:', name);
+    console.log('[삭제버튼] 현재 selectedIds:', Array.from(selectedIds));
+    
     if (!window.confirm(`"${name}" 작업요소를 삭제하시겠습니까?`)) return;
-    if (onDelete) {
-      onDelete([name]);
-    }
+    
+    // 해당 항목 선택 해제
+    const newSelectedIds = new Set(selectedIds);
+    newSelectedIds.delete(id);
+    console.log('[삭제버튼] 삭제 후 selectedIds:', Array.from(newSelectedIds));
+    
+    // 선택 해제된 상태로 저장 (내용 삭제)
+    const selectedFromList = elements.filter(e => newSelectedIds.has(e.id));
+    console.log('[삭제버튼] 저장할 항목:', selectedFromList.map(e => e.name));
+    
+    onSave([...selectedFromList, ...manualElements]);
     onClose();
   };
 
@@ -249,7 +297,7 @@ export default function WorkElementSelectModal({
       activeTab={activeTab}
       onTabChange={setActiveTab}
       onSave={handleSave}
-      saveDisabled={totalSelected === 0}
+      saveDisabled={false}
       footerContent={
         <span className="text-sm font-bold text-blue-600">
           ✓ {totalSelected}개 선택
@@ -302,16 +350,12 @@ export default function WorkElementSelectModal({
             <div className="flex gap-1">
               <button onClick={selectAll} className="px-3 py-2 text-xs font-bold bg-blue-500 text-white rounded-md hover:bg-blue-600 shadow-sm transition-colors">전체</button>
               <button onClick={deselectAll} className="px-3 py-2 text-xs font-bold bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 shadow-sm transition-colors">해제</button>
-              {onDelete && (
-                <button 
-                  onClick={() => setDeleteMode(!deleteMode)} 
-                  className={`px-3 py-2 text-xs font-bold rounded-md shadow-sm transition-colors ${
-                    deleteMode ? 'bg-red-500 text-white' : 'bg-red-500 text-white hover:bg-red-600'
-                  }`}
-                >
-                  🗑️ 삭제
-                </button>
-              )}
+              <button 
+                onClick={clearAndSave} 
+                className="px-3 py-2 text-xs font-bold bg-red-500 text-white rounded-md hover:bg-red-600 shadow-sm transition-colors"
+              >
+                🗑️ 모두삭제
+              </button>
             </div>
           </div>
 
@@ -362,11 +406,15 @@ export default function WorkElementSelectModal({
                         {existing && <span className="ml-1 text-[9px] text-green-600">(현재)</span>}
                       </span>
                       
-                      {/* 삭제 버튼 (삭제모드 & 현재 항목만) */}
-                      {deleteMode && existing && (
+                      {/* 삭제 버튼 - 선택된 항목만 표시 */}
+                      {isSelected && (
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleDeleteSingle(elem.name); }}
-                          className="p-1 text-red-500 hover:bg-red-100 rounded transition-colors shrink-0"
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            console.log('[삭제X버튼] 클릭됨, id:', elem.id, 'name:', elem.name);
+                            handleDeleteSingle(elem.id, elem.name); 
+                          }}
+                          className="p-1.5 text-red-500 hover:bg-red-100 rounded-full transition-colors shrink-0 font-bold text-lg"
                           title="삭제"
                         >
                           ✕

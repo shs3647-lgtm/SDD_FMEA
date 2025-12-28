@@ -220,81 +220,138 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     setDirty(true);
   }, []);
 
+  /**
+   * 공정 선택 핸들러 - 완전히 재작성 (TDD Case 1)
+   * 
+   * 동작:
+   * 1. 선택된 공정만 유지 (선택 해제된 공정 + 하위 작업요소 완전 삭제)
+   * 2. 새로 선택된 공정 추가 (기존에 없던 것만)
+   * 3. 최소 1개 공정 보장
+   */
   const handleProcessSelect = useCallback((selectedProcesses: Array<{ processNo: string; processName: string }>) => {
-    if (selectedProcesses.length === 0) return;
-    const newProcesses: Process[] = selectedProcesses.map((p, idx) => ({
-      id: uid(), no: p.processNo, name: p.processName, order: (state.l2.length + idx) * 10,
-      functions: [], productChars: [],
-      l3: [{ id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10, functions: [], processChars: [] }]
-    }));
+    const selectedNames = new Set(selectedProcesses.map(p => p.processName));
+    
     setState(prev => {
-      const filtered = prev.l2.filter(p => p.no !== '' && !p.name.includes('클릭'));
-      return { ...prev, l2: [...filtered, ...newProcesses] };
+      // 1. 기존 공정 중 선택된 것만 유지 (선택 해제된 공정은 하위 l3 포함 삭제)
+      const keptProcesses = prev.l2.filter(p => {
+        // placeholder 공정은 무조건 제거
+        if (!p.name || p.name.includes('클릭') || p.name.includes('선택')) {
+          return false;
+        }
+        // 선택 목록에 있으면 유지
+        return selectedNames.has(p.name);
+      });
+      
+      // 2. 새로 추가할 공정 (기존에 없던 것만)
+      const existingNames = new Set(keptProcesses.map(p => p.name));
+      const newProcesses: Process[] = selectedProcesses
+        .filter(p => !existingNames.has(p.processName))
+        .map((p, idx) => ({
+          id: uid(),
+          no: p.processNo,
+          name: p.processName,
+          order: (keptProcesses.length + idx + 1) * 10,
+          functions: [],
+          productChars: [],
+          l3: [{ id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10, functions: [], processChars: [] }]
+        }));
+      
+      // 3. 결과 병합
+      const result = [...keptProcesses, ...newProcesses];
+      
+      // 4. 최소 1개 공정 보장
+      if (result.length === 0) {
+        return {
+          ...prev,
+          l2: [{
+            id: uid(),
+            no: '',
+            name: '(클릭하여 공정 선택)',
+            order: 10,
+            functions: [],
+            productChars: [],
+            l3: [{ id: uid(), m4: '', name: '(공정 선택 후 작업요소 추가)', order: 10, functions: [], processChars: [] }]
+          }]
+        };
+      }
+      
+      return { ...prev, l2: result };
     });
     setDirty(true);
-  }, [state.l2.length]);
+  }, []);
 
-  // ============ 평탄화된 행 데이터 (전체보기용 통합 로직) ============
+  // ============ 평탄화된 행 데이터 (구조분석용 - L2/L3 기준) ============
   const rows = useMemo(() => {
     const result: FlatRow[] = [];
     
-    // 1. L1 트리 평탄화 (방어 코드 추가)
-    const l1Branches: any[] = [];
-    const l1Types = state.l1.types || [];
-    
-    if (l1Types.length === 0) {
-      l1Branches.push({ type: null, func: null, req: null });
-    } else {
-      l1Types.forEach(t => {
-        const funcs = t.functions || [];
-        if (funcs.length === 0) l1Branches.push({ type: t, func: null, req: null });
-        else funcs.forEach(f => {
-          const reqs = f.requirements || [];
-          if (reqs.length === 0) l1Branches.push({ type: t, func: f, req: null });
-          else reqs.forEach(r => l1Branches.push({ type: t, func: f, req: r }));
-        });
-      });
-    }
-
-    // 2. L2/L3 트리 평탄화
-    const l23Branches: any[] = [];
+    // L2/L3 트리 평탄화 (구조분석은 L2/L3 기준)
     const l2Data = state.l2 || [];
+    
+    // L2가 없으면 빈 배열 반환
+    if (l2Data.length === 0) {
+      return result;
+    }
+    
+    // 각 공정의 작업요소를 행으로 변환
     l2Data.forEach(proc => {
       const l3Data = proc.l3 || [];
-      l3Data.forEach(we => l23Branches.push({ proc, we }));
-    });
-
-    const maxRows = Math.max(l1Branches.length, l23Branches.length);
-    
-    for (let i = 0; i < maxRows; i++) {
-      const l1 = l1Branches[i] || l1Branches[l1Branches.length - 1];
-      const l23 = l23Branches[i] || l23Branches[l23Branches.length - 1];
       
-      result.push({
-        l1Id: state.l1.id,
-        l1Name: state.l1.name,
-        l1TypeId: l1.type?.id || '',
-        l1Type: l1.type?.name || '',
-        l1FunctionId: l1.func?.id || '',
-        l1Function: l1.func?.name || '',
-        l1RequirementId: l1.req?.id || '',
-        l1Requirement: l1.req?.name || '',
-        l1FailureEffect: l1.req?.failureEffect || '',
-        l1Severity: l1.req?.severity?.toString() || '',
-        l2Id: l23.proc.id,
-        l2No: l23.proc.no,
-        l2Name: l23.proc.name,
-        l2Functions: l23.proc.functions || [],
-        l2ProductChars: l23.proc.productChars || [],
-        l2FailureMode: l23.proc.failureMode || '',
-        l3Id: l23.we.id,
-        m4: l23.we.m4,
-        l3Name: l23.we.name,
-        l3Functions: l23.we.functions || [],
-        l3ProcessChars: l23.we.processChars || [],
-        l3FailureCause: l23.we.failureCause || '',
-      });
-    }
+      // L3가 없으면 빈 작업요소 1개 추가
+      if (l3Data.length === 0) {
+        result.push({
+          l1Id: state.l1.id,
+          l1Name: state.l1.name,
+          l1TypeId: '',
+          l1Type: '',
+          l1FunctionId: '',
+          l1Function: '',
+          l1RequirementId: '',
+          l1Requirement: '',
+          l1FailureEffect: '',
+          l1Severity: '',
+          l2Id: proc.id,
+          l2No: proc.no,
+          l2Name: proc.name,
+          l2Functions: proc.functions || [],
+          l2ProductChars: proc.productChars || [],
+          l2FailureMode: proc.failureMode || '',
+          l3Id: '',
+          m4: '',
+          l3Name: '(클릭하여 작업요소 추가)',
+          l3Functions: [],
+          l3ProcessChars: [],
+          l3FailureCause: '',
+        });
+      } else {
+        // 각 작업요소를 개별 행으로
+        l3Data.forEach(we => {
+          result.push({
+            l1Id: state.l1.id,
+            l1Name: state.l1.name,
+            l1TypeId: '',
+            l1Type: '',
+            l1FunctionId: '',
+            l1Function: '',
+            l1RequirementId: '',
+            l1Requirement: '',
+            l1FailureEffect: '',
+            l1Severity: '',
+            l2Id: proc.id,
+            l2No: proc.no,
+            l2Name: proc.name,
+            l2Functions: proc.functions || [],
+            l2ProductChars: proc.productChars || [],
+            l2FailureMode: proc.failureMode || '',
+            l3Id: we.id,
+            m4: we.m4,
+            l3Name: we.name,
+            l3Functions: we.functions || [],
+            l3ProcessChars: we.processChars || [],
+            l3FailureCause: we.failureCause || '',
+          });
+        });
+      }
+    });
     
     return result;
   }, [state.l1, state.l2]);

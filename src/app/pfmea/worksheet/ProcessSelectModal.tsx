@@ -9,12 +9,18 @@ interface ProcessItem {
   name: string;
 }
 
+interface ProcessWithL3Info {
+  name: string;
+  l3Count: number; // 하위 작업요소 수 (유효한 것만)
+}
+
 interface ProcessSelectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (selectedProcesses: ProcessItem[]) => void;
   onDelete?: (processIds: string[]) => void; // 삭제 콜백
   existingProcessNames?: string[]; // 현재 선택된 공정명들
+  existingProcessesInfo?: ProcessWithL3Info[]; // 하위 작업요소 정보
 }
 
 // 기초정보에서 공정명 로드 (LocalStorage)
@@ -71,7 +77,8 @@ export default function ProcessSelectModal({
   onClose, 
   onSave,
   onDelete,
-  existingProcessNames = []
+  existingProcessNames = [],
+  existingProcessesInfo = []
 }: ProcessSelectModalProps) {
   const [processes, setProcesses] = useState<ProcessItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -115,6 +122,21 @@ export default function ProcessSelectModal({
 
   const handleSave = () => {
     const selected = processes.filter(p => selectedIds.has(p.id));
+    const selectedNames = new Set(selected.map(p => p.name));
+    
+    // 선택 해제된 공정 중 하위 작업요소가 있는 것 확인
+    const removedWithL3 = existingProcessesInfo.filter(p => 
+      !selectedNames.has(p.name) && p.l3Count > 0
+    );
+    
+    if (removedWithL3.length > 0) {
+      const details = removedWithL3.map(p => `• ${p.name}: ${p.l3Count}개 작업요소`).join('\n');
+      const confirmed = window.confirm(
+        `⚠️ 선택 해제된 공정에 하위 작업요소가 있습니다.\n\n${details}\n\n이 공정들과 하위 작업요소를 모두 삭제하시겠습니까?`
+      );
+      if (!confirmed) return;
+    }
+    
     onSave(selected);
     onClose();
   };

@@ -125,6 +125,27 @@ function FMEAWorksheetPageContent() {
     await downloadStructureTemplate();
   }, []);
 
+  // 구조분석 누락 건수 계산
+  const calculateStructureMissing = useCallback(() => {
+    let count = 0;
+    
+    // 완제품명 누락
+    if (!state.l1.name || state.l1.name.trim() === '') count++;
+    
+    // 공정 및 작업요소 검사
+    state.l2.forEach(proc => {
+      const procName = proc.name || '';
+      if (!procName || procName.includes('클릭') || procName.includes('선택')) count++;
+      
+      proc.l3.forEach(we => {
+        const weName = we.name || '';
+        if (!weName || weName.includes('클릭') || weName.includes('추가') || weName.includes('필요') || weName.includes('선택')) count++;
+      });
+    });
+    
+    return count;
+  }, [state.l1.name, state.l2]);
+
   // 공정 모달 저장 핸들러
   const handleProcessSave = useCallback((selectedProcesses: { no: string; name: string }[]) => {
     setState(prev => {
@@ -161,14 +182,27 @@ function FMEAWorksheetPageContent() {
     setDirty(true);
   }, [setState, setDirty]);
 
-  // 작업요소 모달 저장 핸들러
+  // 작업요소 모달 저장 핸들러 (2개 이상이면 행 삭제 가능, 1개면 내용만 삭제)
   const handleWorkElementSelect = useCallback((selectedElements: { id: string; m4: string; name: string }[]) => {
-    if (!targetL2Id) return;
+    console.log('[저장] targetL2Id:', targetL2Id);
+    console.log('[저장] 선택된 항목:', selectedElements.map(e => e.name));
+    
+    if (!targetL2Id) {
+      console.log('[저장] targetL2Id 없음 - 중단');
+      return;
+    }
     
     setState(prev => {
+      const proc = prev.l2.find(p => p.id === targetL2Id);
+      console.log('[저장] 현재 공정:', proc?.name, '현재 l3:', proc?.l3.map(w => w.name));
+      
       const newL2 = prev.l2.map(proc => {
         if (proc.id !== targetL2Id) return proc;
         
+        const existingCount = proc.l3.length;
+        console.log('[저장] 기존 행 수:', existingCount, '선택 수:', selectedElements.length);
+        
+        // 선택된 항목들로 새 리스트 생성
         const newL3: WorkElement[] = selectedElements.map((e, idx) => ({
           id: uid(),
           m4: e.m4,
@@ -178,9 +212,26 @@ function FMEAWorksheetPageContent() {
           processChars: [],
         }));
         
+        // 행이 1개만 남았는데 0개 선택 → 내용만 비우고 행 유지
+        if (existingCount === 1 && newL3.length === 0) {
+          console.log('[저장] 1개→0개: 내용만 비움');
+          newL3.push({ 
+            id: proc.l3[0]?.id || uid(), 
+            m4: '', 
+            name: '(클릭하여 작업요소 추가)', 
+            order: 10, 
+            functions: [], 
+            processChars: [] 
+          });
+        }
+        
+        // 최소 1행 보장 (혹시 모든 경우 대비)
         if (newL3.length === 0) {
+          console.log('[저장] 0개: 기본 행 추가');
           newL3.push({ id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10, functions: [], processChars: [] });
         }
+        
+        console.log('[저장] 최종 l3:', newL3.map(w => w.name));
         return { ...proc, l3: newL3 };
       });
       return { ...prev, l2: newL2 };
@@ -188,23 +239,47 @@ function FMEAWorksheetPageContent() {
     setDirty(true);
   }, [targetL2Id, setState, setDirty]);
 
-  // 작업요소 모달 삭제 핸들러 (워크시트에서 실제 삭제)
+  // 작업요소 모달 삭제 핸들러 (2개 이상이면 행 삭제, 1개면 내용만 삭제)
   const handleWorkElementDelete = useCallback((deletedNames: string[]) => {
+    console.log('[삭제] targetL2Id:', targetL2Id, 'deletedNames:', deletedNames);
     if (!targetL2Id || deletedNames.length === 0) return;
+    
+    // 이름 정규화 (공백 제거)
+    const normalizedDeletedNames = deletedNames.map(n => n.trim());
     
     setState(prev => {
       const newL2 = prev.l2.map(proc => {
         if (proc.id !== targetL2Id) return proc;
         
-        // 삭제된 이름에 해당하지 않는 작업요소만 유지
-        const remainingL3 = proc.l3.filter(w => !deletedNames.includes(w.name));
+        console.log('[삭제] 현재 l3:', proc.l3.map(w => w.name));
         
-        // 모두 삭제되면 기본 항목 추가
-        if (remainingL3.length === 0) {
-          remainingL3.push({ id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10, functions: [], processChars: [] });
+        const currentCount = proc.l3.length;
+        
+        if (currentCount > 1) {
+          // 2개 이상이면 행 자체 삭제
+          const remainingL3 = proc.l3.filter(w => !normalizedDeletedNames.includes(w.name.trim()));
+          console.log('[삭제] 2개이상, 남은 항목:', remainingL3.map(w => w.name));
+          
+          // 모두 삭제되면 최소 1행 유지
+          if (remainingL3.length === 0) {
+            remainingL3.push({ id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10, functions: [], processChars: [] });
+          }
+          
+          return { ...proc, l3: remainingL3 };
+        } else {
+          // 1개만 남았으면 내용만 삭제, 행 유지
+          console.log('[삭제] 1개만 남음, 내용만 삭제');
+          const updatedL3 = proc.l3.map(w => {
+            const isMatch = normalizedDeletedNames.includes(w.name.trim());
+            console.log('[삭제] 비교:', w.name.trim(), '포함여부:', isMatch);
+            if (isMatch) {
+              return { ...w, name: '(클릭하여 작업요소 추가)', m4: '' };
+            }
+            return w;
+          });
+          
+          return { ...proc, l3: updatedL3 };
         }
-        
-        return { ...proc, l3: remainingL3 };
       });
       return { ...prev, l2: newL2 };
     });
@@ -310,16 +385,84 @@ function FMEAWorksheetPageContent() {
             <div 
               style={{ 
                 flexShrink: 0,
-                textAlign: 'center',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
                 fontWeight: 900,
-                padding: '4px 0',
+                padding: '4px 8px',
                 fontSize: '13px',
                 background: state.tab === 'structure' ? '#1a237e' : COLORS.sky2, 
                 color: state.tab === 'structure' ? '#fff' : COLORS.text,
                 borderBottom: `1px solid ${COLORS.line}`,
               }}
             >
-              P-FMEA {getTabLabel(state.tab)}({getStepNumber(state.tab)}단계)
+              {/* 중앙 타이틀 */}
+              <span>P-FMEA {getTabLabel(state.tab)}({getStepNumber(state.tab)}단계)</span>
+              
+              {/* 구조분석일 때만 우측에 확정/누락/수정 버튼 */}
+              {state.tab === 'structure' && (
+                <div style={{ position: 'absolute', right: '8px', display: 'flex', gap: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const missingCount = calculateStructureMissing();
+                      if (missingCount > 0) {
+                        alert(`⚠️ 누락건이 ${missingCount}건 있습니다.`);
+                      } else {
+                        alert('✓ 구조분석이 확정되었습니다.');
+                      }
+                      setState(prev => ({ ...prev, structureConfirmed: true }));
+                      setDirty(true);
+                    }}
+                    disabled={(state as any).structureConfirmed}
+                    style={{
+                      background: (state as any).structureConfirmed ? '#9e9e9e' : '#4caf50',
+                      color: 'white',
+                      border: 'none',
+                      padding: '3px 10px',
+                      borderRadius: '3px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      cursor: (state as any).structureConfirmed ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    확정
+                  </button>
+                  <span style={{ 
+                    background: calculateStructureMissing() > 0 ? '#f44336' : '#4caf50', 
+                    color: 'white', 
+                    padding: '3px 10px', 
+                    borderRadius: '3px', 
+                    fontSize: '11px', 
+                    fontWeight: 700 
+                  }}>
+                    누락 {calculateStructureMissing()}건
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm('구조분석을 수정하시겠습니까?')) {
+                        setState(prev => ({ ...prev, structureConfirmed: false }));
+                        setDirty(true);
+                      }
+                    }}
+                    disabled={!(state as any).structureConfirmed}
+                    style={{
+                      background: (state as any).structureConfirmed ? '#ff9800' : '#9e9e9e',
+                      color: 'white',
+                      border: 'none',
+                      padding: '3px 10px',
+                      borderRadius: '3px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      cursor: (state as any).structureConfirmed ? 'pointer' : 'not-allowed',
+                    }}
+                  >
+                    수정
+                  </button>
+                </div>
+              )}
             </div>
             )}
 
