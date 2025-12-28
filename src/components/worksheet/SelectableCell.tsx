@@ -6,6 +6,8 @@ interface SelectableCellProps {
   value: string;
   placeholder: string;
   bgColor: string;
+  textColor?: string;
+  textAlign?: 'left' | 'center' | 'right';
   onClick: () => void;
 }
 
@@ -17,6 +19,8 @@ export default function SelectableCell({
   value,
   placeholder,
   bgColor,
+  textColor,
+  textAlign = 'left',
   onClick,
 }: SelectableCellProps) {
   return (
@@ -27,6 +31,9 @@ export default function SelectableCell({
         minHeight: '24px', 
         fontSize: '10px', 
         fontFamily: 'inherit',
+        color: textColor || 'inherit',
+        fontWeight: textColor ? 700 : 'inherit',
+        justifyContent: textAlign === 'center' ? 'center' : textAlign === 'right' ? 'flex-end' : 'flex-start',
         background: value ? 'transparent' : `repeating-linear-gradient(45deg, ${bgColor}, ${bgColor} 4px, #fff 4px, #fff 8px)`
       }}
       title="클릭하여 선택"

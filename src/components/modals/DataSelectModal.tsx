@@ -35,6 +35,7 @@ export const ITEM_CODE_LABELS: Record<string, { label: string; category: string;
 const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   '기본': { bg: '#e8f5e9', text: '#2e7d32', border: '#a5d6a7' },
   '추가': { bg: '#fff3e0', text: '#e65100', border: '#ffcc80' },
+  '워크시트': { bg: '#ffebee', text: '#c62828', border: '#ef9a9a' }, // 정리 대상 (빨간색)
 };
 
 export interface DataItem {
@@ -81,7 +82,7 @@ export default function DataSelectModal({
   const [newValue, setNewValue] = useState('');
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('list');
-  const [filterType, setFilterType] = useState<'all' | 'default' | 'added'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'default' | 'added' | 'worksheet'>('all');
   const [categoryFilter, setCategoryFilter] = useState('All');
 
   const itemInfo = ITEM_CODE_LABELS[itemCode] || { label: itemCode, category: 'A', level: 'L1' };
@@ -101,33 +102,37 @@ export default function DataSelectModal({
             { id: 'C1_2', value: 'Ship to Plant', category: '기본', belongsTo: 'Ship to Plant' },
             { id: 'C1_3', value: 'User', category: '기본', belongsTo: 'User' },
           ],
+          // ★ C3: 요구사항 (명사형 - ~조건, ~기준, ~사양)
           C3: [
-            // Your Plant 관련
-            { id: 'C3_1', value: '재료 규격 준수', category: '기본', belongsTo: 'Your Plant' },
-            { id: 'C3_2', value: '배합비 정확도', category: '기본', belongsTo: 'Your Plant' },
-            { id: 'C3_3', value: '공정 파라미터 관리', category: '기본', belongsTo: 'Your Plant' },
-            // Ship to Plant 관련
-            { id: 'C3_4', value: '규격 치수 유지', category: '기본', belongsTo: 'Ship to Plant' },
-            { id: 'C3_5', value: '외관 품질 확보', category: '기본', belongsTo: 'Ship to Plant' },
-            { id: 'C3_6', value: '포장 상태 유지', category: '기본', belongsTo: 'Ship to Plant' },
-            // User 관련
-            { id: 'C3_7', value: '내구성 확보', category: '기본', belongsTo: 'User' },
-            { id: 'C3_8', value: '안전 기준 충족', category: '기본', belongsTo: 'User' },
-            { id: 'C3_9', value: '성능 요건 충족', category: '기본', belongsTo: 'User' },
+            // Your Plant 관련 요구사항
+            { id: 'C3_1', value: '재료 규격 ±0.5mm 이내', category: '기본', belongsTo: 'Your Plant' },
+            { id: 'C3_2', value: '배합비 오차 ±2% 이내', category: '기본', belongsTo: 'Your Plant' },
+            { id: 'C3_3', value: '공정 온도 180±5℃', category: '기본', belongsTo: 'Your Plant' },
+            { id: 'C3_4', value: '공정 압력 10±1 bar', category: '기본', belongsTo: 'Your Plant' },
+            // Ship to Plant 관련 요구사항
+            { id: 'C3_5', value: '외경 치수 Ø50±0.1mm', category: '기본', belongsTo: 'Ship to Plant' },
+            { id: 'C3_6', value: '표면 조도 Ra 1.6 이하', category: '기본', belongsTo: 'Ship to Plant' },
+            { id: 'C3_7', value: '포장 규격 500x300x200mm', category: '기본', belongsTo: 'Ship to Plant' },
+            // User 관련 요구사항
+            { id: 'C3_8', value: '내구 수명 10만km 이상', category: '기본', belongsTo: 'User' },
+            { id: 'C3_9', value: '안전 하중 500kgf 이상', category: '기본', belongsTo: 'User' },
+            { id: 'C3_10', value: '소음 레벨 60dB 이하', category: '기본', belongsTo: 'User' },
           ],
+          // ★ C2: 완제품 기능 (동사형 - ~한다, ~수행한다)
           C2: [
-            // Your Plant 관련
-            { id: 'C2_1', value: '규격에 맞는 재료 투입', category: '기본', belongsTo: 'Your Plant' },
-            { id: 'C2_2', value: '배합 일관성 확보', category: '기본', belongsTo: 'Your Plant' },
-            { id: 'C2_3', value: '공정 품질 유지', category: '기본', belongsTo: 'Your Plant' },
-            // Ship to Plant 관련
-            { id: 'C2_4', value: '차량에 적정하게 장착 가능', category: '기본', belongsTo: 'Ship to Plant' },
-            { id: 'C2_5', value: '치수 및 형상 유지', category: '기본', belongsTo: 'Ship to Plant' },
-            { id: 'C2_6', value: '외관 품질 유지', category: '기본', belongsTo: 'Ship to Plant' },
-            // User 관련
-            { id: 'C2_7', value: '주행 안전성 확보', category: '기본', belongsTo: 'User' },
-            { id: 'C2_8', value: '동력전달 기능 수행', category: '기본', belongsTo: 'User' },
-            { id: 'C2_9', value: '승차감 제공', category: '기본', belongsTo: 'User' },
+            // Your Plant 관련 기능
+            { id: 'C2_1', value: '규격에 맞는 재료를 투입한다', category: '기본', belongsTo: 'Your Plant' },
+            { id: 'C2_2', value: '일관된 배합 품질을 유지한다', category: '기본', belongsTo: 'Your Plant' },
+            { id: 'C2_3', value: '공정 품질을 관리한다', category: '기본', belongsTo: 'Your Plant' },
+            // Ship to Plant 관련 기능
+            { id: 'C2_4', value: '차량에 장착 가능한 형상을 제공한다', category: '기본', belongsTo: 'Ship to Plant' },
+            { id: 'C2_5', value: '규격 치수를 유지한다', category: '기본', belongsTo: 'Ship to Plant' },
+            { id: 'C2_6', value: '외관 품질을 확보한다', category: '기본', belongsTo: 'Ship to Plant' },
+            // User 관련 기능
+            { id: 'C2_7', value: '주행 중 안전성을 확보한다', category: '기본', belongsTo: 'User' },
+            { id: 'C2_8', value: '동력을 전달한다', category: '기본', belongsTo: 'User' },
+            { id: 'C2_9', value: '진동을 흡수한다', category: '기본', belongsTo: 'User' },
+            { id: 'C2_10', value: '승차감을 제공한다', category: '기본', belongsTo: 'User' },
           ],
           C4: [
             { id: 'C4_1', value: '차량 정지 (안전 관련)', category: '기본' },
@@ -225,13 +230,13 @@ export default function DataSelectModal({
           });
         }
         
-        // 현재 워크시트에 있는 값들도 목록에 추가 (삭제 가능하도록)
+        // 현재 워크시트에 있는 값들 - 기본 항목과 정확히 일치하지 않으면 '워크시트' 카테고리로 표시
         currentValues.forEach((val, idx) => {
           if (val && val.trim() && !allItems.find(i => i.value === val)) {
             allItems.push({
               id: `${itemCode}_current_${idx}`,
               value: val,
-              category: '추가', // 워크시트에 있는 항목은 삭제 가능
+              category: '워크시트', // 워크시트에만 있는 항목 (정리 대상)
             });
           }
         });
@@ -262,9 +267,10 @@ export default function DataSelectModal({
   const filteredItems = useMemo(() => {
     let result = items;
     
-    // 카테고리 필터 (기본/추가)
+    // 카테고리 필터 (기본/추가/워크시트)
     if (filterType === 'default') result = result.filter(i => i.category === '기본');
     if (filterType === 'added') result = result.filter(i => i.category === '추가');
+    if (filterType === 'worksheet') result = result.filter(i => i.category === '워크시트');
     
     // 구분 필터 (Your Plant / Ship to Plant / User)
     if (categoryFilter !== 'All') {
@@ -282,6 +288,7 @@ export default function DataSelectModal({
 
   const defaultCount = items.filter(i => i.category === '기본').length;
   const addedCount = items.filter(i => i.category === '추가').length;
+  const worksheetCount = items.filter(i => i.category === '워크시트').length;
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -337,12 +344,13 @@ export default function DataSelectModal({
     >
       {activeTab === 'list' ? (
         <div className="flex flex-col h-full overflow-hidden">
-          {/* 필터 탭 - WorkElementSelectModal과 동일 */}
+          {/* 필터 탭 */}
           <div className="flex border-b bg-gray-50/30 shrink-0">
             {[
               { id: 'all', label: `전체 (${items.length})`, icon: null },
               { id: 'default', label: `기본 (${defaultCount})`, icon: '🌐' },
-              { id: 'added', label: `추가 (${addedCount})`, icon: '➕' }
+              { id: 'added', label: `추가 (${addedCount})`, icon: '➕' },
+              ...(worksheetCount > 0 ? [{ id: 'worksheet', label: `⚠️ 정리대상 (${worksheetCount})`, icon: '🧹' }] : [])
             ].map(type => (
               <button
                 key={type.id}
@@ -432,6 +440,54 @@ export default function DataSelectModal({
               <div className="flex gap-1">
                 <button onClick={selectAll} className="px-3 py-2 text-xs font-bold bg-blue-500 text-white rounded-md hover:bg-blue-600 shadow-sm transition-colors">전체선택</button>
                 <button onClick={deselectAll} className="px-3 py-2 text-xs font-bold bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 shadow-sm transition-colors">해제</button>
+                {worksheetCount > 0 && (
+                  <button 
+                    onClick={() => {
+                      const worksheetItems = items.filter(i => i.category === '워크시트');
+                      const valuesToDelete = worksheetItems.map(i => i.value);
+                      if (confirm(`⚠️ 정리대상 ${worksheetCount}개 항목을 워크시트에서 삭제하시겠습니까?\n\n삭제 항목:\n${valuesToDelete.slice(0, 5).join('\n')}${valuesToDelete.length > 5 ? `\n... 외 ${valuesToDelete.length - 5}개` : ''}\n\n(기본 항목만 유지됩니다)`)) {
+                        if (onDelete) {
+                          onDelete(valuesToDelete);
+                        }
+                        // 목록에서 워크시트 항목 제거
+                        setItems(prev => prev.filter(i => i.category !== '워크시트'));
+                        setSelectedIds(new Set());
+                        alert('정리대상 데이터가 삭제되었습니다.\n기본 항목에서 다시 선택하세요.');
+                      }
+                    }}
+                    className="px-3 py-2 text-xs font-bold bg-red-600 text-white rounded-md hover:bg-red-700 shadow-sm transition-colors animate-pulse"
+                    title="워크시트에서 정리대상 항목 삭제"
+                  >
+                    🗑️ 정리대상 삭제 ({worksheetCount})
+                  </button>
+                )}
+                {addedCount > 0 && (
+                  <button 
+                    onClick={() => {
+                      if (confirm(`추가된 ${addedCount}개 항목을 마스터 목록에서 삭제하시겠습니까?\n\n(기본 항목은 유지됩니다)`)) {
+                        // localStorage에서 해당 itemCode의 추가 데이터 삭제
+                        try {
+                          const savedData = localStorage.getItem('pfmea_master_data');
+                          if (savedData) {
+                            const parsedData = JSON.parse(savedData);
+                            const filteredData = parsedData.filter((item: any) => item.itemCode !== itemCode);
+                            localStorage.setItem('pfmea_master_data', JSON.stringify(filteredData));
+                          }
+                        } catch (e) {
+                          console.error('데이터 정리 오류:', e);
+                        }
+                        // 목록에서 추가 항목 제거
+                        setItems(prev => prev.filter(i => i.category !== '추가'));
+                        setSelectedIds(new Set());
+                        alert('추가 데이터가 정리되었습니다.');
+                      }
+                    }}
+                    className="px-3 py-2 text-xs font-bold bg-orange-500 text-white rounded-md hover:bg-orange-600 shadow-sm transition-colors"
+                    title="마스터 목록에서 추가된 항목 삭제"
+                  >
+                    🧹 추가정리 ({addedCount})
+                  </button>
+                )}
                 {currentValues.length > 0 && (
                   <button 
                     onClick={() => {
@@ -451,8 +507,8 @@ export default function DataSelectModal({
             )}
           </div>
 
-          {/* 아이템 그리드 - 2열 */}
-          <div className="flex-1 overflow-auto p-4 bg-gray-50/20">
+          {/* 아이템 리스트 - 1열, 전체 내용 표시 */}
+          <div className="flex-1 overflow-auto p-2 bg-gray-50/20">
             {filteredItems.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-gray-400 py-16">
                 <span className="text-4xl mb-4">📋</span>
@@ -460,7 +516,7 @@ export default function DataSelectModal({
                 <p className="text-sm mt-1">"직접 입력" 탭에서 추가해 보세요.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
                 {filteredItems.map(item => {
                   const isSelected = selectedIds.has(item.id);
                   const isCurrent = isCurrentlySelected(item.value);
@@ -470,35 +526,35 @@ export default function DataSelectModal({
                     <div 
                       key={item.id}
                       onClick={() => toggleSelect(item.id)}
-                      className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all shadow-sm group ${
+                      className={`flex items-start gap-2 p-2 border rounded cursor-pointer transition-all group ${
                         isSelected 
                           ? isCurrent 
                             ? 'bg-green-50 border-green-400 ring-1 ring-green-400' 
                             : 'bg-blue-50 border-blue-400 ring-1 ring-blue-400'
-                          : 'bg-white border-gray-200 hover:border-blue-300 hover:shadow-md'
+                          : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50/30'
                       }`}
                     >
                       {/* 체크박스 */}
-                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all shrink-0 ${
+                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all shrink-0 mt-0.5 ${
                         isSelected 
                           ? isCurrent ? 'bg-green-500 border-green-500' : 'bg-blue-500 border-blue-500' 
                           : 'bg-white border-gray-300 group-hover:border-blue-400'
                       }`}>
-                        {isSelected && <span className="text-white text-[10px] font-bold">✓</span>}
+                        {isSelected && <span className="text-white text-[8px] font-bold">✓</span>}
                       </div>
 
                       {/* 카테고리 배지 */}
                       <span 
-                        className="text-[9px] font-bold px-1.5 py-0.5 rounded shadow-inner shrink-0"
+                        className="text-[8px] font-bold px-1 py-0.5 rounded shrink-0"
                         style={{ background: catColor.bg, color: catColor.text, border: `1px solid ${catColor.border}` }}
                       >
-                        {item.category || '기본'}
+                        {item.category === '워크시트' ? '⚠️정리' : item.category || '기본'}
                       </span>
 
                       {/* 소속 배지 (belongsTo) */}
                       {item.belongsTo && ['C2', 'C3'].includes(itemCode) && (
                         <span 
-                          className="text-[8px] font-medium px-1.5 py-0.5 rounded shrink-0"
+                          className="text-[7px] font-medium px-1 py-0.5 rounded shrink-0"
                           style={{ 
                             background: item.belongsTo === 'Your Plant' ? '#e8f5e9' : 
                                        item.belongsTo === 'Ship to Plant' ? '#fff3e0' : '#fce4ec',
@@ -513,12 +569,12 @@ export default function DataSelectModal({
                         </span>
                       )}
 
-                      {/* 이름 */}
-                      <span className={`flex-1 text-sm truncate font-medium ${
+                      {/* 이름 - 줄바꿈 허용, 작은 글씨 */}
+                      <span className={`flex-1 text-[10px] leading-tight font-medium break-words whitespace-pre-wrap ${
                         isSelected ? (isCurrent ? 'text-green-900' : 'text-blue-900') : 'text-gray-700'
                       }`}>
                         {item.value}
-                        {isCurrent && <span className="ml-1 text-[9px] font-normal text-green-600">(현재)</span>}
+                        {isCurrent && <span className="ml-1 text-[8px] font-normal text-green-600">(현재)</span>}
                       </span>
 
                     </div>

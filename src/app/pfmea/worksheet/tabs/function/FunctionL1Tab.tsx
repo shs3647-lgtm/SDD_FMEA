@@ -11,6 +11,17 @@ import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 import { COLORS, uid } from '../../constants';
 
+// 구분(Type)별 색상 정의
+const TYPE_COLORS: Record<string, { bg: string; light: string; text: string }> = {
+  'Your Plant': { bg: '#1976d2', light: '#bbdefb', text: '#0d47a1' },      // 파란색
+  'Ship to Plant': { bg: '#f57c00', light: '#ffe0b2', text: '#e65100' },   // 주황색
+  'User': { bg: '#7b1fa2', light: '#e1bee7', text: '#4a148c' },            // 보라색
+};
+
+const getTypeColor = (typeName: string) => {
+  return TYPE_COLORS[typeName] || { bg: '#388e3c', light: '#c8e6c9', text: '#1b5e20' }; // 기본 녹색
+};
+
 export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalStorage }: FunctionTabProps) {
   const [modal, setModal] = useState<{ type: string; id: string; title: string; itemCode: string } | null>(null);
 
@@ -170,10 +181,55 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
               style={{ 
                 background: '#1b5e20', color: 'white', 
                 border: `1px solid ${COLORS.line}`, padding: '8px', 
-                fontSize: '12px', fontWeight: 800, textAlign: 'center'
+                fontSize: '12px', fontWeight: 800, textAlign: 'center',
+                position: 'relative'
               }}
             >
-              3단계 : 1L 완제품 공정 기능분석
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ flex: 1, textAlign: 'center' }}>3단계 : 1L 완제품 공정 기능분석</span>
+                <div style={{ display: 'flex', gap: '4px', position: 'absolute', right: '8px' }}>
+                  <button
+                    type="button"
+                    style={{
+                      padding: '4px 12px',
+                      background: '#4caf50',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    확정
+                  </button>
+                  <span style={{
+                    padding: '4px 10px',
+                    background: '#ff9800',
+                    color: 'white',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: 700
+                  }}>
+                    누락 0건
+                  </span>
+                  <button
+                    type="button"
+                    style={{
+                      padding: '4px 12px',
+                      background: '#2196f3',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    수정
+                  </button>
+                </div>
+              </div>
             </th>
           </tr>
           
@@ -243,8 +299,8 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                 <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700, verticalAlign: 'middle' }}>
                   {state.l1.name || '(구조분석에서 입력)'}
                 </td>
-                <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: '#c8e6c9', verticalAlign: 'middle' }}>
-                  <SelectableCell value={t.name} placeholder="구분" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
+                <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: getTypeColor(t.name).light, verticalAlign: 'middle' }}>
+                  <SelectableCell value={t.name} placeholder="구분" bgColor={getTypeColor(t.name).light} textColor={getTypeColor(t.name).text} textAlign="center" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
                 </td>
                 <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
                   <SelectableCell value="" placeholder="기능 선택" bgColor="#fce4ec" onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} />
@@ -265,8 +321,8 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                     </td>
                   )}
                   {fIdx === 0 && (
-                    <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: '#c8e6c9', verticalAlign: 'middle' }}>
-                      <SelectableCell value={t.name} placeholder="구분" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
+                    <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: getTypeColor(t.name).light, verticalAlign: 'middle' }}>
+                      <SelectableCell value={t.name} placeholder="구분" bgColor={getTypeColor(t.name).light} textColor={getTypeColor(t.name).text} textAlign="center" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
                     </td>
                   )}
                   <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
@@ -285,8 +341,8 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                     </td>
                   )}
                   {fIdx === 0 && rIdx === 0 && (
-                    <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: '#c8e6c9', verticalAlign: 'middle' }}>
-                      <SelectableCell value={t.name} placeholder="구분" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
+                    <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: getTypeColor(t.name).light, verticalAlign: 'middle' }}>
+                      <SelectableCell value={t.name} placeholder="구분" bgColor={getTypeColor(t.name).light} textColor={getTypeColor(t.name).text} textAlign="center" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
                     </td>
                   )}
                   {rIdx === 0 && (
