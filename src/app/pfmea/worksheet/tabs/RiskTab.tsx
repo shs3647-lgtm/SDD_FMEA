@@ -1,25 +1,12 @@
 /**
  * @file RiskTab.tsx
  * @description FMEA 워크시트 - 리스크분석(5단계) 탭
- * @author AI Assistant
- * @created 2025-12-27
  */
 
 'use client';
 
 import React from 'react';
-import { WorksheetState, COLORS } from '../constants';
-
-interface FlatRow {
-  l1Id: string;
-  l1Name: string;
-  l2Id: string;
-  l2No: string;
-  l2Name: string;
-  l3Id: string;
-  m4: string;
-  l3Name: string;
-}
+import { WorksheetState, COLORS, FlatRow } from '../constants';
 
 interface RiskTabProps {
   state: WorksheetState;
@@ -28,9 +15,6 @@ interface RiskTabProps {
   l2Spans: number[];
 }
 
-/**
- * 리스크분석 탭 - 테이블 헤더
- */
 export function RiskHeader() {
   return (
     <>
@@ -52,53 +36,12 @@ export function RiskHeader() {
   );
 }
 
-/**
- * 리스크분석 탭 - 테이블 행 (데이터 셀) - 개발예정
- */
 export function RiskRow({
-  row,
-  idx,
-  l1Spans,
-  l2Spans,
+  row, idx, l1Spans, l2Spans,
 }: RiskTabProps & { row: FlatRow; idx: number }) {
   return (
     <>
-      {l1Spans[idx] > 0 && (
-        <td 
-          rowSpan={l1Spans[idx]} 
-          className="text-center text-xs text-gray-400" 
-          style={{ 
-            border: `1px solid ${COLORS.line}`, 
-            padding: '1px 4px', 
-            verticalAlign: 'middle' 
-          }}
-        >
-          {row.l1Name}
-        </td>
-      )}
-      {l2Spans[idx] > 0 && (
-        <td 
-          rowSpan={l2Spans[idx]} 
-          className="text-center text-xs text-gray-400" 
-          style={{ 
-            border: `1px solid ${COLORS.line}`, 
-            padding: '1px 4px', 
-            verticalAlign: 'middle' 
-          }}
-        >
-          {row.l2No} {row.l2Name}
-        </td>
-      )}
-      <td 
-        className="text-xs text-gray-400" 
-        style={{ 
-          border: `1px solid ${COLORS.line}`, 
-          padding: '1px 4px' 
-        }}
-      >
-        [{row.m4}] {row.l3Name}
-      </td>
-      {/* 개발예정 셀들 */}
+      <td className="text-xs text-gray-400" style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px' }}>[{row.m4}] {row.l3Name}</td>
       <td style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#fafafa' }}></td>
       <td style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#fafafa' }}></td>
       <td style={{ border: `1px solid ${COLORS.line}`, padding: '1px 4px', background: '#fafafa' }}></td>
@@ -107,21 +50,16 @@ export function RiskRow({
   );
 }
 
-/**
- * 리스크분석 탭 - 전체 컴포넌트
- */
 export default function RiskTab(props: RiskTabProps) {
   const { rows } = props;
-  
   return (
     <>
       <thead style={{ position: 'sticky', top: 0, zIndex: 20, background: '#fff' }}>
         <RiskHeader />
       </thead>
-      
       <tbody>
         {rows.map((row, idx) => (
-          <tr key={row.l3Id} style={{ height: '25px' }}>
+          <tr key={`${row.l1TypeId}-${row.l2Id}-${row.l3Id}`} style={{ height: '25px' }}>
             <RiskRow {...props} row={row} idx={idx} />
           </tr>
         ))}
@@ -129,4 +67,3 @@ export default function RiskTab(props: RiskTabProps) {
     </>
   );
 }
-

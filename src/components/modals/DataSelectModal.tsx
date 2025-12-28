@@ -5,18 +5,12 @@
  * @created 2025-12-28
  * 
  * 사용처: 기능분석, 고장분석 등 모든 탭에서 재사용
- * - 완제품 기능 (C2)
- * - 요구사항 (C3)
- * - 공정 기능 (A3)
- * - 제품특성 (A4)
- * - 작업요소 기능 (B2)
- * - 공정특성 (B3)
  */
 
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { createPortal } from 'react-dom';
+import BaseModal from '@/components/modals/BaseModal';
 
 // 아이템 코드별 라벨 정의
 export const ITEM_CODE_LABELS: Record<string, { label: string; category: string; level: 'L1' | 'L2' | 'L3' }> = {
@@ -32,19 +26,20 @@ export const ITEM_CODE_LABELS: Record<string, { label: string; category: string;
   B3: { label: '공정특성', category: 'B', level: 'L3' },
   B4: { label: '고장원인', category: 'B', level: 'L3' },
   B5: { label: '예방관리', category: 'B', level: 'L3' },
+  S1: { label: '심각도', category: 'S', level: 'L1' },
 };
 
-// 레벨별 테마 색상
-const LEVEL_COLORS = {
-  L1: { main: '#7b1fa2', light: '#f3e5f5', border: '#ce93d8' },  // 보라
-  L2: { main: '#512da8', light: '#ede7f6', border: '#b39ddb' },  // 인디고
-  L3: { main: '#303f9f', light: '#e8eaf6', border: '#9fa8da' },  // 파랑
+// 레벨별 테마 색상 (표준화된 색상 사용)
+const LEVEL_THEMES = {
+  L1: { main: '#7b1fa2', bg: '#f3e5f5', border: '#ce93d8', text: '#4a148c' },  // 보라
+  L2: { main: '#512da8', bg: '#ede7f6', border: '#b39ddb', text: '#311b92' },  // 인디고
+  L3: { main: '#303f9f', bg: '#e8eaf6', border: '#9fa8da', text: '#1a237e' },  // 파랑
 };
 
 export interface DataItem {
   id: string;
   value: string;
-  processNo?: string;  // 공정별 필터링용
+  processNo?: string;
   selected?: boolean;
 }
 
@@ -53,9 +48,10 @@ interface DataSelectModalProps {
   onClose: () => void;
   onSave: (selectedValues: string[]) => void;
   title: string;
-  itemCode: string;  // C2, C3, A3, A4, B2, B3 등
-  currentValues: string[];  // 현재 선택된 값들
-  processNo?: string;  // 특정 공정 필터링 (옵션)
+  itemCode: string;
+  currentValues: string[];
+  processNo?: string;
+  singleSelect?: boolean;
 }
 
 export default function DataSelectModal({
@@ -66,23 +62,18 @@ export default function DataSelectModal({
   itemCode,
   currentValues,
   processNo,
+  singleSelect = false,
 }: DataSelectModalProps) {
   const [items, setItems] = useState<DataItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [newValue, setNewValue] = useState('');
   const [search, setSearch] = useState('');
-  const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState('list');
 
   const itemInfo = ITEM_CODE_LABELS[itemCode] || { label: itemCode, category: 'A', level: 'L1' };
-  const colors = LEVEL_COLORS[itemInfo.level];
+  const theme = LEVEL_THEMES[itemInfo.level];
 
-  // 하이드레이션 오류 방지
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
-
-  // localStorage에서 데이터 로드
+  // 데이터 로드
   useEffect(() => {
     if (!isOpen) return;
 
@@ -93,16 +84,9 @@ export default function DataSelectModal({
         
         if (savedData) {
           const parsedData = JSON.parse(savedData);
-          
-          // itemCode에 해당하는 데이터 필터링
           let filteredData = parsedData.filter((item: any) => item.itemCode === itemCode);
+          if (processNo) filteredData = filteredData.filter((item: any) => item.processNo === processNo);
           
-          // 공정번호 필터링 (옵션)
-          if (processNo) {
-            filteredData = filteredData.filter((item: any) => item.processNo === processNo);
-          }
-          
-          // 중복 제거 및 DataItem 형식으로 변환
           const uniqueValues = new Map<string, DataItem>();
           filteredData.forEach((item: any, idx: number) => {
             if (item.value && item.value.trim()) {
@@ -119,7 +103,6 @@ export default function DataSelectModal({
           initialItems = Array.from(uniqueValues.values());
         }
 
-        // C1(구분)인 경우 기본 항목 추가
         if (itemCode === 'C1' && initialItems.length === 0) {
           initialItems = [
             { id: 'C1_1', value: 'Your Plant' },
@@ -127,243 +110,232 @@ export default function DataSelectModal({
             { id: 'C1_3', value: 'User' },
           ];
         }
+
+        if (itemCode === 'C3' && initialItems.length === 0) {
+          initialItems = [
+            { id: 'C3_1', value: 'Your Plant' },
+            { id: 'C3_2', value: 'Ship to Plant' },
+            { id: 'C3_3', value: 'User' },
+          ];
+        }
         
+        if (itemCode === 'S1' && initialItems.length === 0) {
+          initialItems = Array.from({ length: 10 }, (_, i) => ({
+            id: `S1_${i + 1}`,
+            value: (10 - i).toString()
+          }));
+        }
+
+        if (itemCode === 'C4' && initialItems.length === 0) {
+          initialItems = [
+            { id: 'C4_1', value: '차량 정지 (안전 관련)' },
+            { id: 'C4_2', value: '차량 주요기능 작동 불능' },
+            { id: 'C4_3', value: '차량 성능 저하' },
+            { id: 'C4_4', value: '외관 불량' },
+            { id: 'C4_5', value: '이음 발생' },
+          ];
+        }
         setItems(initialItems);
       } catch (error) {
         console.error('데이터 로드 오류:', error);
-        setItems([]);
       }
     };
-
     loadData();
   }, [isOpen, itemCode, processNo]);
 
-  // 현재 값들로 선택 상태 초기화
+  // 선택 상태 초기화
   useEffect(() => {
     if (items.length > 0 && currentValues.length > 0) {
       const newSelectedIds = new Set<string>();
       currentValues.forEach(val => {
         const found = items.find(item => item.value === val);
-        if (found) {
-          newSelectedIds.add(found.id);
-        }
+        if (found) newSelectedIds.add(found.id);
       });
       setSelectedIds(newSelectedIds);
+    } else {
+      setSelectedIds(new Set());
     }
   }, [items, currentValues]);
 
-  // 검색 필터링
   const filteredItems = useMemo(() => {
     if (!search.trim()) return items;
-    const searchLower = search.toLowerCase();
-    return items.filter(item => item.value.toLowerCase().includes(searchLower));
+    const q = search.toLowerCase();
+    return items.filter(item => item.value.toLowerCase().includes(q));
   }, [items, search]);
 
-  // 체크박스 토글
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        // C1(구분)인 경우 단일 선택처럼 동작 (선택 시 다른 것들 해제)
-        if (itemCode === 'C1') {
-          return new Set([id]);
-        }
+      if (newSet.has(id)) newSet.delete(id);
+      else {
+        if (singleSelect) newSet.clear();
         newSet.add(id);
       }
       return newSet;
     });
-  }, [itemCode]);
+  }, [singleSelect]);
 
-  // 전체 선택/해제
-  const toggleAll = useCallback(() => {
-    if (itemCode === 'C1') return; // 구분은 전체선택 방지
-    
-    if (selectedIds.size === filteredItems.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredItems.map(item => item.id)));
-    }
-  }, [selectedIds, filteredItems, itemCode]);
+  const toggleAll = () => {
+    // [표준화] C1도 전체 선택 허용
+    if (selectedIds.size === filteredItems.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filteredItems.map(item => item.id)));
+  };
 
-  // 신규 항목 추가
-  const handleAddNew = useCallback(() => {
+  const handleAddNew = () => {
     if (!newValue.trim()) return;
-    
-    const newItem: DataItem = {
-      id: `new_${Date.now()}`,
-      value: newValue.trim(),
-    };
-    
+    const newItem: DataItem = { id: `new_${Date.now()}`, value: newValue.trim() };
     setItems(prev => [...prev, newItem]);
-    // C1인 경우 신규 추가하면 그것만 선택됨
-    if (itemCode === 'C1') {
-      setSelectedIds(new Set([newItem.id]));
-    } else {
-      setSelectedIds(prev => new Set([...prev, newItem.id]));
-    }
+    setSelectedIds(prev => new Set([...prev, newItem.id]));
     setNewValue('');
-  }, [newValue, itemCode]);
+  };
 
-  // 저장
-  const handleSave = useCallback(() => {
+  const handleSave = () => {
     const selectedValues = items
       .filter(item => selectedIds.has(item.id))
       .map(item => item.value);
     onSave(selectedValues);
     onClose();
-  }, [items, selectedIds, onSave, onClose]);
+  };
 
-  if (!isOpen || !mounted) return null;
-
-  return createPortal(
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-      onClick={onClose}
-    >
-      <div 
-        className="bg-white rounded-lg shadow-xl"
-        style={{ width: '500px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* 헤더 */}
-        <div 
-          className="flex items-center justify-between px-4 py-3 rounded-t-lg"
-          style={{ background: colors.main, color: '#fff' }}
-        >
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-bold">📋 {title}</span>
-            <span 
-              className="text-xs px-2 py-0.5 rounded"
-              style={{ background: 'rgba(255,255,255,0.2)' }}
-            >
-              {itemInfo.label} ({itemCode})
-            </span>
-          </div>
-          <button 
-            onClick={onClose}
-            className="text-white hover:bg-white/20 rounded px-2 py-1"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* 검색 + 전체선택 */}
-        <div className="px-4 py-2 border-b flex items-center gap-2">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="검색..."
-            className="flex-1 px-3 py-1.5 border rounded text-sm"
-            style={{ borderColor: colors.border }}
-          />
-          {itemCode !== 'C1' && (
-            <button
-              onClick={toggleAll}
-              className="px-3 py-1.5 text-xs font-bold rounded"
-              style={{ 
-                background: selectedIds.size === filteredItems.length ? colors.main : colors.light,
-                color: selectedIds.size === filteredItems.length ? '#fff' : colors.main,
-                border: `1px solid ${colors.border}`,
-              }}
-            >
-              {selectedIds.size === filteredItems.length ? '전체해제' : '전체선택'}
-            </button>
-          )}
-        </div>
-
-        {/* 아이템 리스트 */}
-        <div className="flex-1 overflow-auto px-4 py-2" style={{ maxHeight: '300px' }}>
-          {filteredItems.length === 0 ? (
-            <div className="text-center text-gray-400 py-8">
-              <p>데이터가 없습니다.</p>
-              <p className="text-xs mt-1">아래에서 직접 입력하세요.</p>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {filteredItems.map(item => (
-                <label
-                  key={item.id}
-                  className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer hover:bg-gray-50"
-                  style={{
-                    background: selectedIds.has(item.id) ? colors.light : 'transparent',
-                    border: `1px solid ${selectedIds.has(item.id) ? colors.border : '#e5e7eb'}`,
-                  }}
-                >
-                  <input
-                    type={itemCode === 'C1' ? 'radio' : 'checkbox'}
-                    name={itemCode === 'C1' ? 'data-select' : undefined}
-                    checked={selectedIds.has(item.id)}
-                    onChange={() => toggleSelect(item.id)}
-                    className="w-4 h-4"
-                    style={{ accentColor: colors.main }}
-                  />
-                  <span className="flex-1 text-sm">{item.value}</span>
-                  {item.processNo && (
-                    <span className="text-xs text-gray-400">({item.processNo})</span>
-                  )}
-                </label>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* 신규 입력 */}
-        <div className="px-4 py-3 border-t" style={{ background: colors.light }}>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold" style={{ color: colors.main }}>
-              ➕ 신규 입력:
-            </span>
-            <input
-              type="text"
-              value={newValue}
-              onChange={(e) => setNewValue(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleAddNew(); }}
-              placeholder={`새 ${itemInfo.label} 입력...`}
-              className="flex-1 px-3 py-1.5 border rounded text-sm"
-              style={{ borderColor: colors.border }}
-            />
-            <button
-              onClick={handleAddNew}
-              disabled={!newValue.trim()}
-              className="px-3 py-1.5 text-xs font-bold rounded"
-              style={{
-                background: newValue.trim() ? colors.main : '#e5e7eb',
-                color: newValue.trim() ? '#fff' : '#999',
-              }}
-            >
-              추가
-            </button>
-          </div>
-        </div>
-
-        {/* 선택 현황 + 버튼 */}
-        <div className="px-4 py-3 border-t flex items-center justify-between">
-          <span className="text-sm text-gray-500">
-            선택됨: <strong style={{ color: colors.main }}>{selectedIds.size}</strong>개
+  return (
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+      icon="📋"
+      headerColor={theme.main}
+      width="520px"
+      tabs={[
+        { id: 'list', label: '목록에서 선택', icon: '🔍' },
+        { id: 'manual', label: '직접 입력', icon: '⌨️' }
+      ]}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      onSave={handleSave}
+      saveDisabled={selectedIds.size === 0}
+      footerContent={
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-bold" style={{ color: theme.main }}>
+            ✓ {selectedIds.size}개 선택됨
           </span>
-          <div className="flex gap-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-bold rounded border"
-              style={{ borderColor: colors.border, color: colors.main }}
-            >
-              취소
-            </button>
-            <button
-              onClick={handleSave}
-              className="px-4 py-2 text-sm font-bold rounded text-white"
-              style={{ background: colors.main }}
-            >
-              확인 ({selectedIds.size}개)
-            </button>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 border">
+            {itemInfo.label} ({itemCode})
+          </span>
+        </div>
+      }
+    >
+      {activeTab === 'list' ? (
+        <div className="flex flex-col h-full overflow-hidden">
+          <div className="px-4 py-3 border-b flex items-center gap-2 bg-gray-50/50">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={`${itemInfo.label} 검색...`}
+                className="w-full pl-9 pr-3 py-2 text-sm border rounded-md focus:ring-2 outline-none transition-all shadow-sm"
+                style={{ borderColor: theme.border }}
+              />
+              <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
+            </div>
+            {/* [표준화] 모든 항목에 대해 전체 선택 버튼 표시 (단일 선택 모드 제외) */}
+            {!singleSelect && (
+              <button 
+                onClick={toggleAll}
+                className="px-3 py-2 text-xs font-bold rounded-md border shadow-sm transition-colors whitespace-nowrap"
+                style={{ 
+                  background: selectedIds.size === filteredItems.length && filteredItems.length > 0 ? theme.main : '#fff',
+                  color: selectedIds.size === filteredItems.length && filteredItems.length > 0 ? '#fff' : theme.main,
+                  borderColor: theme.border
+                }}
+              >
+                {selectedIds.size === filteredItems.length && filteredItems.length > 0 ? '전체해제' : '전체선택'}
+              </button>
+            )}
+          </div>
+
+          <div className="flex-1 overflow-auto p-4 bg-gray-50/20">
+            {filteredItems.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-gray-400 py-16">
+                <span className="text-4xl mb-4">📋</span>
+                <p className="font-medium">데이터가 없습니다.</p>
+                <p className="text-sm mt-1">"직접 입력" 탭에서 추가해 보세요.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredItems.map(item => {
+                  const isSelected = selectedIds.has(item.id);
+                  return (
+                    <div 
+                      key={item.id}
+                      onClick={() => toggleSelect(item.id)}
+                      className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all shadow-sm group ${
+                        isSelected 
+                          ? 'ring-1' 
+                          : 'bg-white border-gray-200 hover:shadow-md'
+                      }`}
+                      style={{ 
+                        backgroundColor: isSelected ? theme.bg : '#fff',
+                        borderColor: isSelected ? theme.main : '#e5e7eb',
+                        boxShadow: isSelected ? `0 0 0 1px ${theme.main}` : 'none'
+                      }}
+                    >
+                      {/* [표준화] Radio 대신 Checkbox로 통일 */}
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                        isSelected ? 'bg-blue-500 border-blue-500 scale-110' : 'bg-white border-gray-300 group-hover:border-blue-400'
+                      }`}
+                      style={{ backgroundColor: isSelected ? theme.main : '#fff', borderColor: isSelected ? theme.main : '#d1d5db' }}>
+                        {isSelected && <span className="text-white text-[10px] font-bold">✓</span>}
+                      </div>
+                      <span className={`flex-1 text-sm font-medium ${isSelected ? 'text-gray-900' : 'text-gray-700'}`}>
+                        {item.value}
+                      </span>
+                      {item.processNo && (
+                        <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border">
+                          {item.processNo}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
-      </div>
-    </div>,
-    document.body
+      ) : (
+        <div className="p-6 bg-gray-50/20 h-full flex flex-col">
+          <div className="bg-white p-5 rounded-xl border shadow-sm">
+            <h3 className="text-sm font-bold mb-4 flex items-center gap-2" style={{ color: theme.main }}>
+              <span>➕</span> 새 {itemInfo.label} 등록
+            </h3>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newValue}
+                onChange={(e) => setNewValue(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAddNew(); }}
+                placeholder={`새로운 ${itemInfo.label}을 입력하세요...`}
+                className="flex-1 px-4 py-2.5 text-sm border rounded-lg outline-none focus:ring-2 shadow-sm transition-all"
+                style={{ borderColor: theme.border }}
+              />
+              <button
+                onClick={handleAddNew}
+                disabled={!newValue.trim()}
+                className="px-6 py-2.5 text-sm font-bold text-white rounded-lg shadow-md transition-all active:scale-95 disabled:bg-gray-200"
+                style={{ background: newValue.trim() ? theme.main : '#e5e7eb' }}
+              >
+                추가
+              </button>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-3 px-1 italic">
+              * 입력 후 '추가' 버튼을 누르거나 Enter를 치면 목록에 추가됩니다.
+            </p>
+          </div>
+          <div className="mt-auto p-4 rounded-lg border border-dashed text-center bg-white/50" style={{ borderColor: theme.border }}>
+            <p className="text-xs text-gray-500">자주 사용하는 {itemInfo.label} 항목을 직접 등록하여 관리할 수 있습니다.</p>
+          </div>
+        </div>
+      )}
+    </BaseModal>
   );
 }

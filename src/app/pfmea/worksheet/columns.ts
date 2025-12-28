@@ -20,7 +20,7 @@ export const COLUMN_GROUPS: ColumnGroup[] = [
 ];
 
 /** 4M 드롭다운 옵션 */
-const CATEGORY_4M_OPTIONS = ['MN', 'MC', 'MT', 'EN'];
+const CATEGORY_4M_OPTIONS = ['MN', 'MC', 'IM', 'EN'];
 
 /** 특별특성 드롭다운 옵션 */
 const SPECIAL_CHAR_OPTIONS = ['', 'CC', 'SC', 'FFF', 'HI', 'BM-C', 'BM-L', 'BM-S'];
@@ -152,5 +152,6 @@ export function getNestedHeaders(): (string | { label: string; colspan: number }
   
   return [groupRow, headerRow];
 }
+
 
 

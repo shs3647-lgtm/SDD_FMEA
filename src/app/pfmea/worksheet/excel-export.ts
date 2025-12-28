@@ -328,7 +328,7 @@ export async function downloadStructureTemplate() {
 
   // 안내 행
   const guideRow = worksheet.getRow(2);
-  ['(예: 타이어 제조공정)', '(예: 10)', '(예: 자재입고)', '(MN/MC/MT/EN)', '(예: 작업자)'].forEach((guide, idx) => {
+  ['(예: 타이어 제조공정)', '(예: 10)', '(예: 자재입고)', '(MN/MC/IM/EN)', '(예: 작업자)'].forEach((guide, idx) => {
     const cell = guideRow.getCell(idx + 1);
     cell.value = guide;
     cell.font = { italic: true, color: { argb: '666666' }, size: 9 };

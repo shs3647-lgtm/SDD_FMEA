@@ -7,13 +7,13 @@
  */
 
 /** 4M 카테고리 */
-export type Category4M = 'MN' | 'MC' | 'MT' | 'EN';
+export type Category4M = 'MN' | 'MC' | 'IM' | 'EN';
 
 /** 4M 코드 설명 */
 export const CATEGORY_4M_LABELS: Record<Category4M, string> = {
   MN: '작업자 (Man)',
   MC: '설비 (Machine)',
-  MT: '재료/도구 (Material/Tooling)',
+  IM: '재료 (In Material)',
   EN: '환경 (Environment)',
 };
 
@@ -214,5 +214,6 @@ export function createEmptyRow(): PFMEAWorksheetRow {
     remarksAfter: '',
   };
 }
+
 
 

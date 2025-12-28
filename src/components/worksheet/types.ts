@@ -101,3 +101,4 @@ export const SCOPE_INFO: Record<ScopeType, { label: string; color: string }> = {
 };
 
 
+

@@ -52,6 +52,8 @@ export default function FMEAWorksheetPage() {
     handleFmeaChange,
     rows,
     l1Spans,
+    l1TypeSpans,
+    l1FuncSpans,
     l2Spans,
     saveToLocalStorage,
     handleInputKeyDown,
@@ -226,6 +228,8 @@ export default function FMEAWorksheetPage() {
     setState,
     rows,
     l1Spans,
+    l1TypeSpans,
+    l1FuncSpans,
     l2Spans,
     setDirty,
     handleInputBlur,
@@ -247,6 +251,7 @@ export default function FMEAWorksheetPage() {
         <TopMenuBar
           fmeaList={fmeaList}
           currentFmea={currentFmea}
+          selectedFmeaId={selectedFmeaId}
           dirty={dirty}
           isSaving={isSaving}
           lastSaved={lastSaved}
@@ -313,15 +318,27 @@ export default function FMEAWorksheetPage() {
                 background: '#fff',
               }}
             >
-              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                {state.tab === 'structure' && <StructureTabFull {...tabProps} />}
-                {state.tab === 'function' && <FunctionTabFull {...tabProps} />}
-                {state.tab === 'failure' && <FailureTabFull {...tabProps} />}
-                {state.tab === 'risk' && <RiskTabFull {...tabProps} />}
-                {state.tab === 'opt' && <OptTabFull {...tabProps} />}
-                {state.tab === 'doc' && <DocTabFull {...tabProps} />}
-                {state.tab === 'all' && <AllViewTabFull rows={rows} state={state} l1Spans={l1Spans} l2Spans={l2Spans} />}
-              </table>
+              {state.tab.startsWith('function') ? (
+                <FunctionTabFull {...tabProps} />
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                  {state.tab === 'structure' && <StructureTabFull {...tabProps} />}
+                  {state.tab === 'failure' && <FailureTabFull {...tabProps} />}
+                  {state.tab === 'risk' && <RiskTabFull {...tabProps} />}
+                  {state.tab === 'opt' && <OptTabFull {...tabProps} />}
+                  {state.tab === 'doc' && <DocTabFull {...tabProps} />}
+                  {state.tab === 'all' && (
+                    <AllViewTabFull 
+                      rows={rows} 
+                      state={state} 
+                      l1Spans={l1Spans} 
+                      l1TypeSpans={l1TypeSpans}
+                      l1FuncSpans={l1FuncSpans}
+                      l2Spans={l2Spans} 
+                    />
+                  )}
+                </table>
+              )}
             </div>
           </div>
 
@@ -440,7 +457,7 @@ export default function FMEAWorksheetPage() {
                           const m4Colors: Record<string, { bg: string; text: string }> = {
                             MN: { bg: '#e3f2fd', text: '#1565c0' },
                             MC: { bg: '#fff8e1', text: '#f57c00' },
-                            MT: { bg: '#e8f5e9', text: '#2e7d32' },
+                            IM: { bg: '#e8f5e9', text: '#2e7d32' },
                             EN: { bg: '#fce4ec', text: '#c2185b' },
                           };
                           const m4Style = m4Colors[w.m4] || { bg: '#f5f5f5', text: '#666' };
@@ -500,6 +517,27 @@ export default function FMEAWorksheetPage() {
           isOpen={isProcessModalOpen}
           onClose={() => setIsProcessModalOpen(false)}
           onSave={handleProcessSave}
+          onDelete={(ids) => {
+            // 삭제할 공정 ID에 해당하는 공정을 state에서 제거
+            setState(prev => {
+              const processNamesToDelete = ids.map(id => {
+                const match = prev.l2.find(p => p.id === id);
+                return match?.name;
+              }).filter(Boolean);
+              
+              const remainingL2 = prev.l2.filter(p => !processNamesToDelete.includes(p.name));
+              
+              // 모두 삭제되면 기본 항목 추가
+              if (remainingL2.length === 0) {
+                return {
+                  ...prev,
+                  l2: [{ id: uid(), no: '10', name: '(클릭하여 공정 선택)', l3: [{ id: uid(), m4: '', name: '(공정 선택 필요)', order: 10, functions: [], processChars: [] }], functions: [], productChars: [], failureMode: '' }]
+                };
+              }
+              return { ...prev, l2: remainingL2 };
+            });
+            setDirty(true);
+          }}
           existingProcessNames={state.l2.filter(p => !p.name.includes('클릭')).map(p => p.name)}
         />
 
@@ -520,13 +558,25 @@ export default function FMEAWorksheetPage() {
 // ============ 하위 컴포넌트들 ============
 
 function getStepNumber(tab: string): number {
-  const map: Record<string, number> = { structure: 2, function: 3, failure: 4, risk: 5, opt: 6, doc: 7, all: 0 };
+  const map: Record<string, number> = { 
+    structure: 2, 
+    function: 3, 
+    'function-l1': 3,
+    'function-l2': 3,
+    'function-l3': 3,
+    failure: 4, 
+    risk: 5, 
+    opt: 6, 
+    doc: 7, 
+    all: 0 
+  };
   return map[tab] || 0;
 }
 
 interface TopMenuBarProps {
   fmeaList: any[];
   currentFmea: any;
+  selectedFmeaId: string | null;
   dirty: boolean;
   isSaving: boolean;
   lastSaved: string;
@@ -543,7 +593,7 @@ interface TopMenuBarProps {
 }
 
 function TopMenuBar({ 
-  fmeaList, currentFmea, dirty, isSaving, lastSaved, currentTab, importMessage, fileInputRef,
+  fmeaList, currentFmea, selectedFmeaId, dirty, isSaving, lastSaved, currentTab, importMessage, fileInputRef,
   onFmeaChange, onSave, onNavigateToList, onExport, onImportClick, onImportFile, onDownloadTemplate 
 }: TopMenuBarProps) {
   const [showImportMenu, setShowImportMenu] = React.useState(false);
@@ -554,7 +604,7 @@ function TopMenuBar({
       <div className="flex items-center gap-1">
         <span className="text-white text-xs font-bold cursor-pointer hover:underline" onClick={onNavigateToList}>📋 FMEA명:</span>
         <select
-          value={currentFmea?.id || '__NEW__'}
+          value={selectedFmeaId || '__NEW__'}
           onChange={(e) => onFmeaChange(e.target.value)}
           className="px-1 py-0.5 text-xs font-semibold rounded border-0"
           style={{ background: 'rgba(255,255,255,0.25)', color: '#fff', minWidth: '140px' }}
@@ -899,10 +949,12 @@ function DocTabFull(props: any) {
 }
 
 // 전체보기 탭 - 38열 FMEA 워크시트 (Excel과 동일, 셀합치기 적용)
-function AllViewTabFull({ rows, state, l1Spans, l2Spans }: { 
+function AllViewTabFull({ rows, state, l1Spans, l1TypeSpans, l1FuncSpans, l2Spans }: { 
   rows: FlatRow[]; 
   state: WorksheetState; 
   l1Spans: number[]; 
+  l1TypeSpans: number[];
+  l1FuncSpans: number[];
   l2Spans: number[]; 
 }) {
   // 38열 컬럼 정의 (Excel "PFMEA 40열.xlsx"와 동일)
@@ -1010,14 +1062,15 @@ function AllViewTabFull({ rows, state, l1Spans, l2Spans }: {
       case 'l2Name': return row.l2No ? `${row.l2No} ${row.l2Name}` : row.l2Name;
       case 'm4': return row.m4 || '';
       case 'l3Name': return row.l3Name || '';
+      case 'l1Type': return row.l1Type || '';
       case 'l1Function': return row.l1Function || '';
       case 'l1Requirement': return row.l1Requirement || '';
-      case 'l2Function': return row.l2Function || '';
-      case 'l2ProductChar': return row.l2ProductChar || '';
-      case 'l3Function': return row.l3Function || '';
-      case 'l3ProcessChar': return row.l3ProcessChar || '';
+      case 'l2Function': return row.l2Functions.map(f => f.name).join(', ') || '';
+      case 'l2ProductChar': return row.l2ProductChars.map(c => c.name).join(', ') || '';
+      case 'l3Function': return row.l3Functions.map(f => f.name).join(', ') || '';
+      case 'l3ProcessChar': return row.l3ProcessChars.map(c => c.name).join(', ') || '';
       case 'failureEffect': return row.l1FailureEffect || '';
-      case 'severity': return row.l1Severity?.toString() || '';
+      case 'severity': return row.l1Severity || '';
       case 'failureMode': return row.l2FailureMode || '';
       case 'failureCause': return row.l3FailureCause || '';
       default: return '';
@@ -1106,63 +1159,60 @@ function AllViewTabFull({ rows, state, l1Spans, l2Spans }: {
         ) : (
           rows.map((row, idx) => {
             const l1Span = l1Spans[idx];
+            const l1TypeSpan = l1TypeSpans[idx];
+            const l1FuncSpan = l1FuncSpans[idx];
             const l2Span = l2Spans[idx];
             
-            // L1 레벨 컬럼 (완제품 기준 병합)
-            const l1Columns = ['l1Name', 'l1Type', 'l1Function', 'l1Requirement', 'feType', 'failureEffect', 'severity'];
-            // L2 레벨 컬럼 (공정 기준 병합)
-            const l2Columns = ['l2Name', 'l2Function', 'l2ProductChar', 'failureMode'];
+            // 병합 기준별 컬럼 분리
+            const isL1Base = (id: string) => ['l1Name', 'feType'].includes(id);
+            const isL1TypeBase = (id: string) => ['l1Type'].includes(id);
+            const isL1FuncBase = (id: string) => ['l1Function'].includes(id);
+            const isL2Base = (id: string) => ['l2Name', 'l2Function', 'l2ProductChar', 'failureMode'].includes(id);
             
             return (
               <tr key={row.l3Id} style={{ height: '26px' }}>
                 {filteredColumns.map((col, i) => {
-                  // L1 레벨 셀 - 병합 처리
-                  if (l1Columns.includes(col.id)) {
-                    if (l1Span === 0) return null; // 병합된 셀은 렌더링 안함
+                  // 1. L1 완제품명 기준 병합
+                  if (isL1Base(col.id)) {
+                    if (l1Span === 0) return null;
                     return (
-                      <td
-                        key={i}
-                        rowSpan={l1Span > 0 ? l1Span : undefined}
-                        style={{
-                          border: '1px solid #ddd',
-                          padding: '2px 3px',
-                          fontSize: '9px',
-                          background: '#e3f2fd',
-                          whiteSpace: 'normal',
-                          wordBreak: 'break-word',
-                          textAlign: 'center',
-                          verticalAlign: 'middle',
-                        }}
-                      >
+                      <td key={i} rowSpan={l1Span > 0 ? l1Span : undefined} style={{ border: '1px solid #ddd', padding: '2px 3px', fontSize: '9px', background: '#f3e5f5', textAlign: 'center', verticalAlign: 'middle', fontWeight: 700 }}>
                         {getCellValue(row, col.id)}
                       </td>
                     );
                   }
                   
-                  // L2 레벨 셀 - 병합 처리
-                  if (l2Columns.includes(col.id)) {
-                    if (l2Span === 0) return null; // 병합된 셀은 렌더링 안함
+                  // 2. L1 구분 기준 병합
+                  if (isL1TypeBase(col.id)) {
+                    if (l1TypeSpan === 0) return null;
                     return (
-                      <td
-                        key={i}
-                        rowSpan={l2Span > 0 ? l2Span : undefined}
-                        style={{
-                          border: '1px solid #ddd',
-                          padding: '2px 3px',
-                          fontSize: '9px',
-                          background: '#e8f5e9',
-                          whiteSpace: 'normal',
-                          wordBreak: 'break-word',
-                          textAlign: 'center',
-                          verticalAlign: 'middle',
-                        }}
-                      >
+                      <td key={i} rowSpan={l1TypeSpan > 0 ? l1TypeSpan : undefined} style={{ border: '1px solid #ddd', padding: '2px 3px', fontSize: '9px', background: '#f3e5f5', textAlign: 'center', verticalAlign: 'middle' }}>
+                        {getCellValue(row, col.id)}
+                      </td>
+                    );
+                  }
+
+                  // 3. L1 기능 기준 병합
+                  if (isL1FuncBase(col.id)) {
+                    if (l1FuncSpan === 0) return null;
+                    return (
+                      <td key={i} rowSpan={l1FuncSpan > 0 ? l1FuncSpan : undefined} style={{ border: '1px solid #ddd', padding: '2px 3px', fontSize: '9px', background: '#f3e5f5', textAlign: 'center', verticalAlign: 'middle' }}>
                         {getCellValue(row, col.id)}
                       </td>
                     );
                   }
                   
-                  // L3 레벨 셀 (작업요소) - 병합 안함
+                  // 4. L2 공정 기준 병합
+                  if (isL2Base(col.id)) {
+                    if (l2Span === 0) return null;
+                    return (
+                      <td key={i} rowSpan={l2Span > 0 ? l2Span : undefined} style={{ border: '1px solid #ddd', padding: '2px 3px', fontSize: '9px', background: '#ede7f6', textAlign: 'center', verticalAlign: 'middle' }}>
+                        {getCellValue(row, col.id)}
+                      </td>
+                    );
+                  }
+                  
+                  // 5. 그 외 (L1 요구사항, L3 작업요소 등) - 병합 안함
                   return (
                     <td
                       key={i}
@@ -1171,10 +1221,11 @@ function AllViewTabFull({ rows, state, l1Spans, l2Spans }: {
                         padding: '2px 3px',
                         fontSize: '9px',
                         background: idx % 2 === 0 ? '#fff' : '#f9f9f9',
-                        whiteSpace: 'nowrap',
+                        whiteSpace: col.id === 'l3Name' ? 'nowrap' : 'normal',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         textAlign: 'center',
+                        verticalAlign: 'middle',
                       }}
                     >
                       {getCellValue(row, col.id)}

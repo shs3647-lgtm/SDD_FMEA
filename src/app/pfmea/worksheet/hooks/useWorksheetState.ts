@@ -1,8 +1,6 @@
 /**
  * @file useWorksheetState.ts
- * @description FMEA 워크시트 상태 관리 Hook
- * @author AI Assistant
- * @created 2025-12-27
+ * @description FMEA 워크시트 상태 관리 Hook (원자성 데이터 및 분리 탭 반영)
  */
 
 'use client';
@@ -14,61 +12,31 @@ import {
   FMEAProject, 
   Process, 
   WorkElement,
+  FlatRow,
   createInitialState, 
   uid 
 } from '../constants';
 
-interface FlatRow {
-  l1Id: string;
-  l1Name: string;
-  l1Type: string;       // C1: 구분 (Your Plant, Ship to Plant, User)
-  l1Function: string;
-  l1Requirement: string;
-  l1FailureEffect: string;
-  l1Severity: number | undefined;
-  l2Id: string;
-  l2No: string;
-  l2Name: string;
-  l2Function: string;
-  l2ProductChar: string;
-  l2FailureMode: string;
-  l3Id: string;
-  m4: string;
-  l3Name: string;
-  l3Function: string;
-  l3ProcessChar: string;
-  l3FailureCause: string;
-}
-
 interface UseWorksheetStateReturn {
-  // 상태
   state: WorksheetState;
   setState: React.Dispatch<React.SetStateAction<WorksheetState>>;
   dirty: boolean;
   setDirty: React.Dispatch<React.SetStateAction<boolean>>;
   isSaving: boolean;
   lastSaved: string;
-  
-  // FMEA 프로젝트
   fmeaList: FMEAProject[];
   currentFmea: FMEAProject | null;
   selectedFmeaId: string | null;
   handleFmeaChange: (fmeaId: string) => void;
-  
-  // 평탄화된 행 데이터
   rows: FlatRow[];
   l1Spans: number[];
+  l1TypeSpans: number[];
+  l1FuncSpans: number[];
   l2Spans: number[];
-  
-  // 저장 관련
   saveToLocalStorage: () => void;
   handleInputKeyDown: (e: React.KeyboardEvent) => void;
   handleInputBlur: () => void;
-  
-  // 선택/모달
   handleSelect: (type: 'L1' | 'L2' | 'L3', id: string | null) => void;
-  
-  // CRUD
   addL2: () => void;
   addL3: (l2Id: string) => void;
   deleteL2: (l2Id: string) => void;
@@ -76,92 +44,55 @@ interface UseWorksheetStateReturn {
   handleProcessSelect: (selectedProcesses: Array<{ processNo: string; processName: string }>) => void;
 }
 
-/**
- * FMEA 워크시트 상태 관리 Hook
- */
 export function useWorksheetState(): UseWorksheetStateReturn {
   const searchParams = useSearchParams();
   const router = useRouter();
   const selectedFmeaId = searchParams.get('id');
   
-  // 기본 상태
   const [state, setState] = useState<WorksheetState>(createInitialState);
   const [dirty, setDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState('');
-  
-  // FMEA 프로젝트
   const [fmeaList, setFmeaList] = useState<FMEAProject[]>([]);
   const [currentFmea, setCurrentFmea] = useState<FMEAProject | null>(null);
   
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ============ 자동저장 ============
   const saveToLocalStorage = useCallback(() => {
-    if (!selectedFmeaId) return;
+    // currentFmea가 있으면 그 ID 사용, 없으면 selectedFmeaId 사용
+    const targetId = selectedFmeaId || currentFmea?.id;
+    if (!targetId) {
+      console.warn('[저장] FMEA ID가 없어 저장할 수 없습니다. FMEA를 먼저 선택하세요.');
+      return;
+    }
     
     setIsSaving(true);
     try {
       const worksheetData = {
-        fmeaId: selectedFmeaId,
+        fmeaId: targetId,
         l1: state.l1,
         l2: state.l2,
         savedAt: new Date().toISOString(),
       };
-      localStorage.setItem(`pfmea_worksheet_${selectedFmeaId}`, JSON.stringify(worksheetData));
+      localStorage.setItem(`pfmea_worksheet_${targetId}`, JSON.stringify(worksheetData));
+      console.log('[저장] 워크시트 데이터 저장 완료:', targetId);
       setDirty(false);
       setLastSaved(new Date().toLocaleTimeString('ko-KR'));
-      console.log('✅ 자동저장 완료:', new Date().toLocaleTimeString());
-    } catch (e) {
-      console.error('저장 오류:', e);
-    } finally {
-      setIsSaving(false);
-    }
-  }, [selectedFmeaId, state.l1, state.l2]);
+    } catch (e) { console.error('저장 오류:', e); }
+    finally { setIsSaving(false); }
+  }, [selectedFmeaId, currentFmea?.id, state.l1, state.l2]);
 
   const triggerAutoSave = useCallback(() => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-    saveTimeoutRef.current = setTimeout(() => {
-      saveToLocalStorage();
-    }, 500);
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => saveToLocalStorage(), 500);
   }, [saveToLocalStorage]);
 
   useEffect(() => {
-    if (dirty) {
-      triggerAutoSave();
-    }
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
+    if (dirty) triggerAutoSave();
+    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
   }, [dirty, triggerAutoSave]);
 
-  // 저장된 데이터 로드
-  useEffect(() => {
-    if (selectedFmeaId) {
-      const savedData = localStorage.getItem(`pfmea_worksheet_${selectedFmeaId}`);
-      if (savedData) {
-        try {
-          const parsed = JSON.parse(savedData);
-          if (parsed.l1 && parsed.l2) {
-            setState(prev => ({
-              ...prev,
-              l1: parsed.l1,
-              l2: parsed.l2,
-            }));
-            console.log('📂 워크시트 데이터 로드됨:', parsed.savedAt);
-          }
-        } catch (e) {
-          console.error('워크시트 데이터 로드 실패:', e);
-        }
-      }
-    }
-  }, [selectedFmeaId]);
-
-  // FMEA 목록 로드
+  // FMEA 목록 로드 및 자동 선택
   useEffect(() => {
     const stored = localStorage.getItem('pfmea-projects');
     if (stored) {
@@ -170,87 +101,108 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         setFmeaList(projects);
         
         if (selectedFmeaId) {
+          // URL에 ID가 있으면 해당 FMEA 선택
           const found = projects.find(p => p.id === selectedFmeaId);
           if (found) setCurrentFmea(found);
         } else if (projects.length > 0) {
+          // URL에 ID가 없으면 첫 번째 FMEA 자동 선택 및 리다이렉트
           setCurrentFmea(projects[0]);
+          router.push(`/pfmea/worksheet?id=${projects[0].id}`);
         }
-      } catch (e) {
-        console.error('FMEA 목록 로드 실패:', e);
+      } catch (e) { console.error('FMEA 목록 로드 실패:', e); }
+    }
+  }, [selectedFmeaId, router]);
+
+  // 워크시트 데이터 로드 (FMEA ID 변경 시)
+  useEffect(() => {
+    if (!selectedFmeaId) return;
+    
+    console.log('[워크시트] 데이터 로드 시작:', selectedFmeaId);
+    const savedData = localStorage.getItem(`pfmea_worksheet_${selectedFmeaId}`);
+    
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        console.log('[워크시트] 저장된 데이터 발견:', parsed);
+        
+        if (parsed.l1 && parsed.l2) {
+          // [데이터 마이그레이션 및 방어 코드]
+          const migratedL1 = {
+            ...parsed.l1,
+            types: parsed.l1.types || []
+          };
+          
+          const migratedL2 = parsed.l2.map((p: any) => ({
+            ...p,
+            functions: p.functions || [],
+            productChars: p.productChars || [],
+            failureMode: p.failureMode || '',
+            l3: (p.l3 || []).map((we: any) => ({
+              ...we,
+              // MT → IM 마이그레이션
+              m4: we.m4 === 'MT' ? 'IM' : (we.m4 || ''),
+              functions: we.functions || [],
+              processChars: we.processChars || [],
+              failureCause: we.failureCause || ''
+            }))
+          }));
+
+          setState(prev => ({ ...prev, l1: migratedL1, l2: migratedL2 }));
+          setLastSaved(parsed.savedAt ? new Date(parsed.savedAt).toLocaleTimeString('ko-KR') : '');
+          console.log('[워크시트] 데이터 로드 완료');
+        }
+      } catch (e) { 
+        console.error('데이터 로드 실패:', e); 
+        setState(createInitialState());
       }
+    } else {
+      // 저장된 데이터가 없으면 초기 상태로 리셋
+      console.log('[워크시트] 저장된 데이터 없음, 초기 상태로 설정');
+      setState(createInitialState());
     }
   }, [selectedFmeaId]);
 
-  // ============ 핸들러 ============
   const handleInputKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      saveToLocalStorage();
-    }
+    if (e.key === 'Enter') { e.preventDefault(); saveToLocalStorage(); }
   }, [saveToLocalStorage]);
 
-  const handleInputBlur = useCallback(() => {
-    if (dirty) {
-      saveToLocalStorage();
-    }
-  }, [dirty, saveToLocalStorage]);
+  const handleInputBlur = useCallback(() => { if (dirty) saveToLocalStorage(); }, [dirty, saveToLocalStorage]);
 
   const handleFmeaChange = useCallback((fmeaId: string) => {
     if (fmeaId === '__NEW__') {
-      // 빈화면으로 초기화
       setState(createInitialState());
       setCurrentFmea(null);
       setDirty(false);
       router.push('/pfmea/worksheet');
-    } else {
-      router.push(`/pfmea/worksheet?id=${fmeaId}`);
-    }
+    } else { router.push(`/pfmea/worksheet?id=${fmeaId}`); }
   }, [router]);
 
   const handleSelect = useCallback((type: 'L1' | 'L2' | 'L3', id: string | null) => {
     setState(prev => ({ ...prev, selected: { type, id } }));
   }, []);
 
-  // ============ CRUD ============
   const addL2 = useCallback(() => {
     const newProcess: Process = {
-      id: uid(),
-      no: '',
-      name: '(클릭하여 공정 선택)',
-      order: (state.l2.length + 1) * 10,
-      l3: [{ id: uid(), m4: '', name: '(공정 선택 후 작업요소 추가)', order: 10 }]
+      id: uid(), no: '', name: '(클릭하여 공정 선택)', order: (state.l2.length + 1) * 10,
+      functions: [], productChars: [],
+      l3: [{ id: uid(), m4: '', name: '(공정 선택 후 작업요소 추가)', order: 10, functions: [], processChars: [] }]
     };
     setState(prev => ({ ...prev, l2: [...prev.l2, newProcess] }));
     setDirty(true);
   }, [state.l2.length]);
 
   const addL3 = useCallback((l2Id: string) => {
-    const newElement: WorkElement = {
-      id: uid(),
-      m4: '',
-      name: '(클릭하여 작업요소 추가)',
-      order: 10
-    };
+    const newElement: WorkElement = { id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10, functions: [], processChars: [] };
     setState(prev => ({
       ...prev,
-      l2: prev.l2.map(p => 
-        p.id === l2Id 
-          ? { ...p, l3: [...p.l3, newElement] }
-          : p
-      )
+      l2: prev.l2.map(p => p.id === l2Id ? { ...p, l3: [...p.l3, newElement] } : p)
     }));
     setDirty(true);
   }, []);
 
   const deleteL2 = useCallback((l2Id: string) => {
-    if (state.l2.length <= 1) {
-      alert('최소 1개의 공정이 필요합니다.');
-      return;
-    }
-    setState(prev => ({
-      ...prev,
-      l2: prev.l2.filter(p => p.id !== l2Id)
-    }));
+    if (state.l2.length <= 1) { alert('최소 1개의 공정이 필요합니다.'); return; }
+    setState(prev => ({ ...prev, l2: prev.l2.filter(p => p.id !== l2Id) }));
     setDirty(true);
   }, [state.l2.length]);
 
@@ -259,10 +211,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       ...prev,
       l2: prev.l2.map(p => {
         if (p.id === l2Id) {
-          if (p.l3.length <= 1) {
-            alert('최소 1개의 작업요소가 필요합니다.');
-            return p;
-          }
+          if (p.l3.length <= 1) { alert('최소 1개의 작업요소가 필요합니다.'); return p; }
           return { ...p, l3: p.l3.filter(w => w.id !== l3Id) };
         }
         return p;
@@ -273,16 +222,11 @@ export function useWorksheetState(): UseWorksheetStateReturn {
 
   const handleProcessSelect = useCallback((selectedProcesses: Array<{ processNo: string; processName: string }>) => {
     if (selectedProcesses.length === 0) return;
-    
     const newProcesses: Process[] = selectedProcesses.map((p, idx) => ({
-      id: uid(),
-      no: p.processNo,
-      name: p.processName,
-      order: (state.l2.length + idx) * 10,
-      l3: [{ id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10 }]
+      id: uid(), no: p.processNo, name: p.processName, order: (state.l2.length + idx) * 10,
+      functions: [], productChars: [],
+      l3: [{ id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10, functions: [], processChars: [] }]
     }));
-    
-    // 빈 공정 제거 후 추가
     setState(prev => {
       const filtered = prev.l2.filter(p => p.no !== '' && !p.name.includes('클릭'));
       return { ...prev, l2: [...filtered, ...newProcesses] };
@@ -290,94 +234,97 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     setDirty(true);
   }, [state.l2.length]);
 
-  // ============ 평탄화된 행 데이터 ============
+  // ============ 평탄화된 행 데이터 (전체보기용 통합 로직) ============
   const rows = useMemo(() => {
     const result: FlatRow[] = [];
     
-    state.l2.forEach((proc) => {
-      proc.l3.forEach((we) => {
-        result.push({
-          l1Id: state.l1.id,
-          l1Name: state.l1.name,
-          l1Type: state.l1.type || '',
-          l1Function: state.l1.function || '',
-          l1Requirement: state.l1.requirement || '',
-          l1FailureEffect: state.l1.failureEffect || '',
-          l1Severity: state.l1.severity,
-          l2Id: proc.id,
-          l2No: proc.no,
-          l2Name: proc.name,
-          l2Function: proc.function || '',
-          l2ProductChar: proc.productChar || '',
-          l2FailureMode: proc.failureMode || '',
-          l3Id: we.id,
-          m4: we.m4,
-          l3Name: we.name,
-          l3Function: we.function || '',
-          l3ProcessChar: we.processChar || '',
-          l3FailureCause: we.failureCause || '',
+    // 1. L1 트리 평탄화 (방어 코드 추가)
+    const l1Branches: any[] = [];
+    const l1Types = state.l1.types || [];
+    
+    if (l1Types.length === 0) {
+      l1Branches.push({ type: null, func: null, req: null });
+    } else {
+      l1Types.forEach(t => {
+        const funcs = t.functions || [];
+        if (funcs.length === 0) l1Branches.push({ type: t, func: null, req: null });
+        else funcs.forEach(f => {
+          const reqs = f.requirements || [];
+          if (reqs.length === 0) l1Branches.push({ type: t, func: f, req: null });
+          else reqs.forEach(r => l1Branches.push({ type: t, func: f, req: r }));
         });
       });
+    }
+
+    // 2. L2/L3 트리 평탄화
+    const l23Branches: any[] = [];
+    const l2Data = state.l2 || [];
+    l2Data.forEach(proc => {
+      const l3Data = proc.l3 || [];
+      l3Data.forEach(we => l23Branches.push({ proc, we }));
     });
+
+    const maxRows = Math.max(l1Branches.length, l23Branches.length);
+    
+    for (let i = 0; i < maxRows; i++) {
+      const l1 = l1Branches[i] || l1Branches[l1Branches.length - 1];
+      const l23 = l23Branches[i] || l23Branches[l23Branches.length - 1];
+      
+      result.push({
+        l1Id: state.l1.id,
+        l1Name: state.l1.name,
+        l1TypeId: l1.type?.id || '',
+        l1Type: l1.type?.name || '',
+        l1FunctionId: l1.func?.id || '',
+        l1Function: l1.func?.name || '',
+        l1RequirementId: l1.req?.id || '',
+        l1Requirement: l1.req?.name || '',
+        l1FailureEffect: l1.req?.failureEffect || '',
+        l1Severity: l1.req?.severity?.toString() || '',
+        l2Id: l23.proc.id,
+        l2No: l23.proc.no,
+        l2Name: l23.proc.name,
+        l2Functions: l23.proc.functions || [],
+        l2ProductChars: l23.proc.productChars || [],
+        l2FailureMode: l23.proc.failureMode || '',
+        l3Id: l23.we.id,
+        m4: l23.we.m4,
+        l3Name: l23.we.name,
+        l3Functions: l23.we.functions || [],
+        l3ProcessChars: l23.we.processChars || [],
+        l3FailureCause: l23.we.failureCause || '',
+      });
+    }
     
     return result;
   }, [state.l1, state.l2]);
 
-  // L1/L2 병합 스팬 계산
-  const l1Spans = useMemo(() => {
-    return rows.map((_, idx) => idx === 0 ? rows.length : 0);
-  }, [rows]);
-
-  const l2Spans = useMemo(() => {
+  const calculateSpans = (rows: FlatRow[], key: keyof FlatRow) => {
     const spans: number[] = [];
-    let currentL2Id = '';
+    let currentId = '';
     let spanStart = 0;
-    
     rows.forEach((row, idx) => {
-      if (row.l2Id !== currentL2Id) {
-        // 새로운 L2 시작
-        if (currentL2Id !== '') {
-          // 이전 L2의 스팬 설정
-          for (let i = spanStart; i < idx; i++) {
-            spans[i] = i === spanStart ? idx - spanStart : 0;
-          }
+      const val = row[key] as string;
+      if (val !== currentId || val === '') {
+        if (currentId !== '') {
+          for (let i = spanStart; i < idx; i++) spans[i] = i === spanStart ? idx - spanStart : 0;
         }
-        currentL2Id = row.l2Id;
+        currentId = val;
         spanStart = idx;
       }
     });
-    
-    // 마지막 L2 처리
-    for (let i = spanStart; i < rows.length; i++) {
-      spans[i] = i === spanStart ? rows.length - spanStart : 0;
-    }
-    
+    for (let i = spanStart; i < rows.length; i++) spans[i] = i === spanStart ? rows.length - spanStart : 0;
     return spans;
-  }, [rows]);
+  };
+
+  const l1Spans = useMemo(() => rows.map((_, idx) => idx === 0 ? rows.length : 0), [rows]);
+  const l1TypeSpans = useMemo(() => calculateSpans(rows, 'l1TypeId'), [rows]);
+  const l1FuncSpans = useMemo(() => calculateSpans(rows, 'l1FunctionId'), [rows]);
+  const l2Spans = useMemo(() => calculateSpans(rows, 'l2Id'), [rows]);
 
   return {
-    state,
-    setState,
-    dirty,
-    setDirty,
-    isSaving,
-    lastSaved,
-    fmeaList,
-    currentFmea,
-    selectedFmeaId,
-    handleFmeaChange,
-    rows,
-    l1Spans,
-    l2Spans,
-    saveToLocalStorage,
-    handleInputKeyDown,
-    handleInputBlur,
-    handleSelect,
-    addL2,
-    addL3,
-    deleteL2,
-    deleteL3,
-    handleProcessSelect,
+    state, setState, dirty, setDirty, isSaving, lastSaved, fmeaList, currentFmea, selectedFmeaId, handleFmeaChange,
+    rows, l1Spans, l1TypeSpans, l1FuncSpans, l2Spans,
+    saveToLocalStorage, handleInputKeyDown, handleInputBlur, handleSelect, addL2, addL3, deleteL2, deleteL3, handleProcessSelect,
   };
 }
-

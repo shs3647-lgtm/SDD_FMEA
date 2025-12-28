@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import BaseModal from '@/components/modals/BaseModal';
 
 interface WorkElement {
   id: string;
@@ -20,71 +21,60 @@ interface WorkElementSelectModalProps {
 }
 
 const M4_CATEGORIES = [
-  { code: 'MN', label: 'Man', color: '#dbeafe', borderColor: '#3b82f6' },
-  { code: 'MC', label: 'Machine', color: '#fef3c7', borderColor: '#f59e0b' },
-  { code: 'MT', label: 'Material', color: '#d1fae5', borderColor: '#10b981' },
-  { code: 'EN', label: 'Environment', color: '#fce7f3', borderColor: '#ec4899' },
+  { code: 'MN', label: 'Man', color: '#e3f2fd', textColor: '#1565c0', borderColor: '#90caf9' },
+  { code: 'MC', label: 'Machine', color: '#fff8e1', textColor: '#f57c00', borderColor: '#ffe082' },
+  { code: 'IM', label: 'In Material', color: '#e8f5e9', textColor: '#2e7d32', borderColor: '#a5d6a7' },
+  { code: 'EN', label: 'Environment', color: '#fce4ec', textColor: '#c2185b', borderColor: '#f8bbd0' },
 ];
 
-// 공정별 작업요소 샘플 데이터
+// [데이터 복구] 공정별 작업요소 전체 데이터
 const WORK_ELEMENTS_BY_PROCESS: Record<string, WorkElement[]> = {
-  // 공통 작업요소 (모든 공정에 표시)
   'COMMON': [
     { id: 'c1', m4: 'MN', name: '00작업자', processNo: 'COMMON' },
     { id: 'c2', m4: 'MN', name: '00셋업 엔지니어', processNo: 'COMMON' },
     { id: 'c3', m4: 'EN', name: '00 온도', processNo: 'COMMON' },
     { id: 'c4', m4: 'EN', name: '00 습도', processNo: 'COMMON' },
   ],
-  // 10번 공정 - 자재입고
   '10': [
     { id: '10-1', m4: 'MC', name: '10자동창고', processNo: '10' },
     { id: '10-2', m4: 'MC', name: '10컨베이어', processNo: '10' },
-    { id: '10-3', m4: 'MT', name: '10원자재', processNo: '10' },
+    { id: '10-3', m4: 'IM', name: '10원자재', processNo: '10' },
   ],
-  // 11번 공정 - 가온
   '11': [
     { id: '11-1', m4: 'MC', name: '11가온실', processNo: '11' },
     { id: '11-2', m4: 'MC', name: '11히터', processNo: '11' },
   ],
-  // 20번 공정 - 수입검사
   '20': [
     { id: '20-1', m4: 'MN', name: '20검사원', processNo: '20' },
     { id: '20-2', m4: 'MC', name: '20MOONEY VISCOMETER', processNo: '20' },
     { id: '20-3', m4: 'MC', name: '20경도계', processNo: '20' },
     { id: '20-4', m4: 'MC', name: '20비중계', processNo: '20' },
   ],
-  // 30번 공정 - 믹싱
   '30': [
     { id: '30-1', m4: 'MC', name: '30믹서', processNo: '30' },
     { id: '30-2', m4: 'MC', name: '30밴버리', processNo: '30' },
-    { id: '30-3', m4: 'MT', name: '30배합제', processNo: '30' },
+    { id: '30-3', m4: 'IM', name: '30배합제', processNo: '30' },
   ],
-  // 40번 공정 - 압출
   '40': [
     { id: '40-1', m4: 'MC', name: '40압출기', processNo: '40' },
     { id: '40-2', m4: 'MC', name: '40다이', processNo: '40' },
   ],
-  // 50번 공정 - 재단
   '50': [
     { id: '50-1', m4: 'MC', name: '50재단기', processNo: '50' },
     { id: '50-2', m4: 'MC', name: '50절단날', processNo: '50' },
   ],
-  // 60번 공정 - 비드
   '60': [
     { id: '60-1', m4: 'MC', name: '60비드성형기', processNo: '60' },
-    { id: '60-2', m4: 'MT', name: '60비드와이어', processNo: '60' },
+    { id: '60-2', m4: 'IM', name: '60비드와이어', processNo: '60' },
   ],
-  // 70번 공정 - 성형
   '70': [
     { id: '70-1', m4: 'MC', name: '70성형드럼', processNo: '70' },
     { id: '70-2', m4: 'MC', name: '70성형기', processNo: '70' },
   ],
-  // 80번 공정 - 가류
   '80': [
     { id: '80-1', m4: 'MC', name: '80가류기', processNo: '80' },
     { id: '80-2', m4: 'MC', name: '80몰드', processNo: '80' },
   ],
-  // 90번 공정 - 검사
   '90': [
     { id: '90-1', m4: 'MN', name: '90검사원', processNo: '90' },
     { id: '90-2', m4: 'MC', name: '90X-ray', processNo: '90' },
@@ -92,15 +82,10 @@ const WORK_ELEMENTS_BY_PROCESS: Record<string, WorkElement[]> = {
   ],
 };
 
-// 기초정보에서 작업요소 로드 (공정번호 기반)
 const loadWorkElementsForProcess = (processNo: string): WorkElement[] => {
-  // 공통 작업요소
   const commonElements = WORK_ELEMENTS_BY_PROCESS['COMMON'] || [];
-  
-  // 해당 공정 작업요소
   const processElements = WORK_ELEMENTS_BY_PROCESS[processNo] || [];
   
-  // LocalStorage에서 엑셀 임포트 데이터 로드 (pfmea_master_data)
   if (typeof window !== 'undefined') {
     try {
       const savedData = localStorage.getItem('pfmea_master_data');
@@ -112,7 +97,6 @@ const loadWorkElementsForProcess = (processNo: string): WorkElement[] => {
         
         flatData.forEach((item: any, idx: number) => {
           if (item.code === 'A2' && item.value) {
-            // 공정명에서 공정번호 추출 (예: "10 자재입고" -> "10")
             const match = item.value.match(/^(\d+)/);
             currentProcessNo = match ? match[1] : '';
           }
@@ -120,7 +104,6 @@ const loadWorkElementsForProcess = (processNo: string): WorkElement[] => {
             currentM4 = item.value.toUpperCase();
           }
           if (item.code === 'A5' && item.value) {
-            // 공통이거나 해당 공정인 경우에만 추가
             if (currentProcessNo === processNo || currentProcessNo === '') {
               additionalElements.push({
                 id: `imported_${idx}_${Date.now()}`,
@@ -158,23 +141,18 @@ export default function WorkElementSelectModal({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterM4, setFilterM4] = useState<string>('all');
   const [filterType, setFilterType] = useState<'all' | 'common' | 'process'>('all');
+  const [activeTab, setActiveTab] = useState('list');
   
-  const [isManualMode, setIsManualMode] = useState(false);
   const [manualM4, setManualM4] = useState('MN');
   const [manualName, setManualName] = useState('');
   const [manualElements, setManualElements] = useState<WorkElement[]>([]);
-  
-  // 수정 모드 상태
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState('');
-  const [editingM4, setEditingM4] = useState('');
+  const [deleteMode, setDeleteMode] = useState(false);
 
   useEffect(() => {
     if (isOpen && processNo) {
       const loaded = loadWorkElementsForProcess(processNo);
       setElements(loaded);
       
-      // 기존 선택된 작업요소들을 미리 체크
       const preSelected = new Set<string>();
       loaded.forEach(e => {
         if (existingElements.includes(e.name)) {
@@ -182,153 +160,38 @@ export default function WorkElementSelectModal({
         }
       });
       setSelectedIds(preSelected);
-      
       setSearchTerm('');
       setFilterM4('all');
       setFilterType('all');
-      setIsManualMode(false);
+      setActiveTab('list');
       setManualElements([]);
-      setManualName('');
     }
   }, [isOpen, processNo, existingElements]);
 
-  // 이미 선택된 항목도 표시 (disabled 상태로)
-  const filteredElements = elements.filter(e => 
-    (filterM4 === 'all' || e.m4 === filterM4) &&
-    (filterType === 'all' || 
-     (filterType === 'common' && e.processNo === 'COMMON') ||
-     (filterType === 'process' && e.processNo === processNo)) &&
-    (e.m4.includes(searchTerm.toUpperCase()) || e.name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredElements = useMemo(() => {
+    return elements.filter(e => 
+      (filterM4 === 'all' || e.m4 === filterM4) &&
+      (filterType === 'all' || 
+       (filterType === 'common' && e.processNo === 'COMMON') ||
+       (filterType === 'process' && e.processNo === processNo)) &&
+      (e.m4.includes(searchTerm.toUpperCase()) || e.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [elements, filterM4, filterType, searchTerm, processNo]);
 
   const commonCount = elements.filter(e => e.processNo === 'COMMON').length;
   const processCount = elements.filter(e => e.processNo === processNo).length;
-  
-  // 이미 추가된 항목인지 확인
-  const isAlreadyAdded = (name: string) => existingElements.includes(name);
 
-  const toggleSelect = (id: string) => {
+  const toggleSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
+      if (newSet.has(id)) newSet.delete(id);
+      else newSet.add(id);
       return newSet;
     });
-  };
+  }, []);
 
   const selectAll = () => setSelectedIds(new Set(filteredElements.map(e => e.id)));
   const deselectAll = () => setSelectedIds(new Set());
-  
-  // 선택된 항목 삭제 (워크시트에서도 삭제)
-  const deleteSelected = (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    
-    if (selectedIds.size === 0) {
-      alert('삭제할 항목을 선택해주세요.');
-      return;
-    }
-    
-    // 삭제할 항목 이름 추출
-    const toDelete = elements.filter(el => selectedIds.has(el.id));
-    const deletedNames = toDelete.map(el => el.name);
-    const deleteCount = toDelete.length;
-    
-    // 모달 내부 상태에서 삭제
-    const remaining = elements.filter(el => !selectedIds.has(el.id));
-    setElements(remaining);
-    setSelectedIds(new Set());
-    
-    // 워크시트 상태에서도 삭제 (부모 컴포넌트에 알림)
-    if (onDelete && deletedNames.length > 0) {
-      onDelete(deletedNames);
-    }
-    
-    // LocalStorage에서도 삭제
-    try {
-      const savedData = localStorage.getItem('pfmea_master_data');
-      if (savedData) {
-        const flatData = JSON.parse(savedData);
-        const updatedData = flatData.filter((item: any) => 
-          item.code !== 'A5' || !deletedNames.includes(item.value)
-        );
-        localStorage.setItem('pfmea_master_data', JSON.stringify(updatedData));
-      }
-    } catch (err) {
-      console.error('localStorage 업데이트 실패:', err);
-    }
-    
-    alert(`${deleteCount}개 항목이 워크시트에서 삭제되었습니다.`);
-  };
-  
-  // 수정 시작
-  const startEdit = (elem: WorkElement) => {
-    setEditingId(elem.id);
-    setEditingName(elem.name);
-    setEditingM4(elem.m4);
-  };
-  
-  // 수정 저장
-  const saveEdit = () => {
-    if (!editingId || !editingName.trim()) {
-      setEditingId(null);
-      return;
-    }
-    
-    const oldElem = elements.find(e => e.id === editingId);
-    
-    setElements(prev => prev.map(e => 
-      e.id === editingId ? { ...e, name: editingName.trim(), m4: editingM4 } : e
-    ));
-    
-    // LocalStorage 업데이트
-    if (oldElem) {
-      try {
-        const savedData = localStorage.getItem('pfmea_master_data');
-        if (savedData) {
-          const flatData = JSON.parse(savedData);
-          const updatedData = flatData.map((item: any) => {
-            if (item.code === 'A5' && item.value === oldElem.name) {
-              return { ...item, value: editingName.trim() };
-            }
-            return item;
-          });
-          localStorage.setItem('pfmea_master_data', JSON.stringify(updatedData));
-        }
-      } catch (e) {
-        console.error('Failed to update localStorage:', e);
-      }
-    }
-    
-    setEditingId(null);
-  };
-  
-  // 수정 취소
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditingName('');
-    setEditingM4('');
-  };
-
-  const addManualElement = () => {
-    if (!manualName.trim()) return;
-    setManualElements(prev => [...prev, {
-      id: `manual_${Date.now()}`,
-      m4: manualM4,
-      name: manualName.trim(),
-      processNo: processNo
-    }]);
-    setManualName('');
-  };
-
-  const removeManualElement = (id: string) => {
-    setManualElements(prev => prev.filter(e => e.id !== id));
-  };
 
   const handleSave = () => {
     const selectedFromList = elements.filter(e => selectedIds.has(e.id));
@@ -336,289 +199,217 @@ export default function WorkElementSelectModal({
     onClose();
   };
 
-  const getM4Style = (m4: string) => {
-    const cat = M4_CATEGORIES.find(c => c.code === m4);
-    return cat ? { background: cat.color, borderColor: cat.borderColor } : {};
+  // 선택 삭제 (현재 워크시트에서)
+  const handleDeleteSelected = () => {
+    const selectedNames = elements
+      .filter(e => selectedIds.has(e.id) && existingElements.includes(e.name))
+      .map(e => e.name);
+    if (selectedNames.length === 0) {
+      alert('삭제할 항목이 없습니다. (현재 워크시트에 있는 항목만 삭제 가능)');
+      return;
+    }
+    if (!window.confirm(`선택한 ${selectedNames.length}개 작업요소를 삭제하시겠습니까?\n\n${selectedNames.join(', ')}`)) return;
+    
+    if (onDelete) {
+      onDelete(selectedNames);
+    }
+    setSelectedIds(new Set());
+    setDeleteMode(false);
+    onClose();
   };
 
-  if (!isOpen) return null;
+  const handleDeleteSingle = (name: string) => {
+    if (!window.confirm(`"${name}" 작업요소를 삭제하시겠습니까?`)) return;
+    if (onDelete) {
+      onDelete([name]);
+    }
+    onClose();
+  };
+
+  const isExisting = (name: string) => existingElements.includes(name);
+
+  const getM4Style = (m4: string) => {
+    const cat = M4_CATEGORIES.find(c => c.code === m4);
+    return cat ? { background: cat.color, color: cat.textColor, borderColor: cat.borderColor } : {};
+  };
 
   const totalSelected = selectedIds.size + manualElements.length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-lg shadow-xl w-[600px] max-h-[80vh] flex flex-col">
-        {/* 헤더 */}
-        <div className="px-4 py-3 border-b flex items-center justify-between" style={{ background: '#2b78c5' }}>
-          <h2 className="text-white font-bold text-sm">
-            🔧 작업요소 선택 - {processNo} {processName}
-          </h2>
-          <button onClick={onClose} className="text-white hover:bg-white/20 rounded px-2 py-1 text-lg">✕</button>
-        </div>
-
-        {/* 모드 탭 */}
-        <div className="flex border-b">
-          <button
-            onClick={() => setIsManualMode(false)}
-            className={`flex-1 px-4 py-2 text-sm font-bold ${!isManualMode ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-500' : 'text-gray-500'}`}
-          >
-            📋 목록에서 선택
-          </button>
-          <button
-            onClick={() => setIsManualMode(true)}
-            className={`flex-1 px-4 py-2 text-sm font-bold ${isManualMode ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-500' : 'text-gray-500'}`}
-          >
-            ✏️ 직접 입력
-          </button>
-        </div>
-
-        {!isManualMode ? (
-          <>
-            {/* 필터 탭: 공통 / 해당공정 / 전체 */}
-            <div className="flex border-b bg-gray-50">
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`작업요소 선택 - ${processNo} ${processName}`}
+      icon="🔧"
+      width="680px"
+      tabs={[
+        { id: 'list', label: '목록에서 선택', icon: '📋' },
+        { id: 'manual', label: '직접 입력', icon: '✏️' }
+      ]}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      onSave={handleSave}
+      saveDisabled={totalSelected === 0}
+      footerContent={
+        <span className="text-sm font-bold text-blue-600">
+          ✓ {totalSelected}개 선택
+        </span>
+      }
+    >
+      {activeTab === 'list' ? (
+        <div className="flex flex-col h-full overflow-hidden">
+          <div className="flex border-b bg-gray-50/30 shrink-0">
+            {[
+              { id: 'all', label: `전체 (${commonCount + processCount})`, icon: null },
+              { id: 'common', label: `공통 (${commonCount})`, icon: '🌐' },
+              { id: 'process', label: `${processNo}번 공정 (${processCount})`, icon: '🏭' }
+            ].map(type => (
               <button
-                onClick={() => setFilterType('all')}
-                className={`flex-1 px-3 py-2 text-xs font-bold ${filterType === 'all' ? 'bg-white border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
+                key={type.id}
+                onClick={() => setFilterType(type.id as any)}
+                className={`flex-1 px-3 py-2.5 text-xs font-bold transition-all border-b-2 ${
+                  filterType === type.id 
+                    ? 'bg-white border-blue-500 text-blue-600' 
+                    : 'text-gray-500 border-transparent hover:bg-gray-100'
+                }`}
               >
-                전체 ({commonCount + processCount})
+                {type.icon} {type.label}
               </button>
-              <button
-                onClick={() => setFilterType('common')}
-                className={`flex-1 px-3 py-2 text-xs font-bold ${filterType === 'common' ? 'bg-white border-b-2 border-green-500 text-green-600' : 'text-gray-500'}`}
-              >
-                🌐 공통 ({commonCount})
-              </button>
-              <button
-                onClick={() => setFilterType('process')}
-                className={`flex-1 px-3 py-2 text-xs font-bold ${filterType === 'process' ? 'bg-white border-b-2 border-orange-500 text-orange-600' : 'text-gray-500'}`}
-              >
-                🏭 {processNo}번 공정 ({processCount})
-              </button>
-            </div>
+            ))}
+          </div>
 
-            {/* 검색 + 4M 필터 */}
-            <div className="px-4 py-2 border-b flex items-center gap-2 bg-gray-50">
+          <div className="px-4 py-3 border-b flex items-center gap-2 bg-gray-50/50 shrink-0">
+            <div className="relative flex-1">
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="검색..."
-                className="flex-1 px-3 py-2 text-sm border rounded"
+                className="w-full pl-9 pr-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm"
               />
-              <select
-                value={filterM4}
-                onChange={(e) => setFilterM4(e.target.value)}
-                className="px-2 py-2 text-sm border rounded"
-              >
-                <option value="all">전체 4M</option>
-                {M4_CATEGORIES.map(c => (
-                  <option key={c.code} value={c.code}>{c.code}</option>
-                ))}
-              </select>
-              <button onClick={selectAll} className="px-3 py-2 text-xs font-bold bg-blue-500 text-white rounded">전체</button>
-              <button onClick={deselectAll} className="px-3 py-2 text-xs font-bold bg-gray-400 text-white rounded">해제</button>
-              <button 
-                type="button"
-                onClick={(e) => deleteSelected(e)} 
-                disabled={selectedIds.size === 0}
-                className="px-3 py-2 text-xs font-bold bg-red-500 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                🗑 삭제 ({selectedIds.size})
-              </button>
+              <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
             </div>
-
-            {/* 작업요소 그리드 */}
-            <div className="flex-1 overflow-auto p-4">
-              {filteredElements.length === 0 ? (
-                <div className="text-center text-gray-500 py-8">
-                  검색 결과가 없습니다.<br/>
-                  <span className="text-sm">"직접 입력" 탭을 이용하세요.</span>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  {filteredElements.map(elem => {
-                    const isCurrent = isAlreadyAdded(elem.name);
-                    const isSelected = selectedIds.has(elem.id);
-                    const isEditing = editingId === elem.id;
-                    
-                    if (isEditing) {
-                      // 수정 모드
-                      return (
-                        <div 
-                          key={elem.id}
-                          className="flex items-center gap-1 p-2 border-2 rounded border-yellow-400 bg-yellow-50"
-                        >
-                          <select
-                            value={editingM4}
-                            onChange={(e) => setEditingM4(e.target.value)}
-                            className="px-1 py-1 text-xs border rounded w-14"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {M4_CATEGORIES.map(c => (
-                              <option key={c.code} value={c.code}>{c.code}</option>
-                            ))}
-                          </select>
-                          <input
-                            type="text"
-                            value={editingName}
-                            onChange={(e) => setEditingName(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
-                            className="flex-1 px-2 py-1 text-xs border rounded"
-                            autoFocus
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); saveEdit(); }}
-                            className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
-                          >
-                            ✓
-                          </button>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); cancelEdit(); }}
-                            className="px-2 py-1 text-xs bg-gray-400 text-white rounded hover:bg-gray-500"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      );
-                    }
-                    
-                    return (
-                      <div 
-                        key={elem.id}
-                        className={`flex items-center gap-2 p-2 border rounded cursor-pointer transition-colors group ${
-                          isSelected 
-                            ? isCurrent 
-                              ? 'bg-green-100 border-green-400' 
-                              : 'bg-blue-100 border-blue-400'
-                            : 'bg-white border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        {/* 체크박스 */}
-                        <div 
-                          onClick={() => toggleSelect(elem.id)}
-                          className={`w-5 h-5 border-2 rounded flex items-center justify-center flex-shrink-0 ${
-                            isSelected 
-                              ? isCurrent 
-                                ? 'bg-green-500 border-green-500'
-                                : 'bg-blue-500 border-blue-500' 
-                              : 'bg-white border-gray-400'
-                          }`}
-                        >
-                          {isSelected && <span className="text-white text-xs font-bold">✓</span>}
-                        </div>
-                        {/* 공통/공정 표시 */}
-                        <span className={`text-[10px] font-bold px-1 rounded ${
-                          elem.processNo === 'COMMON' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
-                        }`}>
-                          {elem.processNo === 'COMMON' ? '공통' : elem.processNo}
-                        </span>
-                        {/* 4M 배지 */}
-                        <span 
-                          className="px-1.5 py-0.5 text-xs font-bold rounded border flex-shrink-0"
-                          style={getM4Style(elem.m4)}
-                        >
-                          {elem.m4}
-                        </span>
-                        {/* 이름 */}
-                        <span 
-                          className="flex-1 text-sm truncate"
-                          onClick={() => toggleSelect(elem.id)}
-                        >
-                          {elem.name}
-                          {isCurrent && <span className="ml-1 text-[10px] text-green-600">(현재)</span>}
-                        </span>
-                        {/* 수정 버튼 (호버 시 표시) */}
-                        <button
-                          onClick={(e) => { e.stopPropagation(); startEdit(elem); }}
-                          className="opacity-0 group-hover:opacity-100 px-1.5 py-0.5 text-xs bg-yellow-400 text-yellow-900 rounded hover:bg-yellow-500 transition-opacity"
-                          title="수정"
-                        >
-                          ✏️
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
+            <select
+              value={filterM4}
+              onChange={(e) => setFilterM4(e.target.value)}
+              className="px-3 py-2 text-sm border rounded-md bg-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              <option value="all">전체 4M</option>
+              {M4_CATEGORIES.map(c => (
+                <option key={c.code} value={c.code}>{c.code}</option>
+              ))}
+            </select>
+            <div className="flex gap-1">
+              <button onClick={selectAll} className="px-3 py-2 text-xs font-bold bg-blue-500 text-white rounded-md hover:bg-blue-600 shadow-sm transition-colors">전체</button>
+              <button onClick={deselectAll} className="px-3 py-2 text-xs font-bold bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 shadow-sm transition-colors">해제</button>
+              {onDelete && (
+                <button 
+                  onClick={() => setDeleteMode(!deleteMode)} 
+                  className={`px-3 py-2 text-xs font-bold rounded-md shadow-sm transition-colors ${
+                    deleteMode ? 'bg-red-500 text-white' : 'bg-red-500 text-white hover:bg-red-600'
+                  }`}
+                >
+                  🗑️ 삭제
+                </button>
               )}
             </div>
-          </>
-        ) : (
-          /* 직접 입력 */
-          <div className="flex-1 overflow-auto p-4">
-            <div className="flex gap-2 mb-4">
-              <select
-                value={manualM4}
-                onChange={(e) => setManualM4(e.target.value)}
-                className="px-3 py-2 text-sm border rounded w-20"
-              >
-                {M4_CATEGORIES.map(c => (
-                  <option key={c.code} value={c.code}>{c.code}</option>
-                ))}
-              </select>
-              <input
-                type="text"
-                value={manualName}
-                onChange={(e) => setManualName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addManualElement()}
-                placeholder={`${processNo}번 공정 작업요소명 입력`}
-                className="flex-1 px-3 py-2 text-sm border rounded"
-              />
+          </div>
+
+          {/* 삭제 모드 안내 */}
+          {deleteMode && (
+            <div className="px-4 py-2 bg-red-50 border-b border-red-200 flex items-center justify-between shrink-0">
+              <span className="text-xs text-red-700 font-medium">🗑️ 삭제할 작업요소를 선택하세요 (현재 워크시트 항목만 삭제 가능)</span>
               <button
-                onClick={addManualElement}
-                className="px-4 py-2 text-sm font-bold bg-green-500 text-white rounded hover:bg-green-600"
+                onClick={handleDeleteSelected}
+                className="px-3 py-1 text-xs font-bold bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
               >
-                추가
+                선택 삭제
               </button>
             </div>
+          )}
 
+          <div className="flex-1 overflow-auto p-4 bg-gray-50/20">
+            {filteredElements.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-gray-400 py-20">
+                <span className="text-4xl mb-4">🔍</span>
+                <p className="font-medium">검색 결과가 없습니다.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {filteredElements.map(elem => {
+                  const isSelected = selectedIds.has(elem.id);
+                  const m4Style = getM4Style(elem.m4);
+                  const existing = isExisting(elem.name);
+                  return (
+                    <div key={elem.id} onClick={() => toggleSelect(elem.id)} className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all shadow-sm group ${
+                      existing 
+                        ? isSelected ? 'bg-green-50 border-green-400 ring-1 ring-green-400' : 'bg-green-50/50 border-green-300'
+                        : isSelected ? 'bg-blue-50/50 border-blue-400 ring-1 ring-blue-400' : 'bg-white border-gray-200 hover:border-blue-300 hover:shadow-md'
+                    }`}>
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                        isSelected 
+                          ? existing ? 'bg-green-500 border-green-500 scale-110' : 'bg-blue-500 border-blue-500 scale-110' 
+                          : 'bg-white border-gray-300 group-hover:border-blue-400'
+                      }`}>
+                        {isSelected && <span className="text-white text-[10px] font-bold">✓</span>}
+                      </div>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shadow-inner shrink-0 ${elem.processNo === 'COMMON' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                        {elem.processNo === 'COMMON' ? '공통' : elem.processNo}
+                      </span>
+                      <span className="px-2 py-0.5 text-[10px] font-black rounded border shrink-0 shadow-sm" style={m4Style}>{elem.m4}</span>
+                      <span className={`flex-1 text-sm truncate font-medium ${isSelected ? (existing ? 'text-green-900' : 'text-blue-900') : 'text-gray-700'}`}>
+                        {elem.name}
+                        {existing && <span className="ml-1 text-[9px] text-green-600">(현재)</span>}
+                      </span>
+                      
+                      {/* 삭제 버튼 (삭제모드 & 현재 항목만) */}
+                      {deleteMode && existing && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteSingle(elem.name); }}
+                          className="p-1 text-red-500 hover:bg-red-100 rounded transition-colors shrink-0"
+                          title="삭제"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="p-6 flex flex-col h-full bg-gray-50/20">
+          <div className="bg-white p-4 rounded-xl border shadow-sm mb-6">
+            <h3 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2"><span className="text-blue-500">➕</span> 신규 작업요소 등록</h3>
+            <div className="flex gap-2">
+              <select value={manualM4} onChange={(e) => setManualM4(e.target.value)} className="px-3 py-2.5 text-sm border rounded-lg w-24 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm">
+                {M4_CATEGORIES.map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
+              </select>
+              <input type="text" value={manualName} onChange={(e) => setManualName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && manualName.trim()) { setManualElements(prev => [...prev, { id: `manual_${Date.now()}`, m4: manualM4, name: manualName.trim(), processNo: processNo }]); setManualName(''); } }} placeholder={`${processNo}번 공정 작업요소명 입력`} className="flex-1 px-4 py-2.5 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" />
+              <button onClick={() => { if (!manualName.trim()) return; setManualElements(prev => [...prev, { id: `manual_${Date.now()}`, m4: manualM4, name: manualName.trim(), processNo: processNo }]); setManualName(''); }} disabled={!manualName.trim()} className="px-6 py-2.5 text-sm font-bold bg-green-500 text-white rounded-lg hover:bg-green-600 shadow-md transition-all disabled:bg-gray-200 active:scale-95">추가</button>
+            </div>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-bold text-gray-700 mb-3 px-1">입력된 항목 ({manualElements.length})</h3>
             {manualElements.length > 0 ? (
-              <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-3">
                 {manualElements.map(elem => (
-                  <div key={elem.id} className="flex items-center gap-2 p-2 border rounded bg-green-50">
-                    <span className="text-[10px] font-bold px-1 rounded bg-orange-100 text-orange-700">{processNo}</span>
-                    <span className="px-1.5 py-0.5 text-xs font-bold rounded border" style={getM4Style(elem.m4)}>
-                      {elem.m4}
-                    </span>
-                    <span className="flex-1 text-sm">{elem.name}</span>
-                    <button onClick={() => removeManualElement(elem.id)} className="text-red-500 hover:text-red-700">✕</button>
+                  <div key={elem.id} className="flex items-center gap-2 p-3 border rounded-lg bg-white shadow-sm border-green-200">
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 shadow-inner">{processNo}</span>
+                    <span className="px-2 py-0.5 text-[10px] font-black rounded border shadow-sm" style={getM4Style(elem.m4)}>{elem.m4}</span>
+                    <span className="flex-1 text-sm font-medium text-gray-700 truncate">{elem.name}</span>
+                    <button onClick={() => setManualElements(prev => prev.filter(e => e.id !== elem.id))} className="text-red-400 hover:text-red-600 p-1 hover:bg-red-50 rounded-full transition-all">✕</button>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center text-gray-400 py-8">
-                {processNo}번 공정 작업요소를 입력하세요
-              </div>
+              <div className="text-center text-gray-400 py-20 border-2 border-dashed rounded-xl bg-white/50"><p className="text-sm">추가된 항목이 없습니다.</p></div>
             )}
-          </div>
-        )}
-
-        {/* 푸터 */}
-        <div className="px-4 py-3 border-t flex items-center justify-between bg-gray-50">
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-600 font-bold">✓ {totalSelected}개 선택</span>
-            {!isManualMode && selectedIds.size > 0 && (
-              <button 
-                type="button"
-                onClick={(e) => deleteSelected(e)}
-                className="px-3 py-1.5 text-xs font-bold bg-red-500 text-white rounded hover:bg-red-600 flex items-center gap-1"
-              >
-                🗑 선택 삭제 ({selectedIds.size})
-              </button>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <button onClick={onClose} className="px-4 py-2 text-sm font-bold border rounded hover:bg-gray-100">취소</button>
-            <button 
-              onClick={handleSave}
-              disabled={totalSelected === 0}
-              className="px-6 py-2 text-sm font-bold bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300"
-            >
-              저장
-            </button>
           </div>
         </div>
-      </div>
-    </div>
+      )}
+    </BaseModal>
   );
 }
