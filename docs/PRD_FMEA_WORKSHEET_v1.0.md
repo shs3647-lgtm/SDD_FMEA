@@ -3,9 +3,9 @@
 ## 📋 문서 정보
 | 항목 | 내용 |
 |------|------|
-| **버전** | v1.3.0 |
+| **버전** | v1.4.0 |
 | **작성일** | 2025-12-28 |
-| **상태** | In Progress (Phase 3 Complete) |
+| **상태** | In Progress (Phase 3 Complete + 특별특성) |
 | **참조** | PRD-005, FMEA_MASTER_PLAN.md |
 
 ---
@@ -328,7 +328,8 @@ interface FailureData {
   fe: string;          // 고장영향
   fm: string;          // 고장형태
   severity: number;    // 심각도 (1-10)
-  fmSC: boolean;       // 특별특성
+  fmSC: boolean;       // 특별특성 여부
+  specialChar?: string; // 특별특성 기호 (IC, CC, BM-F 등)
 }
 
 interface FailureCause {
@@ -368,6 +369,16 @@ interface FailureCause {
 - **3.2 L2 메인공정 기능분석**: 각 공정별 기능 및 제품특성 정의
 - **3.3 L3 작업요소 기능분석**: 4M 요소별 세부 기능 및 공정특성 정의
 - **원자성 확보**: 모든 기능/특성 데이터는 고유 ID를 가져 '고장연결(Step 4)'에서 참조 가능하도록 구성
+
+### Phase 3.5: 특별특성 마스터 등록 ✅ 완료
+- **SpecialCharMasterModal**: 고객별 특별특성 기호 등록/관리
+  - 고객: 현대/기아, BMW, FORD, GM 등
+  - 기호: IC, CC, BM-F, BM-C, OS, YC 등
+  - 자사 표시: SC(Safety/Critical), FF(Fit/Function)
+- **FMEA 기초정보 연동**: 부품, 공정, 제품특성, 공정특성 선택
+- **문서 연동 설정**: D-FMEA, P-FMEA, CP, PFD 자동 연동
+- **Excel Export/Import**: 마스터 데이터 일괄 관리
+- **UI 규칙**: 저장/취소 버튼 상단 우측 배치
 
 ### Phase 4: 고장 분석 (Step 4) ⏳ 진행 예정
 - **고장 연계(Linkage)**: 정의된 L1-L2-L3 기능을 기반으로 FE-FM-FC 관계 설정
