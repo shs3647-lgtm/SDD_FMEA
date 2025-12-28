@@ -350,7 +350,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
               심각도
             </th>
             <th style={{ background: STEP_COLORS.failure.header3, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
-              삭제
+              편집
             </th>
           </tr>
         </thead>
@@ -459,7 +459,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                   )}
                 </td>
                 
-                {/* 관리 (삭제) */}
+                {/* 편집 (삭제) */}
                 <td style={{ border: `1px solid ${COLORS.line}`, padding: '4px', textAlign: 'center', background: '#fff' }}>
                   {row.effectId ? (
                     <button
