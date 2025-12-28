@@ -5,7 +5,7 @@
  * @created 2025-12-26
  * @updated 2025-12-26 - 다운로드/입포트 탭 추가
  * 
- * A 공정, B 작업요소, C 완제품, 다운로드, 입포트 탭
+ * L2 고장형태, L3 고장원인, L1 고장영향, 다운로드, 입포트 탭
  * 각 탭 클릭시 해당 데이터 표 형식으로 미리보기
  * 세로 스크롤 (디폴트 20행)
  */
@@ -29,7 +29,7 @@ interface RelationPreviewProps {
 const TABS = [
   { 
     code: 'A', 
-    label: 'A 공정', 
+    label: 'L2 고장형태', 
     color: 'blue',
     columns: [
       { code: 'A1', label: '공정번호' },
@@ -42,7 +42,7 @@ const TABS = [
   },
   { 
     code: 'B', 
-    label: 'B 작업요소', 
+    label: 'L3 고장원인', 
     color: 'green',
     columns: [
       { code: 'A1', label: '공정번호' },
@@ -55,7 +55,7 @@ const TABS = [
   },
   { 
     code: 'C', 
-    label: 'C 완(반)제품', 
+    label: 'L1 고장영향', 
     color: 'red',
     columns: [
       { code: 'C1', label: '구분' },  // YOUR PLANT, SHIP TO PLANT, USER
@@ -177,8 +177,8 @@ export default function RelationPreview({ data, onDataChange }: RelationPreviewP
     workbook.creator = 'FMEA Smart System';
     workbook.created = new Date();
 
-    // A 공정 시트
-    const sheetA = workbook.addWorksheet('A 공정', { properties: { tabColor: { argb: '3B82F6' } } });
+    // L2 고장형태 시트
+    const sheetA = workbook.addWorksheet('L2 고장형태', { properties: { tabColor: { argb: '3B82F6' } } });
     sheetA.columns = [
       { header: 'A1.공정번호', key: 'A1', width: 12 },
       { header: 'A2.공정명', key: 'A2', width: 15 },
@@ -198,8 +198,8 @@ export default function RelationPreview({ data, onDataChange }: RelationPreviewP
       });
     });
 
-    // B 작업요소 시트
-    const sheetB = workbook.addWorksheet('B 작업요소', { properties: { tabColor: { argb: '22C55E' } } });
+    // L3 고장원인 시트
+    const sheetB = workbook.addWorksheet('L3 고장원인', { properties: { tabColor: { argb: '22C55E' } } });
     sheetB.columns = [
       { header: 'A1.공정번호', key: 'A1', width: 12 },
       { header: 'B1.작업요소', key: 'B1', width: 15 },
@@ -219,8 +219,8 @@ export default function RelationPreview({ data, onDataChange }: RelationPreviewP
       });
     });
 
-    // C 완제품 시트
-    const sheetC = workbook.addWorksheet('C 완제품', { properties: { tabColor: { argb: 'EF4444' } } });
+    // L1 고장영향 시트
+    const sheetC = workbook.addWorksheet('L1 고장영향', { properties: { tabColor: { argb: 'EF4444' } } });
     sheetC.columns = [
       { header: 'C1.구분', key: 'C1', width: 15 },  // YOUR PLANT, SHIP TO PLANT, USER
       { header: 'C2.제품기능', key: 'C2', width: 20 },
@@ -277,8 +277,8 @@ export default function RelationPreview({ data, onDataChange }: RelationPreviewP
 
       const newData: ImportedFlatData[] = [];
 
-      // A 공정 시트 읽기
-      const sheetA = workbook.getWorksheet('A 공정');
+      // L2 고장형태 시트 읽기
+      const sheetA = workbook.getWorksheet('L2 고장형태');
       if (sheetA) {
         for (let i = 2; i <= sheetA.rowCount; i++) {
           const row = sheetA.getRow(i);
@@ -301,8 +301,8 @@ export default function RelationPreview({ data, onDataChange }: RelationPreviewP
         }
       }
 
-      // B 작업요소 시트 읽기
-      const sheetB = workbook.getWorksheet('B 작업요소');
+      // L3 고장원인 시트 읽기
+      const sheetB = workbook.getWorksheet('L3 고장원인');
       if (sheetB) {
         for (let i = 2; i <= sheetB.rowCount; i++) {
           const row = sheetB.getRow(i);
@@ -325,8 +325,8 @@ export default function RelationPreview({ data, onDataChange }: RelationPreviewP
         }
       }
 
-      // C 완제품 시트 읽기
-      const sheetC = workbook.getWorksheet('C 완제품');
+      // L1 고장영향 시트 읽기
+      const sheetC = workbook.getWorksheet('L1 고장영향');
       if (sheetC) {
         for (let i = 2; i <= sheetC.rowCount; i++) {
           const row = sheetC.getRow(i);
@@ -389,7 +389,7 @@ export default function RelationPreview({ data, onDataChange }: RelationPreviewP
           <h3 className="text-lg font-bold text-[#00587a] mb-2">관계형 DATA 다운로드</h3>
           <p className="text-sm text-gray-600 mb-6">
             현재 Import된 관계형 데이터를 Excel 파일로 다운로드합니다.<br />
-            A 공정, B 작업요소, C 완제품 시트가 포함됩니다.
+            L2 고장형태, L3 고장원인, L1 고장영향 시트가 포함됩니다.
           </p>
           <Button 
             onClick={handleDownload}
@@ -454,15 +454,15 @@ export default function RelationPreview({ data, onDataChange }: RelationPreviewP
           {/* 저장 통계 */}
           <div className="flex justify-center gap-4 mb-6">
             <div className="bg-blue-50 px-4 py-2 rounded">
-              <span className="text-blue-600 font-bold">A 공정: </span>
+              <span className="text-blue-600 font-bold">L2 고장형태: </span>
               <span className="text-blue-800">{processNos.length}개</span>
             </div>
             <div className="bg-green-50 px-4 py-2 rounded">
-              <span className="text-green-600 font-bold">B 작업요소: </span>
+              <span className="text-green-600 font-bold">L3 고장원인: </span>
               <span className="text-green-800">{data.filter(d => d.itemCode.startsWith('B')).length}개</span>
             </div>
             <div className="bg-red-50 px-4 py-2 rounded">
-              <span className="text-red-600 font-bold">C 완제품: </span>
+              <span className="text-red-600 font-bold">L1 고장영향: </span>
               <span className="text-red-800">{productNames.length}개</span>
             </div>
           </div>
