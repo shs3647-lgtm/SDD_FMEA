@@ -135,6 +135,13 @@ export default function FailureModeSelectModal({
 
   const selectAll = () => setSelectedModes(new Set(filteredOptions.map(o => o.value)));
   const deselectAll = () => setSelectedModes(new Set());
+  
+  // 모두 삭제 후 저장
+  const clearAndSave = () => {
+    if (!window.confirm('모든 고장형태를 삭제하시겠습니까?')) return;
+    onSave([]);
+    onClose();
+  };
 
   const parentLabel = parentType === 'productChar' ? '제품특성' : '공정특성';
   const parentColor = parentType === 'productChar' ? '#1b5e20' : '#1565c0';
@@ -214,6 +221,7 @@ export default function FailureModeSelectModal({
             <div className="flex gap-1">
               <button onClick={selectAll} className="px-3 py-2 text-xs font-bold bg-red-500 text-white rounded-md hover:bg-red-600 shadow-sm transition-colors">전체선택</button>
               <button onClick={deselectAll} className="px-3 py-2 text-xs font-bold bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 shadow-sm transition-colors">해제</button>
+              <button onClick={clearAndSave} className="px-3 py-2 text-xs font-bold bg-red-700 text-white rounded-md hover:bg-red-800 shadow-sm transition-colors">🗑️ 모두삭제</button>
             </div>
           </div>
 

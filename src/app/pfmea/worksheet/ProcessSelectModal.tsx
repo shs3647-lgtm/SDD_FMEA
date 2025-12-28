@@ -119,6 +119,13 @@ export default function ProcessSelectModal({
 
   const selectAll = () => setSelectedIds(new Set(filteredProcesses.map(p => p.id)));
   const deselectAll = () => setSelectedIds(new Set());
+  
+  // 전체 해제 후 바로 저장 (모두 삭제)
+  const clearAndSave = () => {
+    if (!window.confirm('모든 공정을 삭제하시겠습니까?\n(행은 유지되고 내용만 삭제됩니다)')) return;
+    onSave([]); // 빈 배열 전달
+    onClose();
+  };
 
   const handleSave = () => {
     const selected = processes.filter(p => selectedIds.has(p.id));
@@ -204,16 +211,12 @@ export default function ProcessSelectModal({
           >
             해제
           </button>
-          {onDelete && (
-            <button 
-              onClick={() => setDeleteMode(!deleteMode)} 
-              className={`px-3 py-2 text-xs font-bold rounded-md shadow-sm transition-colors whitespace-nowrap ${
-                deleteMode ? 'bg-red-600 text-white ring-2 ring-red-300' : 'bg-red-500 text-white hover:bg-red-600'
-              }`}
-            >
-              🗑️ 삭제
-            </button>
-          )}
+          <button 
+            onClick={clearAndSave} 
+            className="px-3 py-2 text-xs font-bold bg-red-500 text-white rounded-md hover:bg-red-600 shadow-sm transition-colors whitespace-nowrap"
+          >
+            🗑️ 모두삭제
+          </button>
         </div>
       </div>
       

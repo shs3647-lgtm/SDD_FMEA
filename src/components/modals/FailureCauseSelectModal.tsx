@@ -168,6 +168,13 @@ export default function FailureCauseSelectModal({
 
   const selectAll = () => setSelectedCauses(new Set(filteredOptions.map(o => o.value)));
   const deselectAll = () => setSelectedCauses(new Set());
+  
+  // 모두 삭제 후 저장
+  const clearAndSave = () => {
+    if (!window.confirm('모든 고장원인을 삭제하시겠습니까?')) return;
+    onSave([]);
+    onClose();
+  };
 
   return (
     <BaseModal
@@ -274,6 +281,7 @@ export default function FailureCauseSelectModal({
             <div className="flex gap-1">
               <button onClick={selectAll} className="px-3 py-2 text-xs font-bold bg-orange-500 text-white rounded-md hover:bg-orange-600 shadow-sm transition-colors">전체선택</button>
               <button onClick={deselectAll} className="px-3 py-2 text-xs font-bold bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 shadow-sm transition-colors">해제</button>
+              <button onClick={clearAndSave} className="px-3 py-2 text-xs font-bold bg-red-500 text-white rounded-md hover:bg-red-600 shadow-sm transition-colors">🗑️ 모두삭제</button>
             </div>
           </div>
 
