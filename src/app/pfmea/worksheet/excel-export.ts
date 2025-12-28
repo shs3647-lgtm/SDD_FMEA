@@ -8,10 +8,10 @@
 import ExcelJS from 'exceljs';
 import { WorksheetState } from './constants';
 
-// 색상 정의
+// 색상 정의 (표준: 구조분석-파란색, 기능분석-진한녹색, 고장분석-붉은색)
 const COLORS = {
   structure: '1976D2',   // 파랑
-  function: '7B1FA2',    // 보라
+  function: '1B5E20',    // 진한녹색
   failure: 'C62828',     // 빨강
   risk: '1565C0',        // 청색
   optimization: '00695C', // 녹색

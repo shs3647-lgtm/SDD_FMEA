@@ -86,7 +86,7 @@ export default function L1Section({
             width: '80px',
             border: `1px solid ${COLORS.line}`,
             padding: '0 4px', 
-            background: '#f3e5f5', 
+            background: '#c8e6c9', 
             verticalAlign: 'middle',
             textAlign: 'center',
           }}
@@ -94,7 +94,7 @@ export default function L1Section({
           <SelectableCell
             value={row.l1Type}
             placeholder="구분"
-            bgColor="#f3e5f5"
+            bgColor="#c8e6c9"
             onClick={() => onOpenModal('l1Type', row.l1Id)}
           />
         </td>
@@ -107,7 +107,7 @@ export default function L1Section({
           style={{ 
             border: `1px solid ${COLORS.line}`,
             padding: '2px 4px', 
-            background: '#f3e5f5', 
+            background: '#c8e6c9', 
             verticalAlign: 'middle',
             wordBreak: 'break-word',
           }}
@@ -115,7 +115,7 @@ export default function L1Section({
           <SelectableCell
             value={row.l1Function}
             placeholder="완제품 기능"
-            bgColor="#f3e5f5"
+            bgColor="#c8e6c9"
             onClick={() => onOpenModal('l1Function', row.l1TypeId)}
           />
         </td>
@@ -126,7 +126,7 @@ export default function L1Section({
         style={{ 
           border: `1px solid ${COLORS.line}`,
           padding: '2px 4px', 
-          background: '#f3e5f5', 
+          background: '#c8e6c9', 
           verticalAlign: 'middle',
           wordBreak: 'break-word',
         }}
@@ -134,7 +134,7 @@ export default function L1Section({
         <SelectableCell
           value={row.l1Requirement}
           placeholder="요구사항"
-          bgColor="#f3e5f5"
+          bgColor="#c8e6c9"
           onClick={() => onOpenModal('l1Requirement', row.l1FunctionId)}
         />
       </td>

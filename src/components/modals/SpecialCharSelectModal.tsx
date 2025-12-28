@@ -388,3 +388,4 @@ export default function SpecialCharSelectModal({
 export { SPECIAL_CHAR_DATA };
 export type { SpecialCharItem };
 
+

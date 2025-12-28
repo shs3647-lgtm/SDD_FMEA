@@ -168,7 +168,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
             <th 
               colSpan={3}
               style={{ 
-                background: '#7b1fa2', color: 'white', 
+                background: '#1b5e20', color: 'white', 
                 border: `1px solid ${COLORS.line}`, padding: '8px', 
                 fontSize: '12px', fontWeight: 800, textAlign: 'center'
               }}
@@ -191,7 +191,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
             <th 
               colSpan={3}
               style={{ 
-                background: '#9c27b0', color: 'white', 
+                background: '#2e7d32', color: 'white', 
                 border: `1px solid ${COLORS.line}`, padding: '6px', 
                 fontSize: '11px', fontWeight: 700, textAlign: 'center'
               }}
@@ -205,13 +205,13 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
             <th style={{ background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
               완제품 공정명
             </th>
-            <th style={{ background: '#e1bee7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
+            <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
               구분
             </th>
-            <th style={{ background: '#e1bee7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
+            <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
               완제품기능
             </th>
-            <th style={{ background: '#e1bee7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
+            <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
               요구사항
             </th>
           </tr>
@@ -224,13 +224,13 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                 {state.l1.name || '(구조분석에서 입력)'}
               </td>
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                <SelectableCell value="" placeholder="구분 선택" bgColor="#f3e5f5" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
+                <SelectableCell value="" placeholder="구분 선택" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
               </td>
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                <SelectableCell value="" placeholder="기능 선택" bgColor="#f3e5f5" onClick={() => setModal({ type: 'l1Function', id: '', title: '완제품 기능 선택', itemCode: 'C2' })} />
+                <SelectableCell value="" placeholder="기능 선택" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l1Function', id: '', title: '완제품 기능 선택', itemCode: 'C2' })} />
               </td>
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                <SelectableCell value="" placeholder="요구사항 선택" bgColor="#f3e5f5" onClick={() => setModal({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3' })} />
+                <SelectableCell value="" placeholder="요구사항 선택" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3' })} />
               </td>
             </tr>
           ) : state.l1.types.map((t, tIdx) => {
@@ -243,8 +243,8 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                     {state.l1.name || '(구조분석에서 입력)'}
                   </td>
                 )}
-                <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: '#f3e5f5', verticalAlign: 'middle' }}>
-                  <SelectableCell value={t.name} placeholder="구분" bgColor="#f3e5f5" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
+                <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: '#c8e6c9', verticalAlign: 'middle' }}>
+                  <SelectableCell value={t.name} placeholder="구분" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
                 </td>
                 <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
                   <SelectableCell value="" placeholder="기능 선택" bgColor="#fce4ec" onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} />
@@ -264,8 +264,8 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                     </td>
                   )}
                   {fIdx === 0 && (
-                    <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: '#f3e5f5', verticalAlign: 'middle' }}>
-                      <SelectableCell value={t.name} placeholder="구분" bgColor="#f3e5f5" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
+                    <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: '#c8e6c9', verticalAlign: 'middle' }}>
+                      <SelectableCell value={t.name} placeholder="구분" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
                     </td>
                   )}
                   <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
@@ -283,8 +283,8 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                     </td>
                   )}
                   {fIdx === 0 && rIdx === 0 && (
-                    <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: '#f3e5f5', verticalAlign: 'middle' }}>
-                      <SelectableCell value={t.name} placeholder="구분" bgColor="#f3e5f5" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
+                    <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: '#c8e6c9', verticalAlign: 'middle' }}>
+                      <SelectableCell value={t.name} placeholder="구분" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
                     </td>
                   )}
                   {rIdx === 0 && (

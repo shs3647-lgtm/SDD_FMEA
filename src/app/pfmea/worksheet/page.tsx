@@ -408,26 +408,26 @@ function FMEAWorksheetPageContent() {
             {/* 1L 기능트리 (완제품 기능분석) */}
             {state.tab === 'function-l1' && (
               <>
-                <div style={{ background: '#7b1fa2', color: 'white', padding: '8px 12px', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
+                <div style={{ background: '#1b5e20', color: 'white', padding: '8px 12px', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
                   🎯 1L 기능트리 (완제품)
                 </div>
-                <div style={{ flex: 1, overflow: 'auto', padding: '8px', background: '#faf0ff' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px', background: '#f3e5f5', borderRadius: '4px', marginBottom: '8px' }}>
+                <div style={{ flex: 1, overflow: 'auto', padding: '8px', background: '#e8f5e9' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px', background: '#c8e6c9', borderRadius: '4px', marginBottom: '8px' }}>
                     <span style={{ fontSize: '14px' }}>📦</span>
                     <span style={{ fontSize: '12px', fontWeight: 700 }}>{state.l1.name || '(완제품명)'}</span>
                   </div>
                   {state.l1.types.length === 0 ? (
                     <div style={{ fontSize: '11px', color: '#888', padding: '16px', textAlign: 'center', background: '#f5f5f5', borderRadius: '4px' }}>구분/기능/요구사항을 정의하세요</div>
                   ) : state.l1.types.map(t => (
-                    <div key={t.id} style={{ marginLeft: '12px', marginBottom: '8px', borderLeft: '2px solid #ce93d8', paddingLeft: '8px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#7b1fa2', padding: '4px 8px', background: '#e1bee7', borderRadius: '3px', marginBottom: '4px' }}>
+                    <div key={t.id} style={{ marginLeft: '12px', marginBottom: '8px', borderLeft: '2px solid #66bb6a', paddingLeft: '8px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#1b5e20', padding: '4px 8px', background: '#a5d6a7', borderRadius: '3px', marginBottom: '4px' }}>
                         📋 {t.name}
                       </div>
                       {t.functions.map(f => (
                         <div key={f.id} style={{ marginLeft: '12px', marginBottom: '4px' }}>
-                          <div style={{ fontSize: '10px', color: '#555', padding: '2px 6px', background: '#f3e5f5', borderRadius: '2px' }}>⚙️ {f.name}</div>
+                          <div style={{ fontSize: '10px', color: '#2e7d32', padding: '2px 6px', background: '#c8e6c9', borderRadius: '2px' }}>⚙️ {f.name}</div>
                           {f.requirements.map(r => (
-                            <div key={r.id} style={{ marginLeft: '16px', fontSize: '9px', color: '#777', padding: '1px 4px' }}>• {r.name}</div>
+                            <div key={r.id} style={{ marginLeft: '16px', fontSize: '9px', color: '#555', padding: '1px 4px' }}>• {r.name}</div>
                           ))}
                         </div>
                       ))}
@@ -443,24 +443,24 @@ function FMEAWorksheetPageContent() {
             {/* 2L 기능트리 (메인공정 기능분석) */}
             {state.tab === 'function-l2' && (
               <>
-                <div style={{ background: '#512da8', color: 'white', padding: '8px 12px', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
+                <div style={{ background: '#2e7d32', color: 'white', padding: '8px 12px', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
                   🔧 2L 기능트리 (메인공정)
                 </div>
-                <div style={{ flex: 1, overflow: 'auto', padding: '8px', background: '#ede7f6' }}>
+                <div style={{ flex: 1, overflow: 'auto', padding: '8px', background: '#e8f5e9' }}>
                   {state.l2.length === 0 ? (
                     <div style={{ fontSize: '11px', color: '#888', padding: '16px', textAlign: 'center', background: '#f5f5f5', borderRadius: '4px' }}>구조분석에서 공정을 추가하세요</div>
                   ) : state.l2.map(proc => (
-                    <div key={proc.id} style={{ marginBottom: '10px', borderLeft: '2px solid #7e57c2', paddingLeft: '8px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#512da8', padding: '4px 8px', background: '#d1c4e9', borderRadius: '3px', marginBottom: '4px' }}>
+                    <div key={proc.id} style={{ marginBottom: '10px', borderLeft: '2px solid #4caf50', paddingLeft: '8px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#1b5e20', padding: '4px 8px', background: '#a5d6a7', borderRadius: '3px', marginBottom: '4px' }}>
                         🏭 {proc.no}. {proc.name}
                       </div>
                       {(proc.functions || []).length === 0 ? (
                         <div style={{ fontSize: '10px', color: '#888', marginLeft: '12px', padding: '4px' }}>기능 미정의</div>
                       ) : (proc.functions || []).map(f => (
                         <div key={f.id} style={{ marginLeft: '12px', marginBottom: '4px' }}>
-                          <div style={{ fontSize: '10px', color: '#555', padding: '2px 6px', background: '#e8eaf6', borderRadius: '2px' }}>⚙️ {f.name}</div>
+                          <div style={{ fontSize: '10px', color: '#2e7d32', padding: '2px 6px', background: '#c8e6c9', borderRadius: '2px' }}>⚙️ {f.name}</div>
                           {(f.productChars || []).map(c => (
-                            <div key={c.id} style={{ marginLeft: '16px', fontSize: '9px', color: '#777', padding: '1px 4px' }}>📐 {c.name}</div>
+                            <div key={c.id} style={{ marginLeft: '16px', fontSize: '9px', color: '#555', padding: '1px 4px' }}>📐 {c.name}</div>
                           ))}
                         </div>
                       ))}
@@ -476,29 +476,29 @@ function FMEAWorksheetPageContent() {
             {/* 3L 기능트리 (작업요소 기능분석) */}
             {state.tab === 'function-l3' && (
               <>
-                <div style={{ background: '#303f9f', color: 'white', padding: '8px 12px', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
+                <div style={{ background: '#388e3c', color: 'white', padding: '8px 12px', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
                   🛠️ 3L 기능트리 (작업요소)
                 </div>
-                <div style={{ flex: 1, overflow: 'auto', padding: '8px', background: '#e8eaf6' }}>
+                <div style={{ flex: 1, overflow: 'auto', padding: '8px', background: '#e8f5e9' }}>
                   {state.l2.every(p => (p.l3 || []).length === 0) ? (
                     <div style={{ fontSize: '11px', color: '#888', padding: '16px', textAlign: 'center', background: '#f5f5f5', borderRadius: '4px' }}>구조분석에서 작업요소를 추가하세요</div>
                   ) : state.l2.filter(p => (p.l3 || []).length > 0).map(proc => (
-                    <div key={proc.id} style={{ marginBottom: '10px', borderLeft: '2px solid #5c6bc0', paddingLeft: '8px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#303f9f', padding: '4px 8px', background: '#c5cae9', borderRadius: '3px', marginBottom: '4px' }}>
+                    <div key={proc.id} style={{ marginBottom: '10px', borderLeft: '2px solid #4caf50', paddingLeft: '8px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#1b5e20', padding: '4px 8px', background: '#a5d6a7', borderRadius: '3px', marginBottom: '4px' }}>
                         🏭 {proc.no}. {proc.name}
                       </div>
                       {(proc.l3 || []).map(we => (
                         <div key={we.id} style={{ marginLeft: '12px', marginBottom: '6px' }}>
-                          <div style={{ fontSize: '10px', fontWeight: 600, color: '#3949ab', padding: '2px 6px', background: '#dce1f7', borderRadius: '2px', marginBottom: '2px' }}>
+                          <div style={{ fontSize: '10px', fontWeight: 600, color: '#2e7d32', padding: '2px 6px', background: '#c8e6c9', borderRadius: '2px', marginBottom: '2px' }}>
                             [{we.m4}] {we.name}
                           </div>
                           {(we.functions || []).length === 0 ? (
                             <div style={{ fontSize: '9px', color: '#888', marginLeft: '12px', padding: '2px' }}>기능 미정의</div>
                           ) : (we.functions || []).map(f => (
                             <div key={f.id} style={{ marginLeft: '12px' }}>
-                              <div style={{ fontSize: '9px', color: '#555', padding: '1px 4px' }}>⚙️ {f.name}</div>
+                              <div style={{ fontSize: '9px', color: '#2e7d32', padding: '1px 4px' }}>⚙️ {f.name}</div>
                               {(f.processChars || []).map(c => (
-                                <div key={c.id} style={{ marginLeft: '12px', fontSize: '8px', color: '#777', padding: '1px 4px' }}>📏 {c.name}</div>
+                                <div key={c.id} style={{ marginLeft: '12px', fontSize: '8px', color: '#555', padding: '1px 4px' }}>📏 {c.name}</div>
                               ))}
                             </div>
                           ))}
@@ -958,7 +958,7 @@ function TabMenu({ state, setState }: TabMenuProps) {
 function StepToggleButtons({ state, setState }: { state: WorksheetState; setState: React.Dispatch<React.SetStateAction<WorksheetState>> }) {
   const steps = [
     { step: 2, label: '2단계', color: '#1565c0' },
-    { step: 3, label: '3단계', color: '#7b1fa2' },
+    { step: 3, label: '3단계', color: '#1b5e20' },
     { step: 4, label: '4단계', color: '#c62828' },
     { step: 5, label: '5단계', color: '#00695c' },
     { step: 6, label: '6단계', color: '#ff6f00' },
@@ -1158,7 +1158,7 @@ function AllViewTabFull({ rows, state, l1Spans, l1TypeSpans, l1FuncSpans, l2Span
   // 단계별 그룹 정의 (필터링)
   const stepGroups = [
     { step: 2, name: 'P-FMEA 구조분석(2단계)', count: 4, bg: '#1565c0' },
-    { step: 3, name: 'P-FMEA 기능분석(3단계)', count: 8, bg: '#7b1fa2' },
+    { step: 3, name: 'P-FMEA 기능분석(3단계)', count: 8, bg: '#1b5e20' },
     { step: 4, name: 'P-FMEA 고장분석(4단계)', count: 6, bg: '#c62828' },
     { step: 5, name: 'P-FMEA 리스크분석(5단계)', count: 7, bg: '#00695c' },
     { step: 6, name: 'P-FMEA 최적화(6단계)', count: 13, bg: '#ff6f00' },
@@ -1192,7 +1192,7 @@ function AllViewTabFull({ rows, state, l1Spans, l1TypeSpans, l1FuncSpans, l2Span
   const getStepColor = (step: number) => {
     const colors: Record<number, string> = {
       2: '#1565c0', // 구조 - 파랑
-      3: '#7b1fa2', // 기능 - 보라
+      3: '#1b5e20', // 기능 - 진한녹색
       4: '#c62828', // 고장 - 빨강
       5: '#00695c', // 리스크 - 청록
       6: '#ff6f00', // 최적화 - 주황

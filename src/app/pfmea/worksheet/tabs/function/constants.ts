@@ -1,15 +1,16 @@
 import { COLORS } from '../../constants';
 
+// 기능분석 색상 - 진한녹색 계열 (표준화)
 export const FUNC_COLORS = {
-  l1Main: '#7b1fa2',      // 보라 진한
-  l1Sub: '#ce93d8',       // 보라 중간
-  l1Cell: '#f3e5f5',      // 보라 연한
-  l2Main: '#512da8',      // 인디고 진한  
-  l2Sub: '#b39ddb',       // 인디고 중간
-  l2Cell: '#ede7f6',      // 인디고 연한
-  l3Main: '#303f9f',      // 파랑 진한
-  l3Sub: '#9fa8da',       // 파랑 중간
-  l3Cell: '#e8eaf6',      // 파랑 연한
+  l1Main: '#1b5e20',      // 진한녹색
+  l1Sub: '#66bb6a',       // 중간녹색
+  l1Cell: '#c8e6c9',      // 연한녹색
+  l2Main: '#2e7d32',      // 진한녹색  
+  l2Sub: '#81c784',       // 중간녹색
+  l2Cell: '#dcedc8',      // 연한녹색
+  l3Main: '#388e3c',      // 진한녹색
+  l3Sub: '#a5d6a7',       // 중간녹색
+  l3Cell: '#e8f5e9',      // 연한녹색
 };
 
 export const stickyFirstColStyle: React.CSSProperties = {

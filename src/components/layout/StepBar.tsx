@@ -34,12 +34,12 @@ interface StepBarProps {
   onFailureLinkSave?: () => void;
 }
 
-// FMEA 7단계 정의
+// FMEA 7단계 정의 (색상 표준: 구조분석-파란색, 기능분석-진한녹색, 고장분석-붉은색)
 const steps = [
-  { id: 1, label: '1단계', name: '구조분석', color: 'bg-sky-400' },
-  { id: 2, label: '2단계', name: '기능분석', color: 'bg-green-500' },
-  { id: 3, label: '3단계', name: '고장분석', color: 'bg-orange-500' },
-  { id: 4, label: '4단계', name: '리스크분석', color: 'bg-red-500' },
+  { id: 1, label: '1단계', name: '구조분석', color: 'bg-blue-500' },
+  { id: 2, label: '2단계', name: '기능분석', color: 'bg-green-700' },
+  { id: 3, label: '3단계', name: '고장분석', color: 'bg-red-600' },
+  { id: 4, label: '4단계', name: '리스크분석', color: 'bg-orange-500' },
   { id: 'link', label: '고장연결', name: '', color: 'bg-pink-500' },
   { id: 5, label: '5단계', name: '최적화', color: 'bg-purple-500' },
   { id: 6, label: '6단계', name: '효과확인', color: 'bg-teal-500' },

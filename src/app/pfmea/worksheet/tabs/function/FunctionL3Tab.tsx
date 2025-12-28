@@ -10,6 +10,52 @@ import { FunctionTabProps } from './types';
 import { COLORS, uid } from '../../constants';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
+import SpecialCharSelectModal, { SPECIAL_CHAR_DATA } from '@/components/modals/SpecialCharSelectModal';
+
+// 특별특성 배지 컴포넌트 (기호만 표시)
+function SpecialCharBadge({ value, onClick }: { value: string; onClick: () => void }) {
+  const charData = SPECIAL_CHAR_DATA.find(d => d.symbol === value);
+  
+  if (!value) {
+    return (
+      <button
+        onClick={onClick}
+        style={{
+          padding: '4px 8px',
+          background: '#f5f5f5',
+          border: '1px dashed #ccc',
+          borderRadius: '4px',
+          fontSize: '10px',
+          color: '#999',
+          cursor: 'pointer',
+          width: '100%'
+        }}
+      >
+        🏷️ 선택
+      </button>
+    );
+  }
+
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: '3px 6px',
+        background: charData?.color || '#e0e0e0',
+        color: 'white',
+        border: 'none',
+        borderRadius: '4px',
+        fontSize: '10px',
+        fontWeight: 700,
+        cursor: 'pointer',
+        whiteSpace: 'nowrap'
+      }}
+      title={charData?.description || value}
+    >
+      {value}
+    </button>
+  );
+}
 
 export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalStorage }: FunctionTabProps) {
   const [modal, setModal] = useState<{ 
@@ -20,6 +66,14 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
     title: string; 
     itemCode: string;
     workElementName?: string;
+  } | null>(null);
+
+  // 특별특성 모달 상태
+  const [specialCharModal, setSpecialCharModal] = useState<{ 
+    procId: string; 
+    l3Id: string;
+    funcId: string; 
+    charId: string; 
   } | null>(null);
 
   const handleSave = useCallback((selectedValues: string[]) => {
@@ -133,6 +187,45 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
     if (saveToLocalStorage) setTimeout(() => saveToLocalStorage(), 100);
   }, [modal, setState, setDirty, saveToLocalStorage]);
 
+  // 특별특성 선택 핸들러
+  const handleSpecialCharSelect = useCallback((symbol: string) => {
+    if (!specialCharModal) return;
+    
+    setState(prev => {
+      const newState = JSON.parse(JSON.stringify(prev));
+      const { procId, l3Id, funcId, charId } = specialCharModal;
+      
+      newState.l2 = newState.l2.map((proc: any) => {
+        if (proc.id !== procId) return proc;
+        return {
+          ...proc,
+          l3: (proc.l3 || []).map((we: any) => {
+            if (we.id !== l3Id) return we;
+            return {
+              ...we,
+              functions: (we.functions || []).map((f: any) => {
+                if (f.id !== funcId) return f;
+                return {
+                  ...f,
+                  processChars: (f.processChars || []).map((c: any) => {
+                    if (c.id !== charId) return c;
+                    return { ...c, specialChar: symbol };
+                  })
+                };
+              })
+            };
+          })
+        };
+      });
+      
+      return newState;
+    });
+    
+    setDirty(true);
+    setSpecialCharModal(null);
+    if (saveToLocalStorage) setTimeout(() => saveToLocalStorage(), 100);
+  }, [specialCharModal, setState, setDirty, saveToLocalStorage]);
+
   // 공정의 총 행 수 계산
   const getProcRowSpan = (proc: any) => {
     const l3List = proc.l3 || [];
@@ -159,9 +252,10 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
         <colgroup>
           <col style={{ width: '120px' }} />
           <col style={{ width: '50px' }} />
-          <col style={{ width: '150px' }} />
-          <col style={{ width: '200px' }} />
-          <col style={{ width: '200px' }} />
+          <col style={{ width: '140px' }} />
+          <col style={{ width: '180px' }} />
+          <col style={{ width: '180px' }} />
+          <col style={{ width: '80px' }} />
         </colgroup>
         
         {/* 3행 헤더 구조 */}
@@ -171,7 +265,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
             <th colSpan={3} style={{ background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
               2단계 구조분석
             </th>
-            <th colSpan={2} style={{ background: '#303f9f', color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
+            <th colSpan={3} style={{ background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
               3단계 : 3L 작업요소 기능분석
             </th>
           </tr>
@@ -181,8 +275,8 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
             <th colSpan={3} style={{ background: '#42a5f5', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
               3. 작업요소 (4M)
             </th>
-            <th colSpan={2} style={{ background: '#5c6bc0', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
-              3. 작업요소 기능/공정특성
+            <th colSpan={3} style={{ background: '#5c6bc0', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
+              3. 작업요소 기능/공정특성/특별특성
             </th>
           </tr>
           
@@ -200,8 +294,11 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
             <th style={{ background: '#c5cae9', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
               작업요소기능
             </th>
-            <th style={{ background: '#c5cae9', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
+            <th style={{ background: '#c5cae9', border: `1px solid ${COLORS.line}`, borderRight: '3px solid #ff9800', padding: '6px', fontSize: '10px', fontWeight: 700 }}>
               공정특성
+            </th>
+            <th style={{ background: '#ff9800', color: 'white', border: `1px solid ${COLORS.line}`, borderLeft: 'none', padding: '6px', fontSize: '10px', fontWeight: 700, textAlign: 'center' }}>
+              특별특성
             </th>
           </tr>
         </thead>
@@ -215,8 +312,11 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
                 <SelectableCell value="" placeholder="작업요소기능 선택" bgColor="#e8eaf6" onClick={() => {}} />
               </td>
-              <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
+              <td style={{ border: `1px solid ${COLORS.line}`, borderRight: '3px solid #ff9800', padding: '0' }}>
                 <SelectableCell value="" placeholder="공정특성 선택" bgColor="#e8eaf6" onClick={() => {}} />
+              </td>
+              <td style={{ border: `1px solid ${COLORS.line}`, borderLeft: 'none', padding: '4px', textAlign: 'center', background: '#fff3e0' }}>
+                <SpecialCharBadge value="" onClick={() => {}} />
               </td>
             </tr>
           ) : state.l2.flatMap((proc) => {
@@ -248,8 +348,11 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                     <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
                       <SelectableCell value="" placeholder="작업요소기능 선택" bgColor="#e8eaf6" onClick={() => setModal({ type: 'l3Function', procId: proc.id, l3Id: we.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} />
                     </td>
-                    <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
+                    <td style={{ border: `1px solid ${COLORS.line}`, borderRight: '3px solid #ff9800', padding: '0' }}>
                       <SelectableCell value="" placeholder="공정특성 선택" bgColor="#e8eaf6" onClick={() => {}} />
+                    </td>
+                    <td style={{ border: `1px solid ${COLORS.line}`, borderLeft: 'none', padding: '4px', textAlign: 'center', background: '#fff3e0' }}>
+                      <SpecialCharBadge value="" onClick={() => {}} />
                     </td>
                   </tr>
                 );
@@ -284,8 +387,11 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                       <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
                         <SelectableCell value={f.name} placeholder="작업요소기능" bgColor="#e8eaf6" onClick={() => setModal({ type: 'l3Function', procId: proc.id, l3Id: we.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} />
                       </td>
-                      <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
+                      <td style={{ border: `1px solid ${COLORS.line}`, borderRight: '3px solid #ff9800', padding: '0' }}>
                         <SelectableCell value="" placeholder="공정특성 선택" bgColor="#fff" onClick={() => setModal({ type: 'l3ProcessChar', procId: proc.id, l3Id: we.id, funcId: f.id, title: '공정특성 선택', itemCode: 'B3', workElementName: we.name })} />
+                      </td>
+                      <td style={{ border: `1px solid ${COLORS.line}`, borderLeft: 'none', padding: '4px', textAlign: 'center', background: '#fff3e0' }}>
+                        <SpecialCharBadge value="" onClick={() => {}} />
                       </td>
                     </tr>
                   );
@@ -317,8 +423,14 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                           <SelectableCell value={f.name} placeholder="작업요소기능" bgColor="#e8eaf6" onClick={() => setModal({ type: 'l3Function', procId: proc.id, l3Id: we.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} />
                         </td>
                       )}
-                      <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
+                      <td style={{ border: `1px solid ${COLORS.line}`, borderRight: '3px solid #ff9800', padding: '0' }}>
                         <SelectableCell value={c.name} placeholder="공정특성" bgColor="#fff" onClick={() => setModal({ type: 'l3ProcessChar', procId: proc.id, l3Id: we.id, funcId: f.id, title: '공정특성 선택', itemCode: 'B3', workElementName: we.name })} />
+                      </td>
+                      <td style={{ border: `1px solid ${COLORS.line}`, borderLeft: 'none', padding: '4px', textAlign: 'center', background: '#fff3e0' }}>
+                        <SpecialCharBadge 
+                          value={c.specialChar || ''} 
+                          onClick={() => setSpecialCharModal({ procId: proc.id, l3Id: we.id, funcId: f.id, charId: c.id })} 
+                        />
                       </td>
                     </tr>
                   );
@@ -358,6 +470,35 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
               return func ? (func.processChars || []).map(c => c.name) : [];
             }
             return [];
+          })()}
+        />
+      )}
+
+      {/* 특별특성 선택 모달 */}
+      {specialCharModal && (
+        <SpecialCharSelectModal
+          isOpen={!!specialCharModal}
+          onClose={() => setSpecialCharModal(null)}
+          onSelect={handleSpecialCharSelect}
+          currentValue={(() => {
+            const proc = state.l2.find(p => p.id === specialCharModal.procId);
+            if (!proc) return '';
+            const we = (proc.l3 || []).find(w => w.id === specialCharModal.l3Id);
+            if (!we) return '';
+            const func = (we.functions || []).find(f => f.id === specialCharModal.funcId);
+            if (!func) return '';
+            const char = (func.processChars || []).find(c => c.id === specialCharModal.charId);
+            return char?.specialChar || '';
+          })()}
+          productCharName={(() => {
+            const proc = state.l2.find(p => p.id === specialCharModal.procId);
+            if (!proc) return '';
+            const we = (proc.l3 || []).find(w => w.id === specialCharModal.l3Id);
+            if (!we) return '';
+            const func = (we.functions || []).find(f => f.id === specialCharModal.funcId);
+            if (!func) return '';
+            const char = (func.processChars || []).find(c => c.id === specialCharModal.charId);
+            return char?.name || '';
           })()}
         />
       )}

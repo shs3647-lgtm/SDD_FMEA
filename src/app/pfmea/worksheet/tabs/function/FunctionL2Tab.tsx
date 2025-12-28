@@ -237,7 +237,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
             <th style={{ background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
               2단계 구조분석
             </th>
-            <th colSpan={3} style={{ background: '#512da8', color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
+            <th colSpan={3} style={{ background: '#2e7d32', color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
               3단계 : 2L 메인공정 기능분석
             </th>
           </tr>
@@ -257,10 +257,10 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
             <th style={{ background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
               공정NO+공정명
             </th>
-            <th style={{ background: '#e1bee7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
+            <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
               메인공정기능
             </th>
-            <th style={{ background: '#e1bee7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
+            <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
               제품특성
             </th>
             <th style={{ background: '#ffcdd2', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
@@ -276,10 +276,10 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                 (구조분석에서 공정 추가)
               </td>
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                <SelectableCell value="" placeholder="공정기능 선택" bgColor="#f3e5f5" onClick={() => {}} />
+                <SelectableCell value="" placeholder="공정기능 선택" bgColor="#c8e6c9" onClick={() => {}} />
               </td>
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                <SelectableCell value="" placeholder="제품특성 선택" bgColor="#f3e5f5" onClick={() => {}} />
+                <SelectableCell value="" placeholder="제품특성 선택" bgColor="#c8e6c9" onClick={() => {}} />
               </td>
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '4px', textAlign: 'center', background: '#ffebee', color: '#999', fontSize: '10px' }}>
                 -
@@ -297,10 +297,10 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                     {proc.no}. {proc.name}
                   </td>
                   <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                    <SelectableCell value="" placeholder="공정기능 선택" bgColor="#f3e5f5" onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
+                    <SelectableCell value="" placeholder="공정기능 선택" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
                   </td>
                   <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                    <SelectableCell value="" placeholder="제품특성 선택" bgColor="#f3e5f5" onClick={() => {}} />
+                    <SelectableCell value="" placeholder="제품특성 선택" bgColor="#c8e6c9" onClick={() => {}} />
                   </td>
                   <td style={{ border: `1px solid ${COLORS.line}`, padding: '4px', textAlign: 'center', background: '#ffebee', color: '#999', fontSize: '10px' }}>
                     -
@@ -324,7 +324,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                       </td>
                     )}
                     <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
-                      <SelectableCell value={f.name} placeholder="공정기능" bgColor="#f3e5f5" onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
+                      <SelectableCell value={f.name} placeholder="공정기능" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
                     </td>
                     <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
                       <SelectableCell value="" placeholder="제품특성 선택" bgColor="#fff" onClick={() => setModal({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, title: '제품특성 선택', itemCode: 'A4' })} />
@@ -346,7 +346,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                   )}
                   {cIdx === 0 && (
                     <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
-                      <SelectableCell value={f.name} placeholder="공정기능" bgColor="#f3e5f5" onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
+                      <SelectableCell value={f.name} placeholder="공정기능" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
                     </td>
                   )}
                   <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>

@@ -17,7 +17,7 @@ import { COLORS, uid } from '../../constants';
 // 색상 정의
 const STEP_COLORS = {
   structure: { header1: '#1976d2', header2: '#42a5f5', header3: '#bbdefb', cell: '#e3f2fd' },
-  function: { header1: '#7b1fa2', header2: '#9c27b0', header3: '#e1bee7', cell: '#f3e5f5' },
+  function: { header1: '#1b5e20', header2: '#2e7d32', header3: '#a5d6a7', cell: '#c8e6c9' },
   failure: { header1: '#c62828', header2: '#e53935', header3: '#ffcdd2', cell: '#ffebee' },
 };
 

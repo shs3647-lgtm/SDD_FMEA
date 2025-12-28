@@ -9,12 +9,12 @@
 import type { ColumnSettings } from 'handsontable/settings';
 import type { ColumnGroup } from './types';
 
-/** 컬럼 그룹 정의 (단계별) */
+/** 컬럼 그룹 정의 (단계별) - 색상 표준: 구조분석-파란색, 기능분석-진한녹색, 고장분석-붉은색 */
 export const COLUMN_GROUPS: ColumnGroup[] = [
   { name: 'revision', label: '개정/이력', color: '#6B7280', startCol: 0, endCol: 1 },
-  { name: 'structure', label: '2단계: 구조분석', color: '#3B82F6', startCol: 2, endCol: 6 },
-  { name: 'function', label: '3단계: 기능분석', color: '#10B981', startCol: 7, endCol: 15 },
-  { name: 'failure', label: '4단계: 고장분석', color: '#F59E0B', startCol: 16, endCol: 22 },
+  { name: 'structure', label: '2단계: 구조분석', color: '#1976d2', startCol: 2, endCol: 6 },
+  { name: 'function', label: '3단계: 기능분석', color: '#1b5e20', startCol: 7, endCol: 15 },
+  { name: 'failure', label: '4단계: 고장분석', color: '#c62828', startCol: 16, endCol: 22 },
   { name: 'risk', label: '5단계: 리스크분석', color: '#EF4444', startCol: 23, endCol: 29 },
   { name: 'optimization', label: '6단계: 최적화', color: '#8B5CF6', startCol: 30, endCol: 43 },
 ];

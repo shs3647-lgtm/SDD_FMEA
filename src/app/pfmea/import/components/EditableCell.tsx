@@ -49,3 +49,4 @@ export function EditableCell({ value, placeholder = '입력', onSave, style, inp
 }
 
 
+
