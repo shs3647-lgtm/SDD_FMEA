@@ -31,6 +31,7 @@ import {
   importStructureAnalysis,
   downloadStructureTemplate 
 } from './excel-export';
+import SpecialCharMasterModal from '@/components/modals/SpecialCharMasterModal';
 
 /**
  * FMEA 워크시트 메인 페이지
@@ -65,6 +66,7 @@ export default function FMEAWorksheetPage() {
   // 모달 상태
   const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
   const [isWorkElementModalOpen, setIsWorkElementModalOpen] = useState(false);
+  const [isSpecialCharModalOpen, setIsSpecialCharModalOpen] = useState(false);
   const [targetL2Id, setTargetL2Id] = useState<string | null>(null);
   
   // 트리 접기/펼치기 상태
@@ -265,6 +267,7 @@ export default function FMEAWorksheetPage() {
           onImportClick={() => fileInputRef.current?.click()}
           onImportFile={handleImportFile}
           onDownloadTemplate={handleDownloadTemplate}
+          onOpenSpecialChar={() => setIsSpecialCharModalOpen(true)}
         />
 
         {/* ========== 메인 레이아웃 (좌측:워크시트 / 우측:트리 완전 분리) ========== */}
@@ -391,9 +394,9 @@ export default function FMEAWorksheetPage() {
               </>
             )}
 
-            {state.tab.startsWith('function') && (
+            {/* 1L 기능트리 (완제품 기능분석) */}
+            {state.tab === 'function-l1' && (
               <>
-                {/* 1L 기능트리 */}
                 <div style={{ background: '#7b1fa2', color: 'white', padding: '8px 12px', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
                   🎯 1L 기능트리 (완제품)
                 </div>
@@ -403,7 +406,7 @@ export default function FMEAWorksheetPage() {
                     <span style={{ fontSize: '12px', fontWeight: 700 }}>{state.l1.name || '(완제품명)'}</span>
                   </div>
                   {state.l1.types.length === 0 ? (
-                    <div style={{ fontSize: '11px', color: '#888', padding: '16px', textAlign: 'center', background: '#f5f5f5', borderRadius: '4px' }}>기능분석 탭에서 구분/기능/요구사항을 정의하세요</div>
+                    <div style={{ fontSize: '11px', color: '#888', padding: '16px', textAlign: 'center', background: '#f5f5f5', borderRadius: '4px' }}>구분/기능/요구사항을 정의하세요</div>
                   ) : state.l1.types.map(t => (
                     <div key={t.id} style={{ marginLeft: '12px', marginBottom: '8px', borderLeft: '2px solid #ce93d8', paddingLeft: '8px' }}>
                       <div style={{ fontSize: '11px', fontWeight: 600, color: '#7b1fa2', padding: '4px 8px', background: '#e1bee7', borderRadius: '3px', marginBottom: '4px' }}>
@@ -422,6 +425,79 @@ export default function FMEAWorksheetPage() {
                 </div>
                 <div style={{ flexShrink: 0, padding: '6px 10px', borderTop: '1px solid #ccc', background: '#e8eaed', fontSize: '10px', color: '#666' }}>
                   구분: {state.l1.types.length}개 | 기능: {state.l1.types.reduce((s, t) => s + t.functions.length, 0)}개 | 요구사항: {state.l1.types.reduce((s, t) => s + t.functions.reduce((a, f) => a + f.requirements.length, 0), 0)}개
+                </div>
+              </>
+            )}
+
+            {/* 2L 기능트리 (메인공정 기능분석) */}
+            {state.tab === 'function-l2' && (
+              <>
+                <div style={{ background: '#512da8', color: 'white', padding: '8px 12px', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
+                  🔧 2L 기능트리 (메인공정)
+                </div>
+                <div style={{ flex: 1, overflow: 'auto', padding: '8px', background: '#ede7f6' }}>
+                  {state.l2.length === 0 ? (
+                    <div style={{ fontSize: '11px', color: '#888', padding: '16px', textAlign: 'center', background: '#f5f5f5', borderRadius: '4px' }}>구조분석에서 공정을 추가하세요</div>
+                  ) : state.l2.map(proc => (
+                    <div key={proc.id} style={{ marginBottom: '10px', borderLeft: '2px solid #7e57c2', paddingLeft: '8px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#512da8', padding: '4px 8px', background: '#d1c4e9', borderRadius: '3px', marginBottom: '4px' }}>
+                        🏭 {proc.no}. {proc.name}
+                      </div>
+                      {(proc.functions || []).length === 0 ? (
+                        <div style={{ fontSize: '10px', color: '#888', marginLeft: '12px', padding: '4px' }}>기능 미정의</div>
+                      ) : (proc.functions || []).map(f => (
+                        <div key={f.id} style={{ marginLeft: '12px', marginBottom: '4px' }}>
+                          <div style={{ fontSize: '10px', color: '#555', padding: '2px 6px', background: '#e8eaf6', borderRadius: '2px' }}>⚙️ {f.name}</div>
+                          {(f.productChars || []).map(c => (
+                            <div key={c.id} style={{ marginLeft: '16px', fontSize: '9px', color: '#777', padding: '1px 4px' }}>📐 {c.name}</div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ flexShrink: 0, padding: '6px 10px', borderTop: '1px solid #ccc', background: '#e8eaed', fontSize: '10px', color: '#666' }}>
+                  공정: {state.l2.length}개 | 기능: {state.l2.reduce((s, p) => s + (p.functions || []).length, 0)}개 | 제품특성: {state.l2.reduce((s, p) => s + (p.functions || []).reduce((a, f) => a + (f.productChars || []).length, 0), 0)}개
+                </div>
+              </>
+            )}
+
+            {/* 3L 기능트리 (작업요소 기능분석) */}
+            {state.tab === 'function-l3' && (
+              <>
+                <div style={{ background: '#303f9f', color: 'white', padding: '8px 12px', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
+                  🛠️ 3L 기능트리 (작업요소)
+                </div>
+                <div style={{ flex: 1, overflow: 'auto', padding: '8px', background: '#e8eaf6' }}>
+                  {state.l2.every(p => (p.l3 || []).length === 0) ? (
+                    <div style={{ fontSize: '11px', color: '#888', padding: '16px', textAlign: 'center', background: '#f5f5f5', borderRadius: '4px' }}>구조분석에서 작업요소를 추가하세요</div>
+                  ) : state.l2.filter(p => (p.l3 || []).length > 0).map(proc => (
+                    <div key={proc.id} style={{ marginBottom: '10px', borderLeft: '2px solid #5c6bc0', paddingLeft: '8px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#303f9f', padding: '4px 8px', background: '#c5cae9', borderRadius: '3px', marginBottom: '4px' }}>
+                        🏭 {proc.no}. {proc.name}
+                      </div>
+                      {(proc.l3 || []).map(we => (
+                        <div key={we.id} style={{ marginLeft: '12px', marginBottom: '6px' }}>
+                          <div style={{ fontSize: '10px', fontWeight: 600, color: '#3949ab', padding: '2px 6px', background: '#dce1f7', borderRadius: '2px', marginBottom: '2px' }}>
+                            [{we.m4}] {we.name}
+                          </div>
+                          {(we.functions || []).length === 0 ? (
+                            <div style={{ fontSize: '9px', color: '#888', marginLeft: '12px', padding: '2px' }}>기능 미정의</div>
+                          ) : (we.functions || []).map(f => (
+                            <div key={f.id} style={{ marginLeft: '12px' }}>
+                              <div style={{ fontSize: '9px', color: '#555', padding: '1px 4px' }}>⚙️ {f.name}</div>
+                              {(f.processChars || []).map(c => (
+                                <div key={c.id} style={{ marginLeft: '12px', fontSize: '8px', color: '#777', padding: '1px 4px' }}>📏 {c.name}</div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ flexShrink: 0, padding: '6px 10px', borderTop: '1px solid #ccc', background: '#e8eaed', fontSize: '10px', color: '#666' }}>
+                  작업요소: {state.l2.reduce((s, p) => s + (p.l3 || []).length, 0)}개 | 기능: {state.l2.reduce((s, p) => s + (p.l3 || []).reduce((a, w) => a + (w.functions || []).length, 0), 0)}개
                 </div>
               </>
             )}
@@ -487,6 +563,12 @@ export default function FMEAWorksheetPage() {
           processName={state.l2.find(p => p.id === targetL2Id)?.name || ''}
           existingElements={state.l2.find(p => p.id === targetL2Id)?.l3.filter(w => !w.name.includes('추가')).map(w => w.name) || []}
         />
+
+        {/* 특별특성 마스터 모달 */}
+        <SpecialCharMasterModal
+          isOpen={isSpecialCharModalOpen}
+          onClose={() => setIsSpecialCharModalOpen(false)}
+        />
       </div>
     </>
   );
@@ -527,11 +609,12 @@ interface TopMenuBarProps {
   onImportClick: () => void;
   onImportFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDownloadTemplate: () => void;
+  onOpenSpecialChar: () => void;
 }
 
 function TopMenuBar({ 
   fmeaList, currentFmea, selectedFmeaId, dirty, isSaving, lastSaved, currentTab, importMessage, fileInputRef,
-  onFmeaChange, onSave, onNavigateToList, onExport, onImportClick, onImportFile, onDownloadTemplate 
+  onFmeaChange, onSave, onNavigateToList, onExport, onImportClick, onImportFile, onDownloadTemplate, onOpenSpecialChar 
 }: TopMenuBarProps) {
   const [showImportMenu, setShowImportMenu] = React.useState(false);
 
@@ -631,7 +714,7 @@ function TopMenuBar({
 
       {/* 특별특성/AP/RPN/LLD */}
       <div className="flex items-center gap-1">
-        <button className="px-1.5 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>⭐특별특성</button>
+        <button onClick={onOpenSpecialChar} className="px-1.5 py-0.5 text-xs font-bold text-white rounded hover:bg-white/30" style={{ background: 'rgba(255,255,255,0.18)' }}>⭐특별특성</button>
         <button className="px-1.5 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,100,100,0.5)' }}>🔴5AP</button>
         <button className="px-1.5 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,165,0,0.5)' }}>🟠6AP</button>
         <button className="px-1.5 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>📊RPN</button>

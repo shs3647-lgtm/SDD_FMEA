@@ -1,6 +1,6 @@
 /**
  * @file FunctionL2Tab.tsx
- * @description 메인공정(L2) 수준 기능 분석 - 독립 워크시트 (원자성 확보)
+ * @description 메인공정(L2) 기능 분석 - 3행 헤더 구조 (L1과 동일한 패턴)
  */
 
 'use client';
@@ -10,43 +10,125 @@ import { FunctionTabProps } from './types';
 import { COLORS, uid } from '../../constants';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
+import SpecialCharSelectModal, { SPECIAL_CHAR_DATA } from '@/components/modals/SpecialCharSelectModal';
+
+// 특별특성 배지 컴포넌트 (기호만 표시)
+function SpecialCharBadge({ value, onClick }: { value: string; onClick: () => void }) {
+  // SPECIAL_CHAR_DATA에서 해당 심볼 찾기
+  const charData = SPECIAL_CHAR_DATA.find(d => d.symbol === value);
+  
+  if (!value) {
+    return (
+      <div 
+        onClick={onClick}
+        style={{
+          padding: '4px',
+          cursor: 'pointer',
+          fontSize: '10px',
+          color: '#999',
+          background: '#fafafa',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        ★
+      </div>
+    );
+  }
+  
+  const bgColor = charData?.color || '#9e9e9e';
+  const icon = charData?.icon || '';
+  
+  return (
+    <div 
+      onClick={onClick}
+      style={{
+        padding: '2px 4px',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+      }}
+    >
+      <span 
+        style={{
+          background: bgColor,
+          color: 'white',
+          padding: '2px 6px',
+          borderRadius: '3px',
+          fontSize: '10px',
+          fontWeight: 700,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '2px',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+          whiteSpace: 'nowrap',
+        }}
+        title={charData?.meaning || value}
+      >
+        {icon && <span style={{ fontSize: '9px' }}>{icon}</span>}
+        {value}
+      </span>
+    </div>
+  );
+}
 
 export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalStorage }: FunctionTabProps) {
-  const [modal, setModal] = useState<{ type: string; id: string; title: string; itemCode: string; processNo?: string } | null>(null);
+  const [modal, setModal] = useState<{ type: string; procId: string; funcId?: string; charId?: string; title: string; itemCode: string } | null>(null);
+  
+  // 특별특성 모달 상태
+  const [specialCharModal, setSpecialCharModal] = useState<{ 
+    procId: string; 
+    funcId: string; 
+    charId: string; 
+    charName: string;
+    currentValue: string;
+  } | null>(null);
 
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
     
     setState(prev => {
-      const newState = { ...prev };
-      const { type, id } = modal;
+      const newState = JSON.parse(JSON.stringify(prev));
+      const { type, procId, funcId } = modal;
 
-      newState.l2 = newState.l2.map(proc => {
-        if (proc.id !== id) return proc;
-        
-        if (type === 'l2Function') {
-          const currentFuncs = proc.functions;
+      if (type === 'l2Function') {
+        // 메인공정 기능 저장
+        newState.l2 = newState.l2.map((proc: any) => {
+          if (proc.id !== procId) return proc;
+          const currentFuncs = proc.functions || [];
           return {
             ...proc,
             functions: selectedValues.map(val => {
-              const existing = currentFuncs.find(f => f.name === val);
-              return existing || { id: uid(), name: val };
+              const existing = currentFuncs.find((f: any) => f.name === val);
+              return existing || { id: uid(), name: val, productChars: [] };
             })
           };
-        } else if (type === 'l2ProductChar') {
-          const currentChar = proc.productChars;
+        });
+      } else if (type === 'l2ProductChar') {
+        // 제품특성 저장 (특정 기능에 연결)
+        newState.l2 = newState.l2.map((proc: any) => {
+          if (proc.id !== procId) return proc;
           return {
             ...proc,
-            productChars: selectedValues.map(val => {
-              const existing = currentChar.find(c => c.name === val);
-              return existing || { id: uid(), name: val };
+            functions: proc.functions.map((f: any) => {
+              if (f.id !== funcId) return f;
+              const currentChars = f.productChars || [];
+              return {
+                ...f,
+                productChars: selectedValues.map(val => {
+                  const existing = currentChars.find((c: any) => c.name === val);
+                  return existing || { id: uid(), name: val, specialChar: '' };
+                })
+              };
             })
           };
-        } else if (type === 'l2FailureMode') {
-          return { ...proc, failureMode: selectedValues.join(', ') };
-        }
-        return proc;
-      });
+        });
+      }
       
       return newState;
     });
@@ -55,100 +137,237 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
     setModal(null);
   }, [modal, setState, setDirty]);
 
-  // 워크시트 데이터 삭제 핸들러
   const handleDelete = useCallback((deletedValues: string[]) => {
     if (!modal) return;
+    const deletedSet = new Set(deletedValues);
     
     setState(prev => {
-      const newState = { ...prev };
-      const { type, id } = modal;
-      const deletedSet = new Set(deletedValues);
+      const newState = JSON.parse(JSON.stringify(prev));
+      const { type, procId, funcId } = modal;
 
-      newState.l2 = newState.l2.map(proc => {
-        if (proc.id !== id) return proc;
-        
-        if (type === 'l2Function') {
+      if (type === 'l2Function') {
+        newState.l2 = newState.l2.map((proc: any) => {
+          if (proc.id !== procId) return proc;
           return {
             ...proc,
-            functions: proc.functions.filter(f => !deletedSet.has(f.name))
+            functions: proc.functions.filter((f: any) => !deletedSet.has(f.name))
           };
-        } else if (type === 'l2ProductChar') {
+        });
+      } else if (type === 'l2ProductChar') {
+        newState.l2 = newState.l2.map((proc: any) => {
+          if (proc.id !== procId) return proc;
           return {
             ...proc,
-            productChars: proc.productChars.filter(c => !deletedSet.has(c.name))
+            functions: proc.functions.map((f: any) => {
+              if (f.id !== funcId) return f;
+              return {
+                ...f,
+                productChars: (f.productChars || []).filter((c: any) => !deletedSet.has(c.name))
+              };
+            })
           };
-        } else if (type === 'l2FailureMode') {
-          return { ...proc, failureMode: '' };
-        }
-        return proc;
-      });
+        });
+      }
       
       return newState;
     });
     
     setDirty(true);
-    
-    // 즉시 저장
-    if (saveToLocalStorage) {
-      setTimeout(() => saveToLocalStorage(), 100);
-    }
+    if (saveToLocalStorage) setTimeout(() => saveToLocalStorage(), 100);
   }, [modal, setState, setDirty, saveToLocalStorage]);
 
-  return (
-    <div style={{ padding: '20px', overflow: 'auto', height: '100%' }}>
-      <div style={{ marginBottom: '15px' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#512da8' }}>
-          2L. 메인공정 기능 및 제품특성 정의 (고장형태 FM의 근거 데이터)
-        </h3>
-      </div>
+  // 특별특성 선택 핸들러
+  const handleSpecialCharSelect = useCallback((symbol: string) => {
+    if (!specialCharModal) return;
+    
+    const { procId, funcId, charId } = specialCharModal;
+    
+    setState(prev => {
+      const newState = JSON.parse(JSON.stringify(prev));
+      newState.l2 = newState.l2.map((proc: any) => {
+        if (proc.id !== procId) return proc;
+        return {
+          ...proc,
+          functions: proc.functions.map((f: any) => {
+            if (f.id !== funcId) return f;
+            return {
+              ...f,
+              productChars: (f.productChars || []).map((c: any) => {
+                if (c.id !== charId) return c;
+                return { ...c, specialChar: symbol };
+              })
+            };
+          })
+        };
+      });
+      return newState;
+    });
+    
+    setDirty(true);
+    setSpecialCharModal(null);
+    if (saveToLocalStorage) setTimeout(() => saveToLocalStorage(), 100);
+  }, [specialCharModal, setState, setDirty, saveToLocalStorage]);
 
+  // 총 행 수 계산
+  const getTotalRows = () => {
+    if (state.l2.length === 0) return 1;
+    return state.l2.reduce((acc, proc) => {
+      const funcs = proc.functions || [];
+      if (funcs.length === 0) return acc + 1;
+      return acc + funcs.reduce((a, f) => a + Math.max(1, (f.productChars || []).length), 0);
+    }, 0);
+  };
+
+  const totalRows = getTotalRows();
+
+  return (
+    <div style={{ padding: '0', overflow: 'auto', height: '100%' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
         <colgroup>
-          <col style={{ width: '150px' }} />
-          <col style={{ width: '250px' }} />
-          <col style={{ width: '200px' }} />
-          <col style={{ width: '200px' }} />
+          <col style={{ width: '140px' }} />
+          <col style={{ width: '280px' }} />
+          <col style={{ width: '220px' }} />
+          <col style={{ width: '60px' }} />
         </colgroup>
+        
+        {/* 3행 헤더 구조 */}
         <thead>
-          <tr style={{ background: '#512da8', color: 'white' }}>
-            <th style={{ border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '11px' }}>공정NO+공정명</th>
-            <th style={{ border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '11px' }}>메인공정 기능 🔍</th>
-            <th style={{ border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '11px' }}>제품 특성 🔍</th>
-            <th style={{ border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '11px' }}>고장형태 (FM) 🔍</th>
+          {/* 1행: 단계 구분 */}
+          <tr>
+            <th style={{ background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
+              2단계 구조분석
+            </th>
+            <th colSpan={3} style={{ background: '#512da8', color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
+              3단계 : 2L 메인공정 기능분석
+            </th>
+          </tr>
+          
+          {/* 2행: 항목 그룹 */}
+          <tr>
+            <th style={{ background: '#42a5f5', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
+              2. 메인공정명
+            </th>
+            <th colSpan={3} style={{ background: '#7c4dff', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
+              2. 메인공정 기능/제품특성
+            </th>
+          </tr>
+          
+          {/* 3행: 세부 컬럼 */}
+          <tr style={{ background: '#e3f2fd' }}>
+            <th style={{ background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
+              공정NO+공정명
+            </th>
+            <th style={{ background: '#e1bee7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
+              메인공정기능
+            </th>
+            <th style={{ background: '#e1bee7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
+              제품특성
+            </th>
+            <th style={{ background: '#ffcdd2', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
+              특별특성
+            </th>
           </tr>
         </thead>
+        
         <tbody>
-          {state.l2.map((proc) => (
-            <tr key={proc.id}>
-              <td style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#ede7f6', fontWeight: 600, fontSize: '11px' }}>
-                {proc.no} {proc.name}
+          {state.l2.length === 0 ? (
+            <tr>
+              <td style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700 }}>
+                (구조분석에서 공정 추가)
               </td>
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                <SelectableCell 
-                  value={proc.functions.map(f => f.name).join(', ')} 
-                  placeholder="공정기능 선택" 
-                  bgColor="#ede7f6" 
-                  onClick={() => setModal({ type: 'l2Function', id: proc.id, title: '메인공정 기능 선택', itemCode: 'A3', processNo: proc.no })} 
-                />
+                <SelectableCell value="" placeholder="공정기능 선택" bgColor="#f3e5f5" onClick={() => {}} />
               </td>
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                <SelectableCell 
-                  value={proc.productChars.map(c => c.name).join(', ')} 
-                  placeholder="제품특성 선택" 
-                  bgColor="#ede7f6" 
-                  onClick={() => setModal({ type: 'l2ProductChar', id: proc.id, title: '제품특성 선택', itemCode: 'A4', processNo: proc.no })} 
-                />
+                <SelectableCell value="" placeholder="제품특성 선택" bgColor="#f3e5f5" onClick={() => {}} />
               </td>
-              <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                <SelectableCell 
-                  value={proc.failureMode || ''} 
-                  placeholder="고장형태(FM) 선택" 
-                  bgColor="#fff" 
-                  onClick={() => setModal({ type: 'l2FailureMode', id: proc.id, title: '고장형태(FM) 선택', itemCode: 'A5', processNo: proc.no })} 
-                />
+              <td style={{ border: `1px solid ${COLORS.line}`, padding: '4px', textAlign: 'center', background: '#ffebee', color: '#999', fontSize: '10px' }}>
+                -
               </td>
             </tr>
-          ))}
+          ) : state.l2.map((proc, pIdx) => {
+            const funcs = proc.functions || [];
+            const procRowSpan = funcs.length === 0 ? 1 : funcs.reduce((a, f) => a + Math.max(1, (f.productChars || []).length), 0);
+            
+            // 공정에 기능이 없는 경우
+            if (funcs.length === 0) {
+              return (
+                <tr key={proc.id}>
+                  <td rowSpan={procRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700, verticalAlign: 'middle' }}>
+                    {proc.no}. {proc.name}
+                  </td>
+                  <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
+                    <SelectableCell value="" placeholder="공정기능 선택" bgColor="#f3e5f5" onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
+                  </td>
+                  <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
+                    <SelectableCell value="" placeholder="제품특성 선택" bgColor="#f3e5f5" onClick={() => {}} />
+                  </td>
+                  <td style={{ border: `1px solid ${COLORS.line}`, padding: '4px', textAlign: 'center', background: '#ffebee', color: '#999', fontSize: '10px' }}>
+                    -
+                  </td>
+                </tr>
+              );
+            }
+            
+            // 공정에 기능이 있는 경우
+            return funcs.map((f, fIdx) => {
+              const chars = f.productChars || [];
+              const funcRowSpan = Math.max(1, chars.length);
+              
+              // 기능에 제품특성이 없는 경우
+              if (chars.length === 0) {
+                return (
+                  <tr key={f.id}>
+                    {fIdx === 0 && (
+                      <td rowSpan={procRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700, verticalAlign: 'middle' }}>
+                        {proc.no}. {proc.name}
+                      </td>
+                    )}
+                    <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
+                      <SelectableCell value={f.name} placeholder="공정기능" bgColor="#f3e5f5" onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
+                    </td>
+                    <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
+                      <SelectableCell value="" placeholder="제품특성 선택" bgColor="#fff" onClick={() => setModal({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, title: '제품특성 선택', itemCode: 'A4' })} />
+                    </td>
+                    <td style={{ border: `1px solid ${COLORS.line}`, padding: '4px', textAlign: 'center', background: '#ffebee', color: '#999', fontSize: '10px' }}>
+                      -
+                    </td>
+                  </tr>
+                );
+              }
+              
+              // 기능에 제품특성이 있는 경우
+              return chars.map((c, cIdx) => (
+                <tr key={c.id}>
+                  {fIdx === 0 && cIdx === 0 && (
+                    <td rowSpan={procRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700, verticalAlign: 'middle' }}>
+                      {proc.no}. {proc.name}
+                    </td>
+                  )}
+                  {cIdx === 0 && (
+                    <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
+                      <SelectableCell value={f.name} placeholder="공정기능" bgColor="#f3e5f5" onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
+                    </td>
+                  )}
+                  <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
+                    <SelectableCell value={c.name} placeholder="제품특성" bgColor="#fff" onClick={() => setModal({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, title: '제품특성 선택', itemCode: 'A4' })} />
+                  </td>
+                  <td style={{ border: `1px solid ${COLORS.line}`, padding: '0', textAlign: 'center' }}>
+                    <SpecialCharBadge 
+                      value={(c as any).specialChar || ''} 
+                      onClick={() => setSpecialCharModal({ 
+                        procId: proc.id, 
+                        funcId: f.id, 
+                        charId: c.id, 
+                        charName: c.name,
+                        currentValue: (c as any).specialChar || ''
+                      })} 
+                    />
+                  </td>
+                </tr>
+              ));
+            });
+          })}
         </tbody>
       </table>
 
@@ -160,15 +379,35 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
           onDelete={handleDelete}
           title={modal.title}
           itemCode={modal.itemCode}
-          processNo={modal.processNo}
+          singleSelect={false}
+          processName={state.l2.find(p => p.id === modal.procId)?.name}
+          processNo={state.l2.find(p => p.id === modal.procId)?.no}
+          processList={state.l2.map(p => ({ id: p.id, no: p.no, name: p.name }))}
+          onProcessChange={(procId) => {
+            const proc = state.l2.find(p => p.id === procId);
+            if (proc) setModal(prev => prev ? { ...prev, procId } : null);
+          }}
           currentValues={(() => {
-            const proc = state.l2.find(p => p.id === modal.id);
+            const proc = state.l2.find(p => p.id === modal.procId);
             if (!proc) return [];
-            if (modal.type === 'l2Function') return proc.functions.map(f => f.name);
-            if (modal.type === 'l2ProductChar') return proc.productChars.map(c => c.name);
-            if (modal.type === 'l2FailureMode') return proc.failureMode ? [proc.failureMode] : [];
+            if (modal.type === 'l2Function') return (proc.functions || []).map(f => f.name);
+            if (modal.type === 'l2ProductChar') {
+              const func = (proc.functions || []).find(f => f.id === modal.funcId);
+              return func ? (func.productChars || []).map(c => c.name) : [];
+            }
             return [];
           })()}
+        />
+      )}
+
+      {/* 특별특성 전용 모달 */}
+      {specialCharModal && (
+        <SpecialCharSelectModal
+          isOpen={!!specialCharModal}
+          onClose={() => setSpecialCharModal(null)}
+          onSelect={handleSpecialCharSelect}
+          currentValue={specialCharModal.currentValue}
+          productCharName={specialCharModal.charName}
         />
       )}
     </div>

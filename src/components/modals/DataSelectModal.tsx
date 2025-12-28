@@ -17,6 +17,7 @@ export const ITEM_CODE_LABELS: Record<string, { label: string; category: string;
   A4: { label: '제품특성', category: 'A', level: 'L2' },
   A5: { label: '고장형태', category: 'A', level: 'L2' },
   A6: { label: '검출관리', category: 'A', level: 'L2' },
+  SP: { label: '특별특성', category: 'S', level: 'L2' },
   B2: { label: '작업요소 기능', category: 'B', level: 'L3' },
   B3: { label: '공정특성', category: 'B', level: 'L3' },
   B4: { label: '고장원인', category: 'B', level: 'L3' },
@@ -47,6 +48,10 @@ interface DataSelectModalProps {
   itemCode: string;
   currentValues: string[];
   processNo?: string;
+  processName?: string; // 현재 공정명 표시용
+  workElementName?: string; // 현재 작업요소명 표시용
+  processList?: { id: string; no: string; name: string }[]; // 공정 목록 (드롭다운용)
+  onProcessChange?: (processId: string) => void; // 공정 변경 콜백
   singleSelect?: boolean;
 }
 
@@ -59,6 +64,10 @@ export default function DataSelectModal({
   itemCode,
   currentValues,
   processNo,
+  processName,
+  workElementName,
+  processList,
+  onProcessChange,
   singleSelect = false,
 }: DataSelectModalProps) {
   const [items, setItems] = useState<DataItem[]>([]);
@@ -126,6 +135,12 @@ export default function DataSelectModal({
             value: (10 - i).toString(),
             category: '기본'
           })),
+          SP: [
+            { id: 'SP_1', value: 'CC (중요 특성)', category: '기본' },
+            { id: 'SP_2', value: 'SC (안전 특성)', category: '기본' },
+            { id: 'SP_3', value: 'HC (중점 관리)', category: '기본' },
+            { id: 'SP_4', value: '-', category: '기본' },
+          ],
         };
         
         // 기본 옵션 추가
@@ -288,6 +303,51 @@ export default function DataSelectModal({
               </button>
             ))}
           </div>
+
+          {/* 현재 공정/작업요소 표시 (드롭다운 또는 뱃지) */}
+          {(processName || workElementName || processList) && (
+            <div className="px-4 py-2 border-b bg-gradient-to-r from-blue-50 to-indigo-50 shrink-0">
+              <div className="flex items-center gap-3 flex-wrap">
+                {/* 공정 드롭다운 (processList가 있으면) */}
+                {processList && processList.length > 0 ? (
+                  <>
+                    <span className="text-xs font-medium text-gray-500">공정 선택:</span>
+                    <select
+                      value={processNo || ''}
+                      onChange={(e) => {
+                        const selectedProc = processList.find(p => p.no === e.target.value);
+                        if (selectedProc && onProcessChange) {
+                          onProcessChange(selectedProc.id);
+                        }
+                      }}
+                      className="px-3 py-1.5 bg-blue-600 text-white text-sm font-bold rounded-lg shadow-sm border-0 outline-none cursor-pointer hover:bg-blue-700"
+                    >
+                      {processList.map(p => (
+                        <option key={p.id} value={p.no} className="bg-white text-gray-800">
+                          {p.no}. {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                ) : processName && (
+                  <>
+                    <span className="text-xs font-medium text-gray-500">공정:</span>
+                    <span className="px-3 py-1 bg-blue-600 text-white text-sm font-bold rounded-full shadow-sm">
+                      {processNo && `${processNo}. `}{processName}
+                    </span>
+                  </>
+                )}
+                {workElementName && (
+                  <>
+                    <span className="text-xs font-medium text-gray-500">작업요소:</span>
+                    <span className="px-3 py-1 bg-purple-600 text-white text-sm font-bold rounded-full shadow-sm">
+                      {workElementName}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* 검색 및 버튼 */}
           <div className="px-4 py-3 border-b flex items-center gap-2 bg-gray-50/50 shrink-0">

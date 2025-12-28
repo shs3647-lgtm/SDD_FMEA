@@ -24,12 +24,16 @@ export interface L1Type extends AtomicUnit {
 }
 
 // L2 메인공정 기능/특성
-export interface L2Function extends AtomicUnit {}
 export interface L2ProductChar extends AtomicUnit {}
+export interface L2Function extends AtomicUnit {
+  productChars: L2ProductChar[];
+}
 
 // L3 작업요소 기능/특성
-export interface L3Function extends AtomicUnit {}
 export interface L3ProcessChar extends AtomicUnit {}
+export interface L3Function extends AtomicUnit {
+  processChars: L3ProcessChar[];
+}
 
 // ============ 구조 요소 (Structure Elements) ============
 
@@ -38,9 +42,9 @@ export interface WorkElement {
   m4: string;
   name: string;
   order: number;
-  // 원자적 기능 정의
+  // 원자적 기능 정의 (각 기능에 공정특성 포함)
   functions: L3Function[];
-  processChars: L3ProcessChar[];
+  processChars?: L3ProcessChar[]; // 하위호환용 (deprecated, 기능별로 관리)
   failureCause?: string; // 나중에 Atomic 연계 예정
 }
 
@@ -50,9 +54,9 @@ export interface Process {
   name: string;
   order: number;
   l3: WorkElement[];
-  // 원자적 기능 정의
+  // 원자적 기능 정의 (각 기능에 제품특성 포함)
   functions: L2Function[];
-  productChars: L2ProductChar[];
+  productChars?: L2ProductChar[]; // 하위호환용 (deprecated, 기능별로 관리)
   failureMode?: string; // 나중에 Atomic 연계 예정
 }
 
