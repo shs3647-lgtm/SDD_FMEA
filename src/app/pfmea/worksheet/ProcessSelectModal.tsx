@@ -122,7 +122,13 @@ export default function ProcessSelectModal({
   
   // 전체 해제 후 바로 저장 (모두 삭제)
   const clearAndSave = () => {
-    if (!window.confirm('모든 공정을 삭제하시겠습니까?\n(행은 유지되고 내용만 삭제됩니다)')) return;
+    const totalL3Count = existingProcessesInfo.reduce((sum, p) => sum + p.l3Count, 0);
+    const message = `⚠️ 모든 데이터를 삭제하시겠습니까?\n\n` +
+      `• 공정: ${existingProcessNames.length}개\n` +
+      `• 하위 작업요소: ${totalL3Count}개\n\n` +
+      `삭제된 데이터는 복구할 수 없습니다.`;
+    
+    if (!window.confirm(message)) return;
     onSave([]); // 빈 배열 전달
     onClose();
   };
@@ -292,7 +298,18 @@ export default function ProcessSelectModal({
                     <button
                       onClick={(e) => { 
                         e.stopPropagation(); 
-                        if (!window.confirm(`"${proc.name}" 공정을 삭제하시겠습니까?`)) return;
+                        // 해당 공정의 하위 작업요소 수 확인
+                        const procInfo = existingProcessesInfo.find(p => p.name === proc.name);
+                        const l3Count = procInfo?.l3Count || 0;
+                        
+                        const message = l3Count > 0
+                          ? `⚠️ 공정과 하위 작업요소를 모두 삭제하시겠습니까?\n\n` +
+                            `• 공정: ${proc.name}\n` +
+                            `• 하위 작업요소: ${l3Count}개\n\n` +
+                            `삭제된 데이터는 복구할 수 없습니다.`
+                          : `"${proc.name}" 공정을 삭제하시겠습니까?`;
+                        
+                        if (!window.confirm(message)) return;
                         // 해당 항목 선택 해제 후 저장
                         const newSelectedIds = new Set(selectedIds);
                         newSelectedIds.delete(proc.id);

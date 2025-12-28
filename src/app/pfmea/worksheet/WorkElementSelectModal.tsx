@@ -210,8 +210,11 @@ export default function WorkElementSelectModal({
   
   // 전체 해제 후 바로 저장 (내용 삭제)
   const clearAndSave = () => {
-    if (!window.confirm('모든 작업요소를 삭제하시겠습니까?\n(행은 유지되고 내용만 삭제됩니다)')) return;
-    console.log('[모달] 전체 삭제 실행');
+    const message = `⚠️ 모든 작업요소를 삭제하시겠습니까?\n\n` +
+      `• 현재 작업요소: ${existingElements.length}개\n\n` +
+      `행은 유지되고 내용만 삭제됩니다.`;
+    
+    if (!window.confirm(message)) return;
     onSave([]); // 빈 배열 전달 → 내용 삭제
     onClose();
   };
