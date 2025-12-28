@@ -52,15 +52,37 @@ src/
 | `app/pfmea/import/types.ts` | 118 | 타입 정의 (15개 테이블) | - |
 | `app/pfmea/import/mock-data.ts` | 96 | 목업 데이터 | types |
 
-### 3. Layout 컴포넌트
+### 3. PFMEA Worksheet 모듈 (업데이트 2025-12-28)
+| 파일 | 라인 | 역할 | 의존성 |
+|------|------|------|--------|
+| `app/pfmea/worksheet/page.tsx` | ~1400 | 워크시트 메인 | 모든 탭, 모달, 상태관리 |
+| `app/pfmea/worksheet/columns.ts` | 150 | 컬럼 정의 | types |
+| `app/pfmea/worksheet/excel-export.ts` | 450 | Excel 내보내기 | ExcelJS |
+| `tabs/function/FunctionL1Tab.tsx` | 330 | 1L 기능분석 | SelectableCell, Modal |
+| `tabs/function/FunctionL2Tab.tsx` | 420 | 2L 기능분석 | SelectableCell, Modal |
+| `tabs/function/FunctionL3Tab.tsx` | 520 | 3L 기능분석 (특별특성 연동) | SelectableCell, SpecialCharSelectModal |
+| `tabs/function/constants.ts` | 30 | 기능분석 색상 상수 | - |
+| `tabs/failure/FailureL1Tab.tsx` | 400 | 1L 고장분석 | SelectableCell |
+| `tabs/failure/FailureL2Tab.tsx` | 180 | 2L 고장분석 | SelectableCell |
+| `tabs/failure/FailureL3Tab.tsx` | 250 | 3L 고장분석 | SelectableCell |
+
+#### 색상 표준 (2025-12-28)
+| 단계 | 색상 | HEX |
+|------|------|-----|
+| 구조분석 | 파란색 | #1976d2 |
+| 기능분석 | 진한녹색 | #1b5e20 |
+| 고장분석 | 붉은색 | #c62828 |
+
+### 4. Layout 컴포넌트
 | 파일 | 라인 | 역할 | 의존성 |
 |------|------|------|--------|
 | `components/layout/Sidebar.tsx` | 298 | 사이드바 | CompanyLogo, Link |
 | `components/layout/Header.tsx` | 109 | 헤더 | - |
 | `components/layout/StatusBar.tsx` | 101 | 상태바 | - |
+| `components/layout/StepBar.tsx` | 130 | 단계바 (색상 표준화) | - |
 | `components/layout/index.ts` | - | 내보내기 | 모든 layout |
 
-### 4. 공통 컴포넌트
+### 5. 공통 컴포넌트
 | 파일 | 라인 | 역할 | 의존성 |
 |------|------|------|--------|
 | `components/CompanyLogo.tsx` | 206 | 회사 로고 | Image |
@@ -155,6 +177,8 @@ PFMEA (예정)
 | 2025-12-26 | 초기 인덱스 생성 | AI |
 | 2025-12-26 | AP 개선관리 모듈 분리 (607→596행, 5파일) | AI |
 | 2025-12-26 | PFMEA Import 모듈 추가 (PRD-026, 507행, 4파일) | AI |
+| 2025-12-28 | 트리뷰 색상 표준화 (구조:파랑, 기능:진한녹색, 고장:빨강) | AI |
+| 2025-12-28 | FunctionL3Tab 특별특성 모달 연동 완료 | AI |
 
 ---
 
