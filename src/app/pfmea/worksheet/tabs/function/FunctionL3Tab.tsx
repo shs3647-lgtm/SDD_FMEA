@@ -76,6 +76,50 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
     charId: string; 
   } | null>(null);
 
+  // 확정 상태 (state.l3Confirmed 사용)
+  const isConfirmed = state.l3Confirmed || false;
+
+  // 누락 건수 계산
+  const missingCount = React.useMemo(() => {
+    let count = 0;
+    state.l2.forEach(proc => {
+      const l3List = proc.l3 || [];
+      l3List.forEach(we => {
+        // 작업요소명 체크
+        if (!we.name || we.name === '클릭' || we.name.includes('추가')) count++;
+        // 작업요소 기능 체크
+        const funcs = we.functions || [];
+        if (funcs.length === 0) count++;
+        funcs.forEach(f => {
+          if (!f.name || f.name === '클릭' || f.name.includes('추가')) count++;
+          // 공정특성 체크
+          const chars = f.processChars || [];
+          if (chars.length === 0) count++;
+          chars.forEach(c => {
+            if (!c.name || c.name === '클릭' || c.name.includes('추가')) count++;
+          });
+        });
+      });
+    });
+    return count;
+  }, [state.l2]);
+
+  // 확정 핸들러
+  const handleConfirm = useCallback(() => {
+    if (missingCount > 0) {
+      alert(`누락된 항목이 ${missingCount}건 있습니다.\n먼저 입력을 완료해주세요.`);
+      return;
+    }
+    setState(prev => ({ ...prev, l3Confirmed: true }));
+    saveToLocalStorage?.();
+    alert('3L 작업요소 기능분석이 확정되었습니다.');
+  }, [missingCount, setState, saveToLocalStorage]);
+
+  // 수정 핸들러
+  const handleEdit = useCallback(() => {
+    setState(prev => ({ ...prev, l3Confirmed: false }));
+  }, [setState]);
+
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
     
@@ -266,7 +310,36 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
               2단계 구조분석
             </th>
             <th colSpan={3} style={{ background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
-              3단계 : 3L 작업요소 기능분석
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
+                <span>3단계 : 3L 작업요소 기능분석</span>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {isConfirmed ? (
+                    <span style={{ background: '#4caf50', color: 'white', padding: '3px 10px', borderRadius: '3px', fontSize: '11px', fontWeight: 700 }}>
+                      ✓ 확정됨
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleConfirm}
+                      style={{ background: '#4caf50', color: 'white', border: 'none', padding: '3px 10px', borderRadius: '3px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      확정
+                    </button>
+                  )}
+                  <span style={{ background: missingCount > 0 ? '#f44336' : '#4caf50', color: 'white', padding: '3px 10px', borderRadius: '3px', fontSize: '11px', fontWeight: 700 }}>
+                    누락 {missingCount}건
+                  </span>
+                  {isConfirmed && (
+                    <button
+                      type="button"
+                      onClick={handleEdit}
+                      style={{ background: '#ff9800', color: 'white', border: 'none', padding: '3px 10px', borderRadius: '3px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      수정
+                    </button>
+                  )}
+                </div>
+              </div>
             </th>
           </tr>
           

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { ReactNode, useEffect, useState } from 'react';
+import React, { ReactNode, useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
 interface BaseModalProps {
@@ -22,6 +22,7 @@ interface BaseModalProps {
 
 /**
  * 프로젝트 전체 모달 표준화를 위한 베이스 컴포넌트
+ * 드래그 이동 지원
  */
 export default function BaseModal({
   isOpen,
@@ -40,6 +41,55 @@ export default function BaseModal({
   children,
 }: BaseModalProps) {
   const [mounted, setMounted] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragOffset = useRef({ x: 0, y: 0 });
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // 드래그 시작
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (modalRef.current) {
+      const rect = modalRef.current.getBoundingClientRect();
+      dragOffset.current = {
+        x: e.clientX - rect.left - rect.width / 2,
+        y: e.clientY - rect.top - rect.height / 2
+      };
+      setIsDragging(true);
+    }
+  }, []);
+
+  // 드래그 중
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (isDragging) {
+      const newX = e.clientX - window.innerWidth / 2 - dragOffset.current.x;
+      const newY = e.clientY - window.innerHeight / 2 - dragOffset.current.y;
+      setPosition({ x: newX, y: newY });
+    }
+  }, [isDragging]);
+
+  // 드래그 종료
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // 마우스 이벤트 리스너
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
+  // 모달 열릴 때 위치 초기화
+  useEffect(() => {
+    if (isOpen) {
+      setPosition({ x: 0, y: 0 });
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     setMounted(true);
@@ -61,21 +111,35 @@ export default function BaseModal({
       onClick={onClose}
     >
       <div 
+        ref={modalRef}
         className="bg-white rounded-lg shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200"
-        style={{ width, maxHeight: '90vh' }}
+        style={{ 
+          width, 
+          maxHeight: '90vh',
+          transform: `translate(${position.x}px, ${position.y}px)`,
+          cursor: isDragging ? 'grabbing' : 'default'
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* 헤더 */}
+        {/* 헤더 - 드래그 핸들 */}
         <div 
-          className="px-4 py-3 flex items-center justify-between"
-          style={{ background: headerColor }}
+          className="px-4 py-3 flex items-center justify-between select-none"
+          style={{ background: headerColor, cursor: 'grab' }}
+          onMouseDown={handleMouseDown}
         >
           <h2 className="text-white font-bold flex items-center gap-2 text-sm sm:text-base">
             {icon && <span>{icon}</span>}
-            {title}
+            <span className="flex items-center gap-2">
+              <span className="text-white/60 text-xs">⋮⋮</span>
+              {title}
+            </span>
           </h2>
           <button 
-            onClick={onClose} 
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
             className="text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center transition-colors"
           >
             ✕
@@ -139,6 +203,3 @@ export default function BaseModal({
     document.body
   );
 }
-
-
-

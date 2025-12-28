@@ -316,9 +316,35 @@ export default function DataSelectModal({
 
   const handleAddNew = () => {
     if (!newValue.trim()) return;
-    const newItem: DataItem = { id: `new_${Date.now()}`, value: newValue.trim(), category: '추가' };
+    const trimmedValue = newValue.trim();
+    
+    // 중복 체크
+    if (items.some(i => i.value === trimmedValue)) {
+      alert('이미 존재하는 항목입니다.');
+      return;
+    }
+    
+    const newItem: DataItem = { id: `new_${Date.now()}`, value: trimmedValue, category: '추가' };
     setItems(prev => [...prev, newItem]);
     setSelectedIds(prev => new Set([...prev, newItem.id]));
+    
+    // localStorage에 저장 (마스터 데이터로 영구 저장)
+    try {
+      const savedData = localStorage.getItem('pfmea_master_data');
+      const masterData = savedData ? JSON.parse(savedData) : [];
+      masterData.push({ 
+        id: newItem.id, 
+        itemCode, 
+        value: trimmedValue, 
+        category: '추가',
+        createdAt: new Date().toISOString()
+      });
+      localStorage.setItem('pfmea_master_data', JSON.stringify(masterData));
+      console.log('[DataSelectModal] 새 항목 저장됨:', trimmedValue);
+    } catch (e) {
+      console.error('데이터 저장 오류:', e);
+    }
+    
     setNewValue('');
   };
 
@@ -493,33 +519,6 @@ export default function DataSelectModal({
                     🗑️ 정리대상 삭제 ({worksheetCount})
                   </button>
                 )}
-                {addedCount > 0 && (
-                  <button 
-                    onClick={() => {
-                      if (confirm(`추가된 ${addedCount}개 항목을 마스터 목록에서 삭제하시겠습니까?\n\n(기본 항목은 유지됩니다)`)) {
-                        // localStorage에서 해당 itemCode의 추가 데이터 삭제
-                        try {
-                          const savedData = localStorage.getItem('pfmea_master_data');
-                          if (savedData) {
-                            const parsedData = JSON.parse(savedData);
-                            const filteredData = parsedData.filter((item: any) => item.itemCode !== itemCode);
-                            localStorage.setItem('pfmea_master_data', JSON.stringify(filteredData));
-                          }
-                        } catch (e) {
-                          console.error('데이터 정리 오류:', e);
-                        }
-                        // 목록에서 추가 항목 제거
-                        setItems(prev => prev.filter(i => i.category !== '추가'));
-                        setSelectedIds(new Set());
-                        alert('추가 데이터가 정리되었습니다.');
-                      }
-                    }}
-                    className="px-3 py-2 text-xs font-bold bg-orange-500 text-white rounded-md hover:bg-orange-600 shadow-sm transition-colors"
-                    title="마스터 목록에서 추가된 항목 삭제"
-                  >
-                    🧹 추가정리 ({addedCount})
-                  </button>
-                )}
                 {currentValues.length > 0 && (
                   <button 
                     onClick={() => {
@@ -539,80 +538,104 @@ export default function DataSelectModal({
             )}
           </div>
 
-          {/* 아이템 리스트 - 1열, 전체 내용 표시 */}
-          <div className="flex-1 overflow-auto p-2 bg-gray-50/20">
+          {/* 아이템 리스트 - 컴팩트 테이블 스타일 */}
+          <div className="flex-1 overflow-auto p-1 bg-gray-50/20">
             {filteredItems.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-gray-400 py-16">
                 <span className="text-4xl mb-4">📋</span>
-                <p className="font-medium">데이터가 없습니다.</p>
-                <p className="text-sm mt-1">"직접 입력" 탭에서 추가해 보세요.</p>
+                <p className="text-xs font-medium">데이터가 없습니다.</p>
+                <p className="text-[10px] mt-1">"직접 입력" 탭에서 추가해 보세요.</p>
               </div>
             ) : (
-              <div className="flex flex-col gap-1">
+              <table className="w-full text-[10px] border-collapse">
+                <tbody>
                 {filteredItems.map(item => {
                   const isSelected = selectedIds.has(item.id);
                   const isCurrent = isCurrentlySelected(item.value);
                   const catColor = CATEGORY_COLORS[item.category || '기본'] || CATEGORY_COLORS['기본'];
                   
                   return (
-                    <div 
+                    <tr 
                       key={item.id}
                       onClick={() => toggleSelect(item.id)}
-                      className={`flex items-start gap-2 p-2 border rounded cursor-pointer transition-all group ${
+                      className={`cursor-pointer transition-all border-b border-gray-100 ${
                         isSelected 
-                          ? isCurrent 
-                            ? 'bg-green-50 border-green-400 ring-1 ring-green-400' 
-                            : 'bg-blue-50 border-blue-400 ring-1 ring-blue-400'
-                          : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50/30'
+                          ? isCurrent ? 'bg-green-50' : 'bg-blue-50'
+                          : 'bg-white hover:bg-blue-50/30'
                       }`}
+                      style={{ height: '26px' }}
                     >
                       {/* 체크박스 */}
-                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all shrink-0 mt-0.5 ${
-                        isSelected 
-                          ? isCurrent ? 'bg-green-500 border-green-500' : 'bg-blue-500 border-blue-500' 
-                          : 'bg-white border-gray-300 group-hover:border-blue-400'
-                      }`}>
-                        {isSelected && <span className="text-white text-[8px] font-bold">✓</span>}
-                      </div>
+                      <td className="w-5 text-center">
+                        <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center mx-auto ${
+                          isSelected 
+                            ? isCurrent ? 'bg-green-500 border-green-500' : 'bg-blue-500 border-blue-500' 
+                            : 'bg-white border-gray-300'
+                        }`}>
+                          {isSelected && <span className="text-white text-[7px] font-bold">✓</span>}
+                        </div>
+                      </td>
 
                       {/* 카테고리 배지 */}
-                      <span 
-                        className="text-[8px] font-bold px-1 py-0.5 rounded shrink-0"
-                        style={{ background: catColor.bg, color: catColor.text, border: `1px solid ${catColor.border}` }}
-                      >
-                        {item.category === '워크시트' ? '⚠️정리' : item.category || '기본'}
-                      </span>
+                      <td className="w-9 px-0.5">
+                        <span 
+                          className="text-[7px] font-bold px-1 py-0.5 rounded whitespace-nowrap"
+                          style={{ background: catColor.bg, color: catColor.text }}
+                        >
+                          {item.category || '기본'}
+                        </span>
+                      </td>
 
                       {/* 소속 배지 (belongsTo) */}
-                      {item.belongsTo && ['C2', 'C3'].includes(itemCode) && (
-                        <span 
-                          className="text-[7px] font-medium px-1 py-0.5 rounded shrink-0"
-                          style={{ 
-                            background: item.belongsTo === 'Your Plant' ? '#e8f5e9' : 
-                                       item.belongsTo === 'Ship to Plant' ? '#fff3e0' : '#fce4ec',
-                            color: item.belongsTo === 'Your Plant' ? '#2e7d32' : 
-                                   item.belongsTo === 'Ship to Plant' ? '#e65100' : '#c2185b',
-                            border: `1px solid ${item.belongsTo === 'Your Plant' ? '#a5d6a7' : 
-                                    item.belongsTo === 'Ship to Plant' ? '#ffcc80' : '#f48fb1'}`
-                          }}
-                        >
-                          {item.belongsTo === 'Your Plant' ? 'YP' : 
-                           item.belongsTo === 'Ship to Plant' ? 'SP' : 'U'}
-                        </span>
+                      {['C2', 'C3'].includes(itemCode) && (
+                        <td className="w-5 px-0.5">
+                          {item.belongsTo && (
+                            <span 
+                              className="text-[7px] font-bold px-1 py-0.5 rounded whitespace-nowrap"
+                              style={{ 
+                                background: item.belongsTo === 'Your Plant' ? '#e8f5e9' : 
+                                           item.belongsTo === 'Ship to Plant' ? '#fff3e0' : '#fce4ec',
+                                color: item.belongsTo === 'Your Plant' ? '#2e7d32' : 
+                                       item.belongsTo === 'Ship to Plant' ? '#e65100' : '#c2185b',
+                              }}
+                            >
+                              {item.belongsTo === 'Your Plant' ? 'YP' : 
+                               item.belongsTo === 'Ship to Plant' ? 'SP' : 'U'}
+                            </span>
+                          )}
+                        </td>
                       )}
 
-                      {/* 이름 - 줄바꿈 허용, 작은 글씨 */}
-                      <span className={`flex-1 text-[10px] leading-tight font-medium break-words whitespace-pre-wrap ${
-                        isSelected ? (isCurrent ? 'text-green-900' : 'text-blue-900') : 'text-gray-700'
-                      }`}>
-                        {item.value}
-                        {isCurrent && <span className="ml-1 text-[8px] font-normal text-green-600">(현재)</span>}
-                      </span>
+                      {/* 이름 - 한 줄, 말줄임 */}
+                      <td className="px-1.5">
+                        <div className={`truncate font-medium ${
+                          isSelected ? (isCurrent ? 'text-green-800' : 'text-blue-800') : 'text-gray-700'
+                        }`} title={item.value}>
+                          {item.value}
+                          {isCurrent && <span className="ml-1 text-[8px] text-green-600">(현재)</span>}
+                        </div>
+                      </td>
 
-                    </div>
+                      {/* 개별 삭제 버튼 */}
+                      <td className="w-5 text-center">
+                        {isSelected && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleSelect(item.id);
+                            }}
+                            className="text-red-400 hover:text-red-600 text-[10px]"
+                            title="선택 해제"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </td>
+                    </tr>
                   );
                 })}
-              </div>
+                </tbody>
+              </table>
             )}
           </div>
         </div>
@@ -641,16 +664,50 @@ export default function DataSelectModal({
             </div>
           </div>
 
-          {/* 입력된 항목 표시 */}
+          {/* 입력된 항목 표시 - 체크박스 포함 */}
           <div className="flex-1">
-            <h3 className="text-sm font-bold text-gray-700 mb-3 px-1">입력된 항목 ({items.filter(i => i.category === '추가').length})</h3>
+            <h3 className="text-sm font-bold text-gray-700 mb-3 px-1">
+              입력된 항목 ({items.filter(i => i.category === '추가').length}) 
+              <span className="ml-2 text-blue-600">- 선택: {items.filter(i => i.category === '추가' && selectedIds.has(i.id)).length}개</span>
+            </h3>
             <div className="space-y-2 max-h-[200px] overflow-auto">
-              {items.filter(i => i.category === '추가').map(item => (
-                <div key={item.id} className="flex items-center gap-2 p-2 bg-white rounded-lg border">
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 border border-orange-200">추가</span>
-                  <span className="flex-1 text-sm text-gray-700">{item.value}</span>
-                </div>
-              ))}
+              {items.filter(i => i.category === '추가').map(item => {
+                const isSelected = selectedIds.has(item.id);
+                return (
+                  <div 
+                    key={item.id} 
+                    onClick={() => toggleSelect(item.id)}
+                    className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
+                      isSelected ? 'bg-blue-50 border-blue-400' : 'bg-white border-gray-200 hover:border-blue-300'
+                    }`}
+                  >
+                    {/* 체크박스 */}
+                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${
+                      isSelected ? 'bg-blue-500 border-blue-500' : 'bg-white border-gray-300'
+                    }`}>
+                      {isSelected && <span className="text-white text-[8px] font-bold">✓</span>}
+                    </div>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 border border-orange-200">추가</span>
+                    <span className={`flex-1 text-sm ${isSelected ? 'text-blue-800 font-medium' : 'text-gray-700'}`}>{item.value}</span>
+                    {/* 삭제 버튼 */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setItems(prev => prev.filter(i => i.id !== item.id));
+                        setSelectedIds(prev => {
+                          const newSet = new Set(prev);
+                          newSet.delete(item.id);
+                          return newSet;
+                        });
+                      }}
+                      className="text-red-400 hover:text-red-600 text-sm px-1"
+                      title="삭제"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

@@ -52,6 +52,42 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
     currentValue?: number;
   } | null>(null);
 
+  // 확정 상태
+  const isConfirmed = state.failureL1Confirmed || false;
+
+  // 누락 건수 계산
+  const missingCount = useMemo(() => {
+    let count = 0;
+    const effects = state.failureEffects || [];
+    // 요구사항은 있는데 고장영향이 없는 경우
+    const types = state.l1?.types || [];
+    types.forEach((type: any) => {
+      (type.functions || []).forEach((func: any) => {
+        (func.requirements || []).forEach((req: any) => {
+          const hasEffect = effects.some((e: any) => e.reqId === req.id && e.effect);
+          if (!hasEffect) count++;
+        });
+      });
+    });
+    return count;
+  }, [state.l1?.types, state.failureEffects]);
+
+  // 확정 핸들러
+  const handleConfirm = useCallback(() => {
+    if (missingCount > 0) {
+      alert(`누락된 항목이 ${missingCount}건 있습니다.\n먼저 입력을 완료해주세요.`);
+      return;
+    }
+    setState(prev => ({ ...prev, failureL1Confirmed: true }));
+    saveToLocalStorage?.();
+    alert('1L 고장영향 분석이 확정되었습니다.');
+  }, [missingCount, setState, saveToLocalStorage]);
+
+  // 수정 핸들러
+  const handleEdit = useCallback(() => {
+    setState(prev => ({ ...prev, failureL1Confirmed: false }));
+  }, [setState]);
+
   // 기능분석 L1에서 요구사항 목록 가져오기 (구분 포함)
   // 요구사항이 없는 구분/기능도 표시
   const requirementsFromFunction: RequirementFromFunction[] = useMemo(() => {
@@ -317,7 +353,20 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
               P-FMEA 기능 분석(3단계)
             </th>
             <th colSpan={3} style={{ background: STEP_COLORS.failure.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
-              P-FMEA 고장 분석(4단계)
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px' }}>
+                <span>4단계 : 1L 고장영향(FE) 분석</span>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {isConfirmed ? (
+                    <span style={{ background: '#4caf50', color: 'white', padding: '3px 10px', borderRadius: '3px', fontSize: '11px', fontWeight: 700 }}>✓ 확정됨</span>
+                  ) : (
+                    <button type="button" onClick={handleConfirm} style={{ background: '#4caf50', color: 'white', border: 'none', padding: '3px 10px', borderRadius: '3px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>확정</button>
+                  )}
+                  <span style={{ background: missingCount > 0 ? '#f44336' : '#4caf50', color: 'white', padding: '3px 10px', borderRadius: '3px', fontSize: '11px', fontWeight: 700 }}>누락 {missingCount}건</span>
+                  {isConfirmed && (
+                    <button type="button" onClick={handleEdit} style={{ background: '#ff9800', color: 'white', border: 'none', padding: '3px 10px', borderRadius: '3px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>수정</button>
+                  )}
+                </div>
+              </div>
             </th>
           </tr>
           
@@ -383,7 +432,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                   </td>
                 )}
                 
-                {/* 구분 (자동) */}
+                {/* 구분 (자동) - 구분별 색상 적용 */}
                 {row.showType && (
                   <td 
                     rowSpan={row.typeRowSpan} 
@@ -391,10 +440,11 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                       border: `1px solid ${COLORS.line}`, 
                       padding: '8px', 
                       textAlign: 'center', 
-                      background: STEP_COLORS.function.cell, 
+                      background: row.typeName === 'Your Plant' ? '#ffe0b2' : row.typeName === 'Ship to Plant' ? '#ffcc80' : row.typeName === 'User' ? '#e1bee7' : STEP_COLORS.function.cell, 
                       fontWeight: 600, 
                       verticalAlign: 'middle',
-                      fontSize: '11px'
+                      fontSize: '11px',
+                      color: row.typeName === 'Your Plant' ? '#1565c0' : row.typeName === 'Ship to Plant' ? '#e65100' : row.typeName === 'User' ? '#7b1fa2' : '#333'
                     }}
                   >
                     {row.typeName}

@@ -114,6 +114,24 @@ export default function FailureModeSelectModal({
     const newItem = { id: `custom_${Date.now()}`, value: trimmed, category: '추가' };
     setCustomModes(prev => [...prev, newItem]);
     setSelectedModes(prev => new Set([...prev, trimmed]));
+    
+    // localStorage에 저장
+    try {
+      const savedData = localStorage.getItem('pfmea_master_data');
+      const masterData = savedData ? JSON.parse(savedData) : [];
+      masterData.push({ 
+        id: newItem.id, 
+        itemCode: 'FM', 
+        value: trimmed, 
+        category: '추가',
+        createdAt: new Date().toISOString()
+      });
+      localStorage.setItem('pfmea_master_data', JSON.stringify(masterData));
+      console.log('[FailureModeSelectModal] 새 항목 저장됨:', trimmed);
+    } catch (e) {
+      console.error('데이터 저장 오류:', e);
+    }
+    
     setNewValue('');
   }, [newValue, allOptions]);
 
@@ -225,56 +243,79 @@ export default function FailureModeSelectModal({
             </div>
           </div>
 
-          {/* 고장형태 그리드 */}
-          <div className="flex-1 overflow-auto p-4 bg-gray-50/20">
-            <div className="grid grid-cols-2 gap-3">
+          {/* 고장형태 테이블 */}
+          <div className="flex-1 overflow-auto p-1 bg-gray-50/20">
+            <table className="w-full text-[10px] border-collapse">
+              <tbody>
               {filteredOptions.map(opt => {
                 const isSelected = selectedModes.has(opt.value);
                 const isCurrent = currentModes.some(m => m.name === opt.value);
                 
                 return (
-                  <div 
+                  <tr 
                     key={opt.id}
                     onClick={() => toggleSelect(opt.value)}
-                    className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all shadow-sm group ${
+                    className={`cursor-pointer transition-all border-b border-gray-100 ${
                       isSelected 
-                        ? isCurrent 
-                          ? 'bg-green-50 border-green-400 ring-1 ring-green-400' 
-                          : 'bg-red-50 border-red-400 ring-1 ring-red-400'
-                        : 'bg-white border-gray-200 hover:border-red-300 hover:shadow-md'
+                        ? isCurrent ? 'bg-green-50' : 'bg-red-50'
+                        : 'bg-white hover:bg-red-50/30'
                     }`}
+                    style={{ height: '26px' }}
                   >
                     {/* 체크박스 */}
-                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all shrink-0 ${
-                      isSelected 
-                        ? isCurrent ? 'bg-green-500 border-green-500' : 'bg-red-500 border-red-500' 
-                        : 'bg-white border-gray-300 group-hover:border-red-400'
-                    }`}>
-                      {isSelected && <span className="text-white text-[10px] font-bold">✓</span>}
-                    </div>
+                    <td className="w-5 text-center">
+                      <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center mx-auto ${
+                        isSelected 
+                          ? isCurrent ? 'bg-green-500 border-green-500' : 'bg-red-500 border-red-500' 
+                          : 'bg-white border-gray-300'
+                      }`}>
+                        {isSelected && <span className="text-white text-[7px] font-bold">✓</span>}
+                      </div>
+                    </td>
 
                     {/* 카테고리 배지 */}
-                    <span 
-                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded shadow-inner shrink-0 ${
-                        opt.category === '추가' 
-                          ? 'bg-orange-100 text-orange-700 border border-orange-200' 
-                          : 'bg-gray-100 text-gray-600 border border-gray-200'
-                      }`}
-                    >
-                      {opt.category}
-                    </span>
+                    <td className="w-9 px-0.5">
+                      <span 
+                        className={`text-[7px] font-bold px-1 py-0.5 rounded whitespace-nowrap ${
+                          opt.category === '추가' 
+                            ? 'bg-orange-100 text-orange-700' 
+                            : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {opt.category}
+                      </span>
+                    </td>
 
                     {/* 이름 */}
-                    <span className={`flex-1 text-sm truncate font-medium ${
-                      isSelected ? (isCurrent ? 'text-green-900' : 'text-red-900') : 'text-gray-700'
-                    }`}>
-                      {opt.value}
-                      {isCurrent && <span className="ml-1 text-[9px] font-normal text-green-600">(현재)</span>}
-                    </span>
-                  </div>
+                    <td className="px-1.5">
+                      <div className={`truncate font-medium ${
+                        isSelected ? (isCurrent ? 'text-green-800' : 'text-red-800') : 'text-gray-700'
+                      }`} title={opt.value}>
+                        {opt.value}
+                        {isCurrent && <span className="ml-1 text-[8px] text-green-600">(현재)</span>}
+                      </div>
+                    </td>
+
+                    {/* 개별 삭제 버튼 */}
+                    <td className="w-5 text-center">
+                      {isSelected && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleSelect(opt.value);
+                          }}
+                          className="text-red-400 hover:text-red-600 text-[10px]"
+                          title="선택 해제"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </td>
+                  </tr>
                 );
               })}
-            </div>
+              </tbody>
+            </table>
           </div>
         </div>
       ) : (
@@ -302,29 +343,47 @@ export default function FailureModeSelectModal({
             </div>
           </div>
 
-          {/* 입력된 항목 표시 */}
+          {/* 입력된 항목 표시 - 체크박스 포함 */}
           <div className="flex-1">
-            <h3 className="text-sm font-bold text-gray-700 mb-3 px-1">추가된 항목 ({customModes.length})</h3>
+            <h3 className="text-sm font-bold text-gray-700 mb-3 px-1">
+              추가된 항목 ({customModes.length})
+              <span className="ml-2 text-red-600">- 선택: {customModes.filter(m => selectedModes.has(m.value)).length}개</span>
+            </h3>
             <div className="space-y-2 max-h-[200px] overflow-auto">
-              {customModes.map(item => (
-                <div key={item.id} className="flex items-center gap-2 p-2 bg-white rounded-lg border">
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 border border-orange-200">추가</span>
-                  <span className="flex-1 text-sm text-gray-700">{item.value}</span>
-                  <button
-                    onClick={() => {
-                      setCustomModes(prev => prev.filter(m => m.id !== item.id));
-                      setSelectedModes(prev => {
-                        const newSet = new Set(prev);
-                        newSet.delete(item.value);
-                        return newSet;
-                      });
-                    }}
-                    className="text-red-500 hover:text-red-700 text-sm"
+              {customModes.map(item => {
+                const isSelected = selectedModes.has(item.value);
+                return (
+                  <div 
+                    key={item.id} 
+                    onClick={() => toggleSelect(item.value)}
+                    className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
+                      isSelected ? 'bg-red-50 border-red-400' : 'bg-white border-gray-200 hover:border-red-300'
+                    }`}
                   >
-                    ✕
-                  </button>
-                </div>
-              ))}
+                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${
+                      isSelected ? 'bg-red-500 border-red-500' : 'bg-white border-gray-300'
+                    }`}>
+                      {isSelected && <span className="text-white text-[8px] font-bold">✓</span>}
+                    </div>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 border border-orange-200">추가</span>
+                    <span className={`flex-1 text-sm ${isSelected ? 'text-red-800 font-medium' : 'text-gray-700'}`}>{item.value}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCustomModes(prev => prev.filter(m => m.id !== item.id));
+                        setSelectedModes(prev => {
+                          const newSet = new Set(prev);
+                          newSet.delete(item.value);
+                          return newSet;
+                        });
+                      }}
+                      className="text-red-400 hover:text-red-600 text-sm px-1"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

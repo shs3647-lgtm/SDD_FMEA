@@ -68,6 +68,54 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
     alert('🔓 수정 모드로 전환되었습니다.');
   };
 
+  // 인라인 편집 핸들러 - 요구사항 (더블클릭)
+  const handleInlineEditRequirement = useCallback((typeId: string, funcId: string, reqId: string, newValue: string) => {
+    setState(prev => ({
+      ...prev,
+      l1: {
+        ...prev.l1,
+        types: prev.l1.types.map(t => {
+          if (t.id !== typeId) return t;
+          return {
+            ...t,
+            functions: t.functions.map(f => {
+              if (f.id !== funcId) return f;
+              return {
+                ...f,
+                requirements: f.requirements.map(r => {
+                  if (r.id !== reqId) return r;
+                  return { ...r, name: newValue };
+                })
+              };
+            })
+          };
+        })
+      }
+    }));
+    setDirty(true);
+  }, [setState, setDirty]);
+
+  // 인라인 편집 핸들러 - 기능 (더블클릭)
+  const handleInlineEditFunction = useCallback((typeId: string, funcId: string, newValue: string) => {
+    setState(prev => ({
+      ...prev,
+      l1: {
+        ...prev.l1,
+        types: prev.l1.types.map(t => {
+          if (t.id !== typeId) return t;
+          return {
+            ...t,
+            functions: t.functions.map(f => {
+              if (f.id !== funcId) return f;
+              return { ...f, name: newValue };
+            })
+          };
+        })
+      }
+    }));
+    setDirty(true);
+  }, [setState, setDirty]);
+
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
     
@@ -373,7 +421,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                     </td>
                   )}
                   <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
-                    <SelectableCell value={f.name} placeholder="기능" bgColor="#fce4ec" textColor="#000000" onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} />
+                    <SelectableCell value={f.name} placeholder="기능" bgColor="#fce4ec" textColor="#000000" onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} onDoubleClickEdit={(newValue) => handleInlineEditFunction(t.id, f.id, newValue)} />
                   </td>
                   <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
                     <SelectableCell value="" placeholder="요구사항 선택" bgColor="#fff3e0" textColor="#e65100" onClick={() => setModal({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} />
@@ -394,11 +442,18 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                   )}
                   {rIdx === 0 && (
                     <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
-                      <SelectableCell value={f.name} placeholder="기능" bgColor="#fce4ec" textColor="#000000" onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} />
+                      <SelectableCell value={f.name} placeholder="기능" bgColor="#fce4ec" textColor="#000000" onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} onDoubleClickEdit={(newValue) => handleInlineEditFunction(t.id, f.id, newValue)} />
                     </td>
                   )}
                   <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                    <SelectableCell value={r.name} placeholder="요구사항" bgColor="#fff3e0" textColor="#e65100" onClick={() => setModal({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} />
+                    <SelectableCell 
+                      value={r.name} 
+                      placeholder="요구사항" 
+                      bgColor="#fff3e0" 
+                      textColor="#e65100" 
+                      onClick={() => setModal({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} 
+                      onDoubleClickEdit={(newValue) => handleInlineEditRequirement(t.id, f.id, r.id, newValue)}
+                    />
                   </td>
                 </tr>
               ));

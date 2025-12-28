@@ -397,8 +397,8 @@ function FMEAWorksheetPageContent() {
                 borderBottom: `1px solid ${COLORS.line}`,
               }}
             >
-              {/* 중앙 타이틀 - 기능분석 탭은 자체 헤더가 있어서 숨김 */}
-              {!state.tab.startsWith('function') && (
+              {/* 중앙 타이틀 - 기능분석/고장분석 탭은 자체 헤더가 있어서 숨김 */}
+              {!state.tab.startsWith('function') && !state.tab.startsWith('failure') && (
                 <span>P-FMEA {getTabLabel(state.tab)}({getStepNumber(state.tab)}단계)</span>
               )}
               

@@ -30,6 +30,7 @@ interface SODSelectModalProps {
   category: 'S' | 'O' | 'D';
   fmeaType?: 'P-FMEA' | 'D-FMEA';
   currentValue?: number;
+  scope?: 'Your Plant' | 'Ship to Plant' | 'User'; // 구분에 따른 심각도 필터
 }
 
 export default function SODSelectModal({
@@ -38,7 +39,8 @@ export default function SODSelectModal({
   onSelect,
   category,
   fmeaType = 'P-FMEA',
-  currentValue
+  currentValue,
+  scope
 }: SODSelectModalProps) {
   const [items, setItems] = useState<SODItem[]>([]);
   const [mounted, setMounted] = useState(false);
@@ -94,16 +96,17 @@ export default function SODSelectModal({
       >
         {/* 헤더 */}
         <div style={{
-          background: categoryLabels[category].color,
+          background: scope === 'Your Plant' ? '#1976d2' : scope === 'Ship to Plant' ? '#e65100' : scope === 'User' ? '#7b1fa2' : categoryLabels[category].color,
           color: 'white', padding: '16px 20px', borderRadius: '12px 12px 0 0',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center'
         }}>
           <div>
             <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>
-              {categoryLabels[category].full} 선택 (Select {categoryLabels[category].en})
+              {scope ? `${scope} ` : ''}{categoryLabels[category].full} 선택
             </h3>
             <p style={{ margin: '4px 0 0', fontSize: '11px', opacity: 0.9 }}>
-              {fmeaType} | 현재 값(Current): {currentValue ?? '미선택(Not Selected)'}
+              {fmeaType} | 현재 값: {currentValue ?? '미선택'}
+              {scope && ` | 구분: ${scope}`}
             </p>
           </div>
           <button

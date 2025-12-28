@@ -29,6 +29,40 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
     [state.l2]
   );
 
+  // 확정 상태
+  const isConfirmed = state.failureL3Confirmed || false;
+
+  // 누락 건수 계산
+  const missingCount = useMemo(() => {
+    let count = 0;
+    state.l2.forEach(proc => {
+      (proc.l3 || []).forEach(we => {
+        const causes = we.failureCauses || [];
+        if (causes.length === 0 && we.name && !we.name.includes('클릭')) count++;
+        causes.forEach(c => {
+          if (!c.name || c.name === '클릭' || c.name.includes('추가')) count++;
+        });
+      });
+    });
+    return count;
+  }, [state.l2]);
+
+  // 확정 핸들러
+  const handleConfirm = useCallback(() => {
+    if (missingCount > 0) {
+      alert(`누락된 항목이 ${missingCount}건 있습니다.\n먼저 입력을 완료해주세요.`);
+      return;
+    }
+    setState(prev => ({ ...prev, failureL3Confirmed: true }));
+    saveToLocalStorage?.();
+    alert('3L 고장원인(FC) 분석이 확정되었습니다.');
+  }, [missingCount, setState, saveToLocalStorage]);
+
+  // 수정 핸들러
+  const handleEdit = useCallback(() => {
+    setState(prev => ({ ...prev, failureL3Confirmed: false }));
+  }, [setState]);
+
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
     
@@ -62,7 +96,12 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
     
     setDirty(true);
     setModal(null);
-  }, [modal, setState, setDirty]);
+    
+    // 저장 후 localStorage에 반영
+    if (saveToLocalStorage) {
+      setTimeout(() => saveToLocalStorage(), 100);
+    }
+  }, [modal, setState, setDirty, saveToLocalStorage]);
 
   const handleDelete = useCallback((deletedValues: string[]) => {
     if (!modal) return;
@@ -163,51 +202,73 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
     <div style={{ padding: '0', overflow: 'auto', height: '100%' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
         <colgroup>
-          <col style={{ width: '140px' }} />
+          <col style={{ width: '120px' }} />
+          <col style={{ width: '120px' }} />
+          <col style={{ width: '160px' }} />
           <col style={{ width: '50px' }} />
-          <col style={{ width: '140px' }} />
           <col style={{ width: '280px' }} />
-          <col style={{ width: '60px' }} />
         </colgroup>
         
         {/* 3행 헤더 구조 */}
         <thead>
           {/* 1행: 단계 구분 */}
           <tr>
-            <th colSpan={3} style={{ background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
-              2단계 구조분석
+            <th colSpan={2} style={{ background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
+              P-FMEA 구조 분석(2단계)
             </th>
-            <th colSpan={2} style={{ background: FAIL_COLORS.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
-              4단계 : 3L 고장원인(FC) 분석
+            <th colSpan={2} style={{ background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
+              P-FMEA 기능 분석(3단계)
+            </th>
+            <th style={{ background: FAIL_COLORS.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                <span>P-FMEA 고장 분석(4단계)</span>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {isConfirmed ? (
+                    <span style={{ background: '#4caf50', color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: '10px', fontWeight: 700 }}>✓ 확정됨</span>
+                  ) : (
+                    <button type="button" onClick={handleConfirm} style={{ background: '#4caf50', color: 'white', border: 'none', padding: '2px 8px', borderRadius: '3px', fontSize: '10px', fontWeight: 700, cursor: 'pointer' }}>확정</button>
+                  )}
+                  <span style={{ background: missingCount > 0 ? '#f44336' : '#4caf50', color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: '10px', fontWeight: 700 }}>누락 {missingCount}건</span>
+                  {isConfirmed && (
+                    <button type="button" onClick={handleEdit} style={{ background: '#ff9800', color: 'white', border: 'none', padding: '2px 8px', borderRadius: '3px', fontSize: '10px', fontWeight: 700, cursor: 'pointer' }}>수정</button>
+                  )}
+                </div>
+              </div>
             </th>
           </tr>
           
           {/* 2행: 항목 그룹 */}
           <tr>
-            <th colSpan={3} style={{ background: '#42a5f5', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
-              3. 작업요소
+            <th style={{ background: '#42a5f5', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
+              2. 메인 공정명
             </th>
-            <th colSpan={2} style={{ background: FAIL_COLORS.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
-              3. 고장원인(FC) / 발생도(O)
+            <th style={{ background: '#42a5f5', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
+              3. 작업 요소명
+            </th>
+            <th colSpan={2} style={{ background: '#66bb6a', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
+              3. 작업요소의 기능 및 공정특성
+            </th>
+            <th style={{ background: FAIL_COLORS.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
+              3. 작업요소의 기능 및 공정특성
             </th>
           </tr>
           
           {/* 3행: 세부 컬럼 */}
-          <tr style={{ background: '#e3f2fd' }}>
-            <th style={{ background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
-              소속공정
+          <tr>
+            <th style={{ background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700, textAlign: 'center' }}>
+              NO+공정명
             </th>
             <th style={{ background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700, textAlign: 'center' }}>
-              4M
-            </th>
-            <th style={{ background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
               작업요소
             </th>
-            <th style={{ background: FAIL_COLORS.cellAlt, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
-              고장원인(FC)
+            <th style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700, textAlign: 'center' }}>
+              공정특성
+            </th>
+            <th style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '4px', fontSize: '9px', fontWeight: 700, textAlign: 'center' }}>
+              SC
             </th>
             <th style={{ background: FAIL_COLORS.cellAlt, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700, textAlign: 'center' }}>
-              O
+              고장원인(FC)
             </th>
           </tr>
         </thead>
@@ -215,64 +276,64 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
         <tbody>
           {flatRows.length === 0 ? (
             <tr>
-              <td colSpan={3} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700 }}>
-                (구조분석에서 작업요소 입력)
+              <td style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700 }}>
+                (구조분석에서 공정 입력)
+              </td>
+              <td style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700 }}>
+                (작업요소 입력)
+              </td>
+              <td style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#c8e6c9' }}>
+                (기능분석에서 입력)
+              </td>
+              <td style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#c8e6c9' }}>
+                -
               </td>
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
                 <SelectableCell value="" placeholder="고장원인 선택" bgColor={FAIL_COLORS.cell} onClick={() => {}} />
               </td>
-              <td style={{ border: `1px solid ${COLORS.line}`, padding: '0', textAlign: 'center', background: FAIL_COLORS.cell }}>
-                -
-              </td>
             </tr>
-          ) : flatRows.map((row, idx) => (
-            <tr key={`${row.proc.id}-${row.we?.id || 'empty'}-${row.cause?.id || idx}`}>
-              {row.procRowSpan > 0 && (
-                <td rowSpan={row.procRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '6px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700, verticalAlign: 'middle', fontSize: '11px' }}>
-                  {row.proc.no}. {row.proc.name}
-                </td>
-              )}
-              {row.weRowSpan > 0 && (
-                <>
-                  <td rowSpan={row.weRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '4px', textAlign: 'center', background: '#e8f5e9', verticalAlign: 'middle' }}>
-                    <span style={{ 
-                      background: row.we?.m4 === 'MN' ? '#e3f2fd' : row.we?.m4 === 'MC' ? '#fff3e0' : row.we?.m4 === 'IM' ? '#e8f5e9' : '#fce4ec',
-                      padding: '2px 6px', borderRadius: '3px', fontSize: '9px', fontWeight: 700
-                    }}>
-                      {row.we?.m4 || '-'}
-                    </span>
+          ) : flatRows.map((row, idx) => {
+            // 기능분석에서 입력한 공정특성 가져오기 (we.functions[].processChars[] 에서)
+            const processChars = (row.we?.functions || []).flatMap((f: any) => f.processChars || []);
+            const processChar = processChars[0];
+            
+            return (
+              <tr key={`${row.proc.id}-${row.we?.id || 'empty'}-${row.cause?.id || idx}`}>
+                {row.procRowSpan > 0 && (
+                  <td rowSpan={row.procRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '6px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700, verticalAlign: 'middle', fontSize: '11px' }}>
+                    {row.proc.no}. {row.proc.name}
                   </td>
-                  <td rowSpan={row.weRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '6px', background: '#e8f5e9', verticalAlign: 'middle', fontSize: '11px' }}>
+                )}
+                {row.weRowSpan > 0 && (
+                  <td rowSpan={row.weRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '6px', textAlign: 'center', background: '#bbdefb', verticalAlign: 'middle', fontSize: '11px' }}>
                     {row.we?.name || '(작업요소 없음)'}
                   </td>
-                </>
-              )}
-              <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                {row.we ? (
-                  <SelectableCell 
-                    value={row.cause?.name || ''} 
-                    placeholder="고장원인 선택" 
-                    bgColor={row.cause ? '#fff' : FAIL_COLORS.cell} 
-                    onClick={() => setModal({ type: 'l3FailureCause', processId: row.proc.id, weId: row.we.id, title: `${row.we.name} 고장원인`, itemCode: 'FC1' })} 
-                  />
-                ) : (
-                  <span style={{ color: '#999', fontSize: '10px', padding: '8px', display: 'block' }}>-</span>
                 )}
-              </td>
-              <td style={{ border: `1px solid ${COLORS.line}`, padding: '0', textAlign: 'center', background: row.cause?.occurrence && row.cause.occurrence >= 7 ? '#ffcdd2' : '#fff' }}>
-                {row.cause ? (
-                  <select
-                    value={row.cause.occurrence || ''}
-                    onChange={(e) => updateOccurrence(row.proc.id, row.we.id, row.cause.id, e.target.value ? Number(e.target.value) : undefined)}
-                    style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '11px', fontWeight: 700, cursor: 'pointer', width: '100%', textAlign: 'center' }}
-                  >
-                    <option value="">-</option>
-                    {[1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n} style={{ fontWeight: n >= 7 ? 700 : 400, color: n >= 7 ? '#c62828' : 'inherit' }}>{n}</option>)}
-                  </select>
-                ) : '-'}
-              </td>
-            </tr>
-          ))}
+                {row.weRowSpan > 0 && (
+                  <td rowSpan={row.weRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '6px', textAlign: 'center', background: '#c8e6c9', verticalAlign: 'middle', fontSize: '11px' }}>
+                    {processChar?.name || '(기능분석에서 입력)'}
+                  </td>
+                )}
+                {row.weRowSpan > 0 && (
+                  <td rowSpan={row.weRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '6px', textAlign: 'center', background: '#c8e6c9', verticalAlign: 'middle', fontSize: '11px' }}>
+                    {processChar?.specialChar || '-'}
+                  </td>
+                )}
+                <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
+                  {row.we ? (
+                    <SelectableCell 
+                      value={row.cause?.name || ''} 
+                      placeholder="고장원인 선택" 
+                      bgColor={row.cause ? '#fff' : FAIL_COLORS.cell} 
+                      onClick={() => setModal({ type: 'l3FailureCause', processId: row.proc.id, weId: row.we.id, title: `${row.we.name} 고장원인`, itemCode: 'FC1' })} 
+                    />
+                  ) : (
+                    <span style={{ color: '#999', fontSize: '10px', padding: '8px', display: 'block' }}>-</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 

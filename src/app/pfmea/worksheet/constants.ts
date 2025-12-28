@@ -116,6 +116,10 @@ export interface WorksheetState {
   l1Confirmed?: boolean;
   l2Confirmed?: boolean;
   l3Confirmed?: boolean;
+  // 고장분석 확정 상태
+  failureL1Confirmed?: boolean;
+  failureL2Confirmed?: boolean;
+  failureL3Confirmed?: boolean;
 }
 
 export interface FlatRow {

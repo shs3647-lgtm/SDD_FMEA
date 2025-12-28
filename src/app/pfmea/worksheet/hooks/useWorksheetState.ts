@@ -72,15 +72,29 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         fmeaId: targetId,
         l1: state.l1,
         l2: state.l2,
+        tab: state.tab, // 현재 탭 저장
+        // 구조분석 확정 상태
+        structureConfirmed: (state as any).structureConfirmed || false,
+        // 기능분석 확정 상태
+        l1Confirmed: (state as any).l1Confirmed || false,
+        l2Confirmed: (state as any).l2Confirmed || false,
+        l3Confirmed: (state as any).l3Confirmed || false,
+        // 고장분석 확정 상태
+        failureL1Confirmed: (state as any).failureL1Confirmed || false,
+        failureL2Confirmed: (state as any).failureL2Confirmed || false,
+        failureL3Confirmed: (state as any).failureL3Confirmed || false,
         savedAt: new Date().toISOString(),
       };
       localStorage.setItem(`pfmea_worksheet_${targetId}`, JSON.stringify(worksheetData));
-      console.log('[저장] 워크시트 데이터 저장 완료:', targetId);
+      // 고장형태 저장 확인 로그
+      const l2WithModes = state.l2.filter((p: any) => (p.failureModes || []).length > 0);
+      console.log('[저장] 워크시트 데이터 저장 완료:', targetId, '탭:', state.tab);
+      console.log('[저장] 고장형태 있는 공정 수:', l2WithModes.length, l2WithModes.map((p: any) => `${p.name}: ${(p.failureModes || []).length}개`));
       setDirty(false);
       setLastSaved(new Date().toLocaleTimeString('ko-KR'));
     } catch (e) { console.error('저장 오류:', e); }
     finally { setIsSaving(false); }
-  }, [selectedFmeaId, currentFmea?.id, state.l1, state.l2]);
+  }, [selectedFmeaId, currentFmea?.id, state.l1, state.l2, state.tab]);
 
   const triggerAutoSave = useCallback(() => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -136,20 +150,36 @@ export function useWorksheetState(): UseWorksheetStateReturn {
             ...p,
             functions: p.functions || [],
             productChars: p.productChars || [],
-            failureMode: p.failureMode || '',
+            failureModes: p.failureModes || [], // 고장형태 배열
             l3: (p.l3 || []).map((we: any) => ({
               ...we,
               // MT → IM 마이그레이션
               m4: we.m4 === 'MT' ? 'IM' : (we.m4 || ''),
               functions: we.functions || [],
               processChars: we.processChars || [],
-              failureCause: we.failureCause || ''
+              failureCauses: we.failureCauses || [] // 고장원인 배열
             }))
           }));
 
-          setState(prev => ({ ...prev, l1: migratedL1, l2: migratedL2 }));
+          setState(prev => ({ 
+            ...prev, 
+            l1: migratedL1, 
+            l2: migratedL2,
+            // 탭 및 확정 상태 복원
+            tab: parsed.tab || prev.tab,
+            // 구조분석 확정 상태
+            structureConfirmed: parsed.structureConfirmed || false,
+            // 기능분석 확정 상태
+            l1Confirmed: parsed.l1Confirmed || false,
+            l2Confirmed: parsed.l2Confirmed || false,
+            l3Confirmed: parsed.l3Confirmed || false,
+            // 고장분석 확정 상태
+            failureL1Confirmed: parsed.failureL1Confirmed || false,
+            failureL2Confirmed: parsed.failureL2Confirmed || false,
+            failureL3Confirmed: parsed.failureL3Confirmed || false,
+          }));
           setLastSaved(parsed.savedAt ? new Date(parsed.savedAt).toLocaleTimeString('ko-KR') : '');
-          console.log('[워크시트] 데이터 로드 완료');
+          console.log('[워크시트] 데이터 로드 완료, 탭:', parsed.tab);
         }
       } catch (e) { 
         console.error('데이터 로드 실패:', e); 

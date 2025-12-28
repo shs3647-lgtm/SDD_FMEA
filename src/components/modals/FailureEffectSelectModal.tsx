@@ -143,6 +143,25 @@ export default function FailureEffectSelectModal({
     const newItem = { id: `custom_${Date.now()}`, value: trimmed, category: '추가', group: parentType };
     setCustomEffects(prev => [...prev, newItem]);
     setSelectedEffects(prev => new Set([...prev, trimmed]));
+    
+    // localStorage에 저장
+    try {
+      const savedData = localStorage.getItem('pfmea_master_data');
+      const masterData = savedData ? JSON.parse(savedData) : [];
+      masterData.push({ 
+        id: newItem.id, 
+        itemCode: 'FE', 
+        value: trimmed, 
+        category: '추가',
+        group: parentType,
+        createdAt: new Date().toISOString()
+      });
+      localStorage.setItem('pfmea_master_data', JSON.stringify(masterData));
+      console.log('[FailureEffectSelectModal] 새 항목 저장됨:', trimmed);
+    } catch (e) {
+      console.error('데이터 저장 오류:', e);
+    }
+    
     setNewValue('');
   }, [newValue, allOptions, parentType]);
 
@@ -362,29 +381,47 @@ export default function FailureEffectSelectModal({
             </div>
           </div>
 
-          {/* 입력된 항목 표시 */}
+          {/* 입력된 항목 표시 - 체크박스 포함 */}
           <div className="flex-1">
-            <h3 className="text-sm font-bold text-gray-700 mb-3 px-1">추가된 항목 ({customEffects.length})</h3>
+            <h3 className="text-sm font-bold text-gray-700 mb-3 px-1">
+              추가된 항목 ({customEffects.length})
+              <span className="ml-2 text-red-600">- 선택: {customEffects.filter(e => selectedEffects.has(e.value)).length}개</span>
+            </h3>
             <div className="space-y-2 max-h-[200px] overflow-auto">
-              {customEffects.map(item => (
-                <div key={item.id} className="flex items-center gap-2 p-2 bg-white rounded-lg border">
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 border border-orange-200">추가</span>
-                  <span className="flex-1 text-sm text-gray-700">{item.value}</span>
-                  <button
-                    onClick={() => {
-                      setCustomEffects(prev => prev.filter(e => e.id !== item.id));
-                      setSelectedEffects(prev => {
-                        const newSet = new Set(prev);
-                        newSet.delete(item.value);
-                        return newSet;
-                      });
-                    }}
-                    className="text-red-500 hover:text-red-700 text-sm"
+              {customEffects.map(item => {
+                const isSelected = selectedEffects.has(item.value);
+                return (
+                  <div 
+                    key={item.id}
+                    onClick={() => toggleSelect(item.value)}
+                    className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
+                      isSelected ? 'bg-red-50 border-red-400' : 'bg-white border-gray-200 hover:border-red-300'
+                    }`}
                   >
-                    ✕
-                  </button>
-                </div>
-              ))}
+                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${
+                      isSelected ? 'bg-red-500 border-red-500' : 'bg-white border-gray-300'
+                    }`}>
+                      {isSelected && <span className="text-white text-[8px] font-bold">✓</span>}
+                    </div>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 border border-orange-200">추가</span>
+                    <span className={`flex-1 text-sm ${isSelected ? 'text-red-800 font-medium' : 'text-gray-700'}`}>{item.value}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCustomEffects(prev => prev.filter(ef => ef.id !== item.id));
+                        setSelectedEffects(prev => {
+                          const newSet = new Set(prev);
+                          newSet.delete(item.value);
+                          return newSet;
+                        });
+                      }}
+                      className="text-red-400 hover:text-red-600 text-sm px-1"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
