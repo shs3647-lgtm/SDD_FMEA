@@ -287,12 +287,21 @@ export default function ProcessSelectModal({
                     {isCurrent && <span className="ml-1 text-[9px] font-normal text-green-600">(현재)</span>}
                   </span>
                   
-                  {/* 삭제 버튼 (삭제모드 & 현재 선택된 것만) */}
-                  {deleteMode && isCurrent && (
+                  {/* 개별 삭제 버튼 (현재 선택된 것만) */}
+                  {isCurrent && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleDeleteSingle(proc.id, proc.name); }}
-                      className="p-1 text-red-500 hover:bg-red-100 rounded transition-colors"
-                      title="삭제"
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        if (!window.confirm(`"${proc.name}" 공정을 삭제하시겠습니까?`)) return;
+                        // 해당 항목 선택 해제 후 저장
+                        const newSelectedIds = new Set(selectedIds);
+                        newSelectedIds.delete(proc.id);
+                        const selected = processes.filter(p => newSelectedIds.has(p.id));
+                        onSave(selected);
+                        onClose();
+                      }}
+                      className="p-1.5 text-red-500 hover:bg-red-100 rounded-full transition-colors font-bold"
+                      title="이 공정 삭제"
                     >
                       ✕
                     </button>

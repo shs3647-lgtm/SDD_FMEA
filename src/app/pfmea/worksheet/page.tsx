@@ -408,11 +408,35 @@ function FMEAWorksheetPageContent() {
                     onClick={() => {
                       const missingCount = calculateStructureMissing();
                       if (missingCount > 0) {
-                        alert(`⚠️ 누락건이 ${missingCount}건 있습니다.`);
-                      } else {
-                        alert('✓ 구조분석이 확정되었습니다.');
+                        alert(`⚠️ 누락건이 ${missingCount}건 있습니다.\n\n누락 항목을 채운 후 다시 확정해주세요.`);
+                        return; // 누락이 있으면 확정 안 됨
                       }
-                      setState(prev => ({ ...prev, structureConfirmed: true }));
+                      
+                      // 구조분석 데이터를 기능분석에 연동
+                      setState(prev => {
+                        // L2(공정)에 기능 초기화 (아직 없는 경우만)
+                        const updatedL2 = prev.l2.map(proc => ({
+                          ...proc,
+                          functions: proc.functions?.length > 0 ? proc.functions : [
+                            { id: uid(), name: '(클릭하여 공정기능 입력)', productChars: [] }
+                          ],
+                          l3: proc.l3.map(we => ({
+                            ...we,
+                            functions: we.functions?.length > 0 ? we.functions : [
+                              { id: uid(), name: '(클릭하여 작업요소기능 입력)', processChars: [] }
+                            ],
+                          })),
+                        }));
+                        
+                        return { 
+                          ...prev, 
+                          structureConfirmed: true,
+                          structureConfirmedAt: new Date().toISOString(),
+                          l2: updatedL2,
+                        };
+                      });
+                      
+                      alert('✓ 구조분석이 확정되었습니다.\n\n이제 기능분석(3단계) 탭이 활성화되었습니다.');
                       setDirty(true);
                     }}
                     disabled={(state as any).structureConfirmed}
@@ -1037,6 +1061,16 @@ interface TabMenuProps {
 }
 
 function TabMenu({ state, setState }: TabMenuProps) {
+  const structureConfirmed = (state as any).structureConfirmed || false;
+  
+  // 탭 활성화 조건
+  const isTabEnabled = (tabId: string) => {
+    if (tabId === 'structure') return true; // 구조분석은 항상 활성화
+    if (tabId.startsWith('function-')) return structureConfirmed; // 기능분석은 구조분석 확정 후
+    if (tabId.startsWith('failure-')) return structureConfirmed; // 고장분석도 구조분석 확정 후
+    return structureConfirmed; // 나머지도 구조분석 확정 후
+  };
+  
   return (
     <div className="flex-shrink-0 bg-white py-0.5" style={{ borderBottom: `2px solid ${COLORS.blue}`, paddingLeft: 0, paddingRight: '8px' }}>
       <div className="flex items-center justify-between">
@@ -1045,23 +1079,34 @@ function TabMenu({ state, setState }: TabMenuProps) {
           <div className="flex gap-px">
             {TABS.map(tab => {
               const isActive = state.tab === tab.id;
+              const isEnabled = isTabEnabled(tab.id);
               const activeColor = tab.id === 'structure' ? '#1a237e' : COLORS.blue;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setState(prev => ({ ...prev, tab: tab.id }))}
-                  className="px-2 py-0.5 text-xs font-bold cursor-pointer"
+                  onClick={() => {
+                    if (!isEnabled) {
+                      alert('⚠️ 구조분석을 먼저 확정해주세요.');
+                      return;
+                    }
+                    setState(prev => ({ ...prev, tab: tab.id }));
+                  }}
+                  className="px-2 py-0.5 text-xs font-bold"
                   style={{
-                    background: isActive ? activeColor : '#e8f0f8',
+                    background: isActive ? activeColor : isEnabled ? '#e8f0f8' : '#f0f0f0',
                     borderTop: `1px solid ${isActive ? activeColor : '#c0d0e0'}`,
                     borderRight: `1px solid ${isActive ? activeColor : '#c0d0e0'}`,
                     borderLeft: `1px solid ${isActive ? activeColor : '#c0d0e0'}`,
                     borderBottom: 'none',
                     borderRadius: '2px 2px 0 0',
-                    color: isActive ? '#fff' : COLORS.text
+                    color: isActive ? '#fff' : isEnabled ? COLORS.text : '#aaa',
+                    cursor: isEnabled ? 'pointer' : 'not-allowed',
+                    opacity: isEnabled ? 1 : 0.6,
                   }}
+                  title={!isEnabled ? '구조분석 확정 후 사용 가능' : ''}
                 >
                   {tab.label}
+                  {!isEnabled && <span className="ml-1 text-[8px]">🔒</span>}
                 </button>
               );
             })}
