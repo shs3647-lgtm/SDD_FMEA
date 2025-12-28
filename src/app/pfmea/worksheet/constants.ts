@@ -171,6 +171,7 @@ export const TABS = [
   { id: 'failure-l1', label: '1L 고장영향', step: 4 },
   { id: 'failure-l2', label: '2L 고장형태', step: 4 },
   { id: 'failure-l3', label: '3L 고장원인', step: 4 },
+  { id: 'failure-link', label: '고장연결', step: 4 },
   { id: 'risk', label: '리스크분석', step: 5 },
   { id: 'opt', label: '최적화', step: 6 },
   { id: 'doc', label: '문서화', step: 7 },

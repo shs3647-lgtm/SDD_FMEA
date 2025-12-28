@@ -925,6 +925,7 @@ function getStepNumber(tab: string): number {
     'failure-l1': 4,
     'failure-l2': 4,
     'failure-l3': 4,
+    'failure-link': 4,
     risk: 5, 
     opt: 6, 
     doc: 7, 

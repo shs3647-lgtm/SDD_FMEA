@@ -88,7 +88,7 @@ export default function SODSelectModal({
     >
       <div
         style={{
-          background: 'white', borderRadius: '12px', width: '600px', maxWidth: '95%',
+          background: 'white', borderRadius: '12px', width: '800px', maxWidth: '95%',
           maxHeight: '80vh', display: 'flex', flexDirection: 'column',
           boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
         }}
@@ -118,57 +118,63 @@ export default function SODSelectModal({
         </div>
 
         {/* 테이블 */}
-        <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
+        <div style={{ flex: 1, overflow: 'auto', padding: '12px' }}>
           {filteredItems.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
               <p>등록된 {categoryLabels[category].full} 기준이 없습니다.</p>
               <p style={{ fontSize: '12px' }}>No {categoryLabels[category].en} criteria registered.</p>
-              <p style={{ fontSize: '12px', marginTop: '8px' }}>메뉴바의 '📊SOD' 버튼에서 등록해주세요.</p>
+              <p style={{ fontSize: '12px', marginTop: '8px' }}>메뉴바의'📊SOD' 버튼에서 등록해주세요.</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {filteredItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => handleSelect(item)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '12px',
-                    padding: '12px 16px', border: currentValue === item.rating ? `2px solid ${categoryLabels[category].color}` : '1px solid #e0e0e0',
-                    borderRadius: '8px', cursor: 'pointer', textAlign: 'left',
-                    background: currentValue === item.rating ? '#e3f2fd' : 'white',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  {/* 등급 뱃지 */}
-                  <div style={{
-                    minWidth: '40px', height: '40px', borderRadius: '8px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: 700, fontSize: '18px',
-                    background: item.rating >= 8 ? '#ffcdd2' : item.rating >= 5 ? '#fff9c4' : '#c8e6c9',
-                    color: item.rating >= 8 ? '#c62828' : item.rating >= 5 ? '#f57f17' : '#2e7d32'
-                  }}>
-                    {item.rating}
-                  </div>
-
-                  {/* 내용 */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: '13px', color: '#333' }}>
-                      {item.levelKr} ({item.levelEn})
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#666', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {category === 'S' 
-                        ? item.endUser || item.yourPlant 
-                        : item.criteria || item.description}
-                    </div>
-                  </div>
-
-                  {/* 선택 표시 */}
-                  {currentValue === item.rating && (
-                    <div style={{ color: categoryLabels[category].color, fontSize: '18px' }}>✓</div>
-                  )}
-                </button>
-              ))}
-            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+              <thead>
+                <tr style={{ background: '#c62828', color: 'white' }}>
+                  <th style={{ padding: '8px 6px', border: '1px solid #b71c1c', width: '45px' }}>등급<br/><span style={{ fontSize: '9px', opacity: 0.8 }}>Rating</span></th>
+                  <th style={{ padding: '8px 6px', border: '1px solid #b71c1c', width: '70px' }}>레벨(한글)<br/><span style={{ fontSize: '9px', opacity: 0.8 }}>Level(KR)</span></th>
+                  <th style={{ padding: '8px 6px', border: '1px solid #b71c1c', width: '70px' }}>레벨(영문)<br/><span style={{ fontSize: '9px', opacity: 0.8 }}>Level(EN)</span></th>
+                  <th style={{ padding: '8px 6px', border: '1px solid #b71c1c' }}>
+                    {scope === 'Your Plant' ? '귀사의 공장에 미치는 영향' : scope === 'Ship to Plant' ? '고객사(Ship to Plant)에 미치는 영향' : scope === 'User' ? '최종사용자(End User)에게 미치는 영향' : '설명'}
+                    <br/><span style={{ fontSize: '9px', opacity: 0.8 }}>{scope === 'Your Plant' ? 'Impact to Your Plant' : scope === 'Ship to Plant' ? 'Impact to Ship to Plant' : scope === 'User' ? 'Impact to End User' : 'Description'}</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredItems.map((item) => {
+                  const bgColor = item.rating >= 9 ? '#ef5350' : item.rating >= 7 ? '#ffab91' : item.rating >= 5 ? '#fff59d' : '#c8e6c9';
+                  const textColor = item.rating >= 9 ? '#fff' : '#333';
+                  const content = category === 'S' 
+                    ? (scope === 'Your Plant' ? item.yourPlant : scope === 'Ship to Plant' ? item.shipToPlant : scope === 'User' ? item.endUser : item.yourPlant || item.endUser || item.description)
+                    : item.criteria || item.description;
+                  return (
+                    <tr 
+                      key={item.id} 
+                      onClick={() => handleSelect(item)}
+                      style={{ 
+                        background: currentValue === item.rating ? '#bbdefb' : bgColor, 
+                        cursor: 'pointer',
+                        borderLeft: currentValue === item.rating ? '4px solid #1976d2' : 'none'
+                      }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0.8'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
+                    >
+                      <td style={{ padding: '8px 6px', border: '1px solid #ddd', textAlign: 'center', fontWeight: 700, fontSize: '14px', color: textColor }}>{item.rating}</td>
+                      <td style={{ padding: '8px 6px', border: '1px solid #ddd', textAlign: 'center', color: textColor }}>{item.levelKr}</td>
+                      <td style={{ padding: '8px 6px', border: '1px solid #ddd', textAlign: 'center', color: textColor }}>{item.levelEn}</td>
+                      <td style={{ padding: '8px 6px', border: '1px solid #ddd', color: textColor, lineHeight: '1.4' }}>
+                        <div style={{ fontWeight: 500 }}>{content}</div>
+                        {category === 'S' && content && (
+                          <div style={{ fontSize: '10px', color: item.rating >= 9 ? 'rgba(255,255,255,0.8)' : '#666', marginTop: '3px', fontStyle: 'italic' }}>
+                            {scope === 'Your Plant' && item.shipToPlant && `(고객사: ${item.shipToPlant?.slice(0, 30)}...)`}
+                            {scope === 'Ship to Plant' && item.yourPlant && `(귀사: ${item.yourPlant?.slice(0, 30)}...)`}
+                            {scope === 'User' && item.yourPlant && `(귀사: ${item.yourPlant?.slice(0, 30)}...)`}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           )}
         </div>
 

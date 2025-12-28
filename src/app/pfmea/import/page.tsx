@@ -175,6 +175,154 @@ function PFMEAImportPageContent() {
   const [dirty, setDirty] = useState(false);  // 데이터 변경 여부
   const [selectedRelationRows, setSelectedRelationRows] = useState<Set<string>>(new Set()); // 관계형 테이블 선택 행
   
+  // 샘플 다운로드용 FMEA 선택 상태
+  const [sampleFmeaL0, setSampleFmeaL0] = useState<string>('');
+  const [sampleFmeaL1, setSampleFmeaL1] = useState<string>('');
+  const [sampleFmeaL2, setSampleFmeaL2] = useState<string>('');
+  const [sampleFmeaL3, setSampleFmeaL3] = useState<string>('');
+  
+  // 선택된 FMEA 워크시트 데이터를 엑셀로 다운로드
+  const downloadFmeaSample = async (fmeaId: string, level: 'L0' | 'L1' | 'L2' | 'L3') => {
+    if (!fmeaId) {
+      alert('FMEA를 선택해주세요.');
+      return;
+    }
+    
+    const wsData = localStorage.getItem(`pfmea-worksheet-${fmeaId}`);
+    if (!wsData) {
+      alert('해당 FMEA의 워크시트 데이터가 없습니다.');
+      return;
+    }
+    
+    const ws = JSON.parse(wsData);
+    const fmea = fmeaList.find(f => f.id === fmeaId);
+    const fmeaName = (fmea as any)?.fmeaNo || fmea?.fmeaInfo?.subject || 'FMEA';
+    
+    const ExcelJS = (await import('exceljs')).default;
+    const workbook = new ExcelJS.Workbook();
+    
+    if (level === 'L1') {
+      // 고장영향 데이터 (L1)
+      const sheet = workbook.addWorksheet('L1_고장영향');
+      sheet.columns = [
+        { header: 'No', key: 'no', width: 6 },
+        { header: '구분', key: 'type', width: 15 },
+        { header: '완제품기능', key: 'func', width: 30 },
+        { header: '요구사항', key: 'req', width: 25 },
+        { header: '고장영향', key: 'effect', width: 30 },
+        { header: '심각도', key: 'severity', width: 8 },
+      ];
+      const headerRow = sheet.getRow(1);
+      headerRow.eachCell((cell) => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'EF4444' } }; cell.font = { bold: true, color: { argb: 'FFFFFF' } }; });
+      
+      let rowNo = 1;
+      (ws.l1?.types || []).forEach((t: any) => {
+        (t.functions || []).forEach((fn: any) => {
+          (fn.requirements || []).forEach((req: any) => {
+            (req.failureEffects || [{ name: '' }]).forEach((fe: any) => {
+              sheet.addRow({ no: rowNo++, type: t.typeName, func: fn.name, req: req.name, effect: fe.name || '', severity: fe.severity || '' });
+            });
+          });
+        });
+      });
+      
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `${fmeaName}_L1_고장영향_${new Date().toISOString().slice(0, 10)}.xlsx`; a.click();
+      URL.revokeObjectURL(url);
+      
+    } else if (level === 'L2') {
+      // 고장형태 데이터 (L2)
+      const sheet = workbook.addWorksheet('L2_고장형태');
+      sheet.columns = [
+        { header: 'No', key: 'no', width: 6 },
+        { header: '공정명', key: 'proc', width: 15 },
+        { header: '공정기능', key: 'func', width: 25 },
+        { header: '제품특성', key: 'char', width: 25 },
+        { header: '고장형태', key: 'mode', width: 30 },
+      ];
+      const headerRow = sheet.getRow(1);
+      headerRow.eachCell((cell) => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '3B82F6' } }; cell.font = { bold: true, color: { argb: 'FFFFFF' } }; });
+      
+      let rowNo = 1;
+      (ws.l2 || []).forEach((proc: any) => {
+        (proc.functions || []).forEach((fn: any) => {
+          (fn.productChars || []).forEach((pc: any) => {
+            (pc.failureModes || [{ name: '' }]).forEach((fm: any) => {
+              sheet.addRow({ no: rowNo++, proc: proc.name, func: fn.name, char: pc.name, mode: fm.name || '' });
+            });
+          });
+        });
+      });
+      
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `${fmeaName}_L2_고장형태_${new Date().toISOString().slice(0, 10)}.xlsx`; a.click();
+      URL.revokeObjectURL(url);
+      
+    } else if (level === 'L3') {
+      // 고장원인 데이터 (L3)
+      const sheet = workbook.addWorksheet('L3_고장원인');
+      sheet.columns = [
+        { header: 'No', key: 'no', width: 6 },
+        { header: '공정명', key: 'proc', width: 12 },
+        { header: '작업요소', key: 'we', width: 15 },
+        { header: '요소기능', key: 'func', width: 25 },
+        { header: '공정특성', key: 'char', width: 25 },
+        { header: '고장원인', key: 'cause', width: 30 },
+        { header: '발생도', key: 'occ', width: 8 },
+      ];
+      const headerRow = sheet.getRow(1);
+      headerRow.eachCell((cell) => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '22C55E' } }; cell.font = { bold: true, color: { argb: 'FFFFFF' } }; });
+      
+      let rowNo = 1;
+      (ws.l2 || []).forEach((proc: any) => {
+        (proc.l3 || []).forEach((we: any) => {
+          (we.functions || []).forEach((fn: any) => {
+            (fn.processChars || []).forEach((pc: any) => {
+              (pc.failureCauses || [{ name: '' }]).forEach((fc: any) => {
+                sheet.addRow({ no: rowNo++, proc: proc.name, we: we.name, func: fn.name, char: pc.name, cause: fc.name || '', occ: fc.occurrence || '' });
+              });
+            });
+          });
+        });
+      });
+      
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `${fmeaName}_L3_고장원인_${new Date().toISOString().slice(0, 10)}.xlsx`; a.click();
+      URL.revokeObjectURL(url);
+      
+    } else {
+      // L0 기초정보
+      const sheet = workbook.addWorksheet('L0_기초정보');
+      sheet.columns = [
+        { header: 'No', key: 'no', width: 6 },
+        { header: '완제품공정명', key: 'l1', width: 20 },
+        { header: '메인공정', key: 'l2', width: 20 },
+        { header: '작업요소', key: 'l3', width: 20 },
+      ];
+      const headerRow = sheet.getRow(1);
+      headerRow.eachCell((cell) => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '00587A' } }; cell.font = { bold: true, color: { argb: 'FFFFFF' } }; });
+      
+      let rowNo = 1;
+      (ws.l2 || []).forEach((proc: any) => {
+        (proc.l3 || []).forEach((we: any) => {
+          sheet.addRow({ no: rowNo++, l1: ws.l1?.name || '', l2: proc.name, l3: we.name });
+        });
+      });
+      
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `${fmeaName}_L0_기초정보_${new Date().toISOString().slice(0, 10)}.xlsx`; a.click();
+      URL.revokeObjectURL(url);
+    }
+  };
+  
   // 관계형 데이터 입포트
   const relationFileInputRef = useRef<HTMLInputElement>(null);
   
@@ -897,137 +1045,46 @@ function PFMEAImportPageContent() {
           📥 PFMEA 기초정보 Excel Import
         </h1>
 
-      {/* 상단: FMEA 샘플 다운로드 테이블 */}
-      <div style={{ marginBottom: '12px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #999' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-          <colgroup>
-            <col style={{ width: '200px' }} />
-            <col style={{ width: '120px' }} />
-            <col style={{ width: '120px' }} />
-          </colgroup>
-          <thead>
-            <tr>
-              <th style={{ ...headerStyle, textAlign: 'center' }}>FMEA명</th>
-              <th style={{ ...headerStyle, textAlign: 'center' }}>빈템플렛</th>
-              <th style={{ ...headerStyle, textAlign: 'center' }}>샘플</th>
-            </tr>
-          </thead>
-          <tbody>
-            {/* 기초정보 행 */}
-            <tr>
-              <td style={{ ...cellStyle, textAlign: 'center', padding: '6px' }}>
-                <select style={{ padding: '4px 8px', fontSize: '11px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}>
-                  <option value="">선택</option>
-                  {(() => {
-                    const projects = localStorage.getItem('pfmea-projects');
-                    if (!projects) return null;
-                    return JSON.parse(projects).map((p: any) => (
-                      <option key={p.id} value={p.id}>{p.fmeaNo}</option>
-                    ));
-                  })()}
-                </select>
-              </td>
-              <td style={{ ...cellStyle, textAlign: 'center', padding: '6px' }}>
-                <button onClick={() => downloadEmptyTemplate()} style={{ padding: '4px 12px', background: '#00587a', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>기초정보</button>
-              </td>
-              <td style={{ ...cellStyle, textAlign: 'center', padding: '6px' }}>
-                <button onClick={() => downloadSampleTemplate()} style={{ padding: '4px 12px', background: '#00587a', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>기초정보</button>
-              </td>
-            </tr>
-            {/* 고장영향 행 */}
-            <tr>
-              <td style={{ ...lightBlueStyle, textAlign: 'center', padding: '6px' }}>
-                <select style={{ padding: '4px 8px', fontSize: '11px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}>
-                  <option value="">선택</option>
-                  {(() => {
-                    const projects = localStorage.getItem('pfmea-projects');
-                    if (!projects) return null;
-                    return JSON.parse(projects).map((p: any) => (
-                      <option key={p.id} value={p.id}>{p.fmeaNo}</option>
-                    ));
-                  })()}
-                </select>
-              </td>
-              <td style={{ ...lightBlueStyle, textAlign: 'center', padding: '6px' }}>
-                <button onClick={() => downloadRelationCEmpty()} style={{ padding: '4px 12px', background: '#EF4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>고장영향</button>
-              </td>
-              <td style={{ ...lightBlueStyle, textAlign: 'center', padding: '6px' }}>
-                <button onClick={() => downloadRelationCSample()} style={{ padding: '4px 12px', background: '#EF4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>고장영향</button>
-              </td>
-            </tr>
-            {/* 고장형태 행 */}
-            <tr>
-              <td style={{ ...cellStyle, textAlign: 'center', padding: '6px' }}>
-                <select style={{ padding: '4px 8px', fontSize: '11px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}>
-                  <option value="">선택</option>
-                  {(() => {
-                    const projects = localStorage.getItem('pfmea-projects');
-                    if (!projects) return null;
-                    return JSON.parse(projects).map((p: any) => (
-                      <option key={p.id} value={p.id}>{p.fmeaNo}</option>
-                    ));
-                  })()}
-                </select>
-              </td>
-              <td style={{ ...cellStyle, textAlign: 'center', padding: '6px' }}>
-                <button onClick={() => downloadRelationAEmpty()} style={{ padding: '4px 12px', background: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>고장형태</button>
-              </td>
-              <td style={{ ...cellStyle, textAlign: 'center', padding: '6px' }}>
-                <button onClick={() => downloadRelationASample()} style={{ padding: '4px 12px', background: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>고장형태</button>
-              </td>
-            </tr>
-            {/* 고장원인 행 */}
-            <tr>
-              <td style={{ ...lightBlueStyle, textAlign: 'center', padding: '6px' }}>
-                <select style={{ padding: '4px 8px', fontSize: '11px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}>
-                  <option value="">선택</option>
-                  {(() => {
-                    const projects = localStorage.getItem('pfmea-projects');
-                    if (!projects) return null;
-                    return JSON.parse(projects).map((p: any) => (
-                      <option key={p.id} value={p.id}>{p.fmeaNo}</option>
-                    ));
-                  })()}
-                </select>
-              </td>
-              <td style={{ ...lightBlueStyle, textAlign: 'center', padding: '6px' }}>
-                <button onClick={() => downloadRelationBEmpty()} style={{ padding: '4px 12px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>고장원인</button>
-              </td>
-              <td style={{ ...lightBlueStyle, textAlign: 'center', padding: '6px' }}>
-                <button onClick={() => downloadRelationBSample()} style={{ padding: '4px 12px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>고장원인</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      
-      {/* 기초정보 테이블 */}
+      {/* 기초정보 테이블 (FMEA 선택 + 빈템플렛/샘플 통합) */}
       <div style={tableWrapperStyle}>
       <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-        <colgroup><col style={{ width: '100px' }} /><col /><col /><col /><col /><col /><col /><col style={{ width: '80px' }} /><col style={{ width: '80px' }} /></colgroup>
+        <colgroup>
+          <col style={{ width: '85px' }} />
+          <col /><col /><col /><col /><col /><col />
+          <col style={{ width: '150px' }} />
+          <col style={{ width: '55px' }} />
+          <col style={{ width: '55px' }} />
+        </colgroup>
         <thead>
           <tr>
             <th style={{ ...headerStyle, textAlign: 'center' }}>구분</th>
             <th colSpan={6} style={{ ...headerStyle, textAlign: 'center' }}>항목</th>
-            <th style={{ ...headerStyle, textAlign: 'center' }}>빈템플렛</th>
-            <th style={{ ...headerStyle, textAlign: 'center' }}>샘플</th>
+            <th style={{ ...headerStyle, textAlign: 'center', fontSize: '10px' }}>FMEA명</th>
+            <th style={{ ...headerStyle, textAlign: 'center', fontSize: '10px' }}>빈템플렛</th>
+            <th style={{ ...headerStyle, textAlign: 'center', fontSize: '10px' }}>샘플</th>
           </tr>
         </thead>
         <tbody>
           {/* L0 공통요소 */}
           <tr>
-            <td style={{ ...rowHeaderStyle, textAlign: 'center' }}>L0 공통요소</td>
+            <td style={{ ...rowHeaderStyle, textAlign: 'center', fontSize: '10px' }}>L0 공통</td>
             <td style={cellStyle}>L0-1 사람</td>
             <td style={cellStyle}>L0-2 부자재</td>
             <td style={cellStyle}>L0-3 작업환경</td>
             <td style={cellStyle}></td>
             <td style={cellStyle}></td>
             <td style={cellStyle}></td>
-            <td style={{ ...cellStyle, textAlign: 'center', padding: '4px' }}>
-              <button onClick={() => downloadEmptyTemplate()} style={{ padding: '4px 8px', background: '#00587a', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', whiteSpace: 'nowrap' }}>기초정보</button>
+            <td style={{ ...cellStyle, textAlign: 'center', padding: '2px' }}>
+              <select style={{ padding: '3px', fontSize: '10px', borderRadius: '3px', border: '1px solid #ccc', width: '100%' }}>
+                <option value="">선택</option>
+                {fmeaList.map(f => (<option key={f.id} value={f.id}>{(f as any).fmeaNo || f.fmeaInfo?.subject || 'FMEA'}</option>))}
+              </select>
             </td>
-            <td style={{ ...cellStyle, textAlign: 'center', padding: '4px' }}>
-              <button onClick={() => downloadSampleTemplate()} style={{ padding: '4px 8px', background: '#00587a', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', whiteSpace: 'nowrap' }}>기초정보</button>
+            <td style={{ ...cellStyle, textAlign: 'center', padding: '2px' }}>
+              <button onClick={() => downloadEmptyTemplate()} style={{ padding: '3px 8px', background: '#00587a', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', whiteSpace: 'nowrap' }}>양식</button>
+            </td>
+            <td style={{ ...cellStyle, textAlign: 'center', padding: '2px' }}>
+              <button onClick={() => downloadSampleTemplate()} style={{ padding: '3px 8px', background: '#00587a', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', whiteSpace: 'nowrap' }}>샘플</button>
             </td>
           </tr>
           {/* L1 고장영향 */}
@@ -1039,11 +1096,17 @@ function PFMEAImportPageContent() {
             <td style={cellStyle}>L1-4 고장영향</td>
             <td style={cellStyle}></td>
             <td style={cellStyle}></td>
-            <td style={{ ...cellStyle, textAlign: 'center', padding: '4px' }}>
-              <button onClick={() => downloadRelationCEmpty()} style={{ padding: '4px 8px', background: '#EF4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', whiteSpace: 'nowrap' }}>고장영향</button>
+            <td style={{ ...cellStyle, textAlign: 'center', padding: '2px' }}>
+              <select style={{ padding: '3px', fontSize: '10px', borderRadius: '3px', border: '1px solid #ccc', width: '100%' }}>
+                <option value="">선택</option>
+                {fmeaList.map(f => (<option key={f.id} value={f.id}>{(f as any).fmeaNo || f.fmeaInfo?.subject || 'FMEA'}</option>))}
+              </select>
             </td>
-            <td style={{ ...cellStyle, textAlign: 'center', padding: '4px' }}>
-              <button onClick={() => downloadRelationCSample()} style={{ padding: '4px 8px', background: '#EF4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', whiteSpace: 'nowrap' }}>고장영향</button>
+            <td style={{ ...cellStyle, textAlign: 'center', padding: '2px' }}>
+              <button onClick={() => downloadRelationCEmpty()} style={{ padding: '3px 8px', background: '#EF4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', whiteSpace: 'nowrap' }}>양식</button>
+            </td>
+            <td style={{ ...cellStyle, textAlign: 'center', padding: '2px' }}>
+              <button onClick={() => downloadRelationCSample()} style={{ padding: '3px 8px', background: '#EF4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', whiteSpace: 'nowrap' }}>샘플</button>
             </td>
           </tr>
           {/* L2 고장형태 */}
@@ -1055,11 +1118,17 @@ function PFMEAImportPageContent() {
             <td style={cellStyle}>L2-4 제품특성</td>
             <td style={cellStyle}>L2-5 고장형태</td>
             <td style={cellStyle}>L2-6 검출관리</td>
-            <td style={{ ...cellStyle, textAlign: 'center', padding: '4px' }}>
-              <button onClick={() => downloadRelationAEmpty()} style={{ padding: '4px 8px', background: '#3B82F6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', whiteSpace: 'nowrap' }}>고장형태</button>
+            <td style={{ ...cellStyle, textAlign: 'center', padding: '2px' }}>
+              <select style={{ padding: '3px', fontSize: '10px', borderRadius: '3px', border: '1px solid #ccc', width: '100%' }}>
+                <option value="">선택</option>
+                {fmeaList.map(f => (<option key={f.id} value={f.id}>{(f as any).fmeaNo || f.fmeaInfo?.subject || 'FMEA'}</option>))}
+              </select>
             </td>
-            <td style={{ ...cellStyle, textAlign: 'center', padding: '4px' }}>
-              <button onClick={() => downloadRelationASample()} style={{ padding: '4px 8px', background: '#3B82F6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', whiteSpace: 'nowrap' }}>고장형태</button>
+            <td style={{ ...cellStyle, textAlign: 'center', padding: '2px' }}>
+              <button onClick={() => downloadRelationAEmpty()} style={{ padding: '3px 8px', background: '#3B82F6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', whiteSpace: 'nowrap' }}>양식</button>
+            </td>
+            <td style={{ ...cellStyle, textAlign: 'center', padding: '2px' }}>
+              <button onClick={() => downloadRelationASample()} style={{ padding: '3px 8px', background: '#3B82F6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', whiteSpace: 'nowrap' }}>샘플</button>
             </td>
           </tr>
           {/* L3 고장원인 */}
@@ -1071,11 +1140,17 @@ function PFMEAImportPageContent() {
             <td style={cellStyle}>L3-4 고장원인</td>
             <td style={cellStyle}>L3-5 예방관리</td>
             <td style={cellStyle}></td>
-            <td style={{ ...cellStyle, textAlign: 'center', padding: '4px' }}>
-              <button onClick={() => downloadRelationBEmpty()} style={{ padding: '4px 8px', background: '#22C55E', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', whiteSpace: 'nowrap' }}>고장원인</button>
+            <td style={{ ...cellStyle, textAlign: 'center', padding: '2px' }}>
+              <select style={{ padding: '3px', fontSize: '10px', borderRadius: '3px', border: '1px solid #ccc', width: '100%' }}>
+                <option value="">선택</option>
+                {fmeaList.map(f => (<option key={f.id} value={f.id}>{(f as any).fmeaNo || f.fmeaInfo?.subject || 'FMEA'}</option>))}
+              </select>
             </td>
-            <td style={{ ...cellStyle, textAlign: 'center', padding: '4px' }}>
-              <button onClick={() => downloadRelationBSample()} style={{ padding: '4px 8px', background: '#22C55E', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', whiteSpace: 'nowrap' }}>고장원인</button>
+            <td style={{ ...cellStyle, textAlign: 'center', padding: '2px' }}>
+              <button onClick={() => downloadRelationBEmpty()} style={{ padding: '3px 8px', background: '#22C55E', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', whiteSpace: 'nowrap' }}>양식</button>
+            </td>
+            <td style={{ ...cellStyle, textAlign: 'center', padding: '2px' }}>
+              <button onClick={() => downloadRelationBSample()} style={{ padding: '3px 8px', background: '#22C55E', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', whiteSpace: 'nowrap' }}>샘플</button>
             </td>
           </tr>
         </tbody>

@@ -50,15 +50,16 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
   const [sodModal, setSODModal] = useState<{
     effectId: string;
     currentValue?: number;
+    scope?: 'Your Plant' | 'Ship to Plant' | 'User';
   } | null>(null);
 
   // 확정 상태
   const isConfirmed = state.failureL1Confirmed || false;
 
-  // 누락 건수 계산
+  // 누락 건수 계산 (state.l1.failureScopes 사용)
   const missingCount = useMemo(() => {
     let count = 0;
-    const effects = state.failureEffects || [];
+    const effects = state.l1?.failureScopes || [];
     // 요구사항은 있는데 고장영향이 없는 경우
     const types = state.l1?.types || [];
     types.forEach((type: any) => {
@@ -70,7 +71,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
       });
     });
     return count;
-  }, [state.l1?.types, state.failureEffects]);
+  }, [state.l1?.types, state.l1?.failureScopes]);
 
   // 확정 핸들러
   const handleConfirm = useCallback(() => {
@@ -493,7 +494,11 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                     background: row.severity && row.severity >= 8 ? '#ffcdd2' : row.severity && row.severity >= 5 ? '#fff9c4' : '#fff',
                     cursor: row.effectId ? 'pointer' : 'default'
                   }}
-                  onClick={() => row.effectId && setSODModal({ effectId: row.effectId, currentValue: row.severity })}
+                  onClick={() => row.effectId && setSODModal({ 
+                    effectId: row.effectId, 
+                    currentValue: row.severity,
+                    scope: row.typeName as 'Your Plant' | 'Ship to Plant' | 'User'
+                  })}
                   title={row.effectId ? '클릭하여 심각도 선택' : ''}
                 >
                   {row.effectId ? (
@@ -563,6 +568,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
         category="S"
         fmeaType="P-FMEA"
         currentValue={sodModal?.currentValue}
+        scope={sodModal?.scope}
       />
     </div>
   );

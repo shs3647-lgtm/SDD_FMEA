@@ -10,6 +10,7 @@ import { FailureTabProps } from './types';
 import FailureL1Tab from './FailureL1Tab';
 import FailureL2Tab from './FailureL2Tab';
 import FailureL3Tab from './FailureL3Tab';
+import FailureLinkTab from './FailureLinkTab';
 
 export default function FailureTab(props: FailureTabProps) {
   const { state } = props;
@@ -21,6 +22,10 @@ export default function FailureTab(props: FailureTabProps) {
   
   if (state.tab === 'failure-l3') {
     return <FailureL3Tab {...props} />;
+  }
+  
+  if (state.tab === 'failure-link') {
+    return <FailureLinkTab {...props} />;
   }
   
   // 기본: L1 고장영향 분석
