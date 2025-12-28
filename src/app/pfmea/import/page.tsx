@@ -897,221 +897,112 @@ function PFMEAImportPageContent() {
           📥 PFMEA 기초정보 Excel Import
         </h1>
 
-      {/* 상단: 기초정보 헤더 + 샘플 다운로드 버튼 */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        background: '#00587a', 
-        padding: '8px 12px', 
-        borderRadius: '8px 8px 0 0',
-        marginBottom: '0'
-      }}>
-        <span style={{ color: 'white', fontWeight: 'bold', fontSize: '13px' }}>
-          📋 기초정보
-        </span>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {/* 마스터데이타 샘플 다운로드 */}
-          <button
-            onClick={async () => {
-              const ExcelJS = (await import('exceljs')).default;
-              const workbook = new ExcelJS.Workbook();
-              const sheet = workbook.addWorksheet('마스터데이타');
-              
-              // 현재 저장된 마스터 데이터 가져오기
-              const masterData = localStorage.getItem('pfmea_master_data');
-              const data = masterData ? JSON.parse(masterData) : [];
-              
-              if (data.length === 0) {
-                alert('저장된 마스터데이타가 없습니다.');
-                return;
-              }
-              
-              // 헤더 설정
-              sheet.columns = [
-                { header: 'ID', key: 'id', width: 20 },
-                { header: '항목코드', key: 'itemCode', width: 12 },
-                { header: '공정번호', key: 'processNo', width: 12 },
-                { header: '값', key: 'value', width: 40 },
-                { header: '카테고리', key: 'category', width: 12 },
-                { header: '생성일', key: 'createdAt', width: 20 },
-              ];
-              
-              // 헤더 스타일
-              sheet.getRow(1).eachCell((cell) => {
-                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '00587A' } };
-                cell.font = { bold: true, color: { argb: 'FFFFFF' } };
-                cell.alignment = { horizontal: 'center' };
-              });
-              
-              // 데이터 추가
-              data.forEach((item: any) => sheet.addRow(item));
-              
-              // 다운로드
-              const buffer = await workbook.xlsx.writeBuffer();
-              const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `마스터데이타_${new Date().toISOString().slice(0,10)}.xlsx`;
-              a.click();
-              URL.revokeObjectURL(url);
-            }}
-            style={{ 
-              padding: '4px 10px', 
-              background: '#4CAF50', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '4px', 
-              cursor: 'pointer', 
-              fontSize: '11px',
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-          >
-            📥 마스터데이타
-          </button>
-          
-          {/* FMEA 선택 샘플 다운로드 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ color: 'white', fontSize: '11px' }}>FMEA명:</span>
-            <select
-              value={selectedFmeaId || ''}
-              onChange={(e) => {
-                const url = new URL(window.location.href);
-                if (e.target.value) {
-                  url.searchParams.set('id', e.target.value);
-                } else {
-                  url.searchParams.delete('id');
-                }
-                window.history.pushState({}, '', url.toString());
-              }}
-              style={{ 
-                padding: '4px 8px', 
-                fontSize: '11px', 
-                borderRadius: '4px', 
-                border: 'none',
-                minWidth: '150px'
-              }}
-            >
-              <option value="">선택하세요</option>
-              {(() => {
-                const projects = localStorage.getItem('pfmea-projects');
-                if (!projects) return null;
-                return JSON.parse(projects).map((p: any) => (
-                  <option key={p.id} value={p.id}>{p.fmeaNo} - {p.productName || p.projectName}</option>
-                ));
-              })()}
-            </select>
-            <button
-              onClick={async () => {
-                if (!selectedFmeaId) {
-                  alert('먼저 FMEA를 선택해주세요.');
-                  return;
-                }
-                
-                const ExcelJS = (await import('exceljs')).default;
-                const workbook = new ExcelJS.Workbook();
-                const sheet = workbook.addWorksheet('FMEA_데이터');
-                
-                // 선택된 FMEA 워크시트 데이터 가져오기
-                const worksheetData = localStorage.getItem(`pfmea_worksheet_${selectedFmeaId}`);
-                if (!worksheetData) {
-                  alert('선택된 FMEA의 데이터가 없습니다.');
-                  return;
-                }
-                
-                const data = JSON.parse(worksheetData);
-                
-                // FMEA 구조 데이터를 Excel로 변환
-                sheet.columns = [
-                  { header: '레벨', key: 'level', width: 10 },
-                  { header: '구분', key: 'type', width: 15 },
-                  { header: '공정번호', key: 'no', width: 12 },
-                  { header: '공정명/요소명', key: 'name', width: 25 },
-                  { header: '기능', key: 'function', width: 30 },
-                  { header: '특성', key: 'char', width: 30 },
-                  { header: '고장', key: 'failure', width: 30 },
-                ];
-                
-                // 헤더 스타일
-                sheet.getRow(1).eachCell((cell) => {
-                  cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '00587A' } };
-                  cell.font = { bold: true, color: { argb: 'FFFFFF' } };
-                  cell.alignment = { horizontal: 'center' };
-                });
-                
-                // L1 데이터
-                if (data.l1?.name) {
-                  sheet.addRow({ level: 'L1', type: '완제품', no: '-', name: data.l1.name, function: '', char: '', failure: '' });
-                  (data.l1.types || []).forEach((t: any) => {
-                    (t.functions || []).forEach((f: any) => {
-                      sheet.addRow({ level: 'L1', type: t.name, no: '-', name: '', function: f.name, char: '', failure: '' });
-                      (f.requirements || []).forEach((r: any) => {
-                        sheet.addRow({ level: 'L1', type: '요구사항', no: '-', name: '', function: '', char: r.name, failure: '' });
-                      });
-                    });
-                  });
-                }
-                
-                // L2 데이터
-                (data.l2 || []).forEach((p: any) => {
-                  sheet.addRow({ level: 'L2', type: '공정', no: p.no, name: p.name, function: '', char: '', failure: '' });
-                  (p.functions || []).forEach((f: any) => {
-                    sheet.addRow({ level: 'L2', type: '기능', no: '', name: '', function: f.name, char: '', failure: '' });
-                    (f.productChars || []).forEach((c: any) => {
-                      sheet.addRow({ level: 'L2', type: '제품특성', no: '', name: '', function: '', char: c.name, failure: '' });
-                    });
-                  });
-                  (p.failureModes || []).forEach((m: any) => {
-                    sheet.addRow({ level: 'L2', type: '고장형태', no: '', name: '', function: '', char: '', failure: m.name });
-                  });
-                  // L3 데이터
-                  (p.l3 || []).forEach((we: any) => {
-                    sheet.addRow({ level: 'L3', type: '작업요소', no: '', name: we.name, function: '', char: '', failure: '' });
-                    (we.functions || []).forEach((f: any) => {
-                      sheet.addRow({ level: 'L3', type: '기능', no: '', name: '', function: f.name, char: '', failure: '' });
-                      (f.processChars || []).forEach((c: any) => {
-                        sheet.addRow({ level: 'L3', type: '공정특성', no: '', name: '', function: '', char: c.name, failure: '' });
-                      });
-                    });
-                    (we.failureCauses || []).forEach((c: any) => {
-                      sheet.addRow({ level: 'L3', type: '고장원인', no: '', name: '', function: '', char: '', failure: c.name });
-                    });
-                  });
-                });
-                
-                // 다운로드
-                const buffer = await workbook.xlsx.writeBuffer();
-                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `FMEA_${selectedFmeaId}_${new Date().toISOString().slice(0,10)}.xlsx`;
-                a.click();
-                URL.revokeObjectURL(url);
-              }}
-              style={{ 
-                padding: '4px 10px', 
-                background: '#2196F3', 
-                color: 'white', 
-                border: 'none', 
-                borderRadius: '4px', 
-                cursor: 'pointer', 
-                fontSize: '11px',
-                fontWeight: 'bold'
-              }}
-            >
-              📥 다운로드
-            </button>
-          </div>
-        </div>
+      {/* 상단: FMEA 샘플 다운로드 테이블 */}
+      <div style={{ marginBottom: '12px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #999' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+          <colgroup>
+            <col style={{ width: '200px' }} />
+            <col style={{ width: '120px' }} />
+            <col style={{ width: '120px' }} />
+          </colgroup>
+          <thead>
+            <tr>
+              <th style={{ ...headerStyle, textAlign: 'center' }}>FMEA명</th>
+              <th style={{ ...headerStyle, textAlign: 'center' }}>빈템플렛</th>
+              <th style={{ ...headerStyle, textAlign: 'center' }}>샘플</th>
+            </tr>
+          </thead>
+          <tbody>
+            {/* 기초정보 행 */}
+            <tr>
+              <td style={{ ...cellStyle, textAlign: 'center', padding: '6px' }}>
+                <select style={{ padding: '4px 8px', fontSize: '11px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}>
+                  <option value="">선택</option>
+                  {(() => {
+                    const projects = localStorage.getItem('pfmea-projects');
+                    if (!projects) return null;
+                    return JSON.parse(projects).map((p: any) => (
+                      <option key={p.id} value={p.id}>{p.fmeaNo}</option>
+                    ));
+                  })()}
+                </select>
+              </td>
+              <td style={{ ...cellStyle, textAlign: 'center', padding: '6px' }}>
+                <button onClick={() => downloadEmptyTemplate()} style={{ padding: '4px 12px', background: '#00587a', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>기초정보</button>
+              </td>
+              <td style={{ ...cellStyle, textAlign: 'center', padding: '6px' }}>
+                <button onClick={() => downloadSampleTemplate()} style={{ padding: '4px 12px', background: '#00587a', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>기초정보</button>
+              </td>
+            </tr>
+            {/* 고장영향 행 */}
+            <tr>
+              <td style={{ ...lightBlueStyle, textAlign: 'center', padding: '6px' }}>
+                <select style={{ padding: '4px 8px', fontSize: '11px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}>
+                  <option value="">선택</option>
+                  {(() => {
+                    const projects = localStorage.getItem('pfmea-projects');
+                    if (!projects) return null;
+                    return JSON.parse(projects).map((p: any) => (
+                      <option key={p.id} value={p.id}>{p.fmeaNo}</option>
+                    ));
+                  })()}
+                </select>
+              </td>
+              <td style={{ ...lightBlueStyle, textAlign: 'center', padding: '6px' }}>
+                <button onClick={() => downloadRelationCEmpty()} style={{ padding: '4px 12px', background: '#EF4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>고장영향</button>
+              </td>
+              <td style={{ ...lightBlueStyle, textAlign: 'center', padding: '6px' }}>
+                <button onClick={() => downloadRelationCSample()} style={{ padding: '4px 12px', background: '#EF4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>고장영향</button>
+              </td>
+            </tr>
+            {/* 고장형태 행 */}
+            <tr>
+              <td style={{ ...cellStyle, textAlign: 'center', padding: '6px' }}>
+                <select style={{ padding: '4px 8px', fontSize: '11px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}>
+                  <option value="">선택</option>
+                  {(() => {
+                    const projects = localStorage.getItem('pfmea-projects');
+                    if (!projects) return null;
+                    return JSON.parse(projects).map((p: any) => (
+                      <option key={p.id} value={p.id}>{p.fmeaNo}</option>
+                    ));
+                  })()}
+                </select>
+              </td>
+              <td style={{ ...cellStyle, textAlign: 'center', padding: '6px' }}>
+                <button onClick={() => downloadRelationAEmpty()} style={{ padding: '4px 12px', background: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>고장형태</button>
+              </td>
+              <td style={{ ...cellStyle, textAlign: 'center', padding: '6px' }}>
+                <button onClick={() => downloadRelationASample()} style={{ padding: '4px 12px', background: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>고장형태</button>
+              </td>
+            </tr>
+            {/* 고장원인 행 */}
+            <tr>
+              <td style={{ ...lightBlueStyle, textAlign: 'center', padding: '6px' }}>
+                <select style={{ padding: '4px 8px', fontSize: '11px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}>
+                  <option value="">선택</option>
+                  {(() => {
+                    const projects = localStorage.getItem('pfmea-projects');
+                    if (!projects) return null;
+                    return JSON.parse(projects).map((p: any) => (
+                      <option key={p.id} value={p.id}>{p.fmeaNo}</option>
+                    ));
+                  })()}
+                </select>
+              </td>
+              <td style={{ ...lightBlueStyle, textAlign: 'center', padding: '6px' }}>
+                <button onClick={() => downloadRelationBEmpty()} style={{ padding: '4px 12px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>고장원인</button>
+              </td>
+              <td style={{ ...lightBlueStyle, textAlign: 'center', padding: '6px' }}>
+                <button onClick={() => downloadRelationBSample()} style={{ padding: '4px 12px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>고장원인</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
       
       {/* 기초정보 테이블 */}
-      <div style={{ ...tableWrapperStyle, borderRadius: '0 0 8px 8px', borderTop: 'none' }}>
+      <div style={tableWrapperStyle}>
       <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
         <colgroup><col style={{ width: '100px' }} /><col /><col /><col /><col /><col /><col /><col style={{ width: '80px' }} /><col style={{ width: '80px' }} /></colgroup>
         <thead>
