@@ -234,15 +234,15 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
               </td>
             </tr>
           ) : state.l1.types.map((t, tIdx) => {
+            // 각 구분(type)별 행 수 계산
             const typeRowSpan = t.functions.length === 0 ? 1 : t.functions.reduce((a, f) => a + Math.max(1, f.requirements.length), 0);
             
             return t.functions.length === 0 ? (
               <tr key={t.id}>
-                {tIdx === 0 && (
-                  <td rowSpan={totalRows} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700, verticalAlign: 'middle' }}>
-                    {state.l1.name || '(구조분석에서 입력)'}
-                  </td>
-                )}
+                {/* 완제품 공정명 - 각 구분과 1:1 매칭 */}
+                <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700, verticalAlign: 'middle' }}>
+                  {state.l1.name || '(구조분석에서 입력)'}
+                </td>
                 <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: '#c8e6c9', verticalAlign: 'middle' }}>
                   <SelectableCell value={t.name} placeholder="구분" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
                 </td>
@@ -258,8 +258,9 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
               
               return f.requirements.length === 0 ? (
                 <tr key={f.id}>
-                  {tIdx === 0 && fIdx === 0 && (
-                    <td rowSpan={totalRows} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700, verticalAlign: 'middle' }}>
+                  {/* 완제품 공정명 - 각 구분의 첫 행에서만 표시 (1:1 매칭) */}
+                  {fIdx === 0 && (
+                    <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700, verticalAlign: 'middle' }}>
                       {state.l1.name || '(구조분석에서 입력)'}
                     </td>
                   )}
@@ -277,8 +278,9 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                 </tr>
               ) : f.requirements.map((r, rIdx) => (
                 <tr key={r.id}>
-                  {tIdx === 0 && fIdx === 0 && rIdx === 0 && (
-                    <td rowSpan={totalRows} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700, verticalAlign: 'middle' }}>
+                  {/* 완제품 공정명 - 각 구분의 첫 행에서만 표시 (1:1 매칭) */}
+                  {fIdx === 0 && rIdx === 0 && (
+                    <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700, verticalAlign: 'middle' }}>
                       {state.l1.name || '(구조분석에서 입력)'}
                     </td>
                   )}
