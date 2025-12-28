@@ -525,8 +525,8 @@ function FMEAWorksheetPageContent() {
             </div>
           </div>
 
-          {/* ===== 우측: 트리 영역 (전체보기에서는 숨김) ===== */}
-          {state.tab !== 'all' && (
+          {/* ===== 우측: 트리 영역 (전체보기, 고장연결에서는 숨김) ===== */}
+          {state.tab !== 'all' && state.tab !== 'failure-link' && (
           <div 
             style={{ 
               width: '280px', 
@@ -826,6 +826,80 @@ function FMEAWorksheetPageContent() {
                 </div>
               </>
             )}
+
+            {/* 고장연결 결과 트리 */}
+            {state.tab === 'failure-link' && (() => {
+              const ui = (state as any).failureLinkUI || {};
+              const { currentFMId, currentFM, savedLinks = [], stats = { linkedFM: 0, totalFM: 0, totalLinks: 0 } } = ui;
+              const resultLinks = currentFMId ? savedLinks.filter((l: any) => l.fmId === currentFMId) : [];
+              const COLORS_LINK = { mn: '#eef7ff', mc: '#ffe6e6', en: '#fef0ff', line: '#6f8fb4' };
+              
+              return (
+                <>
+                  <div style={{ background: '#3949ab', color: 'white', padding: '8px 12px', fontSize: '12px', fontWeight: 700, flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>🔗 연결 결과</span>
+                    <span style={{ fontSize: '10px', fontWeight: 400 }}>연결: {stats.linkedFM}/{stats.totalFM} FM</span>
+                  </div>
+                  <div style={{ flex: 1, overflow: 'auto', padding: '4px', background: '#e8eaf6' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8px' }}>
+                      <thead>
+                        <tr>
+                          <th colSpan={3} style={{ background: '#bbdefb', padding: '3px', textAlign: 'center', fontWeight: 700, border: '1px solid #ccc' }}>1. 고장영향(FE)</th>
+                          <th style={{ background: '#fff8e1', padding: '3px', textAlign: 'center', fontWeight: 700, border: '1px solid #ccc' }}>2. FM</th>
+                          <th colSpan={3} style={{ background: '#c8e6c9', padding: '3px', textAlign: 'center', fontWeight: 700, border: '1px solid #ccc' }}>3. 고장원인(FC)</th>
+                        </tr>
+                        <tr>
+                          <th style={{ background: '#e3f2fd', padding: '2px', textAlign: 'center', fontWeight: 600, border: '1px solid #ccc' }}>구분</th>
+                          <th style={{ background: '#e3f2fd', padding: '2px', textAlign: 'center', fontWeight: 600, border: '1px solid #ccc' }}>FE</th>
+                          <th style={{ background: '#e3f2fd', padding: '2px', textAlign: 'center', fontWeight: 600, border: '1px solid #ccc' }}>S</th>
+                          <th style={{ background: '#fff8e1', padding: '2px', textAlign: 'center', fontWeight: 600, border: '1px solid #ccc' }}>FM</th>
+                          <th style={{ background: '#e8f5e9', padding: '2px', textAlign: 'center', fontWeight: 600, border: '1px solid #ccc' }}>4M</th>
+                          <th style={{ background: '#e8f5e9', padding: '2px', textAlign: 'center', fontWeight: 600, border: '1px solid #ccc' }}>작업요소</th>
+                          <th style={{ background: '#e8f5e9', padding: '2px', textAlign: 'center', fontWeight: 600, border: '1px solid #ccc' }}>FC</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {resultLinks.length === 0 ? (
+                          <tr><td colSpan={7} style={{ textAlign: 'center', padding: '20px', color: '#999', fontSize: '10px' }}>
+                            {currentFMId ? '연결된 항목이 없습니다' : 'FM을 선택하세요'}
+                          </td></tr>
+                        ) : resultLinks.map((link: any, idx: number) => {
+                          const m4Bg = link.fcM4 === 'MN' ? COLORS_LINK.mn : link.fcM4 === 'MC' ? COLORS_LINK.mc : COLORS_LINK.en;
+                          return (
+                            <tr key={idx}>
+                              <td style={{ padding: '2px 3px', border: '1px solid #ccc', textAlign: 'center' }}>{link.feScope}</td>
+                              <td style={{ padding: '2px 3px', border: '1px solid #ccc' }}>{link.feText}</td>
+                              <td style={{ padding: '2px 3px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 'bold', color: link.severity >= 8 ? '#c62828' : '#333' }}>{link.severity}</td>
+                              {idx === 0 && (
+                                <td rowSpan={resultLinks.length} style={{ padding: '2px 3px', border: '1px solid #ccc', background: '#fff8e1', fontWeight: 'bold', textAlign: 'center', verticalAlign: 'middle' }}>{link.fmText}</td>
+                              )}
+                              <td style={{ padding: '2px 3px', border: '1px solid #ccc', textAlign: 'center', background: m4Bg }}>{link.fcM4}</td>
+                              <td style={{ padding: '2px 3px', border: '1px solid #ccc' }}>{link.fcWorkElem}</td>
+                              <td style={{ padding: '2px 3px', border: '1px solid #ccc' }}>{link.fcText}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style={{ flexShrink: 0, padding: '6px 10px', borderTop: '1px solid #ccc', background: '#e8eaf6', fontSize: '10px', color: '#3949ab', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>총 {stats.totalLinks}개 연결</span>
+                    <button 
+                      onClick={() => {
+                        const links = (state as any).failureLinks || [];
+                        setState((prev: any) => ({ ...prev, failureLinks: links }));
+                        setDirty(true);
+                        saveToLocalStorage();
+                        alert(`✅ ${links.length}개 고장연결이 저장되었습니다.`);
+                      }}
+                      style={{ padding: '3px 10px', background: '#e74c3c', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontWeight: 'bold', fontSize: '9px' }}
+                    >
+                      💾 저장
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
 
             {(state.tab === 'risk' || state.tab === 'optimize' || state.tab === 'all') && (
               <>
