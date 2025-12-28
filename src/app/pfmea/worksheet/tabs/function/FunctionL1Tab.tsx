@@ -23,7 +23,50 @@ const getTypeColor = (typeName: string) => {
 };
 
 export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalStorage }: FunctionTabProps) {
-  const [modal, setModal] = useState<{ type: string; id: string; title: string; itemCode: string } | null>(null);
+  const [modal, setModal] = useState<{ type: string; id: string; title: string; itemCode: string; parentFunction?: string; parentCategory?: string } | null>(null);
+  
+  // 확정 상태는 state에서 관리 (localStorage에 저장됨)
+  const isConfirmed = (state as any).l1Confirmed || false;
+
+  // 누락 건수 계산: 구분, 기능, 요구사항 중 빈 항목 카운트
+  const missingCount = (() => {
+    let count = 0;
+    // 구분이 없으면 누락
+    if (state.l1.types.length === 0) {
+      count += 1; // 최소 1개 구분 필요
+    }
+    state.l1.types.forEach(t => {
+      // 기능이 없으면 누락
+      if (t.functions.length === 0) {
+        count += 1;
+      }
+      t.functions.forEach(f => {
+        // 요구사항이 없으면 누락
+        if (!f.requirements || f.requirements.length === 0) {
+          count += 1;
+        }
+      });
+    });
+    return count;
+  })();
+
+  // 확정 핸들러
+  const handleConfirm = () => {
+    if (missingCount > 0) {
+      alert(`누락된 항목이 ${missingCount}건 있습니다.\n모든 항목을 입력 후 확정해 주세요.`);
+      return;
+    }
+    setState((prev: any) => ({ ...prev, l1Confirmed: true }));
+    setDirty(true);
+    alert('✅ 완제품 기능분석이 확정되었습니다.');
+  };
+
+  // 수정 핸들러
+  const handleEdit = () => {
+    setState((prev: any) => ({ ...prev, l1Confirmed: false }));
+    setDirty(true);
+    alert('🔓 수정 모드로 전환되었습니다.');
+  };
 
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
@@ -156,11 +199,9 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
   return (
     <div style={{ padding: '0', overflow: 'auto', height: '100%' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+        {/* 컬럼 너비: 완제품공정명 150px, 구분 90px, 완제품기능 auto, 요구사항 200px */}
         <colgroup>
-          <col style={{ width: '150px' }} />
-          <col style={{ width: '120px' }} />
-          <col style={{ width: '250px' }} />
-          <col style={{ width: '250px' }} />
+          <col style={{ width: '150px' }} /><col style={{ width: '90px' }} /><col /><col style={{ width: '200px' }} />
         </colgroup>
         
         {/* 3행 헤더 구조 */}
@@ -190,40 +231,46 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                 <div style={{ display: 'flex', gap: '4px', position: 'absolute', right: '8px' }}>
                   <button
                     type="button"
+                    onClick={handleConfirm}
+                    disabled={isConfirmed}
                     style={{
                       padding: '4px 12px',
-                      background: '#4caf50',
+                      background: isConfirmed ? '#9e9e9e' : '#4caf50',
                       color: 'white',
                       border: 'none',
                       borderRadius: '4px',
                       fontSize: '11px',
                       fontWeight: 700,
-                      cursor: 'pointer'
+                      cursor: isConfirmed ? 'not-allowed' : 'pointer',
+                      opacity: isConfirmed ? 0.7 : 1
                     }}
                   >
-                    확정
+                    {isConfirmed ? '✓ 확정됨' : '확정'}
                   </button>
                   <span style={{
                     padding: '4px 10px',
-                    background: '#ff9800',
+                    background: missingCount > 0 ? '#f44336' : '#4caf50',
                     color: 'white',
                     borderRadius: '4px',
                     fontSize: '11px',
                     fontWeight: 700
                   }}>
-                    누락 0건
+                    누락 {missingCount}건
                   </span>
                   <button
                     type="button"
+                    onClick={handleEdit}
+                    disabled={!isConfirmed}
                     style={{
                       padding: '4px 12px',
-                      background: '#2196f3',
+                      background: !isConfirmed ? '#9e9e9e' : '#2196f3',
                       color: 'white',
                       border: 'none',
                       borderRadius: '4px',
                       fontSize: '11px',
                       fontWeight: 700,
-                      cursor: 'pointer'
+                      cursor: !isConfirmed ? 'not-allowed' : 'pointer',
+                      opacity: !isConfirmed ? 0.7 : 1
                     }}
                   >
                     수정
@@ -267,7 +314,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
             <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
               완제품기능
             </th>
-            <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
+            <th style={{ background: '#ffe0b2', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700, color: '#e65100' }}>
               요구사항
             </th>
           </tr>
@@ -286,7 +333,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                 <SelectableCell value="" placeholder="기능 선택" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l1Function', id: '', title: '완제품 기능 선택', itemCode: 'C2' })} />
               </td>
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                <SelectableCell value="" placeholder="요구사항 선택" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3' })} />
+                <SelectableCell value="" placeholder="요구사항 선택" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
               </td>
             </tr>
           ) : state.l1.types.map((t, tIdx) => {
@@ -306,7 +353,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                   <SelectableCell value="" placeholder="기능 선택" bgColor="#fce4ec" onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} />
                 </td>
                 <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                  <SelectableCell value="" placeholder="요구사항 선택" bgColor="#fce4ec" onClick={() => setModal({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3' })} />
+                  <SelectableCell value="" placeholder="요구사항 선택" bgColor="#fce4ec" onClick={() => setModal({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
                 </td>
               </tr>
             ) : t.functions.map((f, fIdx) => {
@@ -326,10 +373,10 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                     </td>
                   )}
                   <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
-                    <SelectableCell value={f.name} placeholder="기능" bgColor="#fce4ec" onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} />
+                    <SelectableCell value={f.name} placeholder="기능" bgColor="#fce4ec" textColor="#000000" onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} />
                   </td>
                   <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                    <SelectableCell value="" placeholder="요구사항 선택" bgColor="#fff" onClick={() => setModal({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3' })} />
+                    <SelectableCell value="" placeholder="요구사항 선택" bgColor="#fff3e0" textColor="#e65100" onClick={() => setModal({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} />
                   </td>
                 </tr>
               ) : f.requirements.map((r, rIdx) => (
@@ -347,11 +394,11 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                   )}
                   {rIdx === 0 && (
                     <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
-                      <SelectableCell value={f.name} placeholder="기능" bgColor="#fce4ec" onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} />
+                      <SelectableCell value={f.name} placeholder="기능" bgColor="#fce4ec" textColor="#000000" onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} />
                     </td>
                   )}
                   <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                    <SelectableCell value={r.name} placeholder="요구사항" bgColor="#fff" onClick={() => setModal({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3' })} />
+                    <SelectableCell value={r.name} placeholder="요구사항" bgColor="#fff3e0" textColor="#e65100" onClick={() => setModal({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} />
                   </td>
                 </tr>
               ));
@@ -369,6 +416,8 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
           title={modal.title}
           itemCode={modal.itemCode}
           singleSelect={false}
+          parentFunction={modal.parentFunction}
+          parentCategory={modal.parentCategory}
           currentValues={(() => {
             if (modal.type === 'l1Type') return state.l1.types.map(t => t.name);
             if (modal.type === 'l1Function') return state.l1.types.find(t => t.id === modal.id)?.functions.map(f => f.name) || [];

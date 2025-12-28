@@ -111,6 +111,11 @@ export interface WorksheetState {
   levelView: string;
   search: string;
   visibleSteps: number[];
+  // 확정 상태
+  structureConfirmed?: boolean;
+  l1Confirmed?: boolean;
+  l2Confirmed?: boolean;
+  l3Confirmed?: boolean;
 }
 
 export interface FlatRow {

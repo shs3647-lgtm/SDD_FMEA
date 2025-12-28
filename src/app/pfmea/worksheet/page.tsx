@@ -397,8 +397,10 @@ function FMEAWorksheetPageContent() {
                 borderBottom: `1px solid ${COLORS.line}`,
               }}
             >
-              {/* 중앙 타이틀 */}
-              <span>P-FMEA {getTabLabel(state.tab)}({getStepNumber(state.tab)}단계)</span>
+              {/* 중앙 타이틀 - 기능분석 탭은 자체 헤더가 있어서 숨김 */}
+              {!state.tab.startsWith('function') && (
+                <span>P-FMEA {getTabLabel(state.tab)}({getStepNumber(state.tab)}단계)</span>
+              )}
               
               {/* 구조분석일 때만 우측에 확정/누락/수정 버튼 */}
               {state.tab === 'structure' && (
@@ -585,21 +587,31 @@ function FMEAWorksheetPageContent() {
                   </div>
                   {state.l1.types.length === 0 ? (
                     <div style={{ fontSize: '11px', color: '#888', padding: '16px', textAlign: 'center', background: '#f5f5f5', borderRadius: '4px' }}>구분/기능/요구사항을 정의하세요</div>
-                  ) : state.l1.types.map(t => (
-                    <div key={t.id} style={{ marginLeft: '12px', marginBottom: '8px', borderLeft: '2px solid #66bb6a', paddingLeft: '8px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#1b5e20', padding: '4px 8px', background: '#a5d6a7', borderRadius: '3px', marginBottom: '4px' }}>
-                        📋 {t.name}
-                      </div>
-                      {t.functions.map(f => (
-                        <div key={f.id} style={{ marginLeft: '12px', marginBottom: '4px' }}>
-                          <div style={{ fontSize: '10px', color: '#2e7d32', padding: '2px 6px', background: '#c8e6c9', borderRadius: '2px' }}>⚙️ {f.name}</div>
-                          {f.requirements.map(r => (
-                            <div key={r.id} style={{ marginLeft: '16px', fontSize: '9px', color: '#555', padding: '1px 4px' }}>• {r.name}</div>
-                          ))}
+                  ) : state.l1.types.map(t => {
+                    // 구분별 색상 (워크시트와 동일)
+                    const typeColors: Record<string, { bg: string; light: string; text: string; border: string }> = {
+                      'Your Plant': { bg: '#1976d2', light: '#bbdefb', text: '#0d47a1', border: '#1976d2' },
+                      'Ship to Plant': { bg: '#f57c00', light: '#ffe0b2', text: '#e65100', border: '#f57c00' },
+                      'User': { bg: '#7b1fa2', light: '#e1bee7', text: '#4a148c', border: '#7b1fa2' },
+                    };
+                    const color = typeColors[t.name] || { bg: '#388e3c', light: '#c8e6c9', text: '#1b5e20', border: '#388e3c' };
+                    
+                    return (
+                      <div key={t.id} style={{ marginLeft: '12px', marginBottom: '8px', borderLeft: `3px solid ${color.border}`, paddingLeft: '8px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: 'white', padding: '4px 8px', background: color.bg, borderRadius: '3px', marginBottom: '4px' }}>
+                          📋 {t.name}
                         </div>
-                      ))}
-                    </div>
-                  ))}
+                        {t.functions.map(f => (
+                          <div key={f.id} style={{ marginLeft: '12px', marginBottom: '4px' }}>
+                            <div style={{ fontSize: '10px', color: '#000000', fontWeight: 600, padding: '2px 6px', background: '#fce4ec', borderRadius: '2px' }}>⚙️ {f.name}</div>
+                            {f.requirements.map(r => (
+                              <div key={r.id} style={{ marginLeft: '16px', fontSize: '9px', color: '#e65100', fontWeight: 500, padding: '2px 4px', background: '#fff3e0', borderRadius: '2px', marginTop: '2px' }}>• {r.name}</div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
                 </div>
                 <div style={{ flexShrink: 0, padding: '6px 10px', borderTop: '1px solid #ccc', background: '#e8eaed', fontSize: '10px', color: '#666' }}>
                   구분: {state.l1.types.length}개 | 기능: {state.l1.types.reduce((s, t) => s + t.functions.length, 0)}개 | 요구사항: {state.l1.types.reduce((s, t) => s + t.functions.reduce((a, f) => a + f.requirements.length, 0), 0)}개

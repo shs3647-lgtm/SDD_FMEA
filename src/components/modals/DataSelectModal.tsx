@@ -57,6 +57,8 @@ interface DataSelectModalProps {
   processNo?: string;
   processName?: string; // 현재 공정명 표시용
   workElementName?: string; // 현재 작업요소명 표시용
+  parentFunction?: string; // 상위 기능명 표시용 (요구사항 선택 시)
+  parentCategory?: string; // 상위 구분 (Your Plant, Ship to Plant, User) - 필터링용
   processList?: { id: string; no: string; name: string }[]; // 공정 목록 (드롭다운용)
   onProcessChange?: (processId: string) => void; // 공정 변경 콜백
   singleSelect?: boolean;
@@ -73,6 +75,8 @@ export default function DataSelectModal({
   processNo,
   processName,
   workElementName,
+  parentFunction,
+  parentCategory,
   processList,
   onProcessChange,
   singleSelect = false,
@@ -267,13 +271,18 @@ export default function DataSelectModal({
   const filteredItems = useMemo(() => {
     let result = items;
     
+    // ★ 상위 구분(parentCategory)이 있으면 해당 구분 항목만 표시
+    if (parentCategory) {
+      result = result.filter(i => i.belongsTo === parentCategory || !i.belongsTo);
+    }
+    
     // 카테고리 필터 (기본/추가/워크시트)
     if (filterType === 'default') result = result.filter(i => i.category === '기본');
     if (filterType === 'added') result = result.filter(i => i.category === '추가');
     if (filterType === 'worksheet') result = result.filter(i => i.category === '워크시트');
     
-    // 구분 필터 (Your Plant / Ship to Plant / User)
-    if (categoryFilter !== 'All') {
+    // 구분 필터 (Your Plant / Ship to Plant / User) - parentCategory가 없을 때만 적용
+    if (!parentCategory && categoryFilter !== 'All') {
       result = result.filter(i => i.belongsTo === categoryFilter || !i.belongsTo);
     }
     
@@ -284,7 +293,7 @@ export default function DataSelectModal({
     }
     
     return result;
-  }, [items, filterType, search, categoryFilter]);
+  }, [items, filterType, search, categoryFilter, parentCategory]);
 
   const defaultCount = items.filter(i => i.category === '기본').length;
   const addedCount = items.filter(i => i.category === '추가').length;
@@ -365,6 +374,29 @@ export default function DataSelectModal({
               </button>
             ))}
           </div>
+
+          {/* 상위 기능 및 구분 표시 (요구사항 선택 시) */}
+          {(parentFunction || parentCategory) && (
+            <div className="px-4 py-2 border-b bg-gradient-to-r from-green-50 to-emerald-50 shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-green-700 whitespace-nowrap">🔗 상위기능</span>
+                {parentCategory && (
+                  <span className={`px-3 py-1 text-xs font-bold rounded-lg shadow-sm text-white ${
+                    parentCategory === 'Your Plant' ? 'bg-blue-600' :
+                    parentCategory === 'Ship to Plant' ? 'bg-orange-500' :
+                    parentCategory === 'User' ? 'bg-purple-600' : 'bg-gray-500'
+                  }`}>
+                    {parentCategory}
+                  </span>
+                )}
+                {parentFunction && (
+                  <span className="px-4 py-1.5 bg-green-600 text-white text-xs font-bold rounded-lg shadow-sm flex-1">
+                    {parentFunction}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* 현재 공정/작업요소 표시 (드롭다운 또는 뱃지) */}
           {(processName || workElementName || processList) && (
