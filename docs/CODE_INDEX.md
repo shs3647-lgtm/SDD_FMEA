@@ -56,15 +56,17 @@ src/
 | 파일 | 라인 | 역할 | 의존성 |
 |------|------|------|--------|
 | `app/pfmea/worksheet/page.tsx` | ~1400 | 워크시트 메인 | 모든 탭, 모달, 상태관리 |
+| `app/pfmea/worksheet/constants.ts` | 250 | 상수/인터페이스 정의 | - |
 | `app/pfmea/worksheet/columns.ts` | 150 | 컬럼 정의 | types |
 | `app/pfmea/worksheet/excel-export.ts` | 450 | Excel 내보내기 | ExcelJS |
-| `tabs/function/FunctionL1Tab.tsx` | 330 | 1L 기능분석 | SelectableCell, Modal |
-| `tabs/function/FunctionL2Tab.tsx` | 420 | 2L 기능분석 | SelectableCell, Modal |
-| `tabs/function/FunctionL3Tab.tsx` | 520 | 3L 기능분석 (특별특성 연동) | SelectableCell, SpecialCharSelectModal |
+| `hooks/useWorksheetState.ts` | 410 | 워크시트 상태관리 | constants |
+| `tabs/function/FunctionL1Tab.tsx` | 520 | 1L 기능분석 (확정/누락/수정) | SelectableCell, DataSelectModal |
+| `tabs/function/FunctionL2Tab.tsx` | 490 | 2L 기능분석 (확정/누락/수정) | SelectableCell, DataSelectModal |
+| `tabs/function/FunctionL3Tab.tsx` | 580 | 3L 기능분석 (특별특성 연동) | SelectableCell, SpecialCharSelectModal |
 | `tabs/function/constants.ts` | 30 | 기능분석 색상 상수 | - |
-| `tabs/failure/FailureL1Tab.tsx` | 400 | 1L 고장분석 | SelectableCell |
-| `tabs/failure/FailureL2Tab.tsx` | 180 | 2L 고장분석 | SelectableCell |
-| `tabs/failure/FailureL3Tab.tsx` | 250 | 3L 고장분석 | SelectableCell |
+| `tabs/failure/FailureL1Tab.tsx` | 530 | 1L 고장영향 (요구사항 연동) | SelectableCell, SODSelectModal |
+| `tabs/failure/FailureL2Tab.tsx` | 320 | 2L 고장형태 (제품특성 연동, 셀병합) | SelectableCell, DataSelectModal |
+| `tabs/failure/FailureL3Tab.tsx` | 370 | 3L 고장원인 (공정특성 연동) | SelectableCell, DataSelectModal |
 
 #### 색상 표준 (2025-12-28)
 | 단계 | 색상 | HEX |
@@ -86,6 +88,22 @@ src/
 | 파일 | 라인 | 역할 | 의존성 |
 |------|------|------|--------|
 | `components/CompanyLogo.tsx` | 206 | 회사 로고 | Image |
+
+### 6. 모달 컴포넌트 (2025-12-28)
+| 파일 | 라인 | 역할 | 의존성 |
+|------|------|------|--------|
+| `components/modals/BaseModal.tsx` | 120 | 기본 모달 (드래그 이동) | - |
+| `components/modals/DataSelectModal.tsx` | 720 | 데이터 선택 모달 | BaseModal |
+| `components/modals/SODSelectModal.tsx` | 280 | 심각도/발생도/검출도 선택 | BaseModal |
+| `components/modals/SpecialCharSelectModal.tsx` | 180 | 특별특성 선택 | BaseModal |
+| `components/modals/FailureModeSelectModal.tsx` | 350 | 고장형태 선택 | BaseModal |
+| `components/modals/FailureCauseSelectModal.tsx` | 380 | 고장원인 선택 | BaseModal |
+| `components/modals/FailureEffectSelectModal.tsx` | 340 | 고장영향 선택 | BaseModal |
+
+### 7. 워크시트 컴포넌트 (2025-12-28)
+| 파일 | 라인 | 역할 | 의존성 |
+|------|------|------|--------|
+| `components/worksheet/SelectableCell.tsx` | 120 | 선택/편집 가능 셀 | - |
 
 ---
 
@@ -179,6 +197,10 @@ PFMEA (예정)
 | 2025-12-26 | PFMEA Import 모듈 추가 (PRD-026, 507행, 4파일) | AI |
 | 2025-12-28 | 트리뷰 색상 표준화 (구조:파랑, 기능:진한녹색, 고장:빨강) | AI |
 | 2025-12-28 | FunctionL3Tab 특별특성 모달 연동 완료 | AI |
+| 2025-12-28 | 고장분석 탭 데이터 연동 개선 (기능분석 → 고장분석) | AI |
+| 2025-12-28 | FailureL2Tab 제품특성 셀 병합 로직 수정 | AI |
+| 2025-12-28 | useWorksheetState 고장분석 확정상태 저장/로딩 추가 | AI |
+| 2025-12-28 | 모달 드래그 이동 기능 추가 (BaseModal) | AI |
 
 ---
 
