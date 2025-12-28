@@ -158,9 +158,9 @@ export async function exportFMEAWorksheet(state: WorksheetState, fmeaName: strin
         l2Name: proc.name,
         m4: elem.m4,
         l3Name: elem.name,
-        l2Function: proc.function || '',
-        l2ProductChar: proc.productChar || '',
-        l3ProcessChar: elem.processChar || '',
+        l2Function: proc.functions?.map(f => f.name).join(', ') || '',
+        l2ProductChar: proc.productChars?.map(c => c.name).join(', ') || '',
+        l3ProcessChar: elem.processChars?.map(c => c.name).join(', ') || '',
         l1FailureEffect: state.l1.failureEffect || '',
         l1Severity: state.l1.severity,
         l2FailureMode: proc.failureMode || '',
@@ -423,14 +423,18 @@ export async function importStructureAnalysis(
         no: proc.no,
         name: proc.name,
         order: (pIdx + 1) * 10,
+        functions: [],
+        productChars: [],
         l3: proc.elements.length > 0 
           ? proc.elements.map((elem, eIdx) => ({
               id: `elem_${Date.now()}_${pIdx}_${eIdx}`,
               m4: elem.m4,
               name: elem.name,
               order: (eIdx + 1) * 10,
+              functions: [],
+              processChars: [],
             }))
-          : [{ id: `elem_${Date.now()}_${pIdx}_0`, m4: '', name: '(작업요소 추가)', order: 10 }]
+          : [{ id: `elem_${Date.now()}_${pIdx}_0`, m4: '', name: '(작업요소 추가)', order: 10, functions: [], processChars: [] }]
       }));
 
       return {

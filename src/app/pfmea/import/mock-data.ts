@@ -86,7 +86,7 @@ export const generateRelations = (data: ImportRowData[]): GeneratedRelation[] =>
         processNo: row.processNo,
         processName: row.processName,
         l1: {
-          productFunction: row.productFunction,
+          productFunction: row.productFunction || row.productFunc || '',
           requirement: row.requirement,
           failureEffect: row.failureEffect,
         },
@@ -113,7 +113,7 @@ export const generateRelations = (data: ImportRowData[]): GeneratedRelation[] =>
 
     // L3 데이터 추가 (중복 제거)
     if (row.workElement && !rel.l3.workElements.find(w => w.name === row.workElement)) {
-      rel.l3.workElements.push({ name: row.workElement, func: row.workElementFunc });
+      rel.l3.workElements.push({ name: row.workElement, func: row.workElementFunc || row.elementFunc || '' });
     }
     if (row.processChar && !rel.l3.processChars.includes(row.processChar)) {
       rel.l3.processChars.push(row.processChar);

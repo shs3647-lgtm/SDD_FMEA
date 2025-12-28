@@ -15,11 +15,11 @@ export default function FunctionTab(props: FunctionTabProps) {
   const { state } = props;
   
   // 메인 탭에서 직접 레벨 결정
-  if (state.tab === 'function-l2' || state.tab === 'function' && state.level === 2) {
+  if (state.tab === 'function-l2') {
     return <FunctionL2Tab {...props} />;
   }
   
-  if (state.tab === 'function-l3' || state.tab === 'function' && state.level === 3) {
+  if (state.tab === 'function-l3') {
     return <FunctionL3Tab {...props} />;
   }
   

@@ -11,7 +11,7 @@ export interface AtomicUnit {
   description?: string;
 }
 
-// L1 트리 구조
+// L1 트리 구조 (기능분석)
 export interface L1Requirement extends AtomicUnit {
   failureEffect?: string;
   severity?: number;
@@ -23,16 +23,43 @@ export interface L1Type extends AtomicUnit {
   functions: L1Function[];
 }
 
+// L1 고장분석 구조
+export interface L1FailureEffect extends AtomicUnit {
+  severity?: number;
+}
+// 1L 고장영향 데이터 구조 (요구사항 -> 구분 -> 고장영향 -> 심각도)
+export interface L1FailureScope extends AtomicUnit {
+  requirement?: string; // 연결된 요구사항
+  scope?: string; // Your Plant / Ship to Plant / User
+  effect?: string; // 고장영향 내용
+  severity?: number; // 심각도
+  effects?: L1FailureEffect[]; // 하위호환용 (deprecated)
+}
+
 // L2 메인공정 기능/특성
-export interface L2ProductChar extends AtomicUnit {}
+export interface L2ProductChar extends AtomicUnit {
+  specialChar?: string;
+}
 export interface L2Function extends AtomicUnit {
   productChars: L2ProductChar[];
 }
 
+// L2 고장분석 구조
+export interface L2FailureMode extends AtomicUnit {
+  sc?: boolean; // 특별특성
+}
+
 // L3 작업요소 기능/특성
-export interface L3ProcessChar extends AtomicUnit {}
+export interface L3ProcessChar extends AtomicUnit {
+  specialChar?: string;
+}
 export interface L3Function extends AtomicUnit {
   processChars: L3ProcessChar[];
+}
+
+// L3 고장분석 구조
+export interface L3FailureCause extends AtomicUnit {
+  occurrence?: number; // 발생도
 }
 
 // ============ 구조 요소 (Structure Elements) ============
@@ -46,6 +73,8 @@ export interface WorkElement {
   functions: L3Function[];
   processChars?: L3ProcessChar[]; // 하위호환용 (deprecated, 기능별로 관리)
   failureCause?: string; // 나중에 Atomic 연계 예정
+  // 고장분석: 원자적 고장원인 배열
+  failureCauses?: L3FailureCause[];
 }
 
 export interface Process {
@@ -58,6 +87,8 @@ export interface Process {
   functions: L2Function[];
   productChars?: L2ProductChar[]; // 하위호환용 (deprecated, 기능별로 관리)
   failureMode?: string; // 나중에 Atomic 연계 예정
+  // 고장분석: 원자적 고장형태 배열
+  failureModes?: L2FailureMode[];
 }
 
 export interface L1Data {
@@ -66,6 +97,8 @@ export interface L1Data {
   types: L1Type[]; 
   failureEffect?: string; // 나중에 Atomic 연계 예정
   severity?: number;
+  // 고장분석: 원자적 고장영향 스코프/효과 배열
+  failureScopes?: L1FailureScope[];
 }
 
 // ============ 워크시트 상태 ============
@@ -126,7 +159,9 @@ export const TABS = [
   { id: 'function-l1', label: '1L 완제품 기능', step: 3 },
   { id: 'function-l2', label: '2L 메인공정 기능', step: 3 },
   { id: 'function-l3', label: '3L 작업요소 기능', step: 3 },
-  { id: 'failure', label: '고장분석', step: 4 },
+  { id: 'failure-l1', label: '1L 고장영향', step: 4 },
+  { id: 'failure-l2', label: '2L 고장형태', step: 4 },
+  { id: 'failure-l3', label: '3L 고장원인', step: 4 },
   { id: 'risk', label: '리스크분석', step: 5 },
   { id: 'opt', label: '최적화', step: 6 },
   { id: 'doc', label: '문서화', step: 7 },
@@ -134,9 +169,8 @@ export const TABS = [
 
 export const ALL_VIEW_TAB = { id: 'all', label: '전체보기' } as const;
 
-export const LEVELS = [
-  { id: '1', label: '1L' }, { id: '2', label: '2L' }, { id: '3', label: '3L' }, { id: 'all', label: 'All' },
-] as const;
+// LEVELS는 더 이상 사용하지 않음 (삭제됨)
+export const LEVELS = [] as const;
 
 export const uid = () => 'id_' + Math.random().toString(16).slice(2) + '_' + Date.now().toString(16);
 

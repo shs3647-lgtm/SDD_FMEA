@@ -12,6 +12,7 @@ import { useRef, useEffect, useCallback } from 'react';
 import { HotTable, HotColumn } from '@handsontable/react';
 import { registerAllModules } from 'handsontable/registry';
 import type { CellChange } from 'handsontable/common';
+import Handsontable from 'handsontable';
 import 'handsontable/dist/handsontable.full.min.css';
 
 import { PFMEA_COLUMNS, COLUMN_GROUPS, getNestedHeaders } from './columns';
@@ -28,14 +29,15 @@ interface FMEAWorksheetProps {
 
 /** PFMEA 워크시트 컴포넌트 */
 export function FMEAWorksheet({ data, onChange, readOnly = false }: FMEAWorksheetProps) {
-  const hotRef = useRef<HotTable>(null);
+  const hotRef = useRef<any>(null);
   
   // 데이터 변경 핸들러
   const handleAfterChange = useCallback(
     (changes: CellChange[] | null, source: string) => {
       if (!changes || source === 'loadData') return;
       
-      const hotInstance = hotRef.current?.hotInstance;
+      // HotTable에서 핫 인스턴스 접근 (타입 체크 우회)
+      const hotInstance = (hotRef.current as any)?.hotInstance;
       if (!hotInstance) return;
       
       // 데이터 복사
@@ -101,7 +103,7 @@ export function FMEAWorksheet({ data, onChange, readOnly = false }: FMEAWorkshee
   
   // 컬럼 그룹 헤더 스타일링
   useEffect(() => {
-    const hot = hotRef.current?.hotInstance;
+    const hot = (hotRef.current as any)?.hotInstance;
     if (!hot) return;
     
     // 커스텀 스타일 적용

@@ -8,14 +8,14 @@
  * @refactored 모듈화 - constants, hooks, tabs 분리
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import ProcessSelectModal from './ProcessSelectModal';
 import WorkElementSelectModal from './WorkElementSelectModal';
 import PFMEATopNav from '@/components/layout/PFMEATopNav';
 
 // 모듈화된 상수, hooks, 탭 컴포넌트
-import { COLORS, TABS, LEVELS, uid, getTabLabel, WorksheetState, WorkElement, Process } from './constants';
+import { COLORS, TABS, uid, getTabLabel, WorksheetState, WorkElement, Process, FlatRow } from './constants';
 import { useWorksheetState } from './hooks';
 import { 
   StructureTab, StructureColgroup, StructureHeader, StructureRow,
@@ -25,6 +25,7 @@ import {
   OptTab, OptHeader, OptRow,
   DocTab, DocHeader, DocRow,
 } from './tabs';
+import { FailureTab as FailureTabNew, FailureL1Tab, FailureL2Tab, FailureL3Tab } from './tabs/failure';
 import { 
   exportFMEAWorksheet, 
   exportStructureAnalysis, 
@@ -32,11 +33,12 @@ import {
   downloadStructureTemplate 
 } from './excel-export';
 import SpecialCharMasterModal from '@/components/modals/SpecialCharMasterModal';
+import SODMasterModal from '@/components/modals/SODMasterModal';
 
 /**
- * FMEA 워크시트 메인 페이지
+ * FMEA 워크시트 메인 페이지 컨텐츠
  */
-export default function FMEAWorksheetPage() {
+function FMEAWorksheetPageContent() {
   const router = useRouter();
   
   // 워크시트 상태 관리 Hook
@@ -67,6 +69,7 @@ export default function FMEAWorksheetPage() {
   const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
   const [isWorkElementModalOpen, setIsWorkElementModalOpen] = useState(false);
   const [isSpecialCharModalOpen, setIsSpecialCharModalOpen] = useState(false);
+  const [isSODModalOpen, setIsSODModalOpen] = useState(false);
   const [targetL2Id, setTargetL2Id] = useState<string | null>(null);
   
   // 트리 접기/펼치기 상태
@@ -136,7 +139,9 @@ export default function FMEAWorksheetPage() {
           no: p.no,
           name: p.name,
           order: (keepL2.length + idx + 1) * 10,
-          l3: [{ id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10 }]
+          functions: [],
+          productChars: [],
+          l3: [{ id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10, functions: [], processChars: [] }]
         }));
       
       let finalL2 = [...keepL2, ...newL2];
@@ -146,7 +151,9 @@ export default function FMEAWorksheetPage() {
           no: '',
           name: '(클릭하여 공정 선택)',
           order: 10,
-          l3: [{ id: uid(), m4: '', name: '(공정 선택 후 작업요소 추가)', order: 10 }]
+          functions: [],
+          productChars: [],
+          l3: [{ id: uid(), m4: '', name: '(공정 선택 후 작업요소 추가)', order: 10, functions: [], processChars: [] }]
         }];
       }
       return { ...prev, l2: finalL2 };
@@ -166,11 +173,13 @@ export default function FMEAWorksheetPage() {
           id: uid(),
           m4: e.m4,
           name: e.name,
-          order: (idx + 1) * 10
+          order: (idx + 1) * 10,
+          functions: [],
+          processChars: [],
         }));
         
         if (newL3.length === 0) {
-          newL3.push({ id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10 });
+          newL3.push({ id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10, functions: [], processChars: [] });
         }
         return { ...proc, l3: newL3 };
       });
@@ -192,7 +201,7 @@ export default function FMEAWorksheetPage() {
         
         // 모두 삭제되면 기본 항목 추가
         if (remainingL3.length === 0) {
-          remainingL3.push({ id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10 });
+          remainingL3.push({ id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10, functions: [], processChars: [] });
         }
         
         return { ...proc, l3: remainingL3 };
@@ -268,6 +277,7 @@ export default function FMEAWorksheetPage() {
           onImportFile={handleImportFile}
           onDownloadTemplate={handleDownloadTemplate}
           onOpenSpecialChar={() => setIsSpecialCharModalOpen(true)}
+          onOpenSOD={() => setIsSODModalOpen(true)}
         />
 
         {/* ========== 메인 레이아웃 (좌측:워크시트 / 우측:트리 완전 분리) ========== */}
@@ -323,10 +333,11 @@ export default function FMEAWorksheetPage() {
             >
               {state.tab.startsWith('function') ? (
                 <FunctionTabFull {...tabProps} />
+              ) : state.tab.startsWith('failure') ? (
+                <FailureTabFull {...tabProps} />
               ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                   {state.tab === 'structure' && <StructureTabFull {...tabProps} />}
-                  {state.tab === 'failure' && <FailureTabFull {...tabProps} />}
                   {state.tab === 'risk' && <RiskTabFull {...tabProps} />}
                   {state.tab === 'opt' && <OptTabFull {...tabProps} />}
                   {state.tab === 'doc' && <DocTabFull {...tabProps} />}
@@ -502,7 +513,142 @@ export default function FMEAWorksheetPage() {
               </>
             )}
 
-            {(state.tab === 'failure' || state.tab === 'risk' || state.tab === 'optimize' || state.tab === 'all') && (
+            {/* 1L 고장영향 트리 */}
+            {state.tab === 'failure-l1' && (
+              <>
+                <div style={{ background: '#c62828', color: 'white', padding: '8px 12px', fontSize: '12px', fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                  ⚠️ 1L 고장영향 트리 (FE)
+                </div>
+                <div style={{ flex: 1, overflow: 'auto', padding: '8px', background: '#ffebee' }}>
+                  {/* 완제품 공정명 */}
+                  <div style={{ fontWeight: 700, fontSize: '12px', marginBottom: '8px', color: '#c62828', padding: '4px 8px', background: '#ffcdd2', borderRadius: '4px' }}>
+                    📦 {state.l1.name || '(완제품 공정명)'}
+                  </div>
+                  
+                  {/* 구분별 트리 */}
+                  {(state.l1.types || []).map((type: any) => (
+                    <div key={type.id} style={{ marginLeft: '8px', marginBottom: '8px' }}>
+                      {/* 구분 (Your Plant / Ship to Plant / User) */}
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#d32f2f', padding: '2px 6px', background: '#ffe0e0', borderRadius: '3px', marginBottom: '4px' }}>
+                        🏷️ {type.name}
+                      </div>
+                      
+                      {/* 기능 → 요구사항 → 고장영향 */}
+                      {(type.functions || []).length === 0 ? (
+                        <div style={{ marginLeft: '12px', fontSize: '9px', color: '#999', fontStyle: 'italic' }}>
+                          (기능 미입력)
+                        </div>
+                      ) : (type.functions || []).map((func: any) => (
+                        <div key={func.id} style={{ marginLeft: '12px', marginBottom: '4px' }}>
+                          {/* 요구사항 */}
+                          {(func.requirements || []).length === 0 ? (
+                            <div style={{ fontSize: '9px', color: '#999', fontStyle: 'italic' }}>
+                              (요구사항 미입력)
+                            </div>
+                          ) : (func.requirements || []).map((req: any) => {
+                            // 해당 요구사항의 고장영향 찾기
+                            const effects = (state.l1.failureScopes || []).filter((s: any) => s.reqId === req.id);
+                            return (
+                              <div key={req.id} style={{ marginBottom: '4px' }}>
+                                <div style={{ fontSize: '10px', fontWeight: 600, color: '#555', padding: '1px 4px' }}>
+                                  📋 {req.name}
+                                </div>
+                                {/* 고장영향 */}
+                                {effects.length === 0 ? (
+                                  <div style={{ marginLeft: '16px', fontSize: '9px', color: '#aaa', fontStyle: 'italic' }}>
+                                    (고장영향 미입력)
+                                  </div>
+                                ) : effects.map((eff: any) => (
+                                  <div key={eff.id} style={{ marginLeft: '16px', fontSize: '9px', color: '#666', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                    <span>⚡ {eff.effect || '(미입력)'}</span>
+                                    {eff.severity && (
+                                      <span style={{ 
+                                        color: eff.severity >= 8 ? '#fff' : '#666', 
+                                        fontWeight: 700,
+                                        background: eff.severity >= 8 ? '#c62828' : '#e0e0e0',
+                                        padding: '0 4px',
+                                        borderRadius: '2px',
+                                        fontSize: '8px'
+                                      }}>
+                                        S:{eff.severity}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                  
+                  {(state.l1.types || []).length === 0 && (
+                    <div style={{ textAlign: 'center', color: '#999', fontSize: '10px', padding: '20px' }}>
+                      기능분석(L1)에서 구분을 먼저 입력해주세요.
+                    </div>
+                  )}
+                </div>
+                <div style={{ flexShrink: 0, padding: '6px 10px', borderTop: '1px solid #ffcdd2', background: '#ffebee', fontSize: '10px', color: '#c62828' }}>
+                  구분: {(state.l1.types || []).length}개 | 
+                  요구사항: {(state.l1.types || []).reduce((s: number, t: any) => s + (t.functions || []).reduce((a: number, f: any) => a + (f.requirements || []).length, 0), 0)}개 | 
+                  고장영향: {(state.l1.failureScopes || []).filter((s: any) => s.effect).length}개
+                </div>
+              </>
+            )}
+
+            {/* 2L 고장형태 트리 */}
+            {state.tab === 'failure-l2' && (
+              <>
+                <div style={{ background: '#ad1457', color: 'white', padding: '8px 12px', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
+                  🔥 2L 고장형태 트리 (FM)
+                </div>
+                <div style={{ flex: 1, overflow: 'auto', padding: '8px', background: '#fce4ec' }}>
+                  {state.l2.filter(p => p.name && !p.name.includes('클릭')).map(proc => (
+                    <div key={proc.id} style={{ marginBottom: '8px' }}>
+                      <div style={{ fontSize: '10px', fontWeight: 700, color: '#ad1457' }}>🔧 {proc.no}. {proc.name}</div>
+                      {(proc.failureModes || []).map((m: any) => (
+                        <div key={m.id} style={{ marginLeft: '16px', fontSize: '9px', color: '#666', display: 'flex', gap: '8px' }}>
+                          <span>└ {m.name}</span>
+                          {m.sc && <span style={{ background: '#c62828', color: 'white', padding: '0 4px', borderRadius: '2px', fontSize: '8px' }}>SC</span>}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* 3L 고장원인 트리 */}
+            {state.tab === 'failure-l3' && (
+              <>
+                <div style={{ background: '#6a1b9a', color: 'white', padding: '8px 12px', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
+                  ⚡ 3L 고장원인 트리 (FC)
+                </div>
+                <div style={{ flex: 1, overflow: 'auto', padding: '8px', background: '#f3e5f5' }}>
+                  {state.l2.filter(p => p.name && !p.name.includes('클릭')).map(proc => (
+                    <div key={proc.id} style={{ marginBottom: '8px' }}>
+                      <div style={{ fontSize: '10px', fontWeight: 700, color: '#6a1b9a' }}>🔧 {proc.no}. {proc.name}</div>
+                      {(proc.l3 || []).filter((w: any) => w.name && !w.name.includes('클릭')).map((we: any) => (
+                        <div key={we.id} style={{ marginLeft: '12px', marginBottom: '4px' }}>
+                          <div style={{ fontSize: '9px', fontWeight: 600, color: '#8e24aa' }}>
+                            [{we.m4}] {we.name}
+                          </div>
+                          {(we.failureCauses || []).map((c: any) => (
+                            <div key={c.id} style={{ marginLeft: '16px', fontSize: '9px', color: '#666', display: 'flex', gap: '8px' }}>
+                              <span>└ {c.name}</span>
+                              {c.occurrence && <span style={{ color: c.occurrence >= 7 ? '#c62828' : '#666', fontWeight: c.occurrence >= 7 ? 700 : 400 }}>O:{c.occurrence}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {(state.tab === 'risk' || state.tab === 'optimize' || state.tab === 'all') && (
               <>
                 {/* 전체 트리 */}
                 <div style={{ background: '#455a64', color: 'white', padding: '8px 12px', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
@@ -544,7 +690,7 @@ export default function FMEAWorksheetPage() {
               if (remainingL2.length === 0) {
                 return {
                   ...prev,
-                  l2: [{ id: uid(), no: '10', name: '(클릭하여 공정 선택)', l3: [{ id: uid(), m4: '', name: '(공정 선택 필요)', order: 10, functions: [], processChars: [] }], functions: [], productChars: [], failureMode: '' }]
+                  l2: [{ id: uid(), no: '10', name: '(클릭하여 공정 선택)', order: 10, l3: [{ id: uid(), m4: '', name: '(공정 선택 필요)', order: 10, functions: [], processChars: [] }], functions: [], productChars: [], failureMode: '' }]
                 };
               }
               return { ...prev, l2: remainingL2 };
@@ -569,8 +715,23 @@ export default function FMEAWorksheetPage() {
           isOpen={isSpecialCharModalOpen}
           onClose={() => setIsSpecialCharModalOpen(false)}
         />
+
+        {/* SOD 마스터 모달 */}
+        <SODMasterModal
+          isOpen={isSODModalOpen}
+          onClose={() => setIsSODModalOpen(false)}
+        />
       </div>
     </>
+  );
+}
+
+// Suspense boundary wrapper for useSearchParams
+export default function FMEAWorksheetPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#f0f0f0] flex items-center justify-center">로딩 중...</div>}>
+      <FMEAWorksheetPageContent />
+    </Suspense>
   );
 }
 
@@ -579,11 +740,12 @@ export default function FMEAWorksheetPage() {
 function getStepNumber(tab: string): number {
   const map: Record<string, number> = { 
     structure: 2, 
-    function: 3, 
     'function-l1': 3,
     'function-l2': 3,
     'function-l3': 3,
-    failure: 4, 
+    'failure-l1': 4,
+    'failure-l2': 4,
+    'failure-l3': 4,
     risk: 5, 
     opt: 6, 
     doc: 7, 
@@ -610,11 +772,12 @@ interface TopMenuBarProps {
   onImportFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDownloadTemplate: () => void;
   onOpenSpecialChar: () => void;
+  onOpenSOD: () => void;
 }
 
 function TopMenuBar({ 
   fmeaList, currentFmea, selectedFmeaId, dirty, isSaving, lastSaved, currentTab, importMessage, fileInputRef,
-  onFmeaChange, onSave, onNavigateToList, onExport, onImportClick, onImportFile, onDownloadTemplate, onOpenSpecialChar 
+  onFmeaChange, onSave, onNavigateToList, onExport, onImportClick, onImportFile, onDownloadTemplate, onOpenSpecialChar, onOpenSOD 
 }: TopMenuBarProps) {
   const [showImportMenu, setShowImportMenu] = React.useState(false);
 
@@ -712,9 +875,10 @@ function TopMenuBar({
 
       <div className="w-px h-5 bg-white/40" />
 
-      {/* 특별특성/AP/RPN/LLD */}
+      {/* 특별특성/SOD/AP/RPN/LLD */}
       <div className="flex items-center gap-1">
         <button onClick={onOpenSpecialChar} className="px-1.5 py-0.5 text-xs font-bold text-white rounded hover:bg-white/30" style={{ background: 'rgba(255,255,255,0.18)' }}>⭐특별특성</button>
+        <button onClick={onOpenSOD} className="px-1.5 py-0.5 text-xs font-bold text-white rounded hover:bg-white/30" style={{ background: 'rgba(76,175,80,0.6)' }}>📊SOD</button>
         <button className="px-1.5 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,100,100,0.5)' }}>🔴5AP</button>
         <button className="px-1.5 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,165,0,0.5)' }}>🟠6AP</button>
         <button className="px-1.5 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>📊RPN</button>
@@ -759,25 +923,7 @@ function TabMenu({ state, setState }: TabMenuProps) {
               );
             })}
           </div>
-          <div className="w-px h-4 bg-gray-300 mx-1" />
-          {/* 레벨 */}
-          <div className="flex gap-px">
-            {LEVELS.map(lv => (
-              <button
-                key={lv.id}
-                onClick={() => setState(prev => ({ ...prev, levelView: lv.id }))}
-                className="px-1.5 py-0.5 text-xs font-bold cursor-pointer"
-                style={{
-                  background: state.levelView === lv.id ? '#fff' : '#f0f0f0',
-                  border: `1px solid ${state.levelView === lv.id ? COLORS.blue : '#d0d0d0'}`,
-                  borderRadius: '3px',
-                  color: state.levelView === lv.id ? COLORS.blue : '#666'
-                }}
-              >
-                {lv.label}
-              </button>
-            ))}
-          </div>
+          {/* 레벨 버튼 삭제됨 - 기능분석/고장분석은 이제 개별 탭으로 분리 */}
           
           {/* 단계별 토글 버튼 - 전체보기(All) 선택 시에만 표시 (All 버튼 바로 옆) */}
           {state.tab === 'all' && (
@@ -891,30 +1037,9 @@ function FunctionTabFull(props: any) {
   return <FunctionTab {...props} />;
 }
 
-// 고장분석 탭
+// 고장분석 탭 (L1, L2, L3) - FunctionTabFull과 동일한 구조
 function FailureTabFull(props: any) {
-  const { rows, l1Spans, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown, saveToLocalStorage } = props;
-  return (
-    <>
-      <FailureColgroup />
-      <thead style={stickyTheadStyle}><FailureHeader /></thead>
-      <tbody>
-        {rows.length === 0 ? (
-          <tr>
-            <td colSpan={5} className="text-center text-gray-400 py-8">
-              구조분석 탭에서 데이터를 먼저 입력하세요.
-            </td>
-          </tr>
-        ) : (
-          rows.map((row: any, idx: number) => (
-            <tr key={`failure-${idx}-${row.l3Id}`} style={{ height: '28px' }}>
-              <FailureRow row={row} idx={idx} state={state} setState={setState} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} setDirty={setDirty} handleInputBlur={handleInputBlur} handleInputKeyDown={handleInputKeyDown} saveToLocalStorage={saveToLocalStorage} />
-            </tr>
-          ))
-        )}
-      </tbody>
-    </>
-  );
+  return <FailureTabNew {...props} />;
 }
 
 // 리스크분석 탭

@@ -17,21 +17,24 @@ export interface CommonCategory {
   name: string;
   icon: string;
   description: string;
+  color?: string;
 }
 
 /** 공통 카테고리 정의 */
 export const COMMON_CATEGORIES: CommonCategory[] = [
-  { code: 'MN', name: '사람(Man)', icon: '👤', description: '작업자, 엔지니어 등' },
-  { code: 'EN', name: '환경(Environment)', icon: '🌡️', description: '온도, 습도, 이물 등' },
-  { code: 'IM', name: '부자재(Indirect Material)', icon: '🧴', description: '그리스, 윤활유 등' },
+  { code: 'MN', name: '사람(Man)', icon: '👤', description: '작업자, 엔지니어 등', color: 'bg-blue-600' },
+  { code: 'EN', name: '환경(Environment)', icon: '🌡️', description: '온도, 습도, 이물 등', color: 'bg-green-600' },
+  { code: 'IM', name: '부자재(Indirect Material)', icon: '🧴', description: '그리스, 윤활유 등', color: 'bg-orange-600' },
 ];
 
 /** 공통 기초정보 아이템 */
 export interface CommonItem {
   id: string;
   category: 'MN' | 'EN' | 'IM';  // Man, Environment, Indirect Material
+  categoryName?: string;
   name: string;
   description?: string;
+  failureCauses?: string[];  // 관련 고장원인 목록
 }
 
 /** Import된 Flat 데이터 (Step 1) */
@@ -234,15 +237,18 @@ export interface ImportRowData {
   failureMode: string;
   detectionCtrl: string;
   workElement: string;
-  elementFunc: string;
+  elementFunc?: string;
+  workElementFunc?: string;  // 하위호환: elementFunc와 동일
   processChar: string;
   failureCause: string;
   preventionCtrl: string;
-  productProcessName: string;
-  productFunc: string;
+  productProcessName?: string;
+  productFunc?: string;
+  productFunction?: string;  // 하위호환: productFunc와 동일
   requirement: string;
   failureEffect: string;
   inspectionEquip: string;
+  equipment?: string;  // 하위호환
 }
 
 export interface GeneratedRelation {

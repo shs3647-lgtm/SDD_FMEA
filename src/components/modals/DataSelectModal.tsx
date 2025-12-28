@@ -9,11 +9,17 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import BaseModal from '@/components/modals/BaseModal';
 
 export const ITEM_CODE_LABELS: Record<string, { label: string; category: string; level: 'L1' | 'L2' | 'L3' }> = {
+  // 기능분석
   C1: { label: '구분', category: 'C', level: 'L1' },
   C2: { label: '완제품 기능', category: 'C', level: 'L1' },
   C3: { label: '요구사항', category: 'C', level: 'L1' },
   C4: { label: '고장영향', category: 'C', level: 'L1' },
   A3: { label: '공정 기능', category: 'A', level: 'L2' },
+  // 고장분석
+  FE1: { label: 'FE 구분', category: 'FE', level: 'L1' },
+  FE2: { label: '고장영향(FE)', category: 'FE', level: 'L1' },
+  FM1: { label: '고장형태(FM)', category: 'FM', level: 'L2' },
+  FC1: { label: '고장원인(FC)', category: 'FC', level: 'L3' },
   A4: { label: '제품특성', category: 'A', level: 'L2' },
   A5: { label: '고장형태', category: 'A', level: 'L2' },
   A6: { label: '검출관리', category: 'A', level: 'L2' },
@@ -140,6 +146,54 @@ export default function DataSelectModal({
             { id: 'SP_2', value: 'SC (안전 특성)', category: '기본' },
             { id: 'SP_3', value: 'HC (중점 관리)', category: '기본' },
             { id: 'SP_4', value: '-', category: '기본' },
+          ],
+          // 고장분석 기본 옵션
+          FE1: [
+            { id: 'FE1_1', value: 'Your Plant', category: '기본', belongsTo: 'Your Plant' },
+            { id: 'FE1_2', value: 'Ship to Plant', category: '기본', belongsTo: 'Ship to Plant' },
+            { id: 'FE1_3', value: 'User', category: '기본', belongsTo: 'User' },
+          ],
+          FE2: [
+            // Your Plant 관련
+            { id: 'FE2_1', value: '생산 지연', category: '기본', belongsTo: 'Your Plant' },
+            { id: 'FE2_2', value: '재작업/폐기', category: '기본', belongsTo: 'Your Plant' },
+            { id: 'FE2_3', value: '공정 정지', category: '기본', belongsTo: 'Your Plant' },
+            // Ship to Plant 관련
+            { id: 'FE2_4', value: '조립 불가', category: '기본', belongsTo: 'Ship to Plant' },
+            { id: 'FE2_5', value: '라인 정지', category: '기본', belongsTo: 'Ship to Plant' },
+            { id: 'FE2_6', value: '외관 불량', category: '기본', belongsTo: 'Ship to Plant' },
+            // User 관련
+            { id: 'FE2_7', value: '차량 정지 (안전)', category: '기본', belongsTo: 'User' },
+            { id: 'FE2_8', value: '기능 작동 불능', category: '기본', belongsTo: 'User' },
+            { id: 'FE2_9', value: '성능 저하', category: '기본', belongsTo: 'User' },
+            { id: 'FE2_10', value: '소음/진동 발생', category: '기본', belongsTo: 'User' },
+          ],
+          FM1: [
+            { id: 'FM1_1', value: '규격 미달', category: '기본' },
+            { id: 'FM1_2', value: '규격 초과', category: '기본' },
+            { id: 'FM1_3', value: '변형', category: '기본' },
+            { id: 'FM1_4', value: '파손', category: '기본' },
+            { id: 'FM1_5', value: '누락', category: '기본' },
+            { id: 'FM1_6', value: '오염', category: '기본' },
+            { id: 'FM1_7', value: '기능 불량', category: '기본' },
+            { id: 'FM1_8', value: '외관 불량', category: '기본' },
+          ],
+          FC1: [
+            // 사람(MN) 관련
+            { id: 'FC1_1', value: '작업자 실수', category: '기본', belongsTo: 'MN' },
+            { id: 'FC1_2', value: '교육 미흡', category: '기본', belongsTo: 'MN' },
+            { id: 'FC1_3', value: '숙련도 부족', category: '기본', belongsTo: 'MN' },
+            // 설비(MC) 관련
+            { id: 'FC1_4', value: '설비 마모', category: '기본', belongsTo: 'MC' },
+            { id: 'FC1_5', value: '설비 고장', category: '기본', belongsTo: 'MC' },
+            { id: 'FC1_6', value: '정비 미흡', category: '기본', belongsTo: 'MC' },
+            // 자재(IM) 관련
+            { id: 'FC1_7', value: '원자재 불량', category: '기본', belongsTo: 'IM' },
+            { id: 'FC1_8', value: '부자재 불량', category: '기본', belongsTo: 'IM' },
+            // 환경(EN) 관련
+            { id: 'FC1_9', value: '온도 부적합', category: '기본', belongsTo: 'EN' },
+            { id: 'FC1_10', value: '습도 부적합', category: '기본', belongsTo: 'EN' },
+            { id: 'FC1_11', value: '이물 혼입', category: '기본', belongsTo: 'EN' },
           ],
         };
         

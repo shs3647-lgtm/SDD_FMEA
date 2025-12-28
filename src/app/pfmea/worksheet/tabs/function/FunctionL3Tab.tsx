@@ -339,6 +339,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
           onDelete={handleDelete}
           title={modal.title}
           itemCode={modal.itemCode}
+          singleSelect={false}
           workElementName={modal.workElementName}
           processName={state.l2.find(p => p.id === modal.procId)?.name}
           processNo={state.l2.find(p => p.id === modal.procId)?.no}

@@ -103,10 +103,10 @@ export default function DFMEARegisterPage() {
   const handleBizInfoSelect = (info: BizInfoProject) => {
     setFmeaInfo(prev => ({
       ...prev,
-      companyName: info.customer || '',
-      customerName: info.customer || '',
+      companyName: info.customerName || '',
+      customerName: info.customerName || '',
       modelYear: info.modelYear || '',
-      fmeaProjectName: info.projectName || '',
+      fmeaProjectName: info.program || '',
       subject: info.productName || '',
     }));
     setBizInfoModalOpen(false);
@@ -365,19 +365,17 @@ export default function DFMEARegisterPage() {
       </div>
 
       {/* 모달 */}
-      {bizInfoModalOpen && (
-        <BizInfoSelectModal
-          onClose={() => setBizInfoModalOpen(false)}
-          onSelect={handleBizInfoSelect}
-        />
-      )}
+      <BizInfoSelectModal
+        isOpen={bizInfoModalOpen}
+        onClose={() => setBizInfoModalOpen(false)}
+        onSelect={handleBizInfoSelect}
+      />
 
-      {userModalOpen && (
-        <UserSelectModal
-          onClose={() => { setUserModalOpen(false); setSelectedMemberIndex(null); }}
-          onSelect={handleUserSelect}
-        />
-      )}
+      <UserSelectModal
+        isOpen={userModalOpen}
+        onClose={() => { setUserModalOpen(false); setSelectedMemberIndex(null); }}
+        onSelect={handleUserSelect}
+      />
     </div>
   );
 }

@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { BizInfoSelectModal } from '@/components/modals/BizInfoSelectModal';
 import { UserSelectModal } from '@/components/modals/UserSelectModal';
@@ -63,7 +63,7 @@ function generateFMEAId(): string {
 // =====================================================
 // 메인 컴포넌트
 // =====================================================
-export default function PFMEARegisterPage() {
+function PFMEARegisterPageContent() {
   const searchParams = useSearchParams();
   const editId = searchParams.get('id'); // 수정 모드일 때 ID
   const isEditMode = !!editId;
@@ -134,10 +134,10 @@ export default function PFMEARegisterPage() {
   const handleBizInfoSelect = (info: BizInfoProject) => {
     setFmeaInfo(prev => ({
       ...prev,
-      companyName: info.customer || '',
-      customerName: info.customer || '',
+      companyName: info.customerName || '',
+      customerName: info.customerName || '',
       modelYear: info.modelYear || '',
-      fmeaProjectName: info.projectName || '',
+      fmeaProjectName: info.program || '',
       subject: info.productName || '',
     }));
     setBizInfoModalOpen(false);
@@ -472,20 +472,27 @@ export default function PFMEARegisterPage() {
       </div>
 
       {/* 모달 */}
-      {bizInfoModalOpen && (
-        <BizInfoSelectModal
-          onClose={() => setBizInfoModalOpen(false)}
-          onSelect={handleBizInfoSelect}
-        />
-      )}
+      <BizInfoSelectModal
+        isOpen={bizInfoModalOpen}
+        onClose={() => setBizInfoModalOpen(false)}
+        onSelect={handleBizInfoSelect}
+      />
 
-        {userModalOpen && (
-          <UserSelectModal
-            onClose={() => { setUserModalOpen(false); setSelectedMemberIndex(null); }}
-            onSelect={handleUserSelect}
-          />
-        )}
+      <UserSelectModal
+        isOpen={userModalOpen}
+        onClose={() => { setUserModalOpen(false); setSelectedMemberIndex(null); }}
+        onSelect={handleUserSelect}
+      />
       </div>
     </>
+  );
+}
+
+// Suspense boundary wrapper for useSearchParams
+export default function PFMEARegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#f0f0f0] flex items-center justify-center">로딩 중...</div>}>
+      <PFMEARegisterPageContent />
+    </Suspense>
   );
 }

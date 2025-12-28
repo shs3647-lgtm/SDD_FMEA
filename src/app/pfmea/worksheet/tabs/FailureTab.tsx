@@ -116,8 +116,8 @@ export function FailureRow({
         </td>
       )}
       {l1Spans[idx] > 0 && (
-        <td rowSpan={l1Spans[idx]} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: row.l1Severity && row.l1Severity >= 8 ? '#ffcdd2' : FAIL_COLORS.l1Cell, verticalAlign: 'middle', textAlign: 'center' }}>
-          <SeverityCell value={row.l1Severity} onChange={(val) => { setState(prev => ({ ...prev, l1: { ...prev.l1, severity: val } })); setDirty(true); }} saveToLocalStorage={saveToLocalStorage} />
+        <td rowSpan={l1Spans[idx]} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: row.l1Severity && Number(row.l1Severity) >= 8 ? '#ffcdd2' : FAIL_COLORS.l1Cell, verticalAlign: 'middle', textAlign: 'center' }}>
+          <SeverityCell value={row.l1Severity ? Number(row.l1Severity) : undefined} onChange={(val) => { setState(prev => ({ ...prev, l1: { ...prev.l1, severity: val } })); setDirty(true); }} saveToLocalStorage={saveToLocalStorage} />
         </td>
       )}
       {l2Spans[idx] > 0 && (

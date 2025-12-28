@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * @file page.tsx
  * @description PFMEA 기초정보 Excel Import 메인 페이지
@@ -15,7 +17,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ChevronUp, ChevronDown, Save, Upload, CheckCircle } from 'lucide-react';
 import PFMEATopNav from '@/components/layout/PFMEATopNav';
@@ -132,7 +134,7 @@ interface FMEAProject {
   };
 }
 
-export default function PFMEAImportPage() {
+function PFMEAImportPageContent() {
   const searchParams = useSearchParams();
   const idFromUrl = searchParams.get('id');
   
@@ -761,8 +763,9 @@ export default function PFMEAImportPage() {
   };
 
   // 관계형 데이터 필터링
-  const getRelationData = () => {
-    if (relationTab === 'A') {
+  const getRelationData = (tabOverride?: 'A' | 'B' | 'C') => {
+    const tab = tabOverride || relationTab;
+    if (tab === 'A') {
       const processes = [...new Set(flatData.filter(d => d.itemCode === 'A1').map(d => d.processNo))];
       return processes.map(pNo => ({
         A1: pNo,
@@ -772,7 +775,7 @@ export default function PFMEAImportPage() {
         A5: flatData.find(d => d.processNo === pNo && d.itemCode === 'A5')?.value || '',
         A6: flatData.find(d => d.processNo === pNo && d.itemCode === 'A6')?.value || '',
       }));
-    } else if (relationTab === 'B') {
+    } else if (tab === 'B') {
       const processes = [...new Set(flatData.filter(d => d.itemCode === 'A1').map(d => d.processNo))];
       return processes.map(pNo => ({
         A1: pNo,
@@ -1243,8 +1246,10 @@ export default function PFMEAImportPage() {
                                   const newData: ImportedFlatData = {
                                     id: `new-init-${Date.now()}-${i}`,
                                     processNo: e.target.value,
+                                    category: previewColumn.startsWith('A') ? 'A' : previewColumn.startsWith('B') ? 'B' : 'C',
                                     itemCode: previewColumn,
-                                    value: valueInput?.value || ''
+                                    value: valueInput?.value || '',
+                                    createdAt: new Date(),
                                   };
                                   setFlatData(prev => [...prev, newData]);
                                   setDirty(true);
@@ -1335,8 +1340,10 @@ export default function PFMEAImportPage() {
                                 const newData: ImportedFlatData = {
                                   id: `new-left-${Date.now()}-${i}`,
                                   processNo: e.target.value,
+                                  category: previewColumn.startsWith('A') ? 'A' : previewColumn.startsWith('B') ? 'B' : 'C',
                                   itemCode: previewColumn,
-                                  value: valueInput?.value || ''
+                                  value: valueInput?.value || '',
+                                  createdAt: new Date(),
                                 };
                                 setFlatData(prev => [...prev, newData]);
                                 setDirty(true);
@@ -1473,8 +1480,10 @@ export default function PFMEAImportPage() {
                                   const newData: ImportedFlatData = {
                                     id: `new-${Date.now()}-${i}-${j}`,
                                     processNo: col === 'A1' ? e.target.value : String(i + 1),
+                                    category: col.startsWith('A') ? 'A' : col.startsWith('B') ? 'B' : 'C',
                                     itemCode: col,
-                                    value: e.target.value
+                                    value: e.target.value,
+                                    createdAt: new Date(),
                                   };
                                   setFlatData(prev => [...prev, newData]);
                                   setDirty(true);
@@ -1519,12 +1528,14 @@ export default function PFMEAImportPage() {
                                   }}
                                   onBlur={(e) => {
                                     if (e.target.value) {
-                                      const processNo = row.A1 || row.C1 || String(i + 1);
+                                      const processNo = row.A1 || (row as any).C1 || String(i + 1);
                                       const newData: ImportedFlatData = {
                                         id: `edit-${Date.now()}-${i}-${j}`,
                                         processNo: String(processNo),
+                                        category: key.startsWith('A') ? 'A' : key.startsWith('B') ? 'B' : 'C',
                                         itemCode: key,
-                                        value: e.target.value
+                                        value: e.target.value,
+                                        createdAt: new Date(),
                                       };
                                       setFlatData(prev => [...prev, newData]);
                                       setDirty(true);
@@ -1547,5 +1558,14 @@ export default function PFMEAImportPage() {
       </div>
       </div>
     </>
+  );
+}
+
+// Suspense boundary wrapper for useSearchParams
+export default function PFMEAImportPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#f0f0f0] flex items-center justify-center">로딩 중...</div>}>
+      <PFMEAImportPageContent />
+    </Suspense>
   );
 }

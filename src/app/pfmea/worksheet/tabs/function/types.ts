@@ -1,4 +1,4 @@
-import { WorksheetState, uid } from '../constants';
+import { WorksheetState, uid } from '../../constants';
 
 export interface FlatRow {
   l1Id: string;

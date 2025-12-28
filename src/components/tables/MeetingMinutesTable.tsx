@@ -10,7 +10,7 @@
 import React, { useState, useRef } from 'react';
 import { MeetingMinute } from '@/types/project-revision';
 import { UserSelectModal } from '@/components/modals/UserSelectModal';
-import { User } from '@/lib/user-db';
+import { UserInfo } from '@/types/user';
 
 interface MeetingMinutesTableProps {
   meetingMinutes: MeetingMinute[];
@@ -36,7 +36,7 @@ export const MeetingMinutesTable: React.FC<MeetingMinutesTableProps> = ({
     setUserModalOpen(true);
   };
 
-  const handleUserSelect = (user: User) => {
+  const handleUserSelect = (user: UserInfo) => {
     if (!selectedMeetingId) return;
     onUpdateField(selectedMeetingId, 'author', user.name || '');
     onUpdateField(selectedMeetingId, 'authorPosition', user.position || '');
@@ -261,15 +261,14 @@ export const MeetingMinutesTable: React.FC<MeetingMinutesTableProps> = ({
       />
 
       {/* 사용자 선택 모달 */}
-      {userModalOpen && (
-        <UserSelectModal
-          onClose={() => {
-            setUserModalOpen(false);
-            setSelectedMeetingId(null);
-          }}
-          onSelect={handleUserSelect}
-        />
-      )}
+      <UserSelectModal
+        isOpen={userModalOpen}
+        onClose={() => {
+          setUserModalOpen(false);
+          setSelectedMeetingId(null);
+        }}
+        onSelect={handleUserSelect}
+      />
     </>
   );
 };

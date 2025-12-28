@@ -51,7 +51,7 @@ export default function CommonItemManager({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<CommonItem | null>(null);
   const [formData, setFormData] = useState({
-    category: 'MN' as CommonCategory,
+    category: 'MN' as 'MN' | 'EN' | 'IM',
     name: '',
     description: '',
     failureCauses: '',
@@ -104,7 +104,7 @@ export default function CommonItemManager({
   const groupedItems = COMMON_CATEGORIES.reduce((acc, cat) => {
     acc[cat.code] = items.filter(i => i.category === cat.code);
     return acc;
-  }, {} as Record<CommonCategory, CommonItem[]>);
+  }, {} as Record<'MN' | 'EN' | 'IM', CommonItem[]>);
 
   return (
     <div className="bg-white rounded-lg p-5" style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
@@ -203,7 +203,7 @@ export default function CommonItemManager({
                 <tr>
                   <td className="bg-[#00587a] text-white font-bold px-3 py-2 w-24" style={{ border: '1px solid #999' }}>카테고리</td>
                   <td className="bg-white px-3 py-2" style={{ border: '1px solid #999' }}>
-                    <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v as CommonCategory })}>
+                    <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v as 'MN' | 'EN' | 'IM' })}>
                       <SelectTrigger className="border-0 shadow-none w-full">
                         <SelectValue />
                       </SelectTrigger>

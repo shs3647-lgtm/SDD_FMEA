@@ -1,4 +1,4 @@
-import { COLORS } from '../constants';
+import { COLORS } from '../../constants';
 
 export const FUNC_COLORS = {
   l1Main: '#7b1fa2',      // 보라 진한

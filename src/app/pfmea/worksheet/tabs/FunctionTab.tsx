@@ -6,4 +6,10 @@
 'use client';
 
 export { default } from './function';
-export * from './function';
+export { FunctionL1Tab, FunctionL2Tab, FunctionL3Tab } from './function';
+export * from './function/types';
+
+// Legacy placeholders (기존 코드 호환용)
+export const FunctionColgroup = () => null;
+export const FunctionHeader = () => null;
+export const FunctionRow = () => null;
