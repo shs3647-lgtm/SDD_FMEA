@@ -49,13 +49,23 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
   const fcColRef = useRef<HTMLDivElement>(null);
   const [svgPaths, setSvgPaths] = useState<string[]>([]);
   
-  // state.failureLinks 변경 시 savedLinks 동기화 (항상 최신 상태 유지)
+  // state.failureLinks 변경 시 savedLinks 동기화 (초기 로드 시에만, 이후에는 savedLinks가 소스)
+  // useRef로 초기 로드 여부 추적
+  const isInitialLoad = useRef(true);
   useEffect(() => {
     const stateLinks = (state as any).failureLinks || [];
-    if (stateLinks.length > 0) {
+    // 초기 로드 시에만 동기화 (한 번만 실행)
+    if (isInitialLoad.current && stateLinks.length > 0) {
+      console.log('[초기 동기화] state.failureLinks → savedLinks:', stateLinks.length, '개');
       setSavedLinks(stateLinks);
+      if (stateLinks.length > 0) {
+        setViewMode('result');
+      }
+      isInitialLoad.current = false;
     }
-  }, [(state as any).failureLinks]);
+  }, [(state as any).failureLinks]); // state.failureLinks 변경 시 체크하되, isInitialLoad로 한 번만 실행
+
+  // 제거: useEffect로 인한 무한 루프 방지 (toggleFE/toggleFC에서 직접 처리)
 
   // FE 데이터 추출 (번호 포함)
   const feData: FEItem[] = useMemo(() => {
@@ -147,30 +157,67 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     return fcData.filter(fc => fc.processName === selectedProcess);
   }, [fcData, selectedProcess, fcLinkScope]);
 
-  // 연결 현황 계산
+  // 연결 현황 계산 (ID 기반 정확한 매칭)
   const linkStats = useMemo(() => {
-    // FE 연결 현황
-    const feLinkedIds = new Set(savedLinks.map(l => l.feText));
-    const feLinkedCount = feData.filter(fe => feLinkedIds.has(fe.text)).length;
+    // FE 연결 현황 (빈 문자열 제외, 정확한 ID 매칭)
+    const feLinkedIds = new Set<string>(
+      savedLinks
+        .filter(l => l.feId && l.feId.trim() !== '') // 빈 문자열 및 공백 제외
+        .map(l => l.feId)
+    );
+    const feLinkedTexts = new Set<string>(
+      savedLinks
+        .filter(l => l.feText && l.feText.trim() !== '') // 하위호환용
+        .map(l => l.feText)
+    );
+    const feLinkedCount = feData.filter(fe => 
+      feLinkedIds.has(fe.id) || (fe.text && feLinkedTexts.has(fe.text))
+    ).length;
     const feMissingCount = feData.length - feLinkedCount;
 
-    // FM 연결 현황
-    const fmLinkedIds = new Set(savedLinks.map(l => l.fmId));
+    // FM 연결 현황 (빈 문자열 제외)
+    const fmLinkedIds = new Set<string>(
+      savedLinks
+        .filter(l => l.fmId && l.fmId.trim() !== '')
+        .map(l => l.fmId)
+    );
     const fmLinkedCount = fmData.filter(fm => fmLinkedIds.has(fm.id)).length;
     const fmMissingCount = fmData.length - fmLinkedCount;
 
-    // FC 연결 현황
-    const fcLinkedIds = new Set(savedLinks.map(l => l.fcText));
-    const fcLinkedCount = fcData.filter(fc => fcLinkedIds.has(fc.text)).length;
+    // FC 연결 현황 (빈 문자열 제외, 정확한 ID 매칭)
+    const fcLinkedIds = new Set<string>(
+      savedLinks
+        .filter(l => l.fcId && l.fcId.trim() !== '') // 빈 문자열 및 공백 제외
+        .map(l => l.fcId)
+    );
+    const fcLinkedTexts = new Set<string>(
+      savedLinks
+        .filter(l => l.fcText && l.fcText.trim() !== '') // 하위호환용
+        .map(l => l.fcText)
+    );
+    const fcLinkedCount = fcData.filter(fc => 
+      fcLinkedIds.has(fc.id) || (fc.text && fcLinkedTexts.has(fc.text))
+    ).length;
     const fcMissingCount = fcData.length - fcLinkedCount;
 
-    return { feLinkedCount, feMissingCount, fmLinkedCount, fmMissingCount, fcLinkedCount, fcMissingCount, feLinkedIds, fmLinkedIds, fcLinkedIds };
+    console.log('[linkStats 재계산]', {
+      savedLinksCount: savedLinks.length,
+      feLinkedIds: Array.from(feLinkedIds),
+      fcLinkedIds: Array.from(fcLinkedIds),
+      fmLinkedIds: Array.from(fmLinkedIds)
+    });
+
+    return { 
+      feLinkedCount, feMissingCount, 
+      fmLinkedCount, fmMissingCount, 
+      fcLinkedCount, fcMissingCount, 
+      feLinkedIds, feLinkedTexts, // ID와 텍스트 모두 반환
+      fmLinkedIds, 
+      fcLinkedIds, fcLinkedTexts // ID와 텍스트 모두 반환
+    };
   }, [savedLinks, feData, fmData, fcData]);
 
-  useEffect(() => {
-    const saved = (state as any).failureLinks || [];
-    setSavedLinks(saved);
-  }, [state]);
+  // 제거: 중복된 useEffect (위에서 처리)
 
   // SVG 곡선 그리기
   const drawLines = useCallback(() => {
@@ -229,6 +276,16 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
   }, [drawLines, linkedFEs, linkedFCs, currentFM]);
 
   const selectFM = useCallback((id: string) => {
+    // 이미 선택된 FM을 다시 클릭하면 해제
+    if (currentFMId === id) {
+      setCurrentFMId(null);
+      setLinkedFEs(new Map());
+      setLinkedFCs(new Map());
+      setViewMode('diagram');
+      setTimeout(drawLines, 50);
+      return;
+    }
+    
     setCurrentFMId(id);
     setViewMode('diagram'); // FM 선택 시 고장사슬 화면으로 자동 전환
     // 선택한 FM의 공정으로 자동 필터링
@@ -236,7 +293,19 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     if (selectedFm) {
       setSelectedProcess(selectedFm.processName);
     }
-    const fmLinks = savedLinks.filter(l => l.fmId === id);
+    // linkedFEs/linkedFCs는 useEffect에서 savedLinks를 기반으로 업데이트됨
+    setTimeout(drawLines, 50);
+  }, [currentFMId, fmData, drawLines]);
+
+  // currentFMId 변경 시 savedLinks에서 해당 FM의 연결된 FE/FC 로드
+  useEffect(() => {
+    if (!currentFMId) {
+      setLinkedFEs(new Map());
+      setLinkedFCs(new Map());
+      return;
+    }
+    
+    const fmLinks = savedLinks.filter(l => l.fmId === currentFMId);
     const newFEs = new Map<string, FEItem>();
     const newFCs = new Map<string, FCItem>();
     fmLinks.forEach(link => {
@@ -252,42 +321,190 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     });
     setLinkedFEs(newFEs);
     setLinkedFCs(newFCs);
-    setTimeout(drawLines, 50);
-  }, [savedLinks, feData, fcData, fmData, drawLines]);
+  }, [currentFMId, savedLinks, feData, fcData]);
 
   const toggleFE = useCallback((id: string) => {
-    if (!currentFMId || editMode !== 'edit') return;
+    console.log('[toggleFE] 호출됨:', { currentFMId, feId: id, editMode });
     const fe = feData.find(f => f.id === id);
-    if (!fe) return;
-    setLinkedFEs(prev => {
-      const next = new Map(prev);
-      if (next.has(id)) next.delete(id);
-      else next.set(id, fe);
-      return next;
+    if (!fe) {
+      console.log('[toggleFE] FE 데이터 없음:', id);
+      return;
+    }
+    
+    // savedLinks를 함수형 업데이트로 안전하게 처리
+    setSavedLinks(prev => {
+      const currentLinks = prev;
+      // currentFMId가 있으면 해당 FM과의 연결만 확인, 없으면 모든 FM과의 연결 확인
+      const existingLink = currentFMId 
+        ? currentLinks.find(l => l.fmId === currentFMId && l.feId === id && l.feId && l.feId.trim() !== '')
+        : currentLinks.find(l => l.feId === id && l.feId && l.feId.trim() !== '');
+      
+      console.log('[toggleFE] 기존 연결 확인:', { 
+        currentFMId, 
+        feId: id, 
+        existingLink: !!existingLink,
+        savedLinksCount: currentLinks.length,
+        allLinks: currentLinks.map(l => ({ fmId: l.fmId, feId: l.feId, fcId: l.fcId }))
+      });
+      
+      if (existingLink) {
+        // 이미 저장된 연결이면 해제 (currentFMId가 있으면 해당 FM만, 없으면 모든 FM에서 해제)
+        const filtered = currentFMId
+          ? currentLinks.filter(l => !(l.fmId === currentFMId && l.feId === id))
+          : currentLinks.filter(l => l.feId !== id);
+        
+        console.log('[고장연결 해제] FE:', fe.text, 'FM:', currentFMId || '모든FM', '남은 연결:', filtered.length);
+        
+        // 상태 업데이트 (다음 이벤트 루프에서 실행하여 안전성 보장)
+        requestAnimationFrame(() => {
+          setState((prevState: any) => {
+            console.log('[toggleFE 해제] state.failureLinks 업데이트:', filtered.length);
+            return { ...prevState, failureLinks: filtered };
+          });
+          setDirty(true);
+          setTimeout(() => {
+            saveToLocalStorage?.();
+          }, 100);
+        });
+        
+        // 편집 중인 상태에서도 제거
+        setLinkedFEs(prevFEs => {
+          const next = new Map(prevFEs);
+          next.delete(id);
+          return next;
+        });
+        
+        // 해제 후 분석결과 뷰로 전환
+        if (filtered.length === 0) {
+          setViewMode('diagram');
+        } else {
+          setViewMode('result');
+        }
+        
+        return filtered;
+      } else {
+        // 새로 연결은 편집 모드에서만 (반환값 없음 = 상태 유지)
+        if (currentFMId && editMode === 'edit') {
+          setLinkedFEs(prevFEs => {
+            const next = new Map(prevFEs);
+            next.set(id, fe);
+            return next;
+          });
+        } else if (!currentFMId) {
+          alert('⚠️ 고장형태(FM)를 먼저 선택해주세요.');
+        }
+        return prev; // 상태 변경 없음
+      }
     });
     setTimeout(drawLines, 50);
-  }, [currentFMId, editMode, feData, drawLines]);
+  }, [currentFMId, editMode, feData, drawLines, setState, setDirty, saveToLocalStorage]);
 
   const toggleFC = useCallback((id: string) => {
-    if (!currentFMId || editMode !== 'edit') return;
+    console.log('[toggleFC] 호출됨:', { currentFMId, fcId: id, editMode });
     const fc = fcData.find(f => f.id === id);
-    if (!fc) return;
-    setLinkedFCs(prev => {
-      const next = new Map(prev);
-      if (next.has(id)) next.delete(id);
-      else next.set(id, fc);
-      return next;
+    if (!fc) {
+      console.log('[toggleFC] FC 데이터 없음:', id);
+      return;
+    }
+    
+    // savedLinks를 함수형 업데이트로 안전하게 처리
+    setSavedLinks(prev => {
+      const currentLinks = prev;
+      // currentFMId가 있으면 해당 FM과의 연결만 확인, 없으면 모든 FM과의 연결 확인
+      const existingLink = currentFMId
+        ? currentLinks.find(l => l.fmId === currentFMId && l.fcId === id && l.fcId && l.fcId.trim() !== '')
+        : currentLinks.find(l => l.fcId === id && l.fcId && l.fcId.trim() !== '');
+      
+      console.log('[toggleFC] 기존 연결 확인:', { 
+        currentFMId, 
+        fcId: id, 
+        existingLink: !!existingLink,
+        savedLinksCount: currentLinks.length,
+        allLinks: currentLinks.map(l => ({ fmId: l.fmId, feId: l.feId, fcId: l.fcId }))
+      });
+      
+      if (existingLink) {
+        // 이미 저장된 연결이면 해제 (currentFMId가 있으면 해당 FM만, 없으면 모든 FM에서 해제)
+        const filtered = currentFMId
+          ? currentLinks.filter(l => !(l.fmId === currentFMId && l.fcId === id))
+          : currentLinks.filter(l => l.fcId !== id);
+        
+        console.log('[고장연결 해제] FC:', fc.text, 'FM:', currentFMId || '모든FM', '남은 연결:', filtered.length);
+        
+        // 상태 업데이트 (다음 이벤트 루프에서 실행하여 안전성 보장)
+        requestAnimationFrame(() => {
+          setState((prevState: any) => {
+            console.log('[toggleFC 해제] state.failureLinks 업데이트:', filtered.length);
+            return { ...prevState, failureLinks: filtered };
+          });
+          setDirty(true);
+          setTimeout(() => {
+            saveToLocalStorage?.();
+          }, 100);
+        });
+        
+        // 편집 중인 상태에서도 제거
+        setLinkedFCs(prevFCs => {
+          const next = new Map(prevFCs);
+          next.delete(id);
+          return next;
+        });
+        
+        // 해제 후 분석결과 뷰로 전환
+        if (filtered.length === 0) {
+          setViewMode('diagram');
+        } else {
+          setViewMode('result');
+        }
+        
+        return filtered;
+      } else {
+        // 새로 연결은 편집 모드에서만 (반환값 없음 = 상태 유지)
+        if (currentFMId && editMode === 'edit') {
+          setLinkedFCs(prevFCs => {
+            const next = new Map(prevFCs);
+            next.set(id, fc);
+            return next;
+          });
+        } else if (!currentFMId) {
+          alert('⚠️ 고장형태(FM)를 먼저 선택해주세요.');
+        }
+        return prev; // 상태 변경 없음
+      }
     });
     setTimeout(drawLines, 50);
-  }, [currentFMId, editMode, fcData, drawLines]);
+  }, [currentFMId, editMode, fcData, drawLines, setState, setDirty, saveToLocalStorage]);
 
   const confirmLink = useCallback(() => {
     if (!currentFMId || !currentFM) return;
+    // savedLinks state 사용 (현재 값 사용)
     let newLinks = savedLinks.filter(l => l.fmId !== currentFMId);
     const feArray = Array.from(linkedFEs.values());
     const fcArray = Array.from(linkedFCs.values());
     
-    // FE와 FC를 각각 독립적으로 저장 (1:N 관계 지원)
+    // FK 관계 검증: ID가 실제 데이터와 일치하는지 확인
+    const fmExists = fmData.find(fm => fm.id === currentFMId);
+    if (!fmExists) {
+      alert('⚠️ 고장형태(FM)를 찾을 수 없습니다. 페이지를 새로고침해주세요.');
+      return;
+    }
+    
+    const invalidFEIds = feArray.filter(fe => !feData.find(f => f.id === fe.id)).map(fe => fe.id);
+    const invalidFCIds = fcArray.filter(fc => !fcData.find(f => f.id === fc.id)).map(fc => fc.id);
+    
+    if (invalidFEIds.length > 0 || invalidFCIds.length > 0) {
+      console.error('[고장연결] FK 검증 실패:', { invalidFEIds, invalidFCIds });
+      alert('⚠️ 연결할 데이터를 찾을 수 없습니다. 페이지를 새로고침해주세요.');
+      return;
+    }
+    
+    console.log('[고장연결 확정] FK 관계 검증 통과:', {
+      fmId: currentFMId,
+      feIds: feArray.map(fe => fe.id),
+      fcIds: fcArray.map(fc => fc.id),
+    });
+    
+    // FE와 FC를 각각 독립적으로 저장 (1:N 관계 지원 - 원자성 DB의 FailureLink는 1:1:1이지만, 여러 개의 Link로 표현)
     // FE 연결
     feArray.forEach(fe => {
       newLinks.push({
@@ -328,6 +545,8 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       });
     });
     
+    console.log('[고장연결 확정] 저장될 연결 수:', newLinks.length, '개 (FE:', feArray.length, 'FC:', fcArray.length, ')');
+    
     setSavedLinks(newLinks);
     setState((prev: any) => ({ ...prev, failureLinks: newLinks }));
     setDirty(true);
@@ -336,8 +555,8 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       saveToLocalStorage?.();
     }, 100);
     setEditMode('edit');
-    alert(`✅ ${currentFM.text} 연결이 확정 및 저장되었습니다.`);
-  }, [currentFMId, currentFM, linkedFEs, linkedFCs, savedLinks, setState, setDirty, saveToLocalStorage]);
+    alert(`✅ ${currentFM.text} 연결이 확정 및 저장되었습니다.\n\nFE: ${feArray.length}개, FC: ${fcArray.length}개`);
+  }, [currentFMId, currentFM, linkedFEs, linkedFCs, savedLinks, setState, setDirty, saveToLocalStorage, fmData, feData, fcData, editMode]);
 
   const handleModeChange = useCallback((mode: 'edit' | 'confirm') => {
     setEditMode(mode);
@@ -353,6 +572,25 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     saveToLocalStorage?.();
     alert(`✅ 총 ${savedLinks.length}개의 고장연결이 저장되었습니다.`);
   }, [savedLinks, setState, setDirty, saveToLocalStorage]);
+
+  // 고장연결 데이터 초기화
+  const handleClearAll = useCallback(() => {
+    if (!confirm('⚠️ 모든 고장연결 데이터를 초기화하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) {
+      return;
+    }
+    
+    const emptyLinks: LinkResult[] = [];
+    setSavedLinks(emptyLinks);
+    setLinkedFEs(new Map());
+    setLinkedFCs(new Map());
+    setCurrentFMId(null);
+    setState((prev: any) => ({ ...prev, failureLinks: emptyLinks }));
+    setDirty(true);
+    saveToLocalStorage?.();
+    setViewMode('diagram');
+    alert('✅ 모든 고장연결 데이터가 초기화되었습니다.');
+    console.log('[고장연결 초기화] 모든 연결 데이터 삭제됨');
+  }, [setState, setDirty, saveToLocalStorage]);
 
   // 역전개: 고장분석 ↔ 기능분석 FK 연결 확인 (자동변환 금지!)
   const handleReverseGenerate = useCallback(() => {
@@ -524,12 +762,15 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
                 </thead>
                 <tbody>
                   {feData.map(fe => {
-                    const isLinked = linkStats.feLinkedIds.has(fe.text) || linkedFEs.has(fe.id);
+                    // ID 기반으로 연결 여부 확인 (정확함)
+                    const isLinkedInSaved = linkStats.feLinkedIds.has(fe.id) || linkStats.feLinkedTexts.has(fe.text);
+                    const isLinkedInEdit = linkedFEs.has(fe.id);
+                    const isLinked = isLinkedInSaved || isLinkedInEdit;
                     const noBg = isLinked ? '#4caf50' : '#e53935';
                     return (
                       <tr key={fe.id} onClick={() => toggleFE(fe.id)} style={{ cursor: currentFMId ? 'pointer' : 'default' }}>
                         <td style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 700, background: noBg, color: '#fff' }}>{fe.feNo}</td>
-                        <td style={{ padding: '4px 6px', border: '1px solid #ccc', background: '#fff' }}>{fe.text}</td>
+                        <td style={{ padding: '4px 6px', border: '1px solid #ccc', background: '#fff' }}>{fe.text}{isLinkedInSaved ? ' ✓' : ''}</td>
                         <td style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 700, background: '#fff', color: fe.severity && fe.severity >= 8 ? '#c62828' : fe.severity && fe.severity >= 5 ? '#f57f17' : '#333' }}>{fe.severity || '-'}</td>
                       </tr>
                     );
@@ -599,15 +840,18 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
                 </thead>
                 <tbody>
                   {filteredFcData.map(fc => {
-                    const isLinked = linkStats.fcLinkedIds.has(fc.text) || linkedFCs.has(fc.id);
+                    // ID 기반으로 연결 여부 확인 (정확함)
+                    const isLinkedInSaved = linkStats.fcLinkedIds.has(fc.id) || linkStats.fcLinkedTexts.has(fc.text);
+                    const isLinkedInEdit = linkedFCs.has(fc.id);
+                    const isLinked = isLinkedInSaved || isLinkedInEdit;
                     const noBg = isLinked ? '#4caf50' : '#e53935';
                     return (
-                      <tr key={fc.id} onClick={() => toggleFC(fc.id)} style={{ cursor: currentFMId ? 'pointer' : 'default' }}>
+                      <tr key={fc.id} onClick={() => toggleFC(fc.id)} style={{ cursor: 'pointer' }}>
                         <td style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 700, background: noBg, color: '#fff' }}>{fc.fcNo}</td>
                         <td style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 600, fontSize: '9px', whiteSpace: 'nowrap', background: '#fff' }}>{fc.processName}</td>
                         <td style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 600, background: '#fff' }}>{fc.m4}</td>
                         <td style={{ padding: '4px', border: '1px solid #ccc', fontSize: '9px', background: '#fff' }}>{fc.workElem}</td>
-                        <td style={{ padding: '4px', border: '1px solid #ccc', background: '#fff' }}>{fc.text}</td>
+                        <td style={{ padding: '4px', border: '1px solid #ccc', background: '#fff' }}>{fc.text}{isLinkedInSaved ? ' ✓' : ''}</td>
                       </tr>
                     );
                   })}
@@ -665,6 +909,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
             <button onClick={() => handleModeChange('confirm')} disabled={!currentFMId || (linkedFEs.size === 0 && linkedFCs.size === 0)} style={{ padding: '4px 8px', fontSize: '10px', fontWeight: 700, border: '1px solid #999', borderRadius: '3px', cursor: 'pointer', background: '#2196f3', color: '#fff', opacity: (!currentFMId || (linkedFEs.size === 0 && linkedFCs.size === 0)) ? 0.5 : 1, whiteSpace: 'nowrap' }}>연결확정</button>
             <button onClick={() => handleModeChange('edit')} style={{ padding: '4px 8px', fontSize: '10px', fontWeight: 700, border: '1px solid #999', borderRadius: '3px', cursor: 'pointer', background: editMode === 'edit' ? '#4caf50' : '#fff', color: editMode === 'edit' ? '#fff' : '#333', whiteSpace: 'nowrap' }}>수정</button>
             <button onClick={handleReverseGenerate} disabled={savedLinks.length === 0} style={{ padding: '4px 8px', fontSize: '10px', fontWeight: 700, border: '1px solid #e65100', borderRadius: '3px', cursor: savedLinks.length > 0 ? 'pointer' : 'not-allowed', background: '#fff8e1', color: '#e65100', opacity: savedLinks.length === 0 ? 0.5 : 1, whiteSpace: 'nowrap' }}>🔄 역전개</button>
+            <button onClick={handleClearAll} disabled={savedLinks.length === 0} style={{ padding: '4px 8px', fontSize: '10px', fontWeight: 700, border: '1px solid #d32f2f', borderRadius: '3px', cursor: savedLinks.length > 0 ? 'pointer' : 'not-allowed', background: '#ffebee', color: '#d32f2f', opacity: savedLinks.length === 0 ? 0.5 : 1, whiteSpace: 'nowrap' }}>🗑️ 초기화</button>
           </div>
         </div>
         
@@ -784,25 +1029,35 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
                 // FE 처리: 각 항목 1행, 마지막 항목은 남은 행 모두 차지
                 let showFe = false;
                 let feRowSpan = 0;
-                let feItem = group.fes[rowIdx];
+                let feItem: { id: string; scope: string; text: string; severity: number; feNo: string } | undefined = undefined;
                 
                 if (rowIdx < feCount) {
                   showFe = true;
                   // 마지막 FE면 남은 행을 모두 차지
                   feRowSpan = (rowIdx === feCount - 1) ? (totalRows - rowIdx) : 1;
                   feItem = group.fes[rowIdx];
+                } else if (feCount === 0 && rowIdx === 0) {
+                  // FE가 아예 없을 때 첫 번째 행에만 빈 FE 표시
+                  showFe = true;
+                  feRowSpan = totalRows;
+                  feItem = undefined;
                 }
                 
                 // FC 처리: 각 항목 1행, 마지막 항목은 남은 행 모두 차지
                 let showFc = false;
                 let fcRowSpan = 0;
-                let fcItem = group.fcs[rowIdx];
+                let fcItem: { id: string; processName: string; m4: string; workElem: string; text: string; fcNo: string } | undefined = undefined;
                 
                 if (rowIdx < fcCount) {
                   showFc = true;
                   // 마지막 FC면 남은 행을 모두 차지
                   fcRowSpan = (rowIdx === fcCount - 1) ? (totalRows - rowIdx) : 1;
                   fcItem = group.fcs[rowIdx];
+                } else if (fcCount === 0 && rowIdx === 0) {
+                  // FC가 아예 없을 때 첫 번째 행에만 빈 FC 표시
+                  showFc = true;
+                  fcRowSpan = totalRows;
+                  fcItem = undefined;
                 }
                 
                 renderRows.push({
@@ -852,28 +1107,31 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
                       const linkedBg = '#e8f5e9'; // 연한 녹색
                       return (
                         <tr key={`${row.fmId}-${row.rowIdx}`} style={{ borderTop: row.rowIdx === 0 ? '2px solid #999' : undefined }}>
+                          {/* FE 영역: showFe가 true일 때만 렌더링 (rowSpan 사용) */}
                           {row.showFe && (
                             <>
-                              <td rowSpan={row.feRowSpan} style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 700, color: COLORS.fe.text, verticalAlign: 'middle' }}>{row.fe?.feNo || ''}</td>
-                              <td rowSpan={row.feRowSpan} style={{ padding: '2px 4px', border: '1px solid #ccc', fontSize: '9px', verticalAlign: 'middle', whiteSpace: 'nowrap', textAlign: 'center' }}>
+                              <td rowSpan={row.feRowSpan} style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 700, color: COLORS.fe.text, verticalAlign: 'middle', background: '#e3f2fd' }}>{row.fe?.feNo || ''}</td>
+                              <td rowSpan={row.feRowSpan} style={{ padding: '2px 4px', border: '1px solid #ccc', fontSize: '9px', verticalAlign: 'middle', whiteSpace: 'nowrap', textAlign: 'center', background: '#e3f2fd' }}>
                                 {row.fe?.scope === 'Your Plant' ? 'YP' : row.fe?.scope === 'Ship to Plant' ? 'SP' : row.fe?.scope === 'User' ? 'USER' : row.fe?.scope || ''}
                               </td>
-                              <td rowSpan={row.feRowSpan} style={{ padding: '4px', border: '1px solid #ccc', fontSize: '9px', verticalAlign: 'middle' }}>{row.fe?.text || ''}</td>
-                              <td rowSpan={row.feRowSpan} style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 700, verticalAlign: 'middle', color: (row.fe?.severity || 0) >= 8 ? '#c62828' : (row.fe?.severity || 0) >= 5 ? '#f57f17' : '#333' }}>{row.fe?.severity || ''}</td>
+                              <td rowSpan={row.feRowSpan} style={{ padding: '4px', border: '1px solid #ccc', fontSize: '9px', verticalAlign: 'middle', background: '#e3f2fd' }}>{row.fe?.text || ''}</td>
+                              <td rowSpan={row.feRowSpan} style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 700, verticalAlign: 'middle', color: (row.fe?.severity || 0) >= 8 ? '#c62828' : (row.fe?.severity || 0) >= 5 ? '#f57f17' : '#333', background: '#e3f2fd' }}>{row.fe?.severity || ''}</td>
                             </>
                           )}
+                          {/* FM 영역: 첫 번째 행에만 렌더링 (rowSpan 사용) */}
                           {row.showFm && (
                             <td rowSpan={row.totalRows} style={{ padding: '6px', border: '1px solid #ccc', background: '#fff8e1', fontWeight: 600, textAlign: 'center', verticalAlign: 'middle' }}>
                               <div style={{ fontSize: '10px', color: COLORS.fm.text }}>{row.fm.no}</div>
                               <div>{row.fm.text}</div>
                             </td>
                           )}
+                          {/* FC 영역: showFc가 true일 때만 렌더링 (rowSpan 사용) */}
                           {row.showFc && (
                             <>
-                              <td rowSpan={row.fcRowSpan} style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 700, color: COLORS.fc.text, verticalAlign: 'middle' }}>{row.fc?.fcNo || ''}</td>
+                              <td rowSpan={row.fcRowSpan} style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 700, color: COLORS.fc.text, verticalAlign: 'middle', background: linkedBg }}>{row.fc?.fcNo || ''}</td>
                               <td rowSpan={row.fcRowSpan} style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 600, fontSize: '9px', background: linkedBg, verticalAlign: 'middle', whiteSpace: 'nowrap' }}>{row.fc?.processName || ''}</td>
-                              <td rowSpan={row.fcRowSpan} style={{ padding: '4px', border: '1px solid #ccc', fontSize: '9px', verticalAlign: 'middle' }}>{row.fc?.workElem || ''}</td>
-                              <td rowSpan={row.fcRowSpan} style={{ padding: '4px', border: '1px solid #ccc', verticalAlign: 'middle' }}>{row.fc?.text || ''}</td>
+                              <td rowSpan={row.fcRowSpan} style={{ padding: '4px', border: '1px solid #ccc', fontSize: '9px', verticalAlign: 'middle', background: linkedBg }}>{row.fc?.workElem || ''}</td>
+                              <td rowSpan={row.fcRowSpan} style={{ padding: '4px', border: '1px solid #ccc', verticalAlign: 'middle', background: linkedBg }}>{row.fc?.text || ''}</td>
                             </>
                           )}
                         </tr>

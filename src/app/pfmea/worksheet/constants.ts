@@ -29,7 +29,8 @@ export interface L1FailureEffect extends AtomicUnit {
 }
 // 1L 고장영향 데이터 구조 (요구사항 -> 구분 -> 고장영향 -> 심각도)
 export interface L1FailureScope extends AtomicUnit {
-  requirement?: string; // 연결된 요구사항
+  reqId?: string; // FK: 요구사항 ID
+  requirement?: string; // 연결된 요구사항 (텍스트)
   scope?: string; // Your Plant / Ship to Plant / User
   effect?: string; // 고장영향 내용
   severity?: number; // 심각도
@@ -120,6 +121,8 @@ export interface WorksheetState {
   failureL1Confirmed?: boolean;
   failureL2Confirmed?: boolean;
   failureL3Confirmed?: boolean;
+  // 고장연결 결과
+  failureLinks?: any[];
 }
 
 export interface FlatRow {
@@ -198,13 +201,15 @@ export const getTabLabel = (tabId: string): string => TABS.find(t => t.id === ta
 export const getTabStep = (tabId: string): number => TABS.find(t => t.id === tabId)?.step || 0;
 
 export const createInitialState = (): WorksheetState => ({
-  l1: { id: uid(), name: '', types: [], failureEffect: '', severity: undefined },
+  l1: { id: uid(), name: '', types: [], failureEffect: '', severity: undefined, failureScopes: [] },
   l2: [{ 
     id: uid(), no: '', name: '(클릭하여 공정 선택)', order: 10, 
-    functions: [], productChars: [],
-    l3: [{ id: uid(), m4: '', name: '(공정 선택 후 작업요소 추가)', order: 10, functions: [], processChars: [] }] 
+    functions: [], productChars: [], failureModes: [],
+    l3: [{ id: uid(), m4: '', name: '(공정 선택 후 작업요소 추가)', order: 10, functions: [], processChars: [], failureCauses: [] }] 
   }],
-  selected: { type: 'L2', id: null }, tab: 'structure', levelView: '2', search: '', visibleSteps: [2, 3, 4, 5, 6]
+  selected: { type: 'L2', id: null }, tab: 'structure', levelView: '2', search: '', visibleSteps: [2, 3, 4, 5, 6],
+  failureLinks: [], structureConfirmed: false, l1Confirmed: false, l2Confirmed: false, l3Confirmed: false,
+  failureL1Confirmed: false, failureL2Confirmed: false, failureL3Confirmed: false
 });
 
 export const get4MBadgeStyle = (m4: string) => {

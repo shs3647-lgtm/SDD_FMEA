@@ -73,6 +73,8 @@ interface OldL1Data {
   failureScopes?: Array<{
     id: string;
     name: string;
+    reqId?: string; // FK: 요구사항 ID (하위호환용)
+    requirement?: string; // 연결된 요구사항 (텍스트)
     scope?: string;
     effect?: string;
     severity?: number;
@@ -124,6 +126,7 @@ export function migrateToAtomicDB(oldData: OldWorksheetData): FMEAWorksheetDB {
   }
   
   // 2. L1 기능분석 (구분 → 기능 → 요구사항)
+  const l1FuncMap = new Map<string, L1Function>();
   const l1Types = oldData.l1?.types || [];
   l1Types.forEach(type => {
     const category = type.name as 'Your Plant' | 'Ship to Plant' | 'User';
@@ -134,14 +137,16 @@ export function migrateToAtomicDB(oldData: OldWorksheetData): FMEAWorksheetDB {
       
       if (requirements.length === 0) {
         // 요구사항 없는 경우에도 기능은 저장
-        db.l1Functions.push({
+        const l1Func: L1Function = {
           id: uid(),
           fmeaId: oldData.fmeaId,
           l1StructId: db.l1Structure?.id || '',
           category: category,
           functionName: func.name,
           requirement: '',
-        });
+        };
+        db.l1Functions.push(l1Func);
+        l1FuncMap.set(l1Func.id, l1Func);
       } else {
         requirements.forEach(req => {
           const l1Func: L1Function = {
@@ -153,6 +158,7 @@ export function migrateToAtomicDB(oldData: OldWorksheetData): FMEAWorksheetDB {
             requirement: req.name,
           };
           db.l1Functions.push(l1Func);
+          l1FuncMap.set(l1Func.id, l1Func);
           
           // 요구사항에 고장영향이 있으면 FE 생성
           if (req.failureEffect) {
@@ -169,6 +175,43 @@ export function migrateToAtomicDB(oldData: OldWorksheetData): FMEAWorksheetDB {
       }
     });
   });
+
+  // 2-1. L1 고장영향(failureScopes) → FailureEffect로 승격 (요구사항 FK 기준)
+  const legacyScopes = oldData.l1?.failureScopes || [];
+  console.log('[마이그레이션] failureScopes 변환 시작:', legacyScopes.length, '개');
+  legacyScopes.forEach(fs => {
+    // reqId로 l1Function 찾기
+    let targetFunc = fs.reqId ? l1FuncMap.get(fs.reqId) : null;
+    
+    // reqId 매칭 실패 시, effect 텍스트로 요구사항을 찾아보기 (fallback)
+    if (!targetFunc && fs.effect) {
+      const matchedFunc = Array.from(l1FuncMap.values()).find(f => f.requirement === fs.requirement);
+      if (matchedFunc) targetFunc = matchedFunc;
+    }
+    
+    // 여전히 못 찾으면 첫 번째 함수 사용 (최후의 수단)
+    if (!targetFunc && l1FuncMap.size > 0) {
+      targetFunc = Array.from(l1FuncMap.values())[0];
+      console.warn('[마이그레이션] failureScope reqId 매칭 실패, 첫 번째 함수 사용:', fs.reqId, fs.effect);
+    }
+    
+    // targetFunc가 없으면 건너뛰기 (l1Function이 아예 없는 경우)
+    if (!targetFunc) {
+      console.warn('[마이그레이션] failureScope 건너뜀 (l1Function 없음):', fs.effect);
+      return;
+    }
+    
+    const category = (fs.scope as any) || targetFunc.category || 'Your Plant';
+    db.failureEffects.push({
+      id: fs.id || uid(),
+      fmeaId: oldData.fmeaId,
+      l1FuncId: targetFunc.id,
+      category,
+      effect: fs.effect || fs.name || '',
+      severity: fs.severity ?? 0,
+    });
+  });
+  console.log('[마이그레이션] failureScopes → FailureEffect 변환 완료:', db.failureEffects.length, '개');
   
   // 3. L2 구조분석 (메인공정) + L2 기능분석 + L3 구조/기능분석
   const l2Data = oldData.l2 || [];
@@ -382,6 +425,7 @@ export function convertToLegacyFormat(db: FMEAWorksheetDB): OldWorksheetData {
       id: db.l1Structure?.id || uid(),
       name: db.l1Structure?.name || '',
       types: [],
+      failureScopes: [], // 초기값으로 빈 배열 설정
     },
     l2: [],
     failureLinks: [],
@@ -394,6 +438,25 @@ export function convertToLegacyFormat(db: FMEAWorksheetDB): OldWorksheetData {
     failureL3Confirmed: db.confirmed.l3Failure,
   };
   
+  console.log('[역변환] 시작, failureEffects:', db.failureEffects.length, '개');
+  
+  // FE를 다시 failureScopes로 역변환 (요구사항 기준)
+  const l1FuncMap = new Map<string, { reqName: string; category: string }>();
+  db.l1Functions.forEach(f => {
+    l1FuncMap.set(f.id, { reqName: f.requirement, category: f.category });
+  });
+  const failureScopes = (db.failureEffects || []).map(fe => ({
+    id: fe.id,
+    reqId: fe.l1FuncId,
+    requirement: l1FuncMap.get(fe.l1FuncId)?.reqName || '',
+    scope: l1FuncMap.get(fe.l1FuncId)?.category || fe.category || 'Your Plant',
+    effect: fe.effect,
+    severity: fe.severity,
+  }));
+  // failureScopes 항상 설정 (빈 배열도 포함)
+  (result.l1 as any).failureScopes = failureScopes;
+  console.log('[역변환] failureScopes 복원:', failureScopes.length, '개');
+
   // L1 기능 → types 구조로 변환
   const categoryGroups = new Map<string, Map<string, L1Function[]>>();
   db.l1Functions.forEach(f => {

@@ -230,15 +230,15 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
         <thead>
           {/* 1행: 단계 구분 */}
           <tr>
-            <th colSpan={2} style={{ background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
-              P-FMEA 구조 분석(2단계)
+            <th colSpan={2} style={{ background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '4px 6px', fontSize: '10px', fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
+              구조분석(2단계)
             </th>
-            <th colSpan={2} style={{ background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
-              P-FMEA 기능 분석(3단계)
+            <th colSpan={2} style={{ background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '4px 6px', fontSize: '10px', fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
+              기능분석(3단계)
             </th>
-            <th style={{ background: FAIL_COLORS.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                <span>P-FMEA 고장 분석(4단계)</span>
+            <th style={{ background: FAIL_COLORS.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '4px 6px', fontSize: '10px', fontWeight: 800, textAlign: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'nowrap' }}>
+                <span style={{ whiteSpace: 'nowrap' }}>고장분석(4단계)</span>
                 <div style={{ display: 'flex', gap: '4px' }}>
                   {isConfirmed ? (
                     <span style={{ background: '#4caf50', color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: '10px', fontWeight: 700 }}>✓ 확정됨</span>

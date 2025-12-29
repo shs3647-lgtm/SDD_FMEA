@@ -179,33 +179,34 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
     <div style={{ padding: '0', overflow: 'auto', height: '100%' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
         <colgroup>
-          <col style={{ width: '180px' }} />
+          <col style={{ width: '150px' }} />
+          <col style={{ width: '200px' }} />
+          <col style={{ width: '150px' }} />
           <col style={{ width: '250px' }} />
-          <col style={{ width: '300px' }} />
         </colgroup>
         
         {/* 3행 헤더 구조 */}
         <thead>
           {/* 1행: 단계 구분 */}
           <tr>
-            <th style={{ background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
-              P-FMEA 구조 분석(2단계)
+            <th style={{ background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '4px 6px', fontSize: '10px', fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
+              구조분석(2단계)
             </th>
-            <th style={{ background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
-              P-FMEA 기능 분석(3단계)
+            <th colSpan={2} style={{ background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '4px 6px', fontSize: '10px', fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
+              기능분석(3단계)
             </th>
-            <th style={{ background: FAIL_COLORS.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px' }}>
-                <span>P-FMEA 고장 분석(4단계)</span>
-                <div style={{ display: 'flex', gap: '6px' }}>
+            <th style={{ background: FAIL_COLORS.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '4px 6px', fontSize: '10px', fontWeight: 800, textAlign: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'nowrap' }}>
+                <span style={{ whiteSpace: 'nowrap' }}>고장분석(4단계)</span>
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'nowrap' }}>
                   {isConfirmed ? (
-                    <span style={{ background: '#4caf50', color: 'white', padding: '3px 10px', borderRadius: '3px', fontSize: '11px', fontWeight: 700 }}>✓ 확정됨</span>
+                    <span style={{ background: '#4caf50', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 800, whiteSpace: 'nowrap', lineHeight: 1.1 }}>확정</span>
                   ) : (
-                    <button type="button" onClick={handleConfirm} style={{ background: '#4caf50', color: 'white', border: 'none', padding: '3px 10px', borderRadius: '3px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>확정</button>
+                    <button type="button" onClick={handleConfirm} style={{ background: '#4caf50', color: 'white', border: 'none', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: 1.1 }}>확정</button>
                   )}
-                  <span style={{ background: missingCount > 0 ? '#f44336' : '#4caf50', color: 'white', padding: '3px 10px', borderRadius: '3px', fontSize: '11px', fontWeight: 700 }}>누락 {missingCount}건</span>
+                  <span style={{ background: missingCount > 0 ? '#f44336' : '#4caf50', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 800, whiteSpace: 'nowrap', lineHeight: 1.1 }}>누락 {missingCount}건</span>
                   {isConfirmed && (
-                    <button type="button" onClick={handleEdit} style={{ background: '#ff9800', color: 'white', border: 'none', padding: '3px 10px', borderRadius: '3px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>수정</button>
+                    <button type="button" onClick={handleEdit} style={{ background: '#ff9800', color: 'white', border: 'none', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: 1.1 }}>수정</button>
                   )}
                 </div>
               </div>
@@ -217,7 +218,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
             <th style={{ background: '#42a5f5', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
               2. 메인 공정명
             </th>
-            <th style={{ background: '#66bb6a', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
+            <th colSpan={2} style={{ background: '#66bb6a', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
               2. 메인공정기능 및 제품특성
             </th>
             <th style={{ background: FAIL_COLORS.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
@@ -234,6 +235,9 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
           <tr>
             <th style={{ background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700, textAlign: 'center' }}>
               NO+공정명
+            </th>
+            <th style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700, textAlign: 'center' }}>
+              메인공정기능
             </th>
             <th style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700, textAlign: 'center' }}>
               제품특성
@@ -256,6 +260,9 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
                 (구조분석에서 공정 입력)
               </td>
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#c8e6c9' }}>
+                (기능분석에서 공정기능 입력)
+              </td>
+              <td style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#c8e6c9' }}>
                 (기능분석에서 제품특성 입력)
               </td>
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
@@ -264,47 +271,50 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
             </tr>
           ) : processes.map((proc) => {
             const modes = proc.failureModes || [];
+            const functions = proc.functions || [];
             // 기능분석에서 입력한 제품특성 가져오기 (functions[].productChars[] 에서)
-            const productChars = (proc.functions || []).flatMap((f: any) => f.productChars || []);
-            
-            // 제품특성이 없으면 1행, 있으면 제품특성 수와 고장형태 수 중 큰 값
-            const totalRows = Math.max(1, modes.length);
-            
-            // 제품특성별 고장형태 매핑 (제품특성이 여러개면 균등 분배)
-            const charCount = productChars.length || 1;
-            const modesPerChar = Math.ceil(totalRows / charCount);
-            
-            // 각 제품특성의 시작 행 인덱스 계산
-            const getCharForRow = (rowIdx: number) => {
-              if (productChars.length === 0) return null;
-              const charIdx = Math.floor(rowIdx / modesPerChar);
-              return productChars[Math.min(charIdx, productChars.length - 1)];
-            };
-            
-            // 각 제품특성의 rowSpan 계산
-            const getCharRowSpan = (rowIdx: number) => {
-              if (productChars.length === 0) return totalRows;
-              if (productChars.length === 1) return totalRows;
-              const charIdx = Math.floor(rowIdx / modesPerChar);
-              if (charIdx >= productChars.length - 1) {
-                // 마지막 제품특성은 나머지 모든 행을 차지
-                return totalRows - (charIdx * modesPerChar);
+            const allProductChars: { funcName: string; charName: string; funcId: string }[] = [];
+            functions.forEach((f: any) => {
+              const pChars = f.productChars || [];
+              if (pChars.length === 0) {
+                allProductChars.push({ funcName: f.name, charName: '', funcId: f.id });
+              } else {
+                pChars.forEach((pc: any) => {
+                  allProductChars.push({ funcName: f.name, charName: pc.name, funcId: f.id });
+                });
               }
-              return modesPerChar;
-            };
+            });
             
-            // 제품특성 셀을 표시해야 하는 행인지 확인
-            const shouldShowCharCell = (rowIdx: number) => {
-              if (productChars.length === 0) return rowIdx === 0;
-              if (productChars.length === 1) return rowIdx === 0;
-              return rowIdx % modesPerChar === 0;
+            // 최대 행 수 (기능/제품특성 vs 고장형태)
+            const totalRows = Math.max(1, allProductChars.length, modes.length);
+            
+            // 기능별 rowSpan 계산
+            const funcSpans: { funcName: string; startIdx: number; rowSpan: number }[] = [];
+            let currentFunc = '';
+            let funcStartIdx = 0;
+            allProductChars.forEach((pc, idx) => {
+              if (pc.funcName !== currentFunc) {
+                if (currentFunc) {
+                  funcSpans.push({ funcName: currentFunc, startIdx: funcStartIdx, rowSpan: idx - funcStartIdx });
+                }
+                currentFunc = pc.funcName;
+                funcStartIdx = idx;
+              }
+            });
+            if (currentFunc) {
+              funcSpans.push({ funcName: currentFunc, startIdx: funcStartIdx, rowSpan: allProductChars.length - funcStartIdx });
+            }
+            
+            // 해당 행에서 기능 셀을 표시해야 하는지 확인
+            const getFuncForRow = (rowIdx: number) => {
+              const span = funcSpans.find(s => rowIdx >= s.startIdx && rowIdx < s.startIdx + s.rowSpan);
+              return span ? { showFunc: rowIdx === span.startIdx, funcName: span.funcName, funcRowSpan: span.rowSpan } : null;
             };
             
             return Array.from({ length: totalRows }).map((_, rowIdx) => {
               const mode = modes[rowIdx];
-              const productChar = getCharForRow(rowIdx);
-              const showCharCell = shouldShowCharCell(rowIdx);
-              const charRowSpan = showCharCell ? getCharRowSpan(rowIdx) : 0;
+              const productChar = allProductChars[rowIdx];
+              const funcInfo = getFuncForRow(rowIdx);
               
               return (
                 <tr key={`${proc.id}-${rowIdx}`}>
@@ -313,11 +323,22 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
                       {proc.no}. {proc.name}
                     </td>
                   )}
-                  {showCharCell && (
-                    <td rowSpan={charRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '8px', textAlign: 'center', background: '#c8e6c9', fontSize: '11px', verticalAlign: 'middle' }}>
-                      {productChar?.name || '(기능분석에서 입력)'}
+                  {/* 메인공정기능 */}
+                  {funcInfo?.showFunc && (
+                    <td rowSpan={funcInfo.funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '8px', textAlign: 'left', background: '#c8e6c9', fontSize: '11px', verticalAlign: 'middle' }}>
+                      {funcInfo.funcName || '(기능분석에서 입력)'}
                     </td>
                   )}
+                  {!funcInfo && rowIdx === 0 && (
+                    <td rowSpan={totalRows} style={{ border: `1px solid ${COLORS.line}`, padding: '8px', textAlign: 'center', background: '#c8e6c9', fontSize: '11px', verticalAlign: 'middle' }}>
+                      (기능분석에서 입력)
+                    </td>
+                  )}
+                  {/* 제품특성 */}
+                  <td style={{ border: `1px solid ${COLORS.line}`, padding: '8px', textAlign: 'center', background: '#c8e6c9', fontSize: '11px', verticalAlign: 'middle' }}>
+                    {productChar?.charName || (rowIdx < allProductChars.length ? '' : '')}
+                  </td>
+                  {/* 고장형태 */}
                   <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
                     <SelectableCell 
                       value={mode?.name || ''} 
@@ -329,7 +350,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
                         title: `${proc.no}. ${proc.name} 고장형태`, 
                         itemCode: 'FM1',
                         // 상위항목: 제품특성 (고장형태의 상위는 제품특성!)
-                        parentProductChar: productChar?.name || '',
+                        parentProductChar: productChar?.charName || '',
                         processName: `${proc.no}. ${proc.name}`
                       })} 
                     />

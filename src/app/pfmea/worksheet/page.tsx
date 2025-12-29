@@ -32,6 +32,8 @@ import {
   importStructureAnalysis,
   exportAllViewExcel,
   exportFunctionL1,
+  exportFunctionL2,
+  exportFunctionL3,
   downloadStructureTemplate 
 } from './excel-export';
 import SpecialCharMasterModal from '@/components/modals/SpecialCharMasterModal';
@@ -381,7 +383,23 @@ function FMEAWorksheetPageContent() {
             if (state.tab === 'structure') {
               handleStructureExport();
             } else if (state.tab === 'function-l1') {
-              exportFunctionL1(state, fmeaName);
+              // 1L 완제품기능 (고장영향 미포함)
+              exportFunctionL1(state, fmeaName, false);
+            } else if (state.tab === 'failure-l1') {
+              // 1L 고장영향 (고장영향 포함)
+              exportFunctionL1(state, fmeaName, true);
+            } else if (state.tab === 'function-l2') {
+              // 2L 메인공정기능 (고장형태 미포함)
+              exportFunctionL2(state, fmeaName, false);
+            } else if (state.tab === 'failure-l2') {
+              // 2L 고장형태 (고장형태 포함)
+              exportFunctionL2(state, fmeaName, true);
+            } else if (state.tab === 'function-l3') {
+              // 3L 작업요소기능 (고장원인 미포함)
+              exportFunctionL3(state, fmeaName, false);
+            } else if (state.tab === 'failure-l3') {
+              // 3L 고장원인 (고장원인 포함)
+              exportFunctionL3(state, fmeaName, true);
             } else if (state.tab === 'all') {
               exportAllViewExcel(state, fmeaName);
             } else {
@@ -760,27 +778,31 @@ function FMEAWorksheetPageContent() {
                           (기능 미입력)
                         </div>
                       ) : (type.functions || []).map((func: any) => (
-                        <div key={func.id} style={{ marginLeft: '12px', marginBottom: '4px' }}>
+                        <div key={func.id} style={{ marginLeft: '12px', marginBottom: '6px' }}>
+                          {/* 완제품기능 */}
+                          <div style={{ fontSize: '10px', fontWeight: 600, color: '#1b5e20', padding: '2px 6px', background: '#c8e6c9', borderRadius: '2px', marginBottom: '2px' }}>
+                            ⚙️ {func.name}
+                          </div>
                           {/* 요구사항 */}
                           {(func.requirements || []).length === 0 ? (
-                            <div style={{ fontSize: '9px', color: '#999', fontStyle: 'italic' }}>
+                            <div style={{ marginLeft: '12px', fontSize: '9px', color: '#999', fontStyle: 'italic' }}>
                               (요구사항 미입력)
                             </div>
                           ) : (func.requirements || []).map((req: any) => {
                             // 해당 요구사항의 고장영향 찾기
                             const effects = (state.l1.failureScopes || []).filter((s: any) => s.reqId === req.id);
                             return (
-                              <div key={req.id} style={{ marginBottom: '4px' }}>
-                                <div style={{ fontSize: '10px', fontWeight: 600, color: '#555', padding: '1px 4px' }}>
+                              <div key={req.id} style={{ marginLeft: '12px', marginBottom: '4px' }}>
+                                <div style={{ fontSize: '10px', fontWeight: 600, color: '#e65100', padding: '1px 4px', background: '#fff3e0', borderRadius: '2px' }}>
                                   📋 {req.name}
                                 </div>
                                 {/* 고장영향 */}
                                 {effects.length === 0 ? (
-                                  <div style={{ marginLeft: '16px', fontSize: '9px', color: '#aaa', fontStyle: 'italic' }}>
+                                  <div style={{ marginLeft: '12px', fontSize: '9px', color: '#aaa', fontStyle: 'italic' }}>
                                     (고장영향 미입력)
                                   </div>
                                 ) : effects.map((eff: any) => (
-                                  <div key={eff.id} style={{ marginLeft: '16px', fontSize: '9px', color: '#666', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                  <div key={eff.id} style={{ marginLeft: '12px', fontSize: '9px', color: '#c62828', display: 'flex', gap: '6px', alignItems: 'center' }}>
                                     <span>⚡ {eff.effect || '(미입력)'}</span>
                                     {eff.severity && (
                                       <span style={{ 
@@ -825,17 +847,42 @@ function FMEAWorksheetPageContent() {
                   🔥 2L 고장형태 트리 (FM)
                 </div>
                 <div style={{ flex: 1, overflow: 'auto', padding: '8px', background: '#fce4ec' }}>
-                  {state.l2.filter(p => p.name && !p.name.includes('클릭')).map(proc => (
-                    <div key={proc.id} style={{ marginBottom: '8px' }}>
-                      <div style={{ fontSize: '10px', fontWeight: 700, color: '#ad1457' }}>🔧 {proc.no}. {proc.name}</div>
-                      {(proc.failureModes || []).map((m: any) => (
-                        <div key={m.id} style={{ marginLeft: '16px', fontSize: '9px', color: '#666', display: 'flex', gap: '8px' }}>
-                          <span>└ {m.name}</span>
-                          {m.sc && <span style={{ background: '#c62828', color: 'white', padding: '0 4px', borderRadius: '2px', fontSize: '8px' }}>SC</span>}
-                        </div>
-                      ))}
-                    </div>
-                  ))}
+                  {state.l2.filter(p => p.name && !p.name.includes('클릭')).map(proc => {
+                    const functions = proc.functions || [];
+                    return (
+                      <div key={proc.id} style={{ marginBottom: '10px' }}>
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: '#ad1457' }}>🔧 {proc.no}. {proc.name}</div>
+                        {functions.length > 0 ? functions.map((f: any) => {
+                          const productChars = f.productChars || [];
+                          return (
+                            <div key={f.id} style={{ marginLeft: '12px', marginBottom: '4px' }}>
+                              <div style={{ fontSize: '9px', fontWeight: 600, color: '#388e3c' }}>📋 {f.name}</div>
+                              {productChars.length > 0 ? productChars.map((pc: any) => (
+                                <div key={pc.id} style={{ marginLeft: '12px', marginBottom: '2px' }}>
+                                  <div style={{ fontSize: '9px', color: '#1976d2' }}>🏷️ {pc.name}</div>
+                                  {(proc.failureModes || []).filter((m: any) => !pc.name || m.productCharId === pc.id || !m.productCharId).slice(0, 3).map((m: any) => (
+                                    <div key={m.id} style={{ marginLeft: '12px', fontSize: '9px', color: '#c62828', display: 'flex', gap: '6px' }}>
+                                      <span>└ ⚠️ {m.name}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )) : (
+                                <div style={{ marginLeft: '12px', fontSize: '9px', color: '#999' }}>└ (제품특성 미입력)</div>
+                              )}
+                            </div>
+                          );
+                        }) : (
+                          <div style={{ marginLeft: '12px', fontSize: '9px', color: '#999' }}>└ (메인공정기능 미입력)</div>
+                        )}
+                        {/* 기능에 연결되지 않은 고장형태 표시 */}
+                        {functions.length === 0 && (proc.failureModes || []).map((m: any) => (
+                          <div key={m.id} style={{ marginLeft: '16px', fontSize: '9px', color: '#c62828', display: 'flex', gap: '6px' }}>
+                            <span>└ ⚠️ {m.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
                 </div>
               </>
             )}

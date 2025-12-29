@@ -129,6 +129,9 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     setIsSaving(true);
     try {
       // 1. 레거시 형식으로 저장 (하위호환)
+      const failureScopesCount = (state.l1 as any).failureScopes?.length || 0;
+      console.log('[저장 시작] failureScopes:', failureScopesCount, '개', (state.l1 as any).failureScopes);
+      
       const worksheetData = {
         fmeaId: targetId,
         l1: state.l1,
@@ -144,19 +147,30 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         failureLinks: (state as any).failureLinks || [],
         savedAt: new Date().toISOString(),
       };
+      
+      console.log('[저장] 레거시 데이터 저장:', {
+        l1Name: worksheetData.l1.name,
+        failureScopesCount: (worksheetData.l1 as any).failureScopes?.length || 0,
+      });
       localStorage.setItem(`pfmea_worksheet_${targetId}`, JSON.stringify(worksheetData));
       
       // 2. 원자성 DB로도 저장
       const newAtomicDB = migrateToAtomicDB(worksheetData);
+      console.log('[저장] 원자성 DB 변환 후:', {
+        failureEffects: newAtomicDB.failureEffects.length,
+        l1Functions: newAtomicDB.l1Functions.length,
+      });
       saveWorksheetDB(newAtomicDB);
       setAtomicDB(newAtomicDB);
       
       // 로그
       const l2WithModes = state.l2.filter((p: any) => (p.failureModes || []).length > 0);
       console.log('[저장] 워크시트 데이터 저장 완료:', targetId, '탭:', state.tab);
+      console.log('[저장] 고장영향(failureScopes):', failureScopesCount, '개');
       console.log('[저장] 원자성 DB:', {
         l2Structs: newAtomicDB.l2Structures.length,
         l3Structs: newAtomicDB.l3Structures.length,
+        failureEffects: newAtomicDB.failureEffects.length,
         failureModes: newAtomicDB.failureModes.length,
         failureLinks: newAtomicDB.failureLinks.length,
       });
@@ -179,6 +193,17 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     if (dirty) triggerAutoSave();
     return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
   }, [dirty, triggerAutoSave]);
+
+  // 고장영향(failureScopes) 변경 시 즉시 저장 (새로고침 시 데이터 손실 방지)
+  const failureScopesRef = useRef<any[]>([]);
+  useEffect(() => {
+    const currentScopes = (state.l1 as any)?.failureScopes || [];
+    if (JSON.stringify(currentScopes) !== JSON.stringify(failureScopesRef.current)) {
+      failureScopesRef.current = currentScopes;
+      console.log('[자동저장] failureScopes 변경 감지:', currentScopes.length, '개');
+      saveToLocalStorage();
+    }
+  }, [(state.l1 as any)?.failureScopes, saveToLocalStorage]);
 
   // FMEA 목록 로드 및 자동 선택
   useEffect(() => {
@@ -212,12 +237,25 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     // 원자성 DB 로드 시도
     const loadedDB = loadWorksheetDB(selectedFmeaId);
     
-    if (loadedDB && loadedDB.l2Structures.length > 0) {
+    // 원자성 DB가 있고 (l1Structure 또는 failureEffects가 있으면 유효한 DB)
+    if (loadedDB && (loadedDB.l1Structure || (loadedDB.failureEffects && loadedDB.failureEffects.length > 0) || loadedDB.l2Structures.length > 0)) {
       console.log('[워크시트] 원자성 DB 발견:', loadedDB);
+      console.log('[워크시트] 원자성 DB 상태:', {
+        l1Structure: !!loadedDB.l1Structure,
+        l2Structures: loadedDB.l2Structures.length,
+        failureEffects: loadedDB.failureEffects.length,
+        failureModes: loadedDB.failureModes.length,
+      });
       setAtomicDB(loadedDB);
       
       // 원자성 DB를 레거시 형식으로 변환하여 state에 적용
       const legacy = convertToLegacyFormat(loadedDB);
+      
+      console.log('[워크시트] 역변환된 레거시 데이터:', {
+        l1Name: legacy.l1.name,
+        failureScopesCount: (legacy.l1 as any).failureScopes?.length || 0,
+        l2Count: legacy.l2.length,
+      });
       
       setState(prev => ({ 
         ...prev, 
@@ -250,11 +288,14 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         console.log('[워크시트] 레거시 데이터 발견:', parsed);
         
         if (parsed.l1 && parsed.l2) {
-          // 마이그레이션 및 방어 코드
+          // 마이그레이션 및 방어 코드 - failureScopes 명시적 포함
           const migratedL1 = {
             ...parsed.l1,
-            types: parsed.l1.types || []
+            types: parsed.l1.types || [],
+            failureScopes: parsed.l1.failureScopes || [] // 고장영향 데이터 보존
           };
+          
+          console.log('[데이터 로드] failureScopes:', (parsed.l1.failureScopes || []).length, '개');
           
           const isEmptyValue = (val: string | undefined | null): boolean => {
             if (!val) return true;

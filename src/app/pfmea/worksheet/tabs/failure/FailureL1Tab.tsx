@@ -288,7 +288,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
     return `${prefix}${index + 1}`;
   }, []);
 
-  // 렌더링할 행 데이터 생성 (완제품 공정명은 구분별로 1:1 매칭)
+  // 렌더링할 행 데이터 생성 (완제품 공정명은 구분별로 1:1 매칭, 완제품기능은 기능별로 병합)
   const renderRows = useMemo(() => {
     const rows: {
       key: string;
@@ -297,6 +297,8 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
       showType: boolean;
       typeRowSpan: number;
       typeName: string;
+      showFunc: boolean; // 완제품기능 표시 여부
+      funcRowSpan: number; // 완제품기능 병합 행 수
       funcName: string; // 완제품기능 추가
       feNo: string; // 번호 추가 (Y1, S1, U1...)
       showReq: boolean;
@@ -309,13 +311,26 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
     }[] = [];
 
     let typeShown: Record<string, boolean> = {};
+    let funcShown: Record<string, boolean> = {}; // 기능별 표시 여부 추적
     // 구분별 카운터
     const typeCounters: Record<string, number> = { 'Your Plant': 0, 'Ship to Plant': 0, 'User': 0 };
 
+    // 기능별 rowSpan 미리 계산
+    const funcRowSpanMap = new Map<string, number>();
     typeGroups.forEach((group) => {
-      let productShownInGroup = false;
-      
       group.rows.forEach((reqRow) => {
+        const funcKey = `${group.typeName}_${reqRow.funcName}`;
+        const currentSpan = funcRowSpanMap.get(funcKey) || 0;
+        funcRowSpanMap.set(funcKey, currentSpan + reqRow.totalRowSpan);
+      });
+    });
+
+    typeGroups.forEach((group) => {
+      group.rows.forEach((reqRow) => {
+        const funcKey = `${group.typeName}_${reqRow.funcName}`;
+        const isFirstInFunc = !funcShown[funcKey];
+        const funcRowSpan = funcRowSpanMap.get(funcKey) || 1;
+        
         reqRow.effects.forEach((eff, eIdx) => {
           const isFirstInType = !typeShown[group.typeName];
           const isFirstInReq = eIdx === 0;
@@ -336,6 +351,9 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
             showType: isFirstInType,
             typeRowSpan: group.rowSpan,
             typeName: group.typeName,
+            // 완제품기능: 같은 기능의 첫 행에만 표시, 해당 기능의 모든 요구사항 행 병합
+            showFunc: isFirstInFunc && isFirstInReq,
+            funcRowSpan: funcRowSpan,
             funcName: reqRow.funcName, // 완제품기능 추가
             feNo, // 번호 추가
             showReq: isFirstInReq,
@@ -348,6 +366,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
           });
 
           typeShown[group.typeName] = true;
+          if (isFirstInReq) funcShown[funcKey] = true;
         });
       });
     });
@@ -372,15 +391,15 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
         {/* 3행 헤더 구조 */}
         <thead>
           <tr>
-            <th style={{ background: STEP_COLORS.structure.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '10px 5px', fontSize: '14px', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
-              P-FMEA 구조 분석(2단계)
+            <th style={{ background: STEP_COLORS.structure.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '4px 6px', fontSize: '11px', fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
+              구조분석(2단계)
             </th>
-            <th colSpan={3} style={{ background: STEP_COLORS.function.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '10px 5px', fontSize: '14px', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
-              P-FMEA 기능 분석(3단계)
+            <th colSpan={3} style={{ background: STEP_COLORS.function.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '4px 6px', fontSize: '11px', fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
+              기능분석(3단계)
             </th>
-            <th colSpan={2} style={{ background: STEP_COLORS.failure.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '10px 5px', fontSize: '14px', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px' }}>
-                <span>4단계 : 1L 고장영향(FE) 분석</span>
+            <th colSpan={2} style={{ background: STEP_COLORS.failure.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '4px 6px', fontSize: '11px', fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'nowrap' }}>
+                <span>고장분석(4단계)</span>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   {isConfirmed ? (
                     <span style={{ background: '#4caf50', color: 'white', padding: '3px 10px', borderRadius: '3px', fontSize: '11px', fontWeight: 700 }}>✓ 확정됨</span>
@@ -487,23 +506,26 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                   </td>
                 )}
                 
-                {/* 완제품기능 (기능분석에서 연결) */}
-                <td 
-                  style={{ 
-                    border: `1px solid ${COLORS.line}`, 
-                    padding: '2px 4px', 
-                    textAlign: 'left', 
-                    background: STEP_COLORS.function.cell, 
-                    fontSize: '10px',
-                    verticalAlign: 'middle',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }}
-                  title={row.funcName}
-                >
-                  {row.funcName || '-'}
-                </td>
+                {/* 완제품기능 (기능분석에서 연결) - 같은 기능 병합 */}
+                {row.showFunc && (
+                  <td 
+                    rowSpan={row.funcRowSpan}
+                    style={{ 
+                      border: `1px solid ${COLORS.line}`, 
+                      padding: '2px 4px', 
+                      textAlign: 'left', 
+                      background: STEP_COLORS.function.cell, 
+                      fontSize: '10px',
+                      verticalAlign: 'middle',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}
+                    title={row.funcName}
+                  >
+                    {row.funcName || '-'}
+                  </td>
+                )}
                 
                 {/* 요구사항 (자동) */}
                 {row.showReq && (

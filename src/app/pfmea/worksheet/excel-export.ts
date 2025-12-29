@@ -56,20 +56,34 @@ const applyDataStyle = (cell: ExcelJS.Cell, isEven: boolean) => {
 
 /**
  * 1L 완제품 기능분석 Excel 내보내기 (화면과 1:1 일치)
+ * @param includeFailure - true이면 고장영향 컬럼 포함 (4단계), false이면 기능분석만 (3단계)
  */
-export async function exportFunctionL1(state: WorksheetState, fmeaName: string) {
+export async function exportFunctionL1(state: WorksheetState, fmeaName: string, includeFailure: boolean = false) {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('1L 완제품기능', {
-    properties: { tabColor: { argb: '1B5E20' } },
+  const sheetName = includeFailure ? '1L 고장영향' : '1L 완제품기능';
+  const worksheet = workbook.addWorksheet(sheetName, {
+    properties: { tabColor: { argb: includeFailure ? 'C62828' : '1B5E20' } },
     views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }]
   });
 
-  const columns = [
-    { header: '완제품 공정명', key: 'l1Name', width: 25 },
+  // 고장영향 데이터 가져오기
+  const failureScopes = (state.l1 as any)?.failureScopes || [];
+
+  // 기능분석만 또는 고장분석 포함 컬럼
+  const baseColumns = [
+    { header: '완제품 공정명', key: 'l1Name', width: 20 },
     { header: '구분', key: 'type', width: 15 },
-    { header: '완제품기능', key: 'function', width: 40 },
-    { header: '요구사항', key: 'requirement', width: 30 },
+    { header: '완제품기능', key: 'function', width: 35 },
+    { header: '요구사항', key: 'requirement', width: 20 },
   ];
+  
+  const failureColumns = [
+    { header: '고장영향(FE)', key: 'failureEffect', width: 25 },
+    { header: 'S', key: 'severity', width: 5 },
+  ];
+  
+  const columns = includeFailure ? [...baseColumns, ...failureColumns] : baseColumns;
+  const colCount = columns.length;
 
   worksheet.columns = columns;
 
@@ -78,7 +92,9 @@ export async function exportFunctionL1(state: WorksheetState, fmeaName: string) 
   columns.forEach((col, idx) => {
     const cell = headerRow.getCell(idx + 1);
     cell.value = col.header;
-    applyHeaderStyle(cell, '1B5E20');
+    // 구분별 헤더 색상 (구조분석: 파랑, 기능분석: 녹색, 고장분석: 빨강)
+    const color = idx === 0 ? '1976D2' : idx < 4 ? '1B5E20' : 'C62828';
+    applyHeaderStyle(cell, color);
   });
   headerRow.height = 25;
 
@@ -87,133 +103,262 @@ export async function exportFunctionL1(state: WorksheetState, fmeaName: string) 
   const l1Name = state.l1?.name || '';
   const types = state.l1?.types || [];
 
+  // 평탄화된 데이터 생성
+  const flatData: { type: string; func: string; reqId: string; reqName: string; effect: string; severity?: number }[] = [];
+  
   types.forEach((type: any) => {
-    const typeStartRow = rowNum;
     const funcs = type.functions || [];
-    
     if (funcs.length === 0) {
-      const row = worksheet.getRow(rowNum);
-      row.getCell(1).value = l1Name;
-      row.getCell(2).value = type.name;
-      [1, 2, 3, 4].forEach(i => applyDataStyle(row.getCell(i), rowNum % 2 === 0));
-      rowNum++;
+      flatData.push({ type: type.name, func: '', reqId: '', reqName: '', effect: '', severity: undefined });
     } else {
       funcs.forEach((fn: any) => {
         const reqs = fn.requirements || [];
         if (reqs.length === 0) {
-          const row = worksheet.getRow(rowNum);
-          row.getCell(1).value = l1Name;
-          row.getCell(2).value = type.name;
-          row.getCell(3).value = fn.name;
-          [1, 2, 3, 4].forEach(i => applyDataStyle(row.getCell(i), rowNum % 2 === 0));
-          rowNum++;
+          flatData.push({ type: type.name, func: fn.name, reqId: '', reqName: '', effect: '', severity: undefined });
         } else {
           reqs.forEach((req: any) => {
-            const row = worksheet.getRow(rowNum);
-            row.getCell(1).value = l1Name;
-            row.getCell(2).value = type.name;
-            row.getCell(3).value = fn.name;
-            row.getCell(4).value = req.name;
-            [1, 2, 3, 4].forEach(i => applyDataStyle(row.getCell(i), rowNum % 2 === 0));
-            rowNum++;
+            if (includeFailure) {
+              // 고장분석 포함: 각 요구사항의 고장영향 수에 따라 행 생성
+              const effects = failureScopes.filter((s: any) => s.reqId === req.id);
+              if (effects.length === 0) {
+                flatData.push({ type: type.name, func: fn.name, reqId: req.id, reqName: req.name, effect: '', severity: undefined });
+              } else {
+                effects.forEach((eff: any) => {
+                  flatData.push({ type: type.name, func: fn.name, reqId: req.id, reqName: req.name, effect: eff.effect || '', severity: eff.severity });
+                });
+              }
+            } else {
+              // 기능분석만: 요구사항당 1행
+              flatData.push({ type: type.name, func: fn.name, reqId: req.id, reqName: req.name, effect: '', severity: undefined });
+            }
           });
         }
       });
     }
-
-    // 병합 처리 (구분)
-    if (rowNum > typeStartRow + 1) {
-      worksheet.mergeCells(typeStartRow, 2, rowNum - 1, 2);
-    }
   });
+
+  // 데이터 기록 및 병합 정보 수집
+  interface MergeInfo { startRow: number; endRow: number; col: number }
+  const typeMerges: MergeInfo[] = [];
+  const funcMerges: MergeInfo[] = [];
+  const reqMerges: MergeInfo[] = [];
+  
+  let currentType = '';
+  let typeStartRow = rowNum;
+  let currentFunc = '';
+  let funcStartRow = rowNum;
+  let currentReqId = '';
+  let reqStartRow = rowNum;
+
+  flatData.forEach((data) => {
+    const row = worksheet.getRow(rowNum);
+    row.getCell(1).value = l1Name;
+    row.getCell(2).value = data.type;
+    row.getCell(3).value = data.func;
+    row.getCell(4).value = data.reqName;
+    if (includeFailure) {
+      row.getCell(5).value = data.effect;
+      row.getCell(6).value = data.severity || '';
+    }
+    
+    // 스타일 적용
+    for (let i = 1; i <= colCount; i++) {
+      applyDataStyle(row.getCell(i), rowNum % 2 === 0);
+      if (includeFailure && i === 6) row.getCell(i).alignment = { vertical: 'middle', horizontal: 'center' };
+    }
+
+    // 병합 추적 - 구분
+    if (data.type !== currentType) {
+      if (currentType && rowNum > typeStartRow) {
+        typeMerges.push({ startRow: typeStartRow, endRow: rowNum - 1, col: 2 });
+      }
+      currentType = data.type;
+      typeStartRow = rowNum;
+    }
+    
+    // 병합 추적 - 기능
+    const funcKey = `${data.type}_${data.func}`;
+    if (funcKey !== currentFunc) {
+      if (currentFunc && rowNum > funcStartRow) {
+        funcMerges.push({ startRow: funcStartRow, endRow: rowNum - 1, col: 3 });
+      }
+      currentFunc = funcKey;
+      funcStartRow = rowNum;
+    }
+    
+    // 병합 추적 - 요구사항 (고장분석 포함시에만 병합)
+    if (includeFailure && data.reqId !== currentReqId) {
+      if (currentReqId && rowNum > reqStartRow) {
+        reqMerges.push({ startRow: reqStartRow, endRow: rowNum - 1, col: 4 });
+      }
+      currentReqId = data.reqId;
+      reqStartRow = rowNum;
+    }
+
+    rowNum++;
+  });
+
+  // 마지막 병합 처리
+  if (currentType && rowNum > typeStartRow) {
+    typeMerges.push({ startRow: typeStartRow, endRow: rowNum - 1, col: 2 });
+  }
+  if (currentFunc && rowNum > funcStartRow) {
+    funcMerges.push({ startRow: funcStartRow, endRow: rowNum - 1, col: 3 });
+  }
+  if (includeFailure && currentReqId && rowNum > reqStartRow) {
+    reqMerges.push({ startRow: reqStartRow, endRow: rowNum - 1, col: 4 });
+  }
+
+  // 병합 적용
+  typeMerges.forEach(m => { if (m.endRow > m.startRow) worksheet.mergeCells(m.startRow, m.col, m.endRow, m.col); });
+  funcMerges.forEach(m => { if (m.endRow > m.startRow) worksheet.mergeCells(m.startRow, m.col, m.endRow, m.col); });
+  reqMerges.forEach(m => { if (m.endRow > m.startRow) worksheet.mergeCells(m.startRow, m.col, m.endRow, m.col); });
 
   // 완제품 공정명 전체 병합
   if (rowNum > 2) {
     worksheet.mergeCells(2, 1, rowNum - 1, 1);
   }
 
+  const fileName = includeFailure ? `${fmeaName}_1L_고장영향` : `${fmeaName}_1L_완제품기능`;
   const buffer = await workbook.xlsx.writeBuffer();
-  saveExcelFile(buffer, `${fmeaName}_1L_완제품기능`);
+  saveExcelFile(buffer, fileName);
 }
 
 /**
  * 2L 메인공정 기능분석 Excel 내보내기 (화면과 1:1 일치)
+ * @param includeFailure - true이면 고장형태 컬럼 포함 (4단계), false이면 기능분석만 (3단계)
  */
-export async function exportFunctionL2(state: WorksheetState, fmeaName: string) {
+export async function exportFunctionL2(state: WorksheetState, fmeaName: string, includeFailure: boolean = false) {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('2L 메인공정기능', {
-    properties: { tabColor: { argb: '1B5E20' } },
+  const sheetName = includeFailure ? '2L 고장형태' : '2L 메인공정기능';
+  const worksheet = workbook.addWorksheet(sheetName, {
+    properties: { tabColor: { argb: includeFailure ? 'C62828' : '1B5E20' } },
     views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }]
   });
 
-  const columns = [
+  // 기능분석만 또는 고장분석 포함 컬럼
+  const baseColumns = [
     { header: '공정NO+공정명', key: 'processName', width: 25 },
-    { header: '메인공정기능', key: 'function', width: 40 },
+    { header: '메인공정기능', key: 'function', width: 35 },
     { header: '제품특성', key: 'productChar', width: 25 },
-    { header: '특별특성', key: 'specialChar', width: 15 },
+    { header: '특별특성', key: 'specialChar', width: 10 },
   ];
+  
+  const failureColumns = [
+    { header: '고장형태(FM)', key: 'failureMode', width: 25 },
+  ];
+  
+  const columns = includeFailure ? [...baseColumns, ...failureColumns] : baseColumns;
+  const colCount = columns.length;
 
   worksheet.columns = columns;
 
-  // 헤더 설정
+  // 헤더 설정 (기능분석: 녹색, 고장분석: 빨강)
   const headerRow = worksheet.getRow(1);
   columns.forEach((col, idx) => {
     const cell = headerRow.getCell(idx + 1);
     cell.value = col.header;
-    applyHeaderStyle(cell, '1B5E20');
+    const color = idx < 4 ? '1B5E20' : 'C62828';
+    applyHeaderStyle(cell, color);
   });
   headerRow.height = 25;
 
-  // 데이터 작성
-  let rowNum = 2;
-  const processes = state.l2 || [];
-
+  // 평탄화된 데이터 생성
+  interface FlatData { procName: string; funcName: string; productChar: string; specialChar: string; failureMode: string }
+  const flatData: FlatData[] = [];
+  
+  const processes = (state.l2 || []).filter((p: any) => p.name && !p.name.includes('클릭'));
+  
   processes.forEach((proc: any) => {
-    if (!proc.name || proc.name.includes('클릭')) return;
-
-    const procStartRow = rowNum;
     const functions = proc.functions || [];
+    const failureModes = proc.failureModes || [];
     
-    if (functions.length === 0) {
-      const row = worksheet.getRow(rowNum);
-      row.getCell(1).value = `${proc.no}. ${proc.name}`;
-      [1, 2, 3, 4].forEach(i => applyDataStyle(row.getCell(i), rowNum % 2 === 0));
-      rowNum++;
-    } else {
-      functions.forEach((fn: any) => {
-        const fnStartRow = rowNum;
-        const pChars = fn.productChars || [];
-        
-        if (pChars.length === 0) {
-          const row = worksheet.getRow(rowNum);
-          row.getCell(1).value = `${proc.no}. ${proc.name}`;
-          row.getCell(2).value = fn.name;
-          [1, 2, 3, 4].forEach(i => applyDataStyle(row.getCell(i), rowNum % 2 === 0));
-          rowNum++;
-        } else {
-          pChars.forEach((pc: any) => {
-            const row = worksheet.getRow(rowNum);
-            row.getCell(1).value = `${proc.no}. ${proc.name}`;
-            row.getCell(2).value = fn.name;
-            row.getCell(3).value = pc.name;
-            row.getCell(4).value = pc.specialChar || '';
-            [1, 2, 3, 4].forEach(i => applyDataStyle(row.getCell(i), rowNum % 2 === 0));
-            rowNum++;
-          });
-        }
-
-        // 기능 셀 병합
-        if (rowNum > fnStartRow + 1) {
-          worksheet.mergeCells(fnStartRow, 2, rowNum - 1, 2);
-        }
+    // 각 기능별로 제품특성 수집
+    const allProductChars: { funcName: string; charName: string; specialChar: string }[] = [];
+    functions.forEach((fn: any) => {
+      const pChars = fn.productChars || [];
+      if (pChars.length === 0) {
+        allProductChars.push({ funcName: fn.name, charName: '', specialChar: '' });
+      } else {
+        pChars.forEach((pc: any) => {
+          allProductChars.push({ funcName: fn.name, charName: pc.name, specialChar: pc.specialChar || '' });
+        });
+      }
+    });
+    
+    // 최대 행 수 결정 (제품특성 vs 고장형태)
+    const maxRows = Math.max(allProductChars.length || 1, failureModes.length || 1);
+    
+    for (let i = 0; i < maxRows; i++) {
+      const pc = allProductChars[i];
+      const fm = failureModes[i];
+      flatData.push({
+        procName: `${proc.no}. ${proc.name}`,
+        funcName: pc?.funcName || '',
+        productChar: pc?.charName || '',
+        specialChar: pc?.specialChar || '',
+        failureMode: fm?.name || ''
       });
     }
-
-    // 공정 셀 병합
-    if (rowNum > procStartRow + 1) {
-      worksheet.mergeCells(procStartRow, 1, rowNum - 1, 1);
-    }
   });
+
+  // 데이터 기록 및 병합 정보 수집
+  let rowNum = 2;
+  interface MergeInfo { startRow: number; endRow: number; col: number }
+  const procMerges: MergeInfo[] = [];
+  const funcMerges: MergeInfo[] = [];
+  
+  let currentProc = '';
+  let procStartRow = rowNum;
+  let currentFunc = '';
+  let funcStartRow = rowNum;
+
+  flatData.forEach((data) => {
+    const row = worksheet.getRow(rowNum);
+    row.getCell(1).value = data.procName;
+    row.getCell(2).value = data.funcName;
+    row.getCell(3).value = data.productChar;
+    row.getCell(4).value = data.specialChar;
+    row.getCell(5).value = data.failureMode;
+    
+    [1, 2, 3, 4, 5].forEach(i => {
+      applyDataStyle(row.getCell(i), rowNum % 2 === 0);
+      if (i === 4) row.getCell(i).alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+
+    // 병합 추적 - 공정
+    if (data.procName !== currentProc) {
+      if (currentProc && rowNum > procStartRow) {
+        procMerges.push({ startRow: procStartRow, endRow: rowNum - 1, col: 1 });
+      }
+      currentProc = data.procName;
+      procStartRow = rowNum;
+    }
+    
+    // 병합 추적 - 기능
+    const funcKey = `${data.procName}_${data.funcName}`;
+    if (funcKey !== currentFunc) {
+      if (currentFunc && rowNum > funcStartRow) {
+        funcMerges.push({ startRow: funcStartRow, endRow: rowNum - 1, col: 2 });
+      }
+      currentFunc = funcKey;
+      funcStartRow = rowNum;
+    }
+
+    rowNum++;
+  });
+
+  // 마지막 병합 처리
+  if (currentProc && rowNum > procStartRow) {
+    procMerges.push({ startRow: procStartRow, endRow: rowNum - 1, col: 1 });
+  }
+  if (currentFunc && rowNum > funcStartRow) {
+    funcMerges.push({ startRow: funcStartRow, endRow: rowNum - 1, col: 2 });
+  }
+
+  // 병합 적용
+  procMerges.forEach(m => { if (m.endRow > m.startRow) worksheet.mergeCells(m.startRow, m.col, m.endRow, m.col); });
+  funcMerges.forEach(m => { if (m.endRow > m.startRow) worksheet.mergeCells(m.startRow, m.col, m.endRow, m.col); });
 
   const buffer = await workbook.xlsx.writeBuffer();
   saveExcelFile(buffer, `${fmeaName}_2L_메인공정기능`);
@@ -221,111 +366,178 @@ export async function exportFunctionL2(state: WorksheetState, fmeaName: string) 
 
 /**
  * 3L 작업요소 기능분석 Excel 내보내기 (화면과 1:1 일치)
+ * @param includeFailure - true이면 고장원인 컬럼 포함 (4단계), false이면 기능분석만 (3단계)
  */
-export async function exportFunctionL3(state: WorksheetState, fmeaName: string) {
+export async function exportFunctionL3(state: WorksheetState, fmeaName: string, includeFailure: boolean = false) {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('3L 작업요소기능', {
-    properties: { tabColor: { argb: '1B5E20' } },
+  const sheetName = includeFailure ? '3L 고장원인' : '3L 작업요소기능';
+  const worksheet = workbook.addWorksheet(sheetName, {
+    properties: { tabColor: { argb: includeFailure ? 'C62828' : '1B5E20' } },
     views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }]
   });
 
-  const columns = [
-    { header: '공정명', key: 'processName', width: 25 },
-    { header: '4M', key: 'm4', width: 10 },
-    { header: '작업요소', key: 'workElem', width: 25 },
-    { header: '작업요소기능', key: 'function', width: 40 },
-    { header: '공정특성', key: 'processChar', width: 25 },
-    { header: '특별특성', key: 'specialChar', width: 15 },
+  const baseColumns = [
+    { header: '공정명', key: 'processName', width: 20 },
+    { header: '4M', key: 'm4', width: 8 },
+    { header: '작업요소', key: 'workElem', width: 20 },
+    { header: '작업요소기능', key: 'function', width: 30 },
+    { header: '공정특성', key: 'processChar', width: 20 },
+    { header: '특별특성', key: 'specialChar', width: 10 },
   ];
+  
+  const columns = includeFailure 
+    ? [...baseColumns, { header: '고장원인(FC)', key: 'failureCause', width: 25 }]
+    : baseColumns;
 
   worksheet.columns = columns;
 
-  // 헤더 설정
+  // 헤더 설정 (기능분석: 녹색, 고장분석: 빨강)
   const headerRow = worksheet.getRow(1);
   columns.forEach((col, idx) => {
     const cell = headerRow.getCell(idx + 1);
     cell.value = col.header;
-    applyHeaderStyle(cell, '1B5E20');
+    const color = includeFailure && idx >= baseColumns.length ? 'C62828' : '1B5E20';
+    applyHeaderStyle(cell, color);
   });
   headerRow.height = 25;
 
-  // 데이터 작성
-  let rowNum = 2;
-  const processes = state.l2 || [];
-
+  // 평탄화된 데이터 생성
+  interface FlatData { 
+    procName: string; m4: string; weName: string; funcName: string; 
+    processChar: string; specialChar: string; failureCause: string;
+  }
+  const flatData: FlatData[] = [];
+  
+  const processes = (state.l2 || []).filter((p: any) => p.name && !p.name.includes('클릭'));
+  
   processes.forEach((proc: any) => {
-    if (!proc.name || proc.name.includes('클릭')) return;
-
-    const procStartRow = rowNum;
-    const l3List = proc.l3 || [];
+    const l3List = (proc.l3 || []).filter((we: any) => we.name && !we.name.includes('클릭') && !we.name.includes('추가'));
     
-    if (l3List.length === 0) {
-      const row = worksheet.getRow(rowNum);
-      row.getCell(1).value = `${proc.no}. ${proc.name}`;
-      [1, 2, 3, 4, 5, 6].forEach(i => applyDataStyle(row.getCell(i), rowNum % 2 === 0));
-      rowNum++;
-    } else {
-      l3List.forEach((we: any) => {
-        const weStartRow = rowNum;
-        const functions = we.functions || [];
-        
-        if (functions.length === 0) {
-          const row = worksheet.getRow(rowNum);
-          row.getCell(1).value = `${proc.no}. ${proc.name}`;
-          row.getCell(2).value = we.m4 || '';
-          row.getCell(3).value = we.name;
-          [1, 2, 3, 4, 5, 6].forEach(i => applyDataStyle(row.getCell(i), rowNum % 2 === 0));
-          rowNum++;
+    l3List.forEach((we: any) => {
+      const functions = we.functions || [];
+      const failureCauses = we.failureCauses || [];
+      
+      // 각 기능별로 공정특성 수집
+      const allProcessChars: { funcName: string; charName: string; specialChar: string }[] = [];
+      functions.forEach((fn: any) => {
+        const pChars = fn.processChars || [];
+        if (pChars.length === 0) {
+          allProcessChars.push({ funcName: fn.name, charName: '', specialChar: '' });
         } else {
-          functions.forEach((fn: any) => {
-            const fnStartRow = rowNum;
-            const pChars = fn.processChars || [];
-            
-            if (pChars.length === 0) {
-              const row = worksheet.getRow(rowNum);
-              row.getCell(1).value = `${proc.no}. ${proc.name}`;
-              row.getCell(2).value = we.m4 || '';
-              row.getCell(3).value = we.name;
-              row.getCell(4).value = fn.name;
-              [1, 2, 3, 4, 5, 6].forEach(i => applyDataStyle(row.getCell(i), rowNum % 2 === 0));
-              rowNum++;
-            } else {
-              pChars.forEach((pc: any) => {
-                const row = worksheet.getRow(rowNum);
-                row.getCell(1).value = `${proc.no}. ${proc.name}`;
-                row.getCell(2).value = we.m4 || '';
-                row.getCell(3).value = we.name;
-                row.getCell(4).value = fn.name;
-                row.getCell(5).value = pc.name;
-                row.getCell(6).value = pc.specialChar || '';
-                [1, 2, 3, 4, 5, 6].forEach(i => applyDataStyle(row.getCell(i), rowNum % 2 === 0));
-                rowNum++;
-              });
-            }
-
-            // 기능 셀 병합
-            if (rowNum > fnStartRow + 1) {
-              worksheet.mergeCells(fnStartRow, 4, rowNum - 1, 4);
-            }
+          pChars.forEach((pc: any) => {
+            allProcessChars.push({ funcName: fn.name, charName: pc.name, specialChar: pc.specialChar || '' });
           });
         }
-
-        // 작업요소/4M 셀 병합
-        if (rowNum > weStartRow + 1) {
-          worksheet.mergeCells(weStartRow, 2, rowNum - 1, 2);
-          worksheet.mergeCells(weStartRow, 3, rowNum - 1, 3);
-        }
       });
-    }
-
-    // 공정 셀 병합
-    if (rowNum > procStartRow + 1) {
-      worksheet.mergeCells(procStartRow, 1, rowNum - 1, 1);
-    }
+      
+      // 최대 행 수 결정 (고장원인 포함 여부에 따라)
+      const maxRows = includeFailure 
+        ? Math.max(allProcessChars.length || 1, failureCauses.length || 1)
+        : allProcessChars.length || 1;
+      
+      for (let i = 0; i < maxRows; i++) {
+        const pc = allProcessChars[i];
+        const fc = includeFailure ? failureCauses[i] : undefined;
+        flatData.push({
+          procName: `${proc.no}. ${proc.name}`,
+          m4: we.m4 || '',
+          weName: we.name,
+          funcName: pc?.funcName || '',
+          processChar: pc?.charName || '',
+          specialChar: pc?.specialChar || '',
+          failureCause: fc?.name || ''
+        });
+      }
+    });
   });
 
+  // 데이터 기록 및 병합 정보 수집
+  let rowNum = 2;
+  interface MergeInfo { startRow: number; endRow: number; col: number }
+  const procMerges: MergeInfo[] = [];
+  const m4Merges: MergeInfo[] = [];
+  const weMerges: MergeInfo[] = [];
+  const funcMerges: MergeInfo[] = [];
+  
+  let currentProc = '';
+  let procStartRow = rowNum;
+  let currentWe = '';
+  let weStartRow = rowNum;
+  let currentFunc = '';
+  let funcStartRow = rowNum;
+
+  flatData.forEach((data) => {
+    const row = worksheet.getRow(rowNum);
+    row.getCell(1).value = data.procName;
+    row.getCell(2).value = data.m4;
+    row.getCell(3).value = data.weName;
+    row.getCell(4).value = data.funcName;
+    row.getCell(5).value = data.processChar;
+    row.getCell(6).value = data.specialChar;
+    if (includeFailure) {
+      row.getCell(7).value = data.failureCause;
+    }
+    
+    const cellIndices = includeFailure ? [1, 2, 3, 4, 5, 6, 7] : [1, 2, 3, 4, 5, 6];
+    cellIndices.forEach(i => {
+      applyDataStyle(row.getCell(i), rowNum % 2 === 0);
+      if (i === 2 || i === 6) row.getCell(i).alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+
+    // 병합 추적 - 공정
+    if (data.procName !== currentProc) {
+      if (currentProc && rowNum > procStartRow) {
+        procMerges.push({ startRow: procStartRow, endRow: rowNum - 1, col: 1 });
+      }
+      currentProc = data.procName;
+      procStartRow = rowNum;
+    }
+    
+    // 병합 추적 - 작업요소 (4M, 작업요소명)
+    const weKey = `${data.procName}_${data.weName}`;
+    if (weKey !== currentWe) {
+      if (currentWe && rowNum > weStartRow) {
+        m4Merges.push({ startRow: weStartRow, endRow: rowNum - 1, col: 2 });
+        weMerges.push({ startRow: weStartRow, endRow: rowNum - 1, col: 3 });
+      }
+      currentWe = weKey;
+      weStartRow = rowNum;
+    }
+    
+    // 병합 추적 - 기능
+    const funcKey = `${weKey}_${data.funcName}`;
+    if (funcKey !== currentFunc) {
+      if (currentFunc && rowNum > funcStartRow) {
+        funcMerges.push({ startRow: funcStartRow, endRow: rowNum - 1, col: 4 });
+      }
+      currentFunc = funcKey;
+      funcStartRow = rowNum;
+    }
+
+    rowNum++;
+  });
+
+  // 마지막 병합 처리
+  if (currentProc && rowNum > procStartRow) {
+    procMerges.push({ startRow: procStartRow, endRow: rowNum - 1, col: 1 });
+  }
+  if (currentWe && rowNum > weStartRow) {
+    m4Merges.push({ startRow: weStartRow, endRow: rowNum - 1, col: 2 });
+    weMerges.push({ startRow: weStartRow, endRow: rowNum - 1, col: 3 });
+  }
+  if (currentFunc && rowNum > funcStartRow) {
+    funcMerges.push({ startRow: funcStartRow, endRow: rowNum - 1, col: 4 });
+  }
+
+  // 병합 적용
+  procMerges.forEach(m => { if (m.endRow > m.startRow) worksheet.mergeCells(m.startRow, m.col, m.endRow, m.col); });
+  m4Merges.forEach(m => { if (m.endRow > m.startRow) worksheet.mergeCells(m.startRow, m.col, m.endRow, m.col); });
+  weMerges.forEach(m => { if (m.endRow > m.startRow) worksheet.mergeCells(m.startRow, m.col, m.endRow, m.col); });
+  funcMerges.forEach(m => { if (m.endRow > m.startRow) worksheet.mergeCells(m.startRow, m.col, m.endRow, m.col); });
+
   const buffer = await workbook.xlsx.writeBuffer();
-  saveExcelFile(buffer, `${fmeaName}_3L_작업요소기능`);
+  const fileName = includeFailure ? `${fmeaName}_3L_고장원인` : `${fmeaName}_3L_작업요소기능`;
+  saveExcelFile(buffer, fileName);
 }
 
 /**
