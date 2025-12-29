@@ -9,4 +9,8 @@ export { default as FailureTab, FailureColgroup, FailureHeader, FailureRow } fro
 export { default as RiskTab, RiskHeader, RiskRow } from './RiskTab';
 export { default as OptTab, OptHeader, OptRow } from './OptTab';
 export { default as DocTab, DocHeader, DocRow } from './DocTab';
+export { default as AllViewTab, AllViewHeader } from './AllViewTab';
+
+// 공용 컴포넌트
+export * from './shared';
 

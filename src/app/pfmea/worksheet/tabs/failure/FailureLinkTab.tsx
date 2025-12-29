@@ -36,9 +36,11 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
   const [currentFMId, setCurrentFMId] = useState<string | null>(null);
   const [linkedFEs, setLinkedFEs] = useState<Map<string, FEItem>>(new Map());
   const [linkedFCs, setLinkedFCs] = useState<Map<string, FCItem>>(new Map());
-  const [savedLinks, setSavedLinks] = useState<LinkResult[]>([]);
+  const initialLinks = (state as any).failureLinks || [];
+  const [savedLinks, setSavedLinks] = useState<LinkResult[]>(initialLinks);
   const [editMode, setEditMode] = useState<'edit' | 'confirm'>('edit');
-  const [viewMode, setViewMode] = useState<'diagram' | 'result'>('diagram'); // 토글 상태
+  // 저장된 결과가 있으면 분석결과 뷰를 기본으로 표시
+  const [viewMode, setViewMode] = useState<'diagram' | 'result'>(initialLinks.length > 0 ? 'result' : 'diagram');
   const [selectedProcess, setSelectedProcess] = useState<string>('all'); // 공정 필터 (FM용)
   const [fcLinkScope, setFcLinkScope] = useState<'current' | 'all'>('current'); // FC 연결 범위: 해당공정/모든공정
   const chainAreaRef = useRef<HTMLDivElement>(null);
@@ -46,6 +48,14 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
   const feColRef = useRef<HTMLDivElement>(null);
   const fcColRef = useRef<HTMLDivElement>(null);
   const [svgPaths, setSvgPaths] = useState<string[]>([]);
+  
+  // state.failureLinks 변경 시 savedLinks 동기화 (항상 최신 상태 유지)
+  useEffect(() => {
+    const stateLinks = (state as any).failureLinks || [];
+    if (stateLinks.length > 0) {
+      setSavedLinks(stateLinks);
+    }
+  }, [(state as any).failureLinks]);
 
   // FE 데이터 추출 (번호 포함)
   const feData: FEItem[] = useMemo(() => {
@@ -220,6 +230,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
 
   const selectFM = useCallback((id: string) => {
     setCurrentFMId(id);
+    setViewMode('diagram'); // FM 선택 시 고장사슬 화면으로 자동 전환
     // 선택한 FM의 공정으로 자동 필터링
     const selectedFm = fmData.find(f => f.id === id);
     if (selectedFm) {
@@ -343,6 +354,206 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     alert(`✅ 총 ${savedLinks.length}개의 고장연결이 저장되었습니다.`);
   }, [savedLinks, setState, setDirty, saveToLocalStorage]);
 
+  // 역전개: 고장분석 → 기능분석 변환
+  const handleReverseGenerate = useCallback(() => {
+    if (savedLinks.length === 0) {
+      alert('⚠️ 연결된 고장이 없습니다. 먼저 고장연결을 완료하세요.');
+      return;
+    }
+
+    // 고장 → 기능 변환 맵
+    const failureToFunction = (failureText: string): string => {
+      // 부정형 → 긍정형 변환 규칙
+      const conversions: [RegExp, string][] = [
+        [/미달$/, '만족'],
+        [/초과$/, '관리'],
+        [/불량$/, '양호'],
+        [/부족$/, '확보'],
+        [/실수$/, '정확'],
+        [/누락$/, '완료'],
+        [/오류$/, '정상'],
+        [/불능$/, '가능'],
+        [/정지$/, '연속 운영'],
+        [/지연$/, '적시 진행'],
+        [/손상$/, '보호'],
+        [/오염$/, '청결 유지'],
+        [/이탈$/, '범위 내 유지'],
+      ];
+      
+      let result = failureText;
+      for (const [pattern, replacement] of conversions) {
+        if (pattern.test(result)) {
+          result = result.replace(pattern, replacement);
+          break;
+        }
+      }
+      // 변환이 안된 경우 접두사 추가
+      if (result === failureText) {
+        result = `${failureText} 방지`;
+      }
+      return result;
+    };
+
+    // 고장영향 → 요구사항 (1L)
+    const feToRequirements = new Map<string, { scope: string; text: string; function: string }>();
+    savedLinks.forEach(link => {
+      if (link.feText && !feToRequirements.has(link.feId)) {
+        feToRequirements.set(link.feId, {
+          scope: link.feScope,
+          text: link.feText,
+          function: failureToFunction(link.feText)
+        });
+      }
+    });
+
+    // 고장형태 → 공정기능 (2L)
+    const fmToProcessFunction = new Map<string, { process: string; text: string; function: string }>();
+    savedLinks.forEach(link => {
+      if (link.fmText && !fmToProcessFunction.has(link.fmId)) {
+        fmToProcessFunction.set(link.fmId, {
+          process: link.fmProcess,
+          text: link.fmText,
+          function: failureToFunction(link.fmText)
+        });
+      }
+    });
+
+    // 고장원인 → 작업요소 기능 (3L)
+    const fcToWorkFunction = new Map<string, { process: string; workElem: string; text: string; function: string }>();
+    savedLinks.forEach(link => {
+      if (link.fcText && !fcToWorkFunction.has(link.fcId)) {
+        fcToWorkFunction.set(link.fcId, {
+          process: link.fcProcess,
+          workElem: link.fcWorkElem,
+          text: link.fcText,
+          function: failureToFunction(link.fcText)
+        });
+      }
+    });
+
+    // 결과 표시
+    let resultMsg = '🔄 역전개 결과 (고장분석 → 기능분석)\n\n';
+    
+    resultMsg += '【1L 요구사항】\n';
+    feToRequirements.forEach((v, id) => {
+      resultMsg += `  ${v.scope}: "${v.text}" → "${v.function}"\n`;
+    });
+    
+    resultMsg += '\n【2L 공정기능】\n';
+    fmToProcessFunction.forEach((v, id) => {
+      resultMsg += `  ${v.process}: "${v.text}" → "${v.function}"\n`;
+    });
+    
+    resultMsg += '\n【3L 작업요소 기능】\n';
+    fcToWorkFunction.forEach((v, id) => {
+      resultMsg += `  ${v.workElem}: "${v.text}" → "${v.function}"\n`;
+    });
+
+    alert(resultMsg);
+
+    // 실제 기능분석 데이터 업데이트 (선택적)
+    const confirmUpdate = window.confirm('기능분석 데이터에 역전개 결과를 반영하시겠습니까?');
+    if (confirmUpdate) {
+      // 공정명 비교 함수 (번호 제외하고 비교)
+      const normalizeProcessName = (name: string): string => {
+        // "10 자재입고" -> "자재입고", "자재입고" -> "자재입고"
+        return name.replace(/^\d+\s*/, '').trim();
+      };
+      const matchProcess = (a: string, b: string): boolean => {
+        const na = normalizeProcessName(a);
+        const nb = normalizeProcessName(b);
+        return na === nb || a === b || a.includes(nb) || b.includes(na);
+      };
+
+      let addedL2Count = 0;
+      let addedL3Count = 0;
+
+      setState((prev: any) => {
+        // 1L: 요구사항 업데이트 - 생략 (복잡한 구조)
+        
+        // 2L: 공정기능 업데이트 (l2[].functions[] 에 추가)
+        const updatedL2 = prev.l2.map((proc: any) => {
+          const matchingFuncs: { function: string; text: string }[] = [];
+          fmToProcessFunction.forEach((v, id) => {
+            // 공정명 유연 매칭
+            if (matchProcess(v.process, proc.name) || matchProcess(v.process, `${proc.no} ${proc.name}`)) {
+              matchingFuncs.push(v);
+            }
+          });
+          
+          if (matchingFuncs.length === 0) return proc;
+          
+          const existingFuncNames = new Set((proc.functions || []).map((f: any) => f.name));
+          const newFuncs = matchingFuncs
+            .filter(mf => !existingFuncNames.has(mf.function))
+            .map(mf => ({
+              id: uid(),
+              name: mf.function,
+              productChars: [],
+              reversedFrom: mf.text
+            }));
+          
+          addedL2Count += newFuncs.length;
+          
+          return {
+            ...proc,
+            functions: [...(proc.functions || []), ...newFuncs]
+          };
+        });
+
+        // 3L: 작업요소 기능 업데이트 (l2[].l3[].functions[] 에 추가)
+        const finalL2 = updatedL2.map((proc: any) => {
+          const updatedL3 = (proc.l3 || []).map((we: any) => {
+            const matchingFuncs: { function: string; text: string }[] = [];
+            fcToWorkFunction.forEach((v, id) => {
+              // 작업요소명 또는 공정명으로 매칭
+              const weMatch = v.workElem === we.name || we.name.includes(v.workElem) || v.workElem.includes(we.name);
+              const procMatch = matchProcess(v.process, proc.name) || matchProcess(v.process, `${proc.no} ${proc.name}`);
+              if (weMatch || procMatch) {
+                matchingFuncs.push(v);
+              }
+            });
+            
+            if (matchingFuncs.length === 0) return we;
+            
+            const existingFuncNames = new Set((we.functions || []).map((f: any) => f.name));
+            const newFuncs = matchingFuncs
+              .filter(mf => !existingFuncNames.has(mf.function))
+              .map(mf => ({
+                id: uid(),
+                name: mf.function,
+                reversedFrom: mf.text
+              }));
+            
+            addedL3Count += newFuncs.length;
+            
+            return {
+              ...we,
+              functions: [...(we.functions || []), ...newFuncs]
+            };
+          });
+          
+          return { ...proc, l3: updatedL3 };
+        });
+
+        console.log('역전개 결과:', { addedL2Count, addedL3Count, fmToProcessFunction: Array.from(fmToProcessFunction.entries()), fcToWorkFunction: Array.from(fcToWorkFunction.entries()) });
+
+        return {
+          ...prev,
+          l2: finalL2
+        };
+      });
+      
+      setDirty(true);
+      saveToLocalStorage?.();
+      
+      // 결과 메시지
+      const l2Count = fmToProcessFunction.size;
+      const l3Count = fcToWorkFunction.size;
+      alert(`✅ 기능분석에 역전개 결과가 반영되었습니다!\n\n• 2L 공정기능: ${l2Count}개 추가\n• 3L 작업요소 기능: ${l3Count}개 추가\n\n기능분석 탭(2L/3L)에서 확인하세요.`);
+    }
+  }, [savedLinks, setState, setDirty, saveToLocalStorage]);
+
   return (
     <div style={{ display: 'flex', height: '100%', background: COLORS.bg, overflow: 'hidden' }}>
       {/* 좌측: 3개 테이블 (60%) */}
@@ -350,11 +561,13 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '8px 12px', background: COLORS.skyLight, borderBottom: `1px solid ${COLORS.line}`, fontSize: '13px', position: 'relative' }}>
           <span style={{ fontWeight: 900 }}>P-FMEA 고장 분석(4단계) - 고장연결</span>
           <div style={{ position: 'absolute', right: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '10px', fontWeight: 600, color: '#555' }}>공정:</span>
             <select 
               value={selectedProcess} 
-              onChange={(e) => setSelectedProcess(e.target.value)}
-              style={{ padding: '3px 8px', fontSize: '10px', borderRadius: '3px', border: '1px solid #999', fontWeight: 600 }}
+              onChange={(e) => {
+                setSelectedProcess(e.target.value);
+                setViewMode('diagram'); // 공정 변경 시 고장사슬 화면으로 자동 전환
+              }}
+              style={{ padding: '3px 8px', fontSize: '10px', borderRadius: '3px', border: '1px solid #f9a825', background: '#fff8e1', fontWeight: 600, color: '#e65100' }}
             >
               <option value="all">모든공정</option>
               {processList.map(proc => (
@@ -399,7 +612,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
           {/* FM 테이블 */}
           <div style={{ flex: '0 0 28%', border: `1px solid ${COLORS.line}`, borderRadius: '4px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '6px 8px', fontWeight: 900, fontSize: '10px', background: COLORS.fm.header, color: COLORS.fm.text, textAlign: 'center' }}>
-              고장형태(FM) <span style={{ fontWeight: 600, color: '#2e7d32' }}>연결:{linkStats.fmLinkedCount}</span> <span style={{ fontWeight: 600, color: '#c62828' }}>누락:{linkStats.fmMissingCount}</span>
+              FM({fmData.length}) <span style={{ fontWeight: 600, color: '#2e7d32' }}>연결:{linkStats.fmLinkedCount}</span> <span style={{ fontWeight: 600, color: '#c62828' }}>누락:{linkStats.fmMissingCount}</span>
             </div>
             <div style={{ flex: 1, overflowY: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
@@ -437,7 +650,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
               <select
                 value={fcLinkScope}
                 onChange={(e) => setFcLinkScope(e.target.value as 'current' | 'all')}
-                style={{ padding: '2px 4px', fontSize: '9px', borderRadius: '3px', border: '1px solid #999', background: fcLinkScope === 'all' ? '#fff3e0' : '#fff', fontWeight: 600 }}
+                style={{ padding: '2px 4px', fontSize: '9px', borderRadius: '3px', border: '1px solid #f9a825', background: '#fff8e1', fontWeight: 600, color: '#e65100' }}
               >
                 <option value="current">해당공정</option>
                 <option value="all">모든공정</option>
@@ -478,40 +691,51 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       {/* 우측: 토글 화면 (40%) */}
       <div style={{ flex: '40', background: '#fff', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* 헤더 + 토글 버튼 */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 8px', background: COLORS.skyLight, borderBottom: `1px solid ${COLORS.line}` }}>
-          {/* 토글 버튼 */}
-          <div style={{ display: 'flex', gap: '0' }}>
-            <button 
-              onClick={() => setViewMode('diagram')} 
-              style={{ 
-                padding: '4px 10px', fontSize: '10px', fontWeight: 700, border: '1px solid #999', 
-                borderRadius: '3px 0 0 3px', cursor: 'pointer', whiteSpace: 'nowrap',
-                background: viewMode === 'diagram' ? COLORS.blue : '#fff', 
-                color: viewMode === 'diagram' ? '#fff' : '#333' 
-              }}
-            >
-              고장사슬
-            </button>
+        <div style={{ display: 'flex', alignItems: 'center', padding: '4px 8px', background: COLORS.skyLight, borderBottom: `1px solid ${COLORS.line}`, gap: '4px' }}>
+          {/* 고장사슬 토글 버튼 */}
+          <button 
+            onClick={() => setViewMode('diagram')} 
+            style={{ 
+              padding: '4px 10px', fontSize: '10px', fontWeight: 700, border: '1px solid #1976d2', 
+              borderRadius: '3px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+              background: viewMode === 'diagram' ? '#1976d2' : '#fff', 
+              color: viewMode === 'diagram' ? '#fff' : '#1976d2' 
+            }}
+          >
+            고장사슬
+          </button>
+          
+          {/* FMEA명 + 분석결과 (5:5 비율) */}
+          <div style={{ flex: 1, display: 'flex', gap: '4px', minWidth: 0 }}>
+            {/* FMEA명 (50%) */}
+            <div style={{ 
+              flex: 1, fontSize: '11px', fontWeight: 700, color: '#333', 
+              padding: '4px 8px', background: '#fff', border: '1px solid #ccc', borderRadius: '3px',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+            }}>
+              {state.l1?.name || 'FMEA'}
+            </div>
+            
+            {/* 분석결과 버튼 (50%) */}
             <button 
               onClick={() => setViewMode('result')} 
               style={{ 
-                padding: '4px 10px', fontSize: '10px', fontWeight: 700, border: '1px solid #999', borderLeft: 'none',
-                borderRadius: '0 3px 3px 0', cursor: 'pointer', whiteSpace: 'nowrap',
-                background: viewMode === 'result' ? COLORS.blue : '#fff', 
-                color: viewMode === 'result' ? '#fff' : '#333' 
+                flex: 1, padding: '4px 8px', fontSize: '10px', fontWeight: 700, border: '1px solid #1976d2',
+                borderRadius: '3px', cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 0,
+                background: viewMode === 'result' ? '#1976d2' : '#fff', 
+                color: viewMode === 'result' ? '#fff' : '#1976d2' 
               }}
             >
-              분석결과
+              분석결과 (FE:{new Set(savedLinks.flatMap(l => l.fes?.map((f: any) => f.id) || [])).size} FM:{new Set(savedLinks.map(l => l.fmId)).size} FC:{new Set(savedLinks.flatMap(l => l.fcs?.map((f: any) => f.id) || [])).size})
             </button>
           </div>
           
-          {/* 우측 버튼들 - 연결확정/수정 순서 */}
-          {viewMode === 'diagram' && (
-            <div style={{ display: 'flex', gap: '3px' }}>
-              <button onClick={() => handleModeChange('confirm')} disabled={!currentFMId || (linkedFEs.size === 0 && linkedFCs.size === 0)} style={{ padding: '4px 8px', fontSize: '10px', border: '1px solid #999', borderRadius: '3px', cursor: 'pointer', background: '#2196f3', color: '#fff', opacity: (!currentFMId || (linkedFEs.size === 0 && linkedFCs.size === 0)) ? 0.5 : 1, whiteSpace: 'nowrap' }}>연결확정</button>
-              <button onClick={() => handleModeChange('edit')} style={{ padding: '4px 8px', fontSize: '10px', border: '1px solid #999', borderRadius: '3px', cursor: 'pointer', background: editMode === 'edit' ? '#4caf50' : '#fff', color: editMode === 'edit' ? '#fff' : '#333', whiteSpace: 'nowrap' }}>수정</button>
-            </div>
-          )}
+          {/* 우측 버튼들 */}
+          <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
+            <button onClick={() => handleModeChange('confirm')} disabled={!currentFMId || (linkedFEs.size === 0 && linkedFCs.size === 0)} style={{ padding: '4px 8px', fontSize: '10px', fontWeight: 700, border: '1px solid #999', borderRadius: '3px', cursor: 'pointer', background: '#2196f3', color: '#fff', opacity: (!currentFMId || (linkedFEs.size === 0 && linkedFCs.size === 0)) ? 0.5 : 1, whiteSpace: 'nowrap' }}>연결확정</button>
+            <button onClick={() => handleModeChange('edit')} style={{ padding: '4px 8px', fontSize: '10px', fontWeight: 700, border: '1px solid #999', borderRadius: '3px', cursor: 'pointer', background: editMode === 'edit' ? '#4caf50' : '#fff', color: editMode === 'edit' ? '#fff' : '#333', whiteSpace: 'nowrap' }}>수정</button>
+            <button onClick={handleReverseGenerate} disabled={savedLinks.length === 0} style={{ padding: '4px 8px', fontSize: '10px', fontWeight: 700, border: '1px solid #e65100', borderRadius: '3px', cursor: savedLinks.length > 0 ? 'pointer' : 'not-allowed', background: '#fff8e1', color: '#e65100', opacity: savedLinks.length === 0 ? 0.5 : 1, whiteSpace: 'nowrap' }}>🔄 역전개</button>
+          </div>
         </div>
         
         {/* 콘텐츠 영역 */}
@@ -668,12 +892,12 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
             });
             
             return (
-              <div style={{ padding: '8px', overflowY: 'auto' }}>
+              <div style={{ padding: '8px', height: '100%', overflowY: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
                   <thead>
                     <tr>
                       <th colSpan={4} style={{ background: COLORS.fe.header, padding: '6px', textAlign: 'center', fontWeight: 700, border: `1px solid ${COLORS.line}`, color: COLORS.fe.text }}>고장영향(FE)</th>
-                      <th style={{ background: COLORS.fm.header, padding: '6px', textAlign: 'center', fontWeight: 700, border: `1px solid ${COLORS.line}`, color: COLORS.fm.text }}>고장형태(FM)</th>
+                      <th rowSpan={2} style={{ width: '14%', background: COLORS.fm.header, padding: '6px', textAlign: 'center', fontWeight: 700, border: `1px solid ${COLORS.line}`, color: COLORS.fm.text, verticalAlign: 'middle' }}>고장형태(FM)</th>
                       <th colSpan={4} style={{ background: COLORS.fc.header, padding: '6px', textAlign: 'center', fontWeight: 700, border: `1px solid ${COLORS.line}`, color: COLORS.fc.text }}>고장원인(FC)</th>
                     </tr>
                     <tr>
@@ -681,7 +905,6 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
                       <th style={{ width: '10%', background: '#e3f2fd', padding: '4px', border: '1px solid #ccc', fontWeight: 600 }}>구분</th>
                       <th style={{ width: '18%', background: '#e3f2fd', padding: '4px', border: '1px solid #ccc', fontWeight: 600 }}>고장영향</th>
                       <th style={{ width: '5%', background: '#e3f2fd', padding: '4px', border: '1px solid #ccc', fontWeight: 600 }}>S</th>
-                      <th style={{ width: '14%', background: '#fff8e1', padding: '4px', border: '1px solid #ccc', fontWeight: 600 }}>고장형태</th>
                       <th style={{ width: '6%', background: '#e8f5e9', padding: '4px', border: '1px solid #ccc', fontWeight: 600 }}>No</th>
                       <th style={{ width: '10%', background: '#e8f5e9', padding: '4px', border: '1px solid #ccc', fontWeight: 600 }}>공정명</th>
                       <th style={{ width: '12%', background: '#e8f5e9', padding: '4px', border: '1px solid #ccc', fontWeight: 600 }}>작업요소</th>
@@ -702,8 +925,10 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
                           {row.showFe && (
                             <>
                               <td rowSpan={row.feRowSpan} style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 700, color: COLORS.fe.text, verticalAlign: 'middle' }}>{row.fe?.feNo || ''}</td>
-                              <td rowSpan={row.feRowSpan} style={{ padding: '4px', border: '1px solid #ccc', fontSize: '9px', verticalAlign: 'middle' }}>{row.fe?.scope || ''}</td>
-                              <td rowSpan={row.feRowSpan} style={{ padding: '4px', border: '1px solid #ccc', verticalAlign: 'middle' }}>{row.fe?.text || ''}</td>
+                              <td rowSpan={row.feRowSpan} style={{ padding: '2px 4px', border: '1px solid #ccc', fontSize: '9px', verticalAlign: 'middle', whiteSpace: 'nowrap', textAlign: 'center' }}>
+                                {row.fe?.scope === 'Your Plant' ? 'YP' : row.fe?.scope === 'Ship to Plant' ? 'SP' : row.fe?.scope === 'User' ? 'USER' : row.fe?.scope || ''}
+                              </td>
+                              <td rowSpan={row.feRowSpan} style={{ padding: '4px', border: '1px solid #ccc', fontSize: '9px', verticalAlign: 'middle' }}>{row.fe?.text || ''}</td>
                               <td rowSpan={row.feRowSpan} style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 700, verticalAlign: 'middle', color: (row.fe?.severity || 0) >= 8 ? '#c62828' : (row.fe?.severity || 0) >= 5 ? '#f57f17' : '#333' }}>{row.fe?.severity || ''}</td>
                             </>
                           )}

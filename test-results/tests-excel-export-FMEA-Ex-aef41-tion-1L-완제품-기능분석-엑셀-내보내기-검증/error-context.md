@@ -1,0 +1,145 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic "클릭하여 로고 변경" [ref=e5] [cursor=pointer]:
+        - img "Company Logo" [ref=e7]
+      - navigation [ref=e8]:
+        - link "대시보드" [ref=e10] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e12]
+          - generic: 대시보드
+        - link "APQP" [ref=e16] [cursor=pointer]:
+          - /url: /apqp
+          - img [ref=e18]
+          - generic: APQP
+        - link "DFMEA" [ref=e24] [cursor=pointer]:
+          - /url: /dfmea
+          - img [ref=e26]
+          - generic: DFMEA
+        - link "PFMEA" [ref=e30] [cursor=pointer]:
+          - /url: /pfmea
+          - img [ref=e32]
+          - generic: PFMEA
+        - link "Control Plan" [ref=e35] [cursor=pointer]:
+          - /url: /control-plan
+          - img [ref=e37]
+          - generic: Control Plan
+        - link "PFD" [ref=e41] [cursor=pointer]:
+          - /url: /pfd
+          - img [ref=e43]
+          - generic: PFD
+        - link "WS" [ref=e48] [cursor=pointer]:
+          - /url: /ws
+          - img [ref=e50]
+          - generic: WS
+        - link "PM" [ref=e54] [cursor=pointer]:
+          - /url: /pm
+          - img [ref=e56]
+          - generic: PM
+        - link "SPC" [ref=e60] [cursor=pointer]:
+          - /url: /spc
+          - img [ref=e62]
+          - generic: SPC
+        - link "MSA" [ref=e66] [cursor=pointer]:
+          - /url: /msa
+          - img [ref=e68]
+          - generic: MSA
+      - navigation [ref=e74]:
+        - link "기초정보" [ref=e76] [cursor=pointer]:
+          - /url: /master
+          - img [ref=e78]
+          - generic: 기초정보
+    - generic [ref=e82]:
+      - main [ref=e83]:
+        - generic [ref=e84]:
+          - generic [ref=e85]: 바로가기
+          - button "📝 FMEA등록" [ref=e86] [cursor=pointer]
+          - button "📋 FMEA 리스트" [ref=e87] [cursor=pointer]
+          - button "✏️ FMEA 작성화면" [ref=e88] [cursor=pointer]
+          - button "📜 FMEA 개정관리" [ref=e89] [cursor=pointer]
+        - generic [ref=e91]:
+          - generic [ref=e92]:
+            - generic [ref=e93]:
+              - generic [ref=e94] [cursor=pointer]: "📋 FMEA명:"
+              - combobox [ref=e95]:
+                - option "📄 빈화면 (새로 작성)" [selected]
+              - button "📋" [ref=e96]
+            - generic [ref=e98]:
+              - button "✅저장됨" [ref=e99]
+              - button "📥Import▾" [ref=e101]
+              - button "📤Export" [ref=e102]
+            - generic [ref=e104]:
+              - button "⭐특별특성" [ref=e105]
+              - button "📊SOD" [ref=e106]
+              - button "🔴5AP" [ref=e107]
+              - button "🟠6AP" [ref=e108]
+              - button "📊RPN" [ref=e109]
+              - button "📚LLD" [ref=e110]
+          - generic [ref=e111]:
+            - generic [ref=e112]:
+              - generic [ref=e115]:
+                - generic [ref=e116]:
+                  - generic [ref=e117]:
+                    - button "구조분석" [ref=e118] [cursor=pointer]
+                    - button "1L 완제품 기능🔒" [ref=e119]
+                    - button "2L 메인공정 기능🔒" [ref=e120]
+                    - button "3L 작업요소 기능🔒" [ref=e121]
+                    - button "1L 고장영향🔒" [ref=e122]
+                    - button "2L 고장형태🔒" [ref=e123]
+                    - button "3L 고장원인🔒" [ref=e124]
+                    - button "고장연결🔒" [ref=e125]
+                  - generic [ref=e127]:
+                    - button "구조분석🔒" [ref=e128]
+                    - button "기능분석🔒" [ref=e129]
+                    - button "고장분석🔒" [ref=e130]
+                    - button "리스크분석🔒" [ref=e131]
+                    - button "최적화🔒" [ref=e132]
+                - button "전체보기" [ref=e135] [cursor=pointer]
+              - generic [ref=e136]:
+                - generic [ref=e137]: P-FMEA 구조분석(2단계)
+                - generic [ref=e138]:
+                  - button "확정" [ref=e139] [cursor=pointer]
+                  - generic [ref=e140]: 누락 3건
+                  - button "수정" [disabled] [ref=e141]
+              - table [ref=e143]:
+                - rowgroup [ref=e149]:
+                  - row "1. 완제품 공정명 2. 메인 공정명 🔍 3. 작업 요소명" [ref=e150]:
+                    - columnheader "1. 완제품 공정명" [ref=e151]
+                    - columnheader "2. 메인 공정명 🔍" [ref=e152] [cursor=pointer]
+                    - columnheader "3. 작업 요소명" [ref=e153]
+                  - row "완제품명+라인 공정NO+공정명 4M 작업요소" [ref=e154]:
+                    - columnheader "완제품명+라인" [ref=e155]
+                    - columnheader "공정NO+공정명" [ref=e156]
+                    - columnheader "4M" [ref=e157]
+                    - columnheader "작업요소" [ref=e158]
+                - rowgroup [ref=e159]:
+                  - row "🔍 클릭하여 공정 선택 - 🔍 클릭" [ref=e160]:
+                    - cell [ref=e161]:
+                      - textbox "완제품명 입력" [ref=e162]
+                    - cell "🔍 클릭하여 공정 선택" [ref=e163] [cursor=pointer]
+                    - cell "-" [ref=e164]
+                    - cell "🔍 클릭" [ref=e165] [cursor=pointer]
+            - generic [ref=e166]:
+              - generic [ref=e167]: 🌳 구조 트리
+              - generic [ref=e169]:
+                - generic [ref=e170]: 📦
+                - generic [ref=e171]: (완제품명 입력)
+              - generic [ref=e173]: "공정: 0개 | 작업요소: 0개"
+      - contentinfo [ref=e174]:
+        - generic [ref=e175]:
+          - generic [ref=e176]:
+            - generic [ref=e177]: 🟢 Ready
+            - generic [ref=e178]: "|"
+            - generic [ref=e179]: PFMEA
+            - generic [ref=e180]: "|"
+            - generic [ref=e181]: 4단계-고장연결
+            - generic [ref=e182]: "|"
+            - generic [ref=e183]: 3레벨
+            - generic [ref=e184]: "|"
+            - generic [ref=e185]: 🟢 저장됨
+          - generic [ref=e187]: "사용자: Admin"
+  - alert [ref=e188]
+```

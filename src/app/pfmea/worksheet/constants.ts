@@ -163,7 +163,8 @@ export const COLORS = {
   en: { bg: '#fef0ff', border: '#f0bdf5', color: '#7a1a88' },
 } as const;
 
-export const TABS = [
+// 분석 탭 (Analysis) - 개별 단계별 분석
+export const ANALYSIS_TABS = [
   { id: 'structure', label: '구조분석', step: 2 },
   { id: 'function-l1', label: '1L 완제품 기능', step: 3 },
   { id: 'function-l2', label: '2L 메인공정 기능', step: 3 },
@@ -172,10 +173,19 @@ export const TABS = [
   { id: 'failure-l2', label: '2L 고장형태', step: 4 },
   { id: 'failure-l3', label: '3L 고장원인', step: 4 },
   { id: 'failure-link', label: '고장연결', step: 4 },
+] as const;
+
+// 평가 탭 (Evaluation) - 전체 40열 화면
+export const EVALUATION_TABS = [
+  { id: 'eval-structure', label: '구조분석', step: 2 },
+  { id: 'eval-function', label: '기능분석', step: 3 },
+  { id: 'eval-failure', label: '고장분석', step: 4 },
   { id: 'risk', label: '리스크분석', step: 5 },
   { id: 'opt', label: '최적화', step: 6 },
-  { id: 'doc', label: '문서화', step: 7 },
 ] as const;
+
+// 전체 탭 (하위 호환)
+export const TABS = [...ANALYSIS_TABS, ...EVALUATION_TABS.filter(t => t.id === 'risk' || t.id === 'opt')] as const;
 
 export const ALL_VIEW_TAB = { id: 'all', label: '전체보기' } as const;
 

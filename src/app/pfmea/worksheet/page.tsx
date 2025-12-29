@@ -15,7 +15,7 @@ import WorkElementSelectModal from './WorkElementSelectModal';
 import PFMEATopNav from '@/components/layout/PFMEATopNav';
 
 // 모듈화된 상수, hooks, 탭 컴포넌트
-import { COLORS, TABS, uid, getTabLabel, WorksheetState, WorkElement, Process, FlatRow } from './constants';
+import { COLORS, TABS, ANALYSIS_TABS, EVALUATION_TABS, uid, getTabLabel, WorksheetState, WorkElement, Process, FlatRow } from './constants';
 import { useWorksheetState } from './hooks';
 import { 
   StructureTab, StructureColgroup, StructureHeader, StructureRow,
@@ -30,10 +30,13 @@ import {
   exportFMEAWorksheet, 
   exportStructureAnalysis, 
   importStructureAnalysis,
+  exportAllViewExcel,
+  exportFunctionL1,
   downloadStructureTemplate 
 } from './excel-export';
 import SpecialCharMasterModal from '@/components/modals/SpecialCharMasterModal';
 import SODMasterModal from '@/components/modals/SODMasterModal';
+import APTableModal from '@/components/modals/APTableModal';
 
 /**
  * FMEA 워크시트 메인 페이지 컨텐츠
@@ -70,6 +73,8 @@ function FMEAWorksheetPageContent() {
   const [isWorkElementModalOpen, setIsWorkElementModalOpen] = useState(false);
   const [isSpecialCharModalOpen, setIsSpecialCharModalOpen] = useState(false);
   const [isSODModalOpen, setIsSODModalOpen] = useState(false);
+  const [showAPModal, setShowAPModal] = useState(false);
+  const [show6APModal, setShow6APModal] = useState(false);
   const [targetL2Id, setTargetL2Id] = useState<string | null>(null);
   
   // 트리 접기/펼치기 상태
@@ -325,6 +330,7 @@ function FMEAWorksheetPageContent() {
     setIsWorkElementModalOpen,
     setTargetL2Id,
     saveToLocalStorage,
+    onAPClick: () => setShowAPModal(true),
   };
 
   return (
@@ -347,12 +353,25 @@ function FMEAWorksheetPageContent() {
           onFmeaChange={handleFmeaChange}
           onSave={saveToLocalStorage}
           onNavigateToList={() => router.push('/pfmea/list')}
-          onExport={state.tab === 'structure' ? handleStructureExport : () => exportFMEAWorksheet(state, currentFmea?.fmeaInfo?.subject || 'PFMEA')}
+          onExport={() => {
+            const fmeaName = currentFmea?.fmeaInfo?.subject || 'PFMEA';
+            if (state.tab === 'structure') {
+              handleStructureExport();
+            } else if (state.tab === 'function-l1') {
+              exportFunctionL1(state, fmeaName);
+            } else if (state.tab === 'all') {
+              exportAllViewExcel(state, fmeaName);
+            } else {
+              exportFMEAWorksheet(state, fmeaName);
+            }
+          }}
           onImportClick={() => fileInputRef.current?.click()}
           onImportFile={handleImportFile}
           onDownloadTemplate={handleDownloadTemplate}
           onOpenSpecialChar={() => setIsSpecialCharModalOpen(true)}
           onOpenSOD={() => setIsSODModalOpen(true)}
+          onOpen5AP={() => setShowAPModal(true)}
+          onOpen6AP={() => setShow6APModal(true)}
         />
 
         {/* ========== 메인 레이아웃 (좌측:워크시트 / 우측:트리 완전 분리) ========== */}
@@ -504,22 +523,22 @@ function FMEAWorksheetPageContent() {
                 <FunctionTabFull {...tabProps} />
               ) : state.tab.startsWith('failure') ? (
                 <FailureTabFull {...tabProps} />
+              ) : state.tab.startsWith('eval-') || state.tab === 'risk' || state.tab === 'opt' || state.tab === 'all' ? (
+                /* 평가 탭: 통합 화면 (40열 구조) */
+                <EvalTabRenderer 
+                  tab={state.tab} 
+                  rows={rows} 
+                  state={state} 
+                  l1Spans={l1Spans} 
+                  l1TypeSpans={l1TypeSpans}
+                  l1FuncSpans={l1FuncSpans}
+                  l2Spans={l2Spans}
+                  onAPClick={() => setShowAPModal(true)}
+                />
               ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                   {state.tab === 'structure' && <StructureTabFull {...tabProps} />}
-                  {state.tab === 'risk' && <RiskTabFull {...tabProps} />}
-                  {state.tab === 'opt' && <OptTabFull {...tabProps} />}
                   {state.tab === 'doc' && <DocTabFull {...tabProps} />}
-                  {state.tab === 'all' && (
-                    <AllViewTabFull 
-                      rows={rows} 
-                      state={state} 
-                      l1Spans={l1Spans} 
-                      l1TypeSpans={l1TypeSpans}
-                      l1FuncSpans={l1FuncSpans}
-                      l2Spans={l2Spans} 
-                    />
-                  )}
                 </table>
               )}
             </div>
@@ -529,7 +548,7 @@ function FMEAWorksheetPageContent() {
           {state.tab !== 'all' && state.tab !== 'failure-link' && (
           <div 
             style={{ 
-              width: '280px', 
+              width: (state.tab === 'risk' || state.tab === 'opt') ? '280px' : '280px', 
               flexShrink: 0,
               display: 'flex',
               flexDirection: 'column',
@@ -901,9 +920,19 @@ function FMEAWorksheetPageContent() {
               );
             })()}
 
-            {(state.tab === 'risk' || state.tab === 'optimize' || state.tab === 'all') && (
+            {/* 리스크분석 탭: 5단계 AP 테이블 표시 */}
+            {state.tab === 'risk' && (
+              <APTableInline onClose={() => {}} stage={5} />
+            )}
+
+            {/* 최적화 탭: 6단계 AP 테이블 표시 */}
+            {state.tab === 'opt' && (
+              <APTableInline onClose={() => {}} stage={6} />
+            )}
+            
+            {/* 전체보기 탭: 전체 구조 표시 */}
+            {(state.tab === 'all') && (
               <>
-                {/* 전체 트리 */}
                 <div style={{ background: '#455a64', color: 'white', padding: '8px 12px', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
                   📊 전체 구조
                 </div>
@@ -1027,11 +1056,13 @@ interface TopMenuBarProps {
   onDownloadTemplate: () => void;
   onOpenSpecialChar: () => void;
   onOpenSOD: () => void;
+  onOpen5AP: () => void;
+  onOpen6AP: () => void;
 }
 
 function TopMenuBar({ 
   fmeaList, currentFmea, selectedFmeaId, dirty, isSaving, lastSaved, currentTab, importMessage, fileInputRef,
-  onFmeaChange, onSave, onNavigateToList, onExport, onImportClick, onImportFile, onDownloadTemplate, onOpenSpecialChar, onOpenSOD 
+  onFmeaChange, onSave, onNavigateToList, onExport, onImportClick, onImportFile, onDownloadTemplate, onOpenSpecialChar, onOpenSOD, onOpen5AP, onOpen6AP 
 }: TopMenuBarProps) {
   const [showImportMenu, setShowImportMenu] = React.useState(false);
 
@@ -1133,10 +1164,112 @@ function TopMenuBar({
       <div className="flex items-center gap-1">
         <button onClick={onOpenSpecialChar} className="px-1.5 py-0.5 text-xs font-bold text-white rounded hover:bg-white/30" style={{ background: 'rgba(255,255,255,0.18)' }}>⭐특별특성</button>
         <button onClick={onOpenSOD} className="px-1.5 py-0.5 text-xs font-bold text-white rounded hover:bg-white/30" style={{ background: 'rgba(76,175,80,0.6)' }}>📊SOD</button>
-        <button className="px-1.5 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,100,100,0.5)' }}>🔴5AP</button>
-        <button className="px-1.5 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,165,0,0.5)' }}>🟠6AP</button>
+        <button onClick={onOpen5AP} className="px-1.5 py-0.5 text-xs font-bold text-white rounded hover:bg-white/30" style={{ background: 'rgba(255,100,100,0.5)' }}>🔴5AP</button>
+        <button onClick={onOpen6AP} className="px-1.5 py-0.5 text-xs font-bold text-white rounded hover:bg-white/30" style={{ background: 'rgba(255,165,0,0.5)' }}>🟠6AP</button>
         <button className="px-1.5 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>📊RPN</button>
         <button className="px-1.5 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>📚LLD</button>
+      </div>
+    </div>
+  );
+}
+
+// AP 테이블 인라인 (트리뷰 영역용)
+const AP_TABLE_DATA: { s: string; o: string; d: ('H' | 'M' | 'L')[] }[] = [
+  { s: '9-10', o: '8-10', d: ['H', 'H', 'H', 'H'] },
+  { s: '9-10', o: '6-7', d: ['H', 'H', 'H', 'H'] },
+  { s: '9-10', o: '4-5', d: ['H', 'H', 'L', 'L'] },
+  { s: '9-10', o: '2-3', d: ['H', 'M', 'L', 'L'] },
+  { s: '9-10', o: '1', d: ['H', 'L', 'L', 'L'] },
+  { s: '7-8', o: '8-10', d: ['H', 'H', 'H', 'H'] },
+  { s: '7-8', o: '6-7', d: ['H', 'H', 'M', 'H'] },
+  { s: '7-8', o: '4-5', d: ['H', 'M', 'L', 'L'] },
+  { s: '7-8', o: '2-3', d: ['M', 'L', 'L', 'L'] },
+  { s: '7-8', o: '1', d: ['L', 'L', 'L', 'L'] },
+  { s: '4-6', o: '8-10', d: ['H', 'H', 'M', 'L'] },
+  { s: '4-6', o: '6-7', d: ['H', 'M', 'L', 'L'] },
+  { s: '4-6', o: '4-5', d: ['H', 'M', 'L', 'L'] },
+  { s: '4-6', o: '2-3', d: ['M', 'L', 'L', 'L'] },
+  { s: '4-6', o: '1', d: ['L', 'L', 'L', 'L'] },
+  { s: '2-3', o: '8-10', d: ['M', 'L', 'L', 'L'] },
+  { s: '2-3', o: '6-7', d: ['L', 'L', 'L', 'L'] },
+  { s: '2-3', o: '4-5', d: ['L', 'L', 'L', 'L'] },
+  { s: '2-3', o: '2-3', d: ['L', 'L', 'L', 'L'] },
+  { s: '2-3', o: '1', d: ['L', 'L', 'L', 'L'] },
+];
+
+const D_HEADERS = ['7-10', '5-6', '2-4', '1'];
+const AP_COLORS: Record<'H' | 'M' | 'L', { bg: string; text: string }> = {
+  H: { bg: '#f87171', text: '#7f1d1d' },
+  M: { bg: '#fde047', text: '#713f12' },
+  L: { bg: '#86efac', text: '#14532d' },
+};
+
+function APTableInline({ onClose, showClose = true, stage = 5 }: { onClose: () => void; showClose?: boolean; stage?: 5 | 6 }) {
+  const severityRanges = ['9-10', '7-8', '4-6', '2-3'];
+  const getSeverityRowSpan = (s: string) => AP_TABLE_DATA.filter(r => r.s === s).length;
+  
+  // 개수 계산
+  let hCount = 0, mCount = 0, lCount = 0;
+  AP_TABLE_DATA.forEach(row => {
+    row.d.forEach(ap => {
+      if (ap === 'H') hCount++;
+      else if (ap === 'M') mCount++;
+      else lCount++;
+    });
+  });
+
+  // 단계별 헤더 색상
+  const headerBg = stage === 6 ? '#2e7d32' : '#1e3a5f';
+  const stageLabel = stage === 6 ? '6AP' : '5AP';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ background: headerBg, color: '#fff', padding: '6px 10px', fontSize: '11px', fontWeight: 700, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <span>📊 {stageLabel} 기준표 (H:{hCount} M:{mCount} L:{lCount})</span>
+      </div>
+      <div style={{ flex: 1, overflow: 'auto', padding: '2px', background: '#fff' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8px' }}>
+          <colgroup>
+            <col style={{ width: '13px' }} />
+            <col style={{ width: '19px' }} />
+            <col style={{ width: '19px' }} />
+            <col style={{ width: '19px' }} />
+            <col style={{ width: '19px' }} />
+            <col style={{ width: '19px' }} />
+          </colgroup>
+          <thead>
+            <tr style={{ background: '#f0f4f8' }}>
+              <th style={{ border: '1px solid #000', padding: '1px', fontSize: '8px' }}>S</th>
+              <th style={{ border: '1px solid #000', padding: '1px', fontSize: '8px' }}>O</th>
+              {D_HEADERS.map(d => <th key={d} style={{ border: '1px solid #000', padding: '1px', fontSize: '8px' }}>{d}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {AP_TABLE_DATA.map((row, idx) => {
+              const isFirstOfSeverity = idx === 0 || AP_TABLE_DATA[idx - 1].s !== row.s;
+              return (
+                <tr key={idx}>
+                  {isFirstOfSeverity && (
+                    <td rowSpan={getSeverityRowSpan(row.s)} style={{ border: '1px solid #000', padding: '0', fontWeight: 700, textAlign: 'center', background: '#e3f2fd', fontSize: '9px', writingMode: 'vertical-rl' }}>
+                      {row.s}
+                    </td>
+                  )}
+                  <td style={{ border: '1px solid #000', padding: '1px', textAlign: 'center', background: '#f5f5f5', fontSize: '9px' }}>{row.o}</td>
+                  {row.d.map((ap, dIdx) => (
+                    <td key={dIdx} style={{ border: '1px solid #000', padding: '1px', textAlign: 'center', background: AP_COLORS[ap].bg, color: AP_COLORS[ap].text, fontWeight: 700, fontSize: '10px' }}>
+                      {ap}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ background: '#f0f4f8', padding: '4px', fontSize: '9px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}><span style={{ width: '12px', height: '12px', background: '#f87171', borderRadius: '2px' }}></span>H</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}><span style={{ width: '12px', height: '12px', background: '#fde047', borderRadius: '2px' }}></span>M</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}><span style={{ width: '12px', height: '12px', background: '#86efac', borderRadius: '2px' }}></span>L</span>
       </div>
     </div>
   );
@@ -1149,22 +1282,33 @@ interface TabMenuProps {
 
 function TabMenu({ state, setState }: TabMenuProps) {
   const structureConfirmed = (state as any).structureConfirmed || false;
+  const failureLinks = (state as any).failureLinks || [];
+  const hasFailureLinks = failureLinks.length > 0; // 고장연결 완료 여부
   
   // 탭 활성화 조건
   const isTabEnabled = (tabId: string) => {
-    if (tabId === 'structure') return true; // 구조분석은 항상 활성화
-    if (tabId.startsWith('function-')) return structureConfirmed; // 기능분석은 구조분석 확정 후
-    if (tabId.startsWith('failure-')) return structureConfirmed; // 고장분석도 구조분석 확정 후
-    return structureConfirmed; // 나머지도 구조분석 확정 후
+    if (tabId === 'structure') return true;
+    if (tabId.startsWith('function-')) return structureConfirmed;
+    if (tabId.startsWith('failure-')) return structureConfirmed;
+    // 평가 탭 (리스크분석, 최적화)은 고장연결 후 활성화
+    if (tabId === 'risk' || tabId === 'opt') return hasFailureLinks;
+    return structureConfirmed;
   };
+
+  // 분석 탭 + 평가 탭 (구분선으로 구분)
+  const analysisTabs = ANALYSIS_TABS;
+  const evaluationTabs = [
+    { id: 'risk', label: '리스크분석', step: 5 },
+    { id: 'opt', label: '최적화', step: 6 },
+  ];
   
   return (
     <div className="flex-shrink-0 bg-white py-0.5" style={{ borderBottom: `2px solid ${COLORS.blue}`, paddingLeft: 0, paddingRight: '8px' }}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
-          {/* 탭 */}
+          {/* 분석 탭 */}
           <div className="flex gap-px">
-            {TABS.map(tab => {
+            {analysisTabs.map(tab => {
               const isActive = state.tab === tab.id;
               const isEnabled = isTabEnabled(tab.id);
               const activeColor = tab.id === 'structure' ? '#1a237e' : COLORS.blue;
@@ -1178,8 +1322,10 @@ function TabMenu({ state, setState }: TabMenuProps) {
                     }
                     setState(prev => ({ ...prev, tab: tab.id }));
                   }}
-                  className="px-2 py-0.5 text-xs font-bold"
+                  className="font-bold"
                   style={{
+                    padding: '3px 6px',
+                    fontSize: '10px',
                     background: isActive ? activeColor : isEnabled ? '#e8f0f8' : '#f0f0f0',
                     borderTop: `1px solid ${isActive ? activeColor : '#c0d0e0'}`,
                     borderRight: `1px solid ${isActive ? activeColor : '#c0d0e0'}`,
@@ -1189,18 +1335,65 @@ function TabMenu({ state, setState }: TabMenuProps) {
                     color: isActive ? '#fff' : isEnabled ? COLORS.text : '#aaa',
                     cursor: isEnabled ? 'pointer' : 'not-allowed',
                     opacity: isEnabled ? 1 : 0.6,
+                    whiteSpace: 'nowrap',
                   }}
                   title={!isEnabled ? '구조분석 확정 후 사용 가능' : ''}
                 >
                   {tab.label}
-                  {!isEnabled && <span className="ml-1 text-[8px]">🔒</span>}
+                  {!isEnabled && <span style={{ marginLeft: '2px', fontSize: '7px' }}>🔒</span>}
                 </button>
               );
             })}
           </div>
-          {/* 레벨 버튼 삭제됨 - 기능분석/고장분석은 이제 개별 탭으로 분리 */}
+
+          {/* 구분선 */}
+          <div style={{ width: '2px', height: '20px', background: '#1976d2', margin: '0 4px' }} />
+
+          {/* 평가 탭 (고장연결 후 활성화) - 5개: 구조분석, 기능분석, 고장분석, 리스크분석, 최적화 */}
+          <div className="flex gap-px">
+            {[
+              { id: 'eval-structure', label: '구조분석', step: 2 },
+              { id: 'eval-function', label: '기능분석', step: 3 },
+              { id: 'eval-failure', label: '고장분석', step: 4 },
+              { id: 'risk', label: '리스크분석', step: 5 },
+              { id: 'opt', label: '최적화', step: 6 },
+            ].map(tab => {
+              const isActive = state.tab === tab.id;
+              const isEnabled = hasFailureLinks;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    if (!isEnabled) {
+                      alert('⚠️ 고장연결을 먼저 완료해주세요.');
+                      return;
+                    }
+                    setState(prev => ({ ...prev, tab: tab.id }));
+                  }}
+                  className="font-bold"
+                  style={{
+                    padding: '3px 6px',
+                    fontSize: '10px',
+                    background: isActive ? '#4caf50' : isEnabled ? '#e8f5e9' : '#e0e0e0',
+                    borderTop: `1px solid ${isActive ? '#4caf50' : isEnabled ? '#a5d6a7' : '#bdbdbd'}`,
+                    borderRight: `1px solid ${isActive ? '#4caf50' : isEnabled ? '#a5d6a7' : '#bdbdbd'}`,
+                    borderLeft: `1px solid ${isActive ? '#4caf50' : isEnabled ? '#a5d6a7' : '#bdbdbd'}`,
+                    borderBottom: 'none',
+                    borderRadius: '2px 2px 0 0',
+                    color: isActive ? '#fff' : isEnabled ? '#2e7d32' : '#9e9e9e',
+                    cursor: isEnabled ? 'pointer' : 'not-allowed',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title={!isEnabled ? '고장연결 완료 후 사용 가능' : ''}
+                >
+                  {tab.label}
+                  {!isEnabled && <span style={{ marginLeft: '2px', fontSize: '7px' }}>🔒</span>}
+                </button>
+              );
+            })}
+          </div>
           
-          {/* 단계별 토글 버튼 - 전체보기(All) 선택 시에만 표시 (All 버튼 바로 옆) */}
+          {/* 단계별 토글 버튼 - 전체보기(All) 선택 시에만 표시 */}
           {state.tab === 'all' && (
             <>
               <div className="w-px h-4 bg-gray-300 mx-1" />
@@ -1209,16 +1402,20 @@ function TabMenu({ state, setState }: TabMenuProps) {
           )}
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1" style={{ marginLeft: '4px' }}>
           <div className="w-px h-4 bg-gray-300" />
           <button
             onClick={() => setState(prev => ({ ...prev, tab: 'all', levelView: 'all' }))}
-            className="px-1.5 py-0.5 text-xs font-bold cursor-pointer"
             style={{
               background: state.tab === 'all' ? COLORS.blue : '#fff',
               border: `1px solid ${COLORS.blue}`,
               borderRadius: '3px',
-              color: state.tab === 'all' ? '#fff' : COLORS.blue
+              color: state.tab === 'all' ? '#fff' : COLORS.blue,
+              padding: '3px 6px',
+              fontSize: '10px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
             }}
           >
             전체보기
@@ -1317,12 +1514,13 @@ function FailureTabFull(props: any) {
   return <FailureTabNew {...props} />;
 }
 
-// 리스크분석 탭
+// 리스크분석 탭 (AP 클릭 시 트리뷰에 표시)
 function RiskTabFull(props: any) {
-  const { rows, l1Spans, l2Spans, state } = props;
+  const { rows, l1Spans, l2Spans, state, onAPClick } = props;
+  
   return (
     <>
-      <thead style={stickyTheadStyle}><RiskHeader /></thead>
+      <thead style={stickyTheadStyle}><RiskHeader onAPClick={onAPClick} /></thead>
       <tbody>
         {rows.map((row: any, idx: number) => (
           <tr key={`risk-${idx}-${row.l3Id}`} style={{ height: '25px' }}>
@@ -1368,6 +1566,744 @@ function DocTabFull(props: any) {
   );
 }
 
+// ============ 평가 탭 렌더러 (eval-structure, eval-function, eval-failure, risk, opt, all) ============
+function EvalTabRenderer({ tab, rows, state, l1Spans, l1TypeSpans, l1FuncSpans, l2Spans, onAPClick }: {
+  tab: string;
+  rows: FlatRow[];
+  state: WorksheetState;
+  l1Spans: number[];
+  l1TypeSpans: number[];
+  l1FuncSpans: number[];
+  l2Spans: number[];
+  onAPClick?: () => void;
+}) {
+  const BORDER = '1px solid #b0bec5';
+  const stickyTheadStyle: React.CSSProperties = { position: 'sticky', top: 0, zIndex: 20, background: '#fff' };
+
+  // 탭에 따라 표시할 단계 결정 (각 평가탭은 해당 단계만 표시, 전체보기만 전체 표시)
+  const getVisibleSteps = () => {
+    switch (tab) {
+      case 'eval-structure': return [2];           // 구조분석만
+      case 'eval-function': return [3];            // 기능분석만
+      case 'eval-failure': return [4];             // 고장분석만
+      case 'risk': return [5];                     // 리스크분석만
+      case 'opt': return [6];                      // 최적화만
+      case 'all': return [2, 3, 4, 5, 6];          // 전체보기
+      default: return [2, 3, 4, 5, 6];
+    }
+  };
+
+  const visibleSteps = tab === 'all' ? (state.visibleSteps || [2, 3, 4, 5, 6]) : getVisibleSteps();
+  
+  // 전체보기일 때만 가로 스크롤 활성화
+  const isAllView = tab === 'all';
+
+  // 색상 정의 (조기 반환 전에 정의)
+  const COLORS = {
+    structure: { main: '#1565c0', header: '#bbdefb', cell: '#e3f2fd' },
+    function: { main: '#1b5e20', header: '#c8e6c9', cell: '#e8f5e9' },
+    failure: { main: '#c62828', header: '#fff9c4', cell: '#fffde7' },
+    risk: { main: '#6a1b9a', prevention: { header: '#c8e6c9', cell: '#e8f5e9' }, detection: { header: '#bbdefb', cell: '#e3f2fd' }, evaluation: { header: '#f8bbd9', cell: '#fce4ec' } },
+    opt: { main: '#2e7d32', plan: { header: '#bbdefb', cell: '#e3f2fd' }, monitor: { header: '#ffe0b2', cell: '#fff3e0' }, effect: { header: '#c8e6c9', cell: '#e8f5e9' } },
+  };
+  
+  // 고장연결 데이터
+  const failureLinks = (state as any).failureLinks || [];
+  
+  // eval-structure 탭: 고장연결 결과 기반 구조분석 (공정명 중심 셀합치기)
+  if (tab === 'eval-structure' && failureLinks.length > 0) {
+    // FM별 그룹핑
+    const fmGroups = new Map<string, { 
+      fmId: string; fmText: string; fmProcess: string;
+      fcs: { id: string; no: string; process: string; m4: string; workElem: string; text: string }[];
+    }>();
+    
+    failureLinks.forEach((link: any) => {
+      if (!fmGroups.has(link.fmId)) {
+        fmGroups.set(link.fmId, { 
+          fmId: link.fmId, fmText: link.fmText || '', fmProcess: link.fmProcess || '',
+          fcs: []
+        });
+      }
+      const group = fmGroups.get(link.fmId)!;
+      if (link.fcId && link.fcId !== '' && !group.fcs.some(f => f.id === link.fcId)) {
+        group.fcs.push({ 
+          id: link.fcId, no: link.fcNo || '', process: link.fcProcess || '',
+          m4: link.fcM4 || '', workElem: link.fcWorkElem || '', text: link.fcText || ''
+        });
+      }
+    });
+    
+    // 공정명별 그룹핑 (셀합치기용)
+    const processGroups = new Map<string, { fmList: any[]; startIdx: number }>();
+    const allRows: any[] = [];
+    
+    Array.from(fmGroups.values()).forEach(group => {
+      const procName = group.fmProcess;
+      if (!processGroups.has(procName)) {
+        processGroups.set(procName, { fmList: [], startIdx: -1 });
+      }
+      processGroups.get(procName)!.fmList.push(group);
+    });
+    
+    let globalIdx = 0;
+    processGroups.forEach((pg, procName) => {
+      pg.startIdx = globalIdx;
+      let processRowCount = 0;
+      
+      pg.fmList.forEach((group: any, fmIdx: number) => {
+        const maxRows = Math.max(group.fcs.length, 1);
+        
+        for (let i = 0; i < maxRows; i++) {
+          const fc = group.fcs[i] || null;
+          allRows.push({
+            processName: procName,
+            showProcess: fmIdx === 0 && i === 0,
+            processRowSpan: 0,
+            fc: fc ? { m4: fc.m4, workElem: fc.workElem } : null,
+          });
+          processRowCount++;
+          globalIdx++;
+        }
+      });
+      
+      if (pg.startIdx >= 0 && allRows[pg.startIdx]) {
+        allRows[pg.startIdx].processRowSpan = processRowCount;
+      }
+    });
+    
+    return (
+      <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+        <thead style={stickyTheadStyle}>
+          <tr>
+            <th colSpan={4} style={{ background: COLORS.structure.main, color: '#fff', border: BORDER, padding: '6px', fontWeight: 900, fontSize: '11px', textAlign: 'center' }}>
+              P-FMEA 구조 분석(2단계) - 공정명 중심 (총 {allRows.length}행)
+            </th>
+          </tr>
+          <tr>
+            <th style={{ background: COLORS.structure.header, border: BORDER, padding: '4px', fontSize: '9px', textAlign: 'center' }}>1. 완제품 공정명</th>
+            <th style={{ background: COLORS.structure.header, border: BORDER, padding: '4px', fontSize: '9px', textAlign: 'center' }}>2. 메인 공정명</th>
+            <th colSpan={2} style={{ background: COLORS.structure.header, border: BORDER, padding: '4px', fontSize: '9px', textAlign: 'center' }}>3. 작업 요소명</th>
+          </tr>
+          <tr>
+            <th style={{ width: '20%', background: COLORS.structure.cell, border: BORDER, padding: '3px', fontSize: '9px', textAlign: 'center' }}>완제품공정명</th>
+            <th style={{ width: '25%', background: COLORS.structure.cell, border: BORDER, padding: '3px', fontSize: '9px', textAlign: 'center' }}>NO+공정명</th>
+            <th style={{ width: '10%', background: COLORS.structure.cell, border: BORDER, padding: '3px', fontSize: '9px', textAlign: 'center' }}>4M</th>
+            <th style={{ width: '45%', background: COLORS.structure.cell, border: BORDER, padding: '3px', fontSize: '9px', textAlign: 'center' }}>작업요소</th>
+          </tr>
+        </thead>
+        <tbody>
+          {allRows.map((row, idx) => {
+            const cellStyle = { border: BORDER, padding: '4px', fontSize: '10px', verticalAlign: 'middle' as const };
+            
+            return (
+              <tr key={`str-${idx}`}>
+                {idx === 0 && <td rowSpan={allRows.length} style={{ ...cellStyle, background: '#e3f2fd', fontWeight: 700, textAlign: 'center' }}>{state.l1?.name || ''}</td>}
+                {row.showProcess && row.processRowSpan > 0 && <td rowSpan={row.processRowSpan} style={{ ...cellStyle, background: '#e3f2fd' }}>{row.processName}</td>}
+                <td style={{ ...cellStyle, background: '#e3f2fd', textAlign: 'center' }}>{row.fc?.m4 || ''}</td>
+                <td style={{ ...cellStyle, background: '#e3f2fd' }}>{row.fc?.workElem || ''}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    );
+  }
+
+  // eval-function 탭: 고장연결 결과 기반 기능분석 (1:1 역전개 매칭)
+  if (tab === 'eval-function' && failureLinks.length > 0) {
+    // FM별 그룹핑
+    const fmGroups = new Map<string, { 
+      fmId: string; fmText: string; fmProcess: string;
+      fes: { id: string; no: string; scope: string; text: string; severity: number }[];
+      fcs: { id: string; no: string; process: string; m4: string; workElem: string; text: string }[];
+    }>();
+    
+    failureLinks.forEach((link: any) => {
+      if (!fmGroups.has(link.fmId)) {
+        fmGroups.set(link.fmId, { 
+          fmId: link.fmId, fmText: link.fmText || '', fmProcess: link.fmProcess || '',
+          fes: [], fcs: []
+        });
+      }
+      const group = fmGroups.get(link.fmId)!;
+      if (link.feId && link.feId !== '' && !group.fes.some(f => f.id === link.feId)) {
+        group.fes.push({ 
+          id: link.feId, no: link.feNo || '', scope: link.feScope || '', 
+          text: link.feText || '', severity: link.severity || 0
+        });
+      }
+      if (link.fcId && link.fcId !== '' && !group.fcs.some(f => f.id === link.fcId)) {
+        group.fcs.push({ 
+          id: link.fcId, no: link.fcNo || '', process: link.fcProcess || '',
+          m4: link.fcM4 || '', workElem: link.fcWorkElem || '', text: link.fcText || ''
+        });
+      }
+    });
+    
+    // 행 생성
+    const allRows: {
+      fmText: string;
+      showFm: boolean;
+      fmRowSpan: number;
+      fe: { scope: string; text: string } | null;
+      fc: { m4: string; workElem: string; text: string } | null;
+    }[] = [];
+    
+    Array.from(fmGroups.values()).forEach(group => {
+      const maxRows = Math.max(group.fes.length, group.fcs.length, 1);
+      
+      for (let i = 0; i < maxRows; i++) {
+        const fe = group.fes[i] || null;
+        const fc = group.fcs[i] || null;
+        allRows.push({
+          fmText: group.fmText,
+          showFm: i === 0,
+          fmRowSpan: maxRows,
+          fe: fe ? { scope: fe.scope, text: fe.text } : null,
+          fc: fc ? { m4: fc.m4, workElem: fc.workElem, text: fc.text } : null,
+        });
+      }
+    });
+    
+    const getScopeAbbr = (s: string) => s === 'Your Plant' ? 'YP' : s === 'Ship to Plant' ? 'SP' : s === 'User' ? 'U' : '';
+    
+    return (
+      <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+        <thead style={stickyTheadStyle}>
+          <tr>
+            <th colSpan={8} style={{ background: COLORS.function.main, color: '#fff', border: BORDER, padding: '6px', fontWeight: 900, fontSize: '11px', textAlign: 'center' }}>
+              P-FMEA 기능 분석(3단계) - 역전개 (고장분석 1:1 매칭)
+            </th>
+          </tr>
+          <tr>
+            <th colSpan={3} style={{ background: COLORS.function.header, border: BORDER, padding: '4px', fontSize: '9px', textAlign: 'center' }}>1. 완제품 공정기능/요구사항</th>
+            <th colSpan={2} style={{ background: COLORS.function.header, border: BORDER, padding: '4px', fontSize: '9px', textAlign: 'center' }}>2. 메인공정기능/제품특성</th>
+            <th colSpan={3} style={{ background: COLORS.function.header, border: BORDER, padding: '4px', fontSize: '9px', textAlign: 'center' }}>3. 작업요소기능/공정특성</th>
+          </tr>
+          <tr>
+            <th style={{ width: '6%', background: COLORS.function.cell, border: BORDER, padding: '3px', fontSize: '9px', textAlign: 'center' }}>구분</th>
+            <th style={{ width: '15%', background: COLORS.function.cell, border: BORDER, padding: '3px', fontSize: '9px', textAlign: 'center' }}>완제품기능</th>
+            <th style={{ width: '15%', background: '#c8e6c9', border: BORDER, padding: '3px', fontSize: '9px', textAlign: 'center', fontWeight: 700 }}>요구사항(↔FE)</th>
+            <th style={{ width: '15%', background: COLORS.function.cell, border: BORDER, padding: '3px', fontSize: '9px', textAlign: 'center' }}>공정기능</th>
+            <th style={{ width: '12%', background: '#c8e6c9', border: BORDER, padding: '3px', fontSize: '9px', textAlign: 'center', fontWeight: 700 }}>제품특성(↔FM)</th>
+            <th style={{ width: '7%', background: COLORS.function.cell, border: BORDER, padding: '3px', fontSize: '9px', textAlign: 'center' }}>4M</th>
+            <th style={{ width: '15%', background: COLORS.function.cell, border: BORDER, padding: '3px', fontSize: '9px', textAlign: 'center' }}>작업요소기능</th>
+            <th style={{ width: '15%', background: '#c8e6c9', border: BORDER, padding: '3px', fontSize: '9px', textAlign: 'center', fontWeight: 700 }}>공정특성(↔FC)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {allRows.map((row, idx) => {
+            const cellStyle = { border: BORDER, padding: '4px', fontSize: '10px', verticalAlign: 'middle' as const };
+            
+            return (
+              <tr key={`func-${idx}`} style={{ borderTop: row.showFm ? '2px solid #999' : undefined }}>
+                {/* 1. 완제품 기능/요구사항 */}
+                {/* 구분: FE scope - FM 병합 */}
+                {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#e8f5e9', textAlign: 'center' }}>{row.fe ? getScopeAbbr(row.fe.scope) : ''}</td>}
+                {/* 완제품기능: 빈칸 - FM 병합 */}
+                {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#e8f5e9' }}></td>}
+                {/* 요구사항: FE text 역전개 - FM 병합 */}
+                {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#c8e6c9', fontWeight: 600 }}>{row.fe?.text || ''}</td>}
+                {/* 2. 공정기능/제품특성 */}
+                {/* 공정기능: 빈칸 - FM 병합 */}
+                {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#e8f5e9' }}></td>}
+                {/* 제품특성: FM text 역전개 - FM 병합 */}
+                {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#c8e6c9', fontWeight: 600 }}>{row.fmText}</td>}
+                {/* 3. 작업요소 기능/공정특성 */}
+                {/* 4M: FC별 */}
+                <td style={{ ...cellStyle, background: '#e8f5e9', textAlign: 'center' }}>{row.fc?.m4 || ''}</td>
+                {/* 작업요소기능: 빈칸 */}
+                <td style={{ ...cellStyle, background: '#e8f5e9' }}>{row.fc?.workElem || ''}</td>
+                {/* 공정특성: FC text 역전개 */}
+                <td style={{ ...cellStyle, background: row.fc ? '#c8e6c9' : '#fafafa', fontWeight: 600 }}>{row.fc?.text || ''}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    );
+  }
+
+  // eval-failure 탭: 고장연결 결과 표시 (두 번째 이미지 형식)
+  if (tab === 'eval-failure' && failureLinks.length > 0) {
+    // FM별 그룹핑
+    const fmGroups = new Map<string, { fmId: string; fmText: string; fmNo: string; fes: any[]; fcs: any[] }>();
+    failureLinks.forEach((link: any) => {
+      if (!fmGroups.has(link.fmId)) {
+        fmGroups.set(link.fmId, { fmId: link.fmId, fmText: link.fmText, fmNo: link.fmNo || '', fes: [], fcs: [] });
+      }
+      const group = fmGroups.get(link.fmId)!;
+      if (link.feId && !group.fes.some(f => f.id === link.feId)) {
+        group.fes.push({ id: link.feId, scope: link.feScope, text: link.feText, severity: link.severity, feNo: link.feNo, processName: link.fcProcess });
+      }
+      if (link.fcId && !group.fcs.some(f => f.id === link.fcId)) {
+        group.fcs.push({ id: link.fcId, text: link.fcText, workElem: link.fcWorkElem, fcNo: link.fcNo, processName: link.fcProcess });
+      }
+    });
+    const groups = Array.from(fmGroups.values());
+    
+    // 렌더링 행 생성 - FM 중심, FE/FC는 각각 한 줄씩
+    const renderRows: any[] = [];
+    groups.forEach(group => {
+      const maxRows = Math.max(group.fes.length, group.fcs.length, 1);
+      for (let i = 0; i < maxRows; i++) {
+        const fe = group.fes[i];
+        const fc = group.fcs[i];
+        renderRows.push({
+          fmId: group.fmId, fmText: group.fmText, fmNo: group.fmNo,
+          showFm: i === 0, fmRowSpan: maxRows,
+          fe, showFe: !!fe,
+          fc, showFc: !!fc,
+        });
+      }
+    });
+    
+    const totalFE = groups.reduce((s, g) => s + g.fes.length, 0);
+    const totalFC = groups.reduce((s, g) => s + g.fcs.length, 0);
+    
+    return (
+      <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+        <thead style={stickyTheadStyle}>
+          <tr>
+            <th colSpan={9} style={{ background: COLORS.failure.main, color: '#fff', border: BORDER, padding: '6px', fontWeight: 900, fontSize: '11px', textAlign: 'center' }}>
+              P-FMEA 고장 분석(4단계) - 연결 결과 (FM:{groups.length} FE:{totalFE} FC:{totalFC})
+            </th>
+          </tr>
+          <tr>
+            <th colSpan={4} style={{ background: '#e3f2fd', border: BORDER, padding: '4px', fontSize: '10px', textAlign: 'center', fontWeight: 700 }}>고장영향(FE)</th>
+            <th rowSpan={2} style={{ width: '12%', background: '#fff8e1', border: BORDER, padding: '4px', fontSize: '10px', textAlign: 'center', fontWeight: 700, verticalAlign: 'middle' }}>고장형태(FM)</th>
+            <th colSpan={4} style={{ background: '#e8f5e9', border: BORDER, padding: '4px', fontSize: '10px', textAlign: 'center', fontWeight: 700 }}>고장원인(FC)</th>
+          </tr>
+          <tr>
+            <th style={{ width: '5%', background: '#e3f2fd', border: BORDER, padding: '3px', fontSize: '9px', fontWeight: 600 }}>No</th>
+            <th style={{ width: '6%', background: '#e3f2fd', border: BORDER, padding: '3px', fontSize: '9px', fontWeight: 600 }}>구분</th>
+            <th style={{ width: '15%', background: '#e3f2fd', border: BORDER, padding: '3px', fontSize: '9px', fontWeight: 600 }}>고장영향</th>
+            <th style={{ width: '4%', background: '#e3f2fd', border: BORDER, padding: '3px', fontSize: '9px', fontWeight: 600 }}>S</th>
+            <th style={{ width: '5%', background: '#e8f5e9', border: BORDER, padding: '3px', fontSize: '9px', fontWeight: 600 }}>No</th>
+            <th style={{ width: '10%', background: '#e8f5e9', border: BORDER, padding: '3px', fontSize: '9px', fontWeight: 600 }}>공정명</th>
+            <th style={{ width: '12%', background: '#e8f5e9', border: BORDER, padding: '3px', fontSize: '9px', fontWeight: 600 }}>작업요소</th>
+            <th style={{ background: '#e8f5e9', border: BORDER, padding: '3px', fontSize: '9px', fontWeight: 600 }}>고장원인</th>
+          </tr>
+        </thead>
+        <tbody>
+          {renderRows.map((row, idx) => (
+            <tr key={`fail-${row.fmId}-${idx}`} style={{ borderTop: row.showFm ? '2px solid #999' : undefined }}>
+              {/* FE 영역 */}
+              {row.showFe ? (
+                <>
+                  <td style={{ border: BORDER, padding: '3px', fontSize: '9px', background: '#e8f5e9', textAlign: 'center', fontWeight: 700, color: '#2e7d32' }}>{row.fe?.feNo || ''}</td>
+                  <td style={{ border: BORDER, padding: '3px', fontSize: '9px', background: '#e3f2fd', textAlign: 'center' }}>
+                    {row.fe?.scope === 'Your Plant' ? 'YP' : row.fe?.scope === 'Ship to Plant' ? 'SP' : row.fe?.scope === 'User' ? 'USER' : ''}
+                  </td>
+                  <td style={{ border: BORDER, padding: '3px', fontSize: '9px' }}>{row.fe?.text || ''}</td>
+                  <td style={{ border: BORDER, padding: '3px', fontSize: '10px', textAlign: 'center', fontWeight: 700, color: (row.fe?.severity || 0) >= 8 ? '#c62828' : '#333' }}>{row.fe?.severity || ''}</td>
+                </>
+              ) : (
+                <><td style={{ border: BORDER, background: '#fafafa' }}></td><td style={{ border: BORDER, background: '#fafafa' }}></td><td style={{ border: BORDER, background: '#fafafa' }}></td><td style={{ border: BORDER, background: '#fafafa' }}></td></>
+              )}
+              {/* FM 영역 - 병합 */}
+              {row.showFm && (
+                <td rowSpan={row.fmRowSpan} style={{ border: BORDER, padding: '4px', fontSize: '9px', background: '#fff8e1', verticalAlign: 'middle', textAlign: 'center', fontWeight: 600 }}>
+                  <div style={{ fontSize: '8px', color: '#f57c00', marginBottom: '2px' }}>{row.fmNo}</div>
+                  <div>{row.fmText}</div>
+                </td>
+              )}
+              {/* FC 영역 */}
+              {row.showFc ? (
+                <>
+                  <td style={{ border: BORDER, padding: '3px', fontSize: '9px', background: '#e8f5e9', textAlign: 'center', fontWeight: 700, color: '#2e7d32' }}>{row.fc?.fcNo || ''}</td>
+                  <td style={{ border: BORDER, padding: '3px', fontSize: '9px' }}>{row.fc?.processName || ''}</td>
+                  <td style={{ border: BORDER, padding: '3px', fontSize: '9px' }}>{row.fc?.workElem || ''}</td>
+                  <td style={{ border: BORDER, padding: '3px', fontSize: '9px' }}>{row.fc?.text || ''}</td>
+                </>
+              ) : (
+                <><td style={{ border: BORDER, background: '#fafafa' }}></td><td style={{ border: BORDER, background: '#fafafa' }}></td><td style={{ border: BORDER, background: '#fafafa' }}></td><td style={{ border: BORDER, background: '#fafafa' }}></td></>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+
+  // 전체보기(all) 탭: 고장연결 결과 기반 40열 테이블
+  if (tab === 'all' && failureLinks.length > 0) {
+    // ========== 1. FM별 그룹핑 ==========
+    const fmGroups = new Map<string, { 
+      fmId: string; fmText: string; fmProcess: string;
+      fes: { id: string; no: string; scope: string; text: string; severity: number }[];
+      fcs: { id: string; no: string; process: string; m4: string; workElem: string; text: string }[];
+    }>();
+    
+    failureLinks.forEach((link: any) => {
+      // FM 그룹 생성
+      if (!fmGroups.has(link.fmId)) {
+        fmGroups.set(link.fmId, { 
+          fmId: link.fmId, 
+          fmText: link.fmText || '', 
+          fmProcess: link.fmProcess || '',
+          fes: [], 
+          fcs: []
+        });
+      }
+      const group = fmGroups.get(link.fmId)!;
+      
+      // FE 레코드 (feId가 있으면 FE)
+      if (link.feId && link.feId !== '' && !group.fes.some(f => f.id === link.feId)) {
+        group.fes.push({ 
+          id: link.feId, 
+          no: link.feNo || '', 
+          scope: link.feScope || '', 
+          text: link.feText || '',  // 고장영향
+          severity: link.severity || 0
+        });
+      }
+      
+      // FC 레코드 (fcId가 있으면 FC)
+      if (link.fcId && link.fcId !== '' && !group.fcs.some(f => f.id === link.fcId)) {
+        group.fcs.push({ 
+          id: link.fcId, 
+          no: link.fcNo || '', 
+          process: link.fcProcess || '',  // FC 공정명
+          m4: link.fcM4 || '',             // 4M
+          workElem: link.fcWorkElem || '', // 작업요소
+          text: link.fcText || ''          // 고장원인
+        });
+      }
+    });
+    
+    // 디버깅 로그
+    console.log('=== 전체보기 데이터 검증 ===');
+    console.log('FM 그룹 수:', fmGroups.size);
+    fmGroups.forEach((g, k) => {
+      console.log(`FM[${k}]: "${g.fmText}" (${g.fmProcess}) - FE:${g.fes.length}, FC:${g.fcs.length}`);
+    });
+    
+    // ========== 2. 공정명별 그룹핑 (셀합치기용) ==========
+    const processGroups = new Map<string, { fmList: typeof fmGroups extends Map<string, infer V> ? V[] : never; startIdx: number }>();
+    const allRows: {
+      processName: string;
+      fmText: string;
+      showFm: boolean;
+      fmRowSpan: number;
+      showProcess: boolean;
+      processRowSpan: number;
+      fe: { no: string; scope: string; text: string; severity: number } | null;
+      fc: { no: string; process: string; m4: string; workElem: string; text: string } | null;
+    }[] = [];
+    
+    // 먼저 공정별 FM 목록 생성
+    Array.from(fmGroups.values()).forEach(group => {
+      const procName = group.fmProcess;
+      if (!processGroups.has(procName)) {
+        processGroups.set(procName, { fmList: [], startIdx: -1 });
+      }
+      processGroups.get(procName)!.fmList.push(group);
+    });
+    
+    // 행 생성
+    let globalIdx = 0;
+    processGroups.forEach((pg, procName) => {
+      pg.startIdx = globalIdx;
+      let processRowCount = 0;
+      
+      pg.fmList.forEach((group, fmIdx) => {
+        const maxRows = Math.max(group.fes.length, group.fcs.length, 1);
+        
+        for (let i = 0; i < maxRows; i++) {
+          const fe = group.fes[i] || null;
+          const fc = group.fcs[i] || null;
+          
+          allRows.push({
+            processName: procName,
+            fmText: group.fmText,
+            showFm: i === 0,
+            fmRowSpan: maxRows,
+            showProcess: fmIdx === 0 && i === 0,
+            processRowSpan: 0, // 나중에 계산
+            fe: fe ? { no: fe.no, scope: fe.scope, text: fe.text, severity: fe.severity } : null,
+            fc: fc ? { no: fc.no, process: fc.process, m4: fc.m4, workElem: fc.workElem, text: fc.text } : null,
+          });
+          
+          processRowCount++;
+          globalIdx++;
+        }
+      });
+      
+      // 공정 rowSpan 설정
+      if (pg.startIdx >= 0 && allRows[pg.startIdx]) {
+        allRows[pg.startIdx].processRowSpan = processRowCount;
+      }
+    });
+    
+    const totalFM = fmGroups.size;
+    const totalFE = Array.from(fmGroups.values()).reduce((s, g) => s + g.fes.length, 0);
+    const totalFC = Array.from(fmGroups.values()).reduce((s, g) => s + g.fcs.length, 0);
+    
+    console.log(`총 FM:${totalFM}, FE:${totalFE}, FC:${totalFC}, 행:${allRows.length}`);
+    
+    const handleExportExcel = () => {
+      exportAllViewExcel(state, failureLinks, (state as any).fmeaName || 'PFMEA');
+    };
+    
+    return (
+      <div style={{ width: '100%' }}>
+        {/* 전체보기 헤더 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#1565c0', color: '#fff', marginBottom: '4px' }}>
+          <div style={{ fontWeight: 900, fontSize: '12px' }}>
+            📊 P-FMEA 전체보기 (FM:{totalFM} FE:{totalFE} FC:{totalFC}) - 총 {allRows.length}행
+          </div>
+          <button
+            onClick={handleExportExcel}
+            style={{
+              padding: '6px 14px', fontSize: '11px', fontWeight: 700,
+              background: '#4caf50', color: '#fff', border: 'none',
+              borderRadius: '4px', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '6px'
+            }}
+          >
+            📥 Excel 내보내기
+          </button>
+        </div>
+        <div style={{ overflowX: 'auto', width: '100%' }}>
+        <table style={{ minWidth: '2800px', borderCollapse: 'collapse' }}>
+          <thead style={stickyTheadStyle}>
+            {/* 1행: 단계 대분류 */}
+            <tr>
+              <th colSpan={4} style={{ background: '#1565c0', color: '#fff', border: BORDER, padding: '4px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>P-FMEA 구조분석(2단계)</th>
+              <th colSpan={8} style={{ background: '#1b5e20', color: '#fff', border: BORDER, padding: '4px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>P-FMEA 기능분석(3단계)</th>
+              <th colSpan={6} style={{ background: '#c62828', color: '#fff', border: BORDER, padding: '4px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>P-FMEA 고장분석(4단계)</th>
+              <th colSpan={8} style={{ background: '#6a1b9a', color: '#fff', border: BORDER, padding: '4px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>P-FMEA 리스크분석(5단계)</th>
+              <th colSpan={14} style={{ background: '#e65100', color: '#fff', border: BORDER, padding: '4px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>P-FMEA 최적화(6단계)</th>
+            </tr>
+            {/* 2행: 서브그룹 */}
+            <tr>
+              <th style={{ background: '#bbdefb', border: BORDER, padding: '2px', fontSize: '8px' }}>1.완제품</th>
+              <th style={{ background: '#bbdefb', border: BORDER, padding: '2px', fontSize: '8px' }}>2.메인공정</th>
+              <th colSpan={2} style={{ background: '#bbdefb', border: BORDER, padding: '2px', fontSize: '8px' }}>3.작업요소</th>
+              <th colSpan={3} style={{ background: '#c8e6c9', border: BORDER, padding: '2px', fontSize: '8px' }}>1.완제품기능/요구사항</th>
+              <th colSpan={2} style={{ background: '#c8e6c9', border: BORDER, padding: '2px', fontSize: '8px' }}>2.공정기능/제품특성</th>
+              <th colSpan={3} style={{ background: '#c8e6c9', border: BORDER, padding: '2px', fontSize: '8px' }}>3.작업요소기능/공정특성</th>
+              <th colSpan={3} style={{ background: '#fff9c4', border: BORDER, padding: '2px', fontSize: '8px' }}>1.고장영향(FE)</th>
+              <th style={{ background: '#fff9c4', border: BORDER, padding: '2px', fontSize: '8px' }}>2.고장형태</th>
+              <th colSpan={2} style={{ background: '#fff9c4', border: BORDER, padding: '2px', fontSize: '8px' }}>3.고장원인(FC)</th>
+              <th colSpan={2} style={{ background: '#e1bee7', border: BORDER, padding: '2px', fontSize: '8px' }}>예방관리</th>
+              <th colSpan={2} style={{ background: '#e1bee7', border: BORDER, padding: '2px', fontSize: '8px' }}>검출관리</th>
+              <th colSpan={4} style={{ background: '#e1bee7', border: BORDER, padding: '2px', fontSize: '8px' }}>리스크평가</th>
+              <th colSpan={4} style={{ background: '#ffe0b2', border: BORDER, padding: '2px', fontSize: '8px' }}>계획</th>
+              <th colSpan={3} style={{ background: '#ffe0b2', border: BORDER, padding: '2px', fontSize: '8px' }}>모니터링</th>
+              <th colSpan={7} style={{ background: '#ffe0b2', border: BORDER, padding: '2px', fontSize: '8px' }}>효과평가</th>
+            </tr>
+            {/* 3행: 컬럼명 */}
+            <tr>
+              {/* 구조분석 4열 */}
+              <th style={{ width: '60px', background: '#e3f2fd', border: BORDER, padding: '2px', fontSize: '7px' }}>완제품</th>
+              <th style={{ width: '80px', background: '#e3f2fd', border: BORDER, padding: '2px', fontSize: '7px' }}>NO+공정명</th>
+              <th style={{ width: '25px', background: '#e3f2fd', border: BORDER, padding: '2px', fontSize: '7px' }}>4M</th>
+              <th style={{ width: '70px', background: '#e3f2fd', border: BORDER, padding: '2px', fontSize: '7px' }}>작업요소</th>
+              {/* 기능분석 8열 */}
+              <th style={{ width: '35px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: '7px' }}>구분</th>
+              <th style={{ width: '80px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: '7px' }}>완제품기능</th>
+              <th style={{ width: '70px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: '7px' }}>요구사항</th>
+              <th style={{ width: '80px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: '7px' }}>공정기능</th>
+              <th style={{ width: '60px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: '7px' }}>제품특성</th>
+              <th style={{ width: '25px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: '7px' }}>4M</th>
+              <th style={{ width: '70px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: '7px' }}>작업요소기능</th>
+              <th style={{ width: '60px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: '7px' }}>공정특성</th>
+              {/* 고장분석 6열 */}
+              <th style={{ width: '35px', background: '#fffde7', border: BORDER, padding: '2px', fontSize: '7px' }}>구분</th>
+              <th style={{ width: '80px', background: '#fffde7', border: BORDER, padding: '2px', fontSize: '7px' }}>고장영향</th>
+              <th style={{ width: '25px', background: '#fffde7', border: BORDER, padding: '2px', fontSize: '7px' }}>S</th>
+              <th style={{ width: '80px', background: '#fffde7', border: BORDER, padding: '2px', fontSize: '7px' }}>고장형태</th>
+              <th style={{ width: '60px', background: '#fffde7', border: BORDER, padding: '2px', fontSize: '7px' }}>작업요소</th>
+              <th style={{ width: '80px', background: '#fffde7', border: BORDER, padding: '2px', fontSize: '7px' }}>고장원인</th>
+              {/* 리스크분석 8열 */}
+              <th style={{ width: '70px', background: '#fce4ec', border: BORDER, padding: '2px', fontSize: '7px' }}>예방관리</th>
+              <th style={{ width: '25px', background: '#fce4ec', border: BORDER, padding: '2px', fontSize: '7px' }}>O</th>
+              <th style={{ width: '70px', background: '#fce4ec', border: BORDER, padding: '2px', fontSize: '7px' }}>검출관리</th>
+              <th style={{ width: '25px', background: '#fce4ec', border: BORDER, padding: '2px', fontSize: '7px' }}>D</th>
+              <th style={{ width: '25px', background: '#fce4ec', border: BORDER, padding: '2px', fontSize: '7px' }}>AP</th>
+              <th style={{ width: '30px', background: '#fce4ec', border: BORDER, padding: '2px', fontSize: '7px' }}>RPN</th>
+              <th style={{ width: '40px', background: '#fce4ec', border: BORDER, padding: '2px', fontSize: '7px' }}>특별특성</th>
+              <th style={{ width: '60px', background: '#fce4ec', border: BORDER, padding: '2px', fontSize: '7px' }}>습득교훈</th>
+              {/* 최적화 14열 */}
+              <th style={{ width: '70px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: '7px' }}>예방개선</th>
+              <th style={{ width: '70px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: '7px' }}>검출개선</th>
+              <th style={{ width: '50px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: '7px' }}>책임자</th>
+              <th style={{ width: '50px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: '7px' }}>목표일</th>
+              <th style={{ width: '35px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: '7px' }}>상태</th>
+              <th style={{ width: '60px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: '7px' }}>개선근거</th>
+              <th style={{ width: '50px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: '7px' }}>완료일</th>
+              <th style={{ width: '25px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: '7px' }}>S</th>
+              <th style={{ width: '25px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: '7px' }}>O</th>
+              <th style={{ width: '25px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: '7px' }}>D</th>
+              <th style={{ width: '40px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: '7px' }}>특별특성</th>
+              <th style={{ width: '25px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: '7px' }}>AP</th>
+              <th style={{ width: '30px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: '7px' }}>RPN</th>
+              <th style={{ width: '50px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: '7px' }}>비고</th>
+            </tr>
+          </thead>
+          <tbody>
+            {allRows.map((row, idx) => {
+              const cellStyle = { border: BORDER, padding: '2px', fontSize: '8px', verticalAlign: 'middle' as const };
+              const getScopeAbbr = (s: string) => s === 'Your Plant' ? 'YP' : s === 'Ship to Plant' ? 'SP' : s === 'User' ? 'U' : '';
+              
+              return (
+                <tr key={`all-${idx}`} style={{ borderTop: row.showFm ? '2px solid #666' : undefined }}>
+                  {/* ===== 구조분석 4열 ===== */}
+                  {/* 1. 완제품 공정명: 전체 병합 */}
+                  {idx === 0 && <td rowSpan={allRows.length} style={{ ...cellStyle, background: '#e3f2fd', fontWeight: 700, textAlign: 'center' }}>{state.l1?.name || ''}</td>}
+                  {/* 2. 메인공정명: 공정별 병합 */}
+                  {row.showProcess && row.processRowSpan > 0 && <td rowSpan={row.processRowSpan} style={{ ...cellStyle, background: '#e3f2fd' }}>{row.processName}</td>}
+                  {/* 3. 4M: FC별 */}
+                  <td style={{ ...cellStyle, background: '#e3f2fd', textAlign: 'center' }}>{row.fc?.m4 || ''}</td>
+                  {/* 4. 작업요소: FC별 */}
+                  <td style={{ ...cellStyle, background: '#e3f2fd' }}>{row.fc?.workElem || ''}</td>
+                  
+                  {/* ===== 기능분석 8열 (역전개: 1:1 매칭) ===== */}
+                  {/* 1. 구분: FE scope - FM 병합 */}
+                  {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#e8f5e9', textAlign: 'center' }}>{row.fe ? getScopeAbbr(row.fe.scope) : ''}</td>}
+                  {/* 2. 완제품기능: 빈칸 - FM 병합 */}
+                  {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#e8f5e9' }}></td>}
+                  {/* 3. 요구사항: FE → 역전개 - FM 병합 */}
+                  {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#c8e6c9', fontWeight: 600 }}>{row.fe?.text || ''}</td>}
+                  {/* 4. 공정기능: 빈칸 - FM 병합 */}
+                  {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#e8f5e9' }}></td>}
+                  {/* 5. 제품특성: FM → 역전개 - FM 병합 */}
+                  {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#c8e6c9', fontWeight: 600 }}>{row.fmText}</td>}
+                  {/* 6. 4M: FC별 */}
+                  <td style={{ ...cellStyle, background: '#e8f5e9', textAlign: 'center' }}>{row.fc?.m4 || ''}</td>
+                  {/* 7. 작업요소기능: 빈칸 */}
+                  <td style={{ ...cellStyle, background: '#e8f5e9' }}></td>
+                  {/* 8. 공정특성: FC → 역전개 */}
+                  <td style={{ ...cellStyle, background: '#c8e6c9', fontWeight: 600 }}>{row.fc?.text || ''}</td>
+                  
+                  {/* ===== 고장분석 6열 ===== */}
+                  {/* 1. 구분: FE scope */}
+                  <td style={{ ...cellStyle, background: '#fffde7', textAlign: 'center' }}>{row.fe ? getScopeAbbr(row.fe.scope) : ''}</td>
+                  {/* 2. 고장영향: FE text */}
+                  <td style={{ ...cellStyle, background: row.fe ? '#fffde7' : '#fafafa' }}>{row.fe?.text || ''}</td>
+                  {/* 3. 심각도: FE severity */}
+                  <td style={{ ...cellStyle, background: row.fe ? '#fffde7' : '#fafafa', textAlign: 'center', fontWeight: 700, color: (row.fe?.severity || 0) >= 8 ? '#c62828' : '#333' }}>{row.fe?.severity || ''}</td>
+                  {/* 4. 고장형태: FM text - FM 병합 */}
+                  {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#fff8e1', textAlign: 'center', fontWeight: 700 }}>{row.fmText}</td>}
+                  {/* 5. 작업요소: FC workElem */}
+                  <td style={{ ...cellStyle, background: row.fc ? '#fffde7' : '#fafafa' }}>{row.fc?.workElem || ''}</td>
+                  {/* 6. 고장원인: FC text */}
+                  <td style={{ ...cellStyle, background: row.fc ? '#fffde7' : '#fafafa' }}>{row.fc?.text || ''}</td>
+                  
+                  {/* ===== 리스크분석 8열 ===== */}
+                  <td style={{ ...cellStyle, background: '#fce4ec' }}></td>
+                  <td style={{ ...cellStyle, background: '#fce4ec', textAlign: 'center' }}></td>
+                  <td style={{ ...cellStyle, background: '#fce4ec' }}></td>
+                  <td style={{ ...cellStyle, background: '#fce4ec', textAlign: 'center' }}></td>
+                  <td style={{ ...cellStyle, background: '#fce4ec', textAlign: 'center' }}></td>
+                  <td style={{ ...cellStyle, background: '#fce4ec', textAlign: 'center' }}></td>
+                  <td style={{ ...cellStyle, background: '#fce4ec', textAlign: 'center' }}></td>
+                  <td style={{ ...cellStyle, background: '#fce4ec' }}></td>
+                  
+                  {/* ===== 최적화 14열 ===== */}
+                  <td style={{ ...cellStyle, background: '#fff3e0' }}></td>
+                  <td style={{ ...cellStyle, background: '#fff3e0' }}></td>
+                  <td style={{ ...cellStyle, background: '#fff3e0' }}></td>
+                  <td style={{ ...cellStyle, background: '#fff3e0' }}></td>
+                  <td style={{ ...cellStyle, background: '#fff3e0' }}></td>
+                  <td style={{ ...cellStyle, background: '#fff3e0' }}></td>
+                  <td style={{ ...cellStyle, background: '#fff3e0' }}></td>
+                  <td style={{ ...cellStyle, background: '#fff3e0', textAlign: 'center' }}></td>
+                  <td style={{ ...cellStyle, background: '#fff3e0', textAlign: 'center' }}></td>
+                  <td style={{ ...cellStyle, background: '#fff3e0', textAlign: 'center' }}></td>
+                  <td style={{ ...cellStyle, background: '#fff3e0', textAlign: 'center' }}></td>
+                  <td style={{ ...cellStyle, background: '#fff3e0', textAlign: 'center' }}></td>
+                  <td style={{ ...cellStyle, background: '#fff3e0', textAlign: 'center' }}></td>
+                  <td style={{ ...cellStyle, background: '#fff3e0' }}></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        </div>
+      </div>
+    );
+  }
+
+  // 컬럼 수 계산
+  const colCounts = { 2: 4, 3: 8, 4: 6, 5: 8, 6: 14 };
+  const totalCols = visibleSteps.reduce((sum, step) => sum + (colCounts[step as keyof typeof colCounts] || 0), 0);
+  
+  // 전체보기는 고정 너비 (40열 * 약 80px = 3200px), 개별 탭은 100%
+  const tableMinWidth = isAllView ? `${totalCols * 80}px` : '100%';
+
+  return (
+    <table style={{ 
+      width: isAllView ? 'max-content' : '100%', 
+      minWidth: tableMinWidth,
+      borderCollapse: 'collapse', 
+      tableLayout: isAllView ? 'auto' : 'fixed' 
+    }}>
+      <thead style={stickyTheadStyle}>
+        {/* 1행: 단계 대분류 */}
+        <tr>
+          {visibleSteps.includes(2) && <th colSpan={4} style={{ background: COLORS.structure.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>P-FMEA 구조 분석(2단계)</th>}
+          {visibleSteps.includes(3) && <th colSpan={8} style={{ background: COLORS.function.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>P-FMEA 기능 분석(3단계)</th>}
+          {visibleSteps.includes(4) && <th colSpan={6} style={{ background: COLORS.failure.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>P-FMEA 고장 분석(4단계)</th>}
+          {visibleSteps.includes(5) && <th colSpan={8} style={{ background: COLORS.risk.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>P-FMEA 리스크 분석(5단계)</th>}
+          {visibleSteps.includes(6) && <th colSpan={14} style={{ background: COLORS.opt.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>P-FMEA 최적화(6단계)</th>}
+        </tr>
+        {/* 2행: 서브그룹 */}
+        <tr>
+          {visibleSteps.includes(2) && <><th style={{ background: COLORS.structure.header, border: BORDER, padding: '2px', fontSize: '9px', textAlign: 'center' }}>1. 완제품 공정명</th><th style={{ background: COLORS.structure.header, border: BORDER, padding: '2px', fontSize: '9px', textAlign: 'center' }}>2. 메인 공정명</th><th colSpan={2} style={{ background: COLORS.structure.header, border: BORDER, padding: '2px', fontSize: '9px', textAlign: 'center' }}>3. 작업 요소명</th></>}
+          {visibleSteps.includes(3) && <><th colSpan={3} style={{ background: COLORS.function.header, border: BORDER, padding: '2px', fontSize: '9px', textAlign: 'center' }}>1. 완제품 공정기능/요구사항</th><th colSpan={2} style={{ background: COLORS.function.header, border: BORDER, padding: '2px', fontSize: '9px', textAlign: 'center' }}>2. 메인공정기능 및 제품특성</th><th colSpan={3} style={{ background: COLORS.function.header, border: BORDER, padding: '2px', fontSize: '9px', textAlign: 'center' }}>3. 작업요소기능 및 공정특성</th></>}
+          {visibleSteps.includes(4) && <><th colSpan={3} style={{ background: COLORS.failure.header, border: BORDER, padding: '2px', fontSize: '9px', textAlign: 'center' }}>1. 고장영향(FE)</th><th style={{ background: COLORS.failure.header, border: BORDER, padding: '2px', fontSize: '9px', textAlign: 'center' }}>2. 고장형태(FM)</th><th colSpan={2} style={{ background: COLORS.failure.header, border: BORDER, padding: '2px', fontSize: '9px', textAlign: 'center' }}>3. 고장원인(FC)</th></>}
+          {visibleSteps.includes(5) && <><th colSpan={2} style={{ background: COLORS.risk.prevention.header, border: BORDER, padding: '2px', fontSize: '9px', textAlign: 'center' }}>현재 예방관리</th><th colSpan={2} style={{ background: COLORS.risk.detection.header, border: BORDER, padding: '2px', fontSize: '9px', textAlign: 'center' }}>현재 검출관리</th><th colSpan={4} style={{ background: COLORS.risk.evaluation.header, border: BORDER, padding: '2px', fontSize: '9px', textAlign: 'center' }}>리스크 평가</th></>}
+          {visibleSteps.includes(6) && <><th colSpan={4} style={{ background: COLORS.opt.plan.header, border: BORDER, padding: '2px', fontSize: '9px', textAlign: 'center' }}>계획</th><th colSpan={3} style={{ background: COLORS.opt.monitor.header, border: BORDER, padding: '2px', fontSize: '9px', textAlign: 'center' }}>결과 모니터링</th><th colSpan={7} style={{ background: COLORS.opt.effect.header, border: BORDER, padding: '2px', fontSize: '9px', textAlign: 'center' }}>효과 평가</th></>}
+        </tr>
+        {/* 3행: 컬럼명 */}
+        <tr>
+          {visibleSteps.includes(2) && <><th style={{ background: COLORS.structure.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>완제품공정명</th><th style={{ background: COLORS.structure.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>NO+공정명</th><th style={{ background: COLORS.structure.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>4M</th><th style={{ background: COLORS.structure.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>작업요소</th></>}
+          {visibleSteps.includes(3) && <><th style={{ background: COLORS.function.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>구분</th><th style={{ background: COLORS.function.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>완제품기능</th><th style={{ background: COLORS.function.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>요구사항</th><th style={{ background: COLORS.function.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>공정기능</th><th style={{ background: COLORS.function.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>제품특성</th><th style={{ background: COLORS.function.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>작업요소</th><th style={{ background: COLORS.function.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>작업요소기능</th><th style={{ background: COLORS.function.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>공정특성</th></>}
+          {visibleSteps.includes(4) && <><th style={{ background: COLORS.failure.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>구분</th><th style={{ background: COLORS.failure.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>고장영향(FE)</th><th style={{ background: COLORS.failure.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>심각도</th><th style={{ background: COLORS.failure.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>고장형태(FM)</th><th style={{ background: COLORS.failure.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>작업요소</th><th style={{ background: COLORS.failure.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>고장원인(FC)</th></>}
+          {visibleSteps.includes(5) && <><th style={{ background: COLORS.risk.prevention.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>예방관리(PC)</th><th style={{ background: COLORS.risk.prevention.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>발생도</th><th style={{ background: COLORS.risk.detection.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>검출관리(DC)</th><th style={{ background: COLORS.risk.detection.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>검출도</th><th onClick={onAPClick} style={{ background: COLORS.risk.evaluation.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center', cursor: 'pointer' }}>AP 📊</th><th style={{ background: COLORS.risk.evaluation.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>RPN</th><th style={{ background: COLORS.risk.evaluation.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>특별특성</th><th style={{ background: COLORS.risk.evaluation.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>습득교훈</th></>}
+          {visibleSteps.includes(6) && <><th style={{ background: COLORS.opt.plan.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>예방관리개선</th><th style={{ background: COLORS.opt.plan.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>검출관리개선</th><th style={{ background: COLORS.opt.plan.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>책임자성명</th><th style={{ background: COLORS.opt.plan.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>목표완료일자</th><th style={{ background: COLORS.opt.monitor.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>상태</th><th style={{ background: COLORS.opt.monitor.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>개선결과근거</th><th style={{ background: COLORS.opt.monitor.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>완료일자</th><th style={{ background: COLORS.opt.effect.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>심각도</th><th style={{ background: COLORS.opt.effect.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>발생도</th><th style={{ background: COLORS.opt.effect.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>검출도</th><th style={{ background: COLORS.opt.effect.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>특별특성</th><th style={{ background: COLORS.opt.effect.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>AP</th><th style={{ background: COLORS.opt.effect.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>RPN</th><th style={{ background: COLORS.opt.effect.cell, border: BORDER, padding: '2px', fontSize: '8px', textAlign: 'center' }}>비고</th></>}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.length === 0 ? (
+          <tr><td colSpan={totalCols} style={{ textAlign: 'center', padding: '40px', color: '#999', fontSize: '12px' }}>데이터가 없습니다.</td></tr>
+        ) : rows.map((row, idx) => {
+          const cellStyle = { border: BORDER, padding: '2px 3px', fontSize: '8px', background: '#fff' };
+          return (
+            <tr key={`eval-${row.l1Id}-${row.l2Id}-${row.l3Id}-${idx}`} style={{ height: '22px' }}>
+              {visibleSteps.includes(2) && <>{l1Spans[idx] > 0 && <td rowSpan={l1Spans[idx]} style={{ ...cellStyle, background: COLORS.structure.cell }}>{row.l1Name}</td>}{l2Spans[idx] > 0 && <td rowSpan={l2Spans[idx]} style={{ ...cellStyle, background: COLORS.structure.cell }}>{row.l2No} {row.l2Name}</td>}<td style={{ ...cellStyle, background: COLORS.structure.cell, textAlign: 'center' }}>{row.m4}</td><td style={{ ...cellStyle, background: COLORS.structure.cell }}>{row.l3Name}</td></>}
+              {visibleSteps.includes(3) && <>
+                <td style={{ ...cellStyle, background: COLORS.function.cell }}>{row.l1Type || ''}</td>
+                <td style={{ ...cellStyle, background: COLORS.function.cell }}>{row.l1Function || ''}</td>
+                <td style={{ ...cellStyle, background: COLORS.function.cell }}>{row.l1Requirement || ''}</td>
+                <td style={{ ...cellStyle, background: COLORS.function.cell }}>{row.l2Functions?.map((f: any) => f.name).join(', ') || ''}</td>
+                <td style={{ ...cellStyle, background: COLORS.function.cell }}>{row.l2ProductChars?.map((c: any) => c.name).join(', ') || ''}</td>
+                <td style={{ ...cellStyle, background: COLORS.function.cell }}>{row.m4 || ''}</td>
+                <td style={{ ...cellStyle, background: COLORS.function.cell }}>{row.l3Functions?.map((f: any) => f.name).join(', ') || ''}</td>
+                <td style={{ ...cellStyle, background: COLORS.function.cell }}>{row.l3ProcessChars?.map((c: any) => c.name).join(', ') || ''}</td>
+              </>}
+              {visibleSteps.includes(4) && <>
+                <td style={{ ...cellStyle, background: COLORS.failure.cell }}>{row.l1Type || ''}</td>
+                <td style={{ ...cellStyle, background: COLORS.failure.cell }}>{row.l1FailureEffect || ''}</td>
+                <td style={{ ...cellStyle, background: COLORS.failure.cell, textAlign: 'center' }}>{row.l1Severity || ''}</td>
+                <td style={{ ...cellStyle, background: COLORS.failure.cell }}>{row.l2FailureMode || ''}</td>
+                <td style={{ ...cellStyle, background: COLORS.failure.cell }}>{row.m4 || ''}</td>
+                <td style={{ ...cellStyle, background: COLORS.failure.cell }}>{row.l3FailureCause || ''}</td>
+              </>}
+              {visibleSteps.includes(5) && <><td style={{ ...cellStyle, background: COLORS.risk.prevention.cell }}></td><td style={{ ...cellStyle, background: COLORS.risk.prevention.cell }}></td><td style={{ ...cellStyle, background: COLORS.risk.detection.cell }}></td><td style={{ ...cellStyle, background: COLORS.risk.detection.cell }}></td><td style={{ ...cellStyle, background: COLORS.risk.evaluation.cell }}></td><td style={{ ...cellStyle, background: COLORS.risk.evaluation.cell }}></td><td style={{ ...cellStyle, background: COLORS.risk.evaluation.cell }}></td><td style={{ ...cellStyle, background: COLORS.risk.evaluation.cell }}></td></>}
+              {visibleSteps.includes(6) && <><td style={{ ...cellStyle, background: COLORS.opt.plan.cell }}></td><td style={{ ...cellStyle, background: COLORS.opt.plan.cell }}></td><td style={{ ...cellStyle, background: COLORS.opt.plan.cell }}></td><td style={{ ...cellStyle, background: COLORS.opt.plan.cell }}></td><td style={{ ...cellStyle, background: COLORS.opt.monitor.cell }}></td><td style={{ ...cellStyle, background: COLORS.opt.monitor.cell }}></td><td style={{ ...cellStyle, background: COLORS.opt.monitor.cell }}></td><td style={{ ...cellStyle, background: COLORS.opt.effect.cell }}></td><td style={{ ...cellStyle, background: COLORS.opt.effect.cell }}></td><td style={{ ...cellStyle, background: COLORS.opt.effect.cell }}></td><td style={{ ...cellStyle, background: COLORS.opt.effect.cell }}></td><td style={{ ...cellStyle, background: COLORS.opt.effect.cell }}></td><td style={{ ...cellStyle, background: COLORS.opt.effect.cell }}></td><td style={{ ...cellStyle, background: COLORS.opt.effect.cell }}></td></>}
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
 // 전체보기 탭 - 38열 FMEA 워크시트 (Excel과 동일, 셀합치기 적용)
 function AllViewTabFull({ rows, state, l1Spans, l1TypeSpans, l1FuncSpans, l2Spans }: { 
   rows: FlatRow[]; 
@@ -1400,15 +2336,16 @@ function AllViewTabFull({ rows, state, l1Spans, l1TypeSpans, l1FuncSpans, l2Span
     { id: 'failureMode', label: '고장형태(FM)', width: '80px', step: 4 },
     { id: 'fcType', label: '작업요소', width: '40px', step: 4 },
     { id: 'failureCause', label: '고장원인(FC)', width: '80px', step: 4 },
-    // 리스크분석 5단계 (7열)
+    // 리스크분석 5단계 (8열) - RPN 추가
     { id: 'prevention', label: '예방관리(PC)', width: '80px', step: 5 },
     { id: 'occurrence', label: '발생도', width: '35px', step: 5 },
     { id: 'detection', label: '검출관리(DC)', width: '80px', step: 5 },
     { id: 'detectability', label: '검출도', width: '35px', step: 5 },
     { id: 'ap', label: 'AP', width: '30px', step: 5 },
+    { id: 'rpn', label: 'RPN', width: '35px', step: 5 },
     { id: 'specialChar', label: '특별특성', width: '50px', step: 5 },
     { id: 'lessonLearned', label: '습득교훈', width: '80px', step: 5 },
-    // 최적화 6단계 (13열)
+    // 최적화 6단계 (14열) - RPN 추가
     { id: 'preventionImprove', label: '예방관리개선', width: '80px', step: 6 },
     { id: 'detectionImprove', label: '검출관리개선', width: '80px', step: 6 },
     { id: 'responsible', label: '책임자성명', width: '60px', step: 6 },
@@ -1421,6 +2358,7 @@ function AllViewTabFull({ rows, state, l1Spans, l1TypeSpans, l1FuncSpans, l2Span
     { id: 'newDetectability', label: '검출도', width: '35px', step: 6 },
     { id: 'newSpecialChar', label: '특별특성', width: '50px', step: 6 },
     { id: 'newAP', label: 'AP', width: '30px', step: 6 },
+    { id: 'newRPN', label: 'RPN', width: '35px', step: 6 },
     { id: 'remarks', label: '비고', width: '80px', step: 6 },
   ];
 

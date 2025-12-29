@@ -83,6 +83,8 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         failureL1Confirmed: (state as any).failureL1Confirmed || false,
         failureL2Confirmed: (state as any).failureL2Confirmed || false,
         failureL3Confirmed: (state as any).failureL3Confirmed || false,
+        // 고장연결 데이터 (영구 저장)
+        failureLinks: (state as any).failureLinks || [],
         savedAt: new Date().toISOString(),
       };
       localStorage.setItem(`pfmea_worksheet_${targetId}`, JSON.stringify(worksheetData));
@@ -94,7 +96,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       setLastSaved(new Date().toLocaleTimeString('ko-KR'));
     } catch (e) { console.error('저장 오류:', e); }
     finally { setIsSaving(false); }
-  }, [selectedFmeaId, currentFmea?.id, state.l1, state.l2, state.tab]);
+  }, [selectedFmeaId, currentFmea?.id, state.l1, state.l2, state.tab, (state as any).failureLinks]);
 
   const triggerAutoSave = useCallback(() => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -129,10 +131,16 @@ export function useWorksheetState(): UseWorksheetStateReturn {
 
   // 워크시트 데이터 로드 (FMEA ID 변경 시)
   useEffect(() => {
-    if (!selectedFmeaId) return;
+    if (typeof window === 'undefined' || !selectedFmeaId) return;
     
     console.log('[워크시트] 데이터 로드 시작:', selectedFmeaId);
-    const savedData = localStorage.getItem(`pfmea_worksheet_${selectedFmeaId}`);
+    // 키 명칭 통일 시도: pfmea_worksheet_... 와 fmea-worksheet-... 둘 다 확인
+    const keys = [`pfmea_worksheet_${selectedFmeaId}`, `fmea-worksheet-${selectedFmeaId}`];
+    let savedData = null;
+    for (const key of keys) {
+      savedData = localStorage.getItem(key);
+      if (savedData) break;
+    }
     
     if (savedData) {
       try {
@@ -150,14 +158,13 @@ export function useWorksheetState(): UseWorksheetStateReturn {
             ...p,
             functions: p.functions || [],
             productChars: p.productChars || [],
-            failureModes: p.failureModes || [], // 고장형태 배열
+            failureModes: p.failureModes || [], 
             l3: (p.l3 || []).map((we: any) => ({
               ...we,
-              // MT → IM 마이그레이션
               m4: we.m4 === 'MT' ? 'IM' : (we.m4 || ''),
               functions: we.functions || [],
               processChars: we.processChars || [],
-              failureCauses: we.failureCauses || [] // 고장원인 배열
+              failureCauses: we.failureCauses || [] 
             }))
           }));
 
@@ -165,30 +172,34 @@ export function useWorksheetState(): UseWorksheetStateReturn {
             ...prev, 
             l1: migratedL1, 
             l2: migratedL2,
-            // 탭 및 확정 상태 복원
+            failureLinks: parsed.failureLinks || [], // 고장연결 데이터 복구
             tab: parsed.tab || prev.tab,
-            // 구조분석 확정 상태
             structureConfirmed: parsed.structureConfirmed || false,
-            // 기능분석 확정 상태
             l1Confirmed: parsed.l1Confirmed || false,
             l2Confirmed: parsed.l2Confirmed || false,
             l3Confirmed: parsed.l3Confirmed || false,
-            // 고장분석 확정 상태
             failureL1Confirmed: parsed.failureL1Confirmed || false,
             failureL2Confirmed: parsed.failureL2Confirmed || false,
             failureL3Confirmed: parsed.failureL3Confirmed || false,
           }));
-          setLastSaved(parsed.savedAt ? new Date(parsed.savedAt).toLocaleTimeString('ko-KR') : '');
-          console.log('[워크시트] 데이터 로드 완료, 탭:', parsed.tab);
+          setDirty(false);
         }
-      } catch (e) { 
-        console.error('데이터 로드 실패:', e); 
-        setState(createInitialState());
+      } catch (e) {
+        console.error('데이터 파싱 오류:', e);
       }
     } else {
-      // 저장된 데이터가 없으면 초기 상태로 리셋
-      console.log('[워크시트] 저장된 데이터 없음, 초기 상태로 설정');
-      setState(createInitialState());
+      console.log('[워크시트] 저장된 데이터 없음, 초기화 진행');
+      // 데이터가 아예 없는 경우 기본 틀 생성
+      setState(prev => ({
+        ...prev,
+        l1: { id: uid(), name: '', types: [], failureScopes: [] },
+        l2: [{
+          id: uid(), no: '', name: '(클릭하여 공정 선택)', order: 10, functions: [], productChars: [],
+          l3: [{ id: uid(), m4: '', name: '(공정 선택 후 작업요소 추가)', order: 10, functions: [], processChars: [] }]
+        }],
+        failureLinks: [],
+        structureConfirmed: false
+      }));
     }
   }, [selectedFmeaId]);
 
@@ -314,77 +325,134 @@ export function useWorksheetState(): UseWorksheetStateReturn {
   const rows = useMemo(() => {
     const result: FlatRow[] = [];
     
-    // L2/L3 트리 평탄화 (구조분석은 L2/L3 기준)
+    // L2/L3 트리 평탄화
     const l2Data = state.l2 || [];
-    
-    // L2가 없으면 빈 배열 반환
-    if (l2Data.length === 0) {
-      return result;
-    }
-    
-    // 각 공정의 작업요소를 행으로 변환
-    l2Data.forEach(proc => {
-      const l3Data = proc.l3 || [];
-      
-      // L3가 없으면 빈 작업요소 1개 추가
-      if (l3Data.length === 0) {
+    if (l2Data.length === 0) return result;
+
+    // 고장연결 데이터가 있으면 그것을 기반으로 행 생성 (1:1 매칭 보장)
+    const failureLinks = (state as any).failureLinks || [];
+    if (failureLinks.length > 0) {
+      // FM별 그룹핑
+      const fmGroups = new Map<string, { fmId: string; fmText: string; fmProcess: string; fes: any[]; fcs: any[] }>();
+      failureLinks.forEach((link: any) => {
+        if (!fmGroups.has(link.fmId)) {
+          fmGroups.set(link.fmId, { fmId: link.fmId, fmText: link.fmText, fmProcess: link.fmProcess, fes: [], fcs: [] });
+        }
+        const group = fmGroups.get(link.fmId)!;
+        if (link.feId && !group.fes.some(f => f.id === link.feId)) {
+          group.fes.push({ id: link.feId, scope: link.feScope, text: link.feText, severity: link.severity });
+        }
+        if (link.fcId && !group.fcs.some(f => f.id === link.fcId)) {
+          group.fcs.push({ id: link.fcId, text: link.fcText, workElem: link.fcWorkElem, process: link.fcProcess });
+        }
+      });
+
+      fmGroups.forEach((group) => {
+        const maxRows = Math.max(group.fes.length, group.fcs.length, 1);
+        for (let i = 0; i < maxRows; i++) {
+        const fe = group.fes[i] || null;
+        const fc = group.fcs[i] || null;
+        
+        // 1L 정보 찾기 (기능, 구분)
+        let l1Type = fe?.scope || '';
+        let l1Func = '';
+        let l1Req = fe?.text || '';
+
+        if (fe?.id) {
+          state.l1.types.forEach(t => {
+            t.functions.forEach(f => {
+              if (f.requirements.some(r => r.id === fe.id)) {
+                l1Type = t.name;
+                l1Func = f.name;
+              }
+            });
+          });
+        }
+        
+        // 공정 정보 찾기
+        const proc = l2Data.find(p => p.name === group.fmProcess || p.name.includes(group.fmProcess));
+        
         result.push({
           l1Id: state.l1.id,
           l1Name: state.l1.name,
-          l1TypeId: '',
-          l1Type: '',
-          l1FunctionId: '',
-          l1Function: '',
-          l1RequirementId: '',
-          l1Requirement: '',
-          l1FailureEffect: '',
-          l1Severity: '',
-          l2Id: proc.id,
-          l2No: proc.no,
-          l2Name: proc.name,
-          l2Functions: proc.functions || [],
-          l2ProductChars: proc.productChars || [],
-          l2FailureMode: proc.failureMode || '',
-          l3Id: '',
-          m4: '',
-          l3Name: '(클릭하여 작업요소 추가)',
-          l3Functions: [],
-          l3ProcessChars: [],
-          l3FailureCause: '',
-        });
-      } else {
-        // 각 작업요소를 개별 행으로
-        l3Data.forEach(we => {
-          result.push({
-            l1Id: state.l1.id,
-            l1Name: state.l1.name,
-            l1TypeId: '',
-            l1Type: '',
-            l1FunctionId: '',
-            l1Function: '',
-            l1RequirementId: '',
-            l1Requirement: '',
-            l1FailureEffect: '',
-            l1Severity: '',
-            l2Id: proc.id,
-            l2No: proc.no,
-            l2Name: proc.name,
-            l2Functions: proc.functions || [],
-            l2ProductChars: proc.productChars || [],
-            l2FailureMode: proc.failureMode || '',
-            l3Id: we.id,
-            m4: we.m4,
-            l3Name: we.name,
-            l3Functions: we.functions || [],
-            l3ProcessChars: we.processChars || [],
-            l3FailureCause: we.failureCause || '',
+          l1Type: l1Type,
+          l1Function: l1Func,
+          l1Requirement: l1Req,
+          l1FailureEffect: fe?.text || '',
+          l1Severity: fe?.severity?.toString() || '',
+            l2Id: proc?.id || '',
+            l2No: proc?.no || '',
+            l2Name: proc?.name || group.fmProcess,
+            l2Functions: proc?.functions || [],
+            l2ProductChars: (proc?.functions || []).flatMap((f: any) => f.productChars || []),
+            l2FailureMode: group.fmText,
+            l3Id: '',
+            m4: '',
+            l3Name: fc?.workElem || '',
+            l3Functions: [],
+            l3ProcessChars: [],
+            l3FailureCause: fc?.text || '',
           });
+        }
+      });
+      return result;
+    }
+
+    // 고장연결이 없으면 기존 구조분석 방식 (L2/L3 기준)
+    let rowIdx = 0;
+    // ... 기존 로직 ...
+    const l1Types = state.l1?.types || [];
+    const l1FlatData: { typeId: string; type: string; funcId: string; func: string; reqId: string; req: string }[] = [];
+    l1Types.forEach(type => {
+      const funcs = type.functions || [];
+      if (funcs.length === 0) {
+        l1FlatData.push({ typeId: type.id, type: type.name, funcId: '', func: '', reqId: '', req: '' });
+      } else {
+        funcs.forEach(fn => {
+          const reqs = fn.requirements || [];
+          if (reqs.length === 0) {
+            l1FlatData.push({ typeId: type.id, type: type.name, funcId: fn.id, func: fn.name, reqId: '', req: '' });
+          } else {
+            reqs.forEach(req => {
+              l1FlatData.push({ typeId: type.id, type: type.name, funcId: fn.id, func: fn.name, reqId: req.id, req: req.name });
+            });
+          }
         });
       }
     });
-    
+
+    l2Data.forEach(proc => {
+      const l3Data = proc.l3 || [];
+      if (l3Data.length === 0) {
+        const l1Item = l1FlatData[rowIdx % Math.max(l1FlatData.length, 1)] || { type: '', func: '', req: '' };
+        result.push({
+          l1Id: state.l1.id, l1Name: state.l1.name, l1Type: l1Item.type, l1Function: l1Item.func, l1Requirement: l1Item.req,
+          l1FailureEffect: '', l1Severity: '',
+          l2Id: proc.id, l2No: proc.no, l2Name: proc.name, l2Functions: proc.functions || [],
+          l2ProductChars: (proc.functions || []).flatMap((f: any) => f.productChars || []),
+          l2FailureMode: (proc.failureModes || []).map((m: any) => m.name).join(', '),
+          l3Id: '', m4: '', l3Name: '(작업요소 없음)', l3Functions: [], l3ProcessChars: [], l3FailureCause: ''
+        });
+        rowIdx++;
+      } else {
+        l3Data.forEach(we => {
+          const l1Item = l1FlatData[rowIdx % Math.max(l1FlatData.length, 1)] || { type: '', func: '', req: '' };
+          result.push({
+            l1Id: state.l1.id, l1Name: state.l1.name, l1Type: l1Item.type, l1Function: l1Item.func, l1Requirement: l1Item.req,
+            l1FailureEffect: '', l1Severity: '',
+            l2Id: proc.id, l2No: proc.no, l2Name: proc.name, l2Functions: proc.functions || [],
+            l2ProductChars: (proc.functions || []).flatMap((f: any) => f.productChars || []),
+            l2FailureMode: (proc.failureModes || []).map((m: any) => m.name).join(', '),
+            l3Id: we.id, m4: we.m4, l3Name: we.name,
+            l3Functions: we.functions || [], l3ProcessChars: we.processChars || [],
+            l3FailureCause: (we.failureCauses || []).map((c: any) => c.name).join(', ')
+          });
+          rowIdx++;
+        });
+      }
+    });
     return result;
-  }, [state.l1, state.l2]);
+  }, [state.l1, state.l2, (state as any).failureLinks]);
 
   const calculateSpans = (rows: FlatRow[], key: keyof FlatRow) => {
     const spans: number[] = [];

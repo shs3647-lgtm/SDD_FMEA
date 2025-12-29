@@ -69,44 +69,13 @@ function formatFmeaId(id: string, index: number): string {
   return `PFM${year}-${seq}`;
 }
 
-// 기본 샘플 데이터 (DB에 저장할 데이터)
-// 프로젝트명은 APQP 프로젝트 등록에서 가져오며, FMEA 등록에서는 입력하지 않음
+// 기본 샘플 데이터 - SDD FMEA만 유지
 const DEFAULT_SAMPLE_DATA: FMEAProject[] = [
   {
-    id: 'PFM25-520',
-    project: { projectName: 'New FMEA개발', customer: '현대차', productName: 'New FMEA개발', partNo: 'PART-001', department: '개발팀', leader: '신홍섭', startDate: '2025-12-01', endDate: '2026-01-31' },
-    fmeaInfo: { subject: 'New FMEA개발', fmeaStartDate: '2025-12-01', fmeaRevisionDate: '2026-01-31', modelYear: 'MY2025', designResponsibility: '개발팀', fmeaResponsibleName: '신홍섭' },
-    createdAt: '2025-12-27T09:00:00.000Z', status: 'active', step: 1, revisionNo: 'Rev.00'
-  },
-  {
-    id: 'PFM25-521',
-    project: { projectName: 'EV 배터리 모듈', customer: '삼성SDI', productName: 'EV 배터리 모듈', partNo: 'BAT-2025-001', department: 'EV개발팀', leader: '김영철', startDate: '2025-11-15', endDate: '2026-03-15' },
-    fmeaInfo: { subject: 'EV 배터리 모듈', fmeaStartDate: '2025-11-15', fmeaRevisionDate: '2025-12-20', modelYear: 'MY2026', designResponsibility: 'EV개발팀', fmeaResponsibleName: '김영철' },
-    createdAt: '2025-12-20T10:30:00.000Z', status: 'active', step: 2, revisionNo: 'Rev.01'
-  },
-  {
-    id: 'PFM25-522',
-    project: { projectName: '전동화 부품', customer: 'LG에너지솔루션', productName: '전동화 부품', partNo: 'ELE-2025-002', department: '전동화팀', leader: '이수진', startDate: '2025-10-01', endDate: '2026-02-28' },
-    fmeaInfo: { subject: '전동화 부품', fmeaStartDate: '2025-10-01', fmeaRevisionDate: '2025-12-15', modelYear: 'MY2025', designResponsibility: '전동화팀', fmeaResponsibleName: '이수진' },
-    createdAt: '2025-12-15T14:00:00.000Z', status: 'active', step: 3, revisionNo: 'Rev.02'
-  },
-  {
-    id: 'PFM25-523',
-    project: { projectName: '자율주행 센서', customer: 'SK하이닉스', productName: '자율주행 센서', partNo: 'SEN-2025-003', department: 'ADAS팀', leader: '박민수', startDate: '2025-09-01', endDate: '2026-01-31' },
-    fmeaInfo: { subject: '자율주행 센서', fmeaStartDate: '2025-09-01', fmeaRevisionDate: '2025-12-10', modelYear: 'MY2026', designResponsibility: 'ADAS팀', fmeaResponsibleName: '박민수' },
-    createdAt: '2025-12-10T09:15:00.000Z', status: 'active', step: 4, revisionNo: 'Rev.00'
-  },
-  {
-    id: 'PFM25-524',
-    project: { projectName: '차량용 인포테인먼트', customer: '카카오모빌리티', productName: '차량용 인포테인먼트', partNo: 'INF-2025-004', department: '인포팀', leader: '정다혜', startDate: '2025-08-15', endDate: '2025-12-31' },
-    fmeaInfo: { subject: '차량용 인포테인먼트', fmeaStartDate: '2025-08-15', fmeaRevisionDate: '2025-12-05', modelYear: 'MY2025', designResponsibility: '인포팀', fmeaResponsibleName: '정다혜' },
-    createdAt: '2025-12-05T16:30:00.000Z', status: 'completed', step: 6, revisionNo: 'Rev.03'
-  },
-  {
-    id: 'PFM25-525',
-    project: { projectName: '경량화 샤시', customer: '현대모비스', productName: '경량화 샤시', partNo: 'CHA-2025-005', department: '샤시개발팀', leader: '최재영', startDate: '2025-07-01', endDate: '2025-11-30' },
-    fmeaInfo: { subject: '경량화 샤시', fmeaStartDate: '2025-07-01', fmeaRevisionDate: '2025-11-28', modelYear: 'MY2025', designResponsibility: '샤시개발팀', fmeaResponsibleName: '최재영' },
-    createdAt: '2025-11-28T11:00:00.000Z', status: 'completed', step: 7, revisionNo: 'Rev.05'
+    id: 'PFM25-310',
+    project: { projectName: 'SDD NEW FMEA 개발', customer: 'SDD', productName: 'PCR 타이어', partNo: 'PCR-2025-001', department: '품질팀', leader: '신홍섭', startDate: '2025-12-01', endDate: '2026-06-30' },
+    fmeaInfo: { subject: 'SDD NEW FMEA 개발', fmeaStartDate: '2025-12-01', fmeaRevisionDate: '2025-12-29', modelYear: 'MY2025', designResponsibility: '품질팀', fmeaResponsibleName: '신홍섭' },
+    createdAt: '2025-12-01T09:00:00.000Z', status: 'active', step: 4, revisionNo: 'Rev.01'
   },
 ];
 

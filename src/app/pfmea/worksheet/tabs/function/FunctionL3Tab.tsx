@@ -120,6 +120,62 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
     setState(prev => ({ ...prev, l3Confirmed: false }));
   }, [setState]);
 
+  // 작업요소 기능 인라인 편집 핸들러 (더블클릭)
+  const handleInlineEditFunction = useCallback((procId: string, l3Id: string, funcId: string, newValue: string) => {
+    setState(prev => ({
+      ...prev,
+      l2: prev.l2.map(proc => {
+        if (proc.id !== procId) return proc;
+        return {
+          ...proc,
+          l3: proc.l3.map(we => {
+            if (we.id !== l3Id) return we;
+            return {
+              ...we,
+              functions: (we.functions || []).map(f => {
+                if (f.id !== funcId) return f;
+                return { ...f, name: newValue };
+              })
+            };
+          })
+        };
+      })
+    }));
+    setDirty(true);
+    saveToLocalStorage?.();
+  }, [setState, setDirty, saveToLocalStorage]);
+
+  // 공정특성 인라인 편집 핸들러 (더블클릭)
+  const handleInlineEditProcessChar = useCallback((procId: string, l3Id: string, funcId: string, charId: string, newValue: string) => {
+    setState(prev => ({
+      ...prev,
+      l2: prev.l2.map(proc => {
+        if (proc.id !== procId) return proc;
+        return {
+          ...proc,
+          l3: proc.l3.map(we => {
+            if (we.id !== l3Id) return we;
+            return {
+              ...we,
+              functions: (we.functions || []).map(f => {
+                if (f.id !== funcId) return f;
+                return {
+                  ...f,
+                  processChars: (f.processChars || []).map(c => {
+                    if (c.id !== charId) return c;
+                    return { ...c, name: newValue };
+                  })
+                };
+              })
+            };
+          })
+        };
+      })
+    }));
+    setDirty(true);
+    saveToLocalStorage?.();
+  }, [setState, setDirty, saveToLocalStorage]);
+
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
     
@@ -458,7 +514,13 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                         </>
                       )}
                       <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
-                        <SelectableCell value={f.name} placeholder="작업요소기능" bgColor="#e8eaf6" onClick={() => setModal({ type: 'l3Function', procId: proc.id, l3Id: we.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} />
+                        <SelectableCell 
+                          value={f.name} 
+                          placeholder="작업요소기능" 
+                          bgColor="#e8eaf6" 
+                          onClick={() => setModal({ type: 'l3Function', procId: proc.id, l3Id: we.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} 
+                          onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, we.id, f.id, newValue)}
+                        />
                       </td>
                       <td style={{ border: `1px solid ${COLORS.line}`, borderRight: '3px solid #ff9800', padding: '0' }}>
                         <SelectableCell value="" placeholder="공정특성 선택" bgColor="#fff" onClick={() => setModal({ type: 'l3ProcessChar', procId: proc.id, l3Id: we.id, funcId: f.id, title: '공정특성 선택', itemCode: 'B3', workElementName: we.name })} />
@@ -493,11 +555,23 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                       )}
                       {cIdx === 0 && (
                         <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
-                          <SelectableCell value={f.name} placeholder="작업요소기능" bgColor="#e8eaf6" onClick={() => setModal({ type: 'l3Function', procId: proc.id, l3Id: we.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} />
+                          <SelectableCell 
+                            value={f.name} 
+                            placeholder="작업요소기능" 
+                            bgColor="#e8eaf6" 
+                            onClick={() => setModal({ type: 'l3Function', procId: proc.id, l3Id: we.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} 
+                            onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, we.id, f.id, newValue)}
+                          />
                         </td>
                       )}
                       <td style={{ border: `1px solid ${COLORS.line}`, borderRight: '3px solid #ff9800', padding: '0' }}>
-                        <SelectableCell value={c.name} placeholder="공정특성" bgColor="#fff" onClick={() => setModal({ type: 'l3ProcessChar', procId: proc.id, l3Id: we.id, funcId: f.id, title: '공정특성 선택', itemCode: 'B3', workElementName: we.name })} />
+                        <SelectableCell 
+                          value={c.name} 
+                          placeholder="공정특성" 
+                          bgColor="#fff" 
+                          onClick={() => setModal({ type: 'l3ProcessChar', procId: proc.id, l3Id: we.id, funcId: f.id, title: '공정특성 선택', itemCode: 'B3', workElementName: we.name })} 
+                          onDoubleClickEdit={(newValue) => handleInlineEditProcessChar(proc.id, we.id, f.id, c.id, newValue)}
+                        />
                       </td>
                       <td style={{ border: `1px solid ${COLORS.line}`, borderLeft: 'none', padding: '4px', textAlign: 'center', background: '#fff3e0' }}>
                         <SpecialCharBadge 
