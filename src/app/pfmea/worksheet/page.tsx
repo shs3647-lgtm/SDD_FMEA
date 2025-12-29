@@ -2069,46 +2069,99 @@ function EvalTabRenderer({ tab, rows, state, l1Spans, l1TypeSpans, l1FuncSpans, 
 
   // 전체보기(all) 탭: 고장연결 결과 기반 40열 테이블
   if (tab === 'all' && failureLinks.length > 0) {
-    // ========== 1. FM별 그룹핑 ==========
+    // ========== 0. 기능분석 데이터 조회용 맵 구축 (eval-function과 동일) ==========
+    // 1L: 요구사항 맵 (id -> { type, funcName, reqName })
+    const requirementMap = new Map<string, { typeName: string; funcName: string; reqName: string }>();
+    (state.l1?.types || []).forEach((type: any) => {
+      (type.functions || []).forEach((func: any) => {
+        (func.requirements || []).forEach((req: any) => {
+          requirementMap.set(req.id, { typeName: type.name, funcName: func.name, reqName: req.name });
+        });
+      });
+    });
+    
+    // 2L: 제품특성 맵 (processName -> { funcName, productChar })
+    const productCharMap = new Map<string, { processName: string; funcName: string; productCharName: string }[]>();
+    (state.l2 || []).forEach((proc: any) => {
+      const key = proc.name || '';
+      if (!productCharMap.has(key)) productCharMap.set(key, []);
+      (proc.functions || []).forEach((func: any) => {
+        (func.productChars || []).forEach((pc: any) => {
+          productCharMap.get(key)!.push({ processName: proc.name, funcName: func.name, productCharName: pc.name });
+        });
+      });
+    });
+    
+    // 3L: 공정특성 맵 (workElemName -> { funcName, processChar })
+    const processCharMap = new Map<string, { processName: string; workElemName: string; m4: string; funcName: string; processCharName: string }[]>();
+    (state.l2 || []).forEach((proc: any) => {
+      (proc.l3 || []).forEach((we: any) => {
+        const key = we.name || '';
+        if (!processCharMap.has(key)) processCharMap.set(key, []);
+        (we.functions || []).forEach((func: any) => {
+          (func.processChars || []).forEach((pc: any) => {
+            processCharMap.get(key)!.push({ processName: proc.name, workElemName: we.name, m4: we.m4 || '', funcName: func.name, processCharName: pc.name });
+          });
+        });
+      });
+    });
+    
+    // ========== 1. FM별 그룹핑 + 기능분석 데이터 조회 ==========
     const fmGroups = new Map<string, { 
       fmId: string; fmText: string; fmProcess: string;
-      fes: { id: string; no: string; scope: string; text: string; severity: number }[];
-      fcs: { id: string; no: string; process: string; m4: string; workElem: string; text: string }[];
+      fes: { id: string; no: string; scope: string; text: string; severity: number; funcData: { typeName: string; funcName: string; reqName: string } | null }[];
+      fcs: { id: string; no: string; process: string; m4: string; workElem: string; text: string; funcData: { processName: string; workElemName: string; m4: string; funcName: string; processCharName: string } | null }[];
+      l2FuncData: { processName: string; funcName: string; productCharName: string } | null;
     }>();
     
     failureLinks.forEach((link: any) => {
       // FM 그룹 생성
       if (!fmGroups.has(link.fmId)) {
+        // 2L 제품특성 조회: fmProcess와 매칭
+        const procKey = (link.fmProcess || '').replace(/^\d+\s*/, '').trim();
+        const l2Funcs = productCharMap.get(procKey) || productCharMap.get(link.fmProcess || '') || [];
+        
         fmGroups.set(link.fmId, { 
           fmId: link.fmId, 
           fmText: link.fmText || '', 
           fmProcess: link.fmProcess || '',
           fes: [], 
-          fcs: []
+          fcs: [],
+          l2FuncData: l2Funcs.length > 0 ? l2Funcs[0] : null
         });
       }
       const group = fmGroups.get(link.fmId)!;
       
-      // FE 레코드 (feId가 있으면 FE)
+      // FE 레코드 (feId가 있으면 FE) + 기능분석 데이터 조회
       if (link.feId && link.feId !== '' && !group.fes.some(f => f.id === link.feId)) {
+        // 1L 요구사항 조회: feId로 직접 조회하거나, failureScopes에서 reqId 찾기
+        const failureScope = (state.l1?.failureScopes || []).find((fs: any) => fs.id === link.feId) as any;
+        const reqData = failureScope?.reqId ? requirementMap.get(failureScope.reqId) : null;
+        
         group.fes.push({ 
           id: link.feId, 
           no: link.feNo || '', 
           scope: link.feScope || '', 
           text: link.feText || '',  // 고장영향
-          severity: link.severity || 0
+          severity: link.severity || 0,
+          funcData: reqData || null
         });
       }
       
-      // FC 레코드 (fcId가 있으면 FC)
+      // FC 레코드 (fcId가 있으면 FC) + 기능분석 데이터 조회
       if (link.fcId && link.fcId !== '' && !group.fcs.some(f => f.id === link.fcId)) {
+        // 3L 공정특성 조회: workElem으로 매칭
+        const weKey = link.fcWorkElem || '';
+        const l3Funcs = processCharMap.get(weKey) || [];
+        
         group.fcs.push({ 
           id: link.fcId, 
           no: link.fcNo || '', 
           process: link.fcProcess || '',  // FC 공정명
           m4: link.fcM4 || '',             // 4M
           workElem: link.fcWorkElem || '', // 작업요소
-          text: link.fcText || ''          // 고장원인
+          text: link.fcText || '',          // 고장원인
+          funcData: l3Funcs.length > 0 ? l3Funcs[0] : null
         });
       }
     });
@@ -2129,8 +2182,13 @@ function EvalTabRenderer({ tab, rows, state, l1Spans, l1TypeSpans, l1FuncSpans, 
       fmRowSpan: number;
       showProcess: boolean;
       processRowSpan: number;
-      fe: { no: string; scope: string; text: string; severity: number } | null;
-      fc: { no: string; process: string; m4: string; workElem: string; text: string } | null;
+      fe: { no: string; scope: string; text: string; severity: number; funcData: { typeName: string; funcName: string; reqName: string } | null } | null;
+      feRowSpan: number;
+      showFe: boolean;
+      fc: { no: string; process: string; m4: string; workElem: string; text: string; funcData: { processName: string; workElemName: string; m4: string; funcName: string; processCharName: string } | null } | null;
+      fcRowSpan: number;
+      showFc: boolean;
+      l2FuncData: { processName: string; funcName: string; productCharName: string } | null;
     }[] = [];
     
     // 먼저 공정별 FM 목록 생성
@@ -2149,11 +2207,44 @@ function EvalTabRenderer({ tab, rows, state, l1Spans, l1TypeSpans, l1FuncSpans, 
       let processRowCount = 0;
       
       pg.fmList.forEach((group, fmIdx) => {
-        const maxRows = Math.max(group.fes.length, group.fcs.length, 1);
+        const feCount = group.fes.length;
+        const fcCount = group.fcs.length;
+        const maxRows = Math.max(feCount, fcCount, 1);
         
         for (let i = 0; i < maxRows; i++) {
-          const fe = group.fes[i] || null;
-          const fc = group.fcs[i] || null;
+          // FE 처리: 각 항목 1행, 마지막 항목은 남은 행 모두 차지
+          let showFe = false;
+          let feRowSpan = 0;
+          let fe: { no: string; scope: string; text: string; severity: number; funcData: { typeName: string; funcName: string; reqName: string } | null } | null = null;
+          
+          if (i < feCount) {
+            showFe = true;
+            // 마지막 FE면 남은 행을 모두 차지
+            feRowSpan = (i === feCount - 1) ? (maxRows - i) : 1;
+            fe = group.fes[i];
+          } else if (feCount === 0 && i === 0) {
+            // FE가 아예 없을 때 첫 번째 행에만 빈 FE 표시
+            showFe = true;
+            feRowSpan = maxRows;
+            fe = null;
+          }
+          
+          // FC 처리: 각 항목 1행, 마지막 항목은 남은 행 모두 차지
+          let showFc = false;
+          let fcRowSpan = 0;
+          let fc: { no: string; process: string; m4: string; workElem: string; text: string; funcData: { processName: string; workElemName: string; m4: string; funcName: string; processCharName: string } | null } | null = null;
+          
+          if (i < fcCount) {
+            showFc = true;
+            // 마지막 FC면 남은 행을 모두 차지
+            fcRowSpan = (i === fcCount - 1) ? (maxRows - i) : 1;
+            fc = group.fcs[i];
+          } else if (fcCount === 0 && i === 0) {
+            // FC가 아예 없을 때 첫 번째 행에만 빈 FC 표시
+            showFc = true;
+            fcRowSpan = maxRows;
+            fc = null;
+          }
           
           allRows.push({
             processName: procName,
@@ -2162,8 +2253,13 @@ function EvalTabRenderer({ tab, rows, state, l1Spans, l1TypeSpans, l1FuncSpans, 
             fmRowSpan: maxRows,
             showProcess: fmIdx === 0 && i === 0,
             processRowSpan: 0, // 나중에 계산
-            fe: fe ? { no: fe.no, scope: fe.scope, text: fe.text, severity: fe.severity } : null,
-            fc: fc ? { no: fc.no, process: fc.process, m4: fc.m4, workElem: fc.workElem, text: fc.text } : null,
+            fe: fe,
+            feRowSpan: feRowSpan,
+            showFe: showFe,
+            fc: fc,
+            fcRowSpan: fcRowSpan,
+            showFc: showFc,
+            l2FuncData: group.l2FuncData,
           });
           
           processRowCount++;
@@ -2296,42 +2392,42 @@ function EvalTabRenderer({ tab, rows, state, l1Spans, l1TypeSpans, l1FuncSpans, 
                   {idx === 0 && <td rowSpan={allRows.length} style={{ ...cellStyle, background: '#e3f2fd', fontWeight: 700, textAlign: 'center' }}>{state.l1?.name || ''}</td>}
                   {/* 2. 메인공정명: 공정별 병합 */}
                   {row.showProcess && row.processRowSpan > 0 && <td rowSpan={row.processRowSpan} style={{ ...cellStyle, background: '#e3f2fd' }}>{row.processName}</td>}
-                  {/* 3. 4M: FC별 */}
-                  <td style={{ ...cellStyle, background: '#e3f2fd', textAlign: 'center' }}>{row.fc?.m4 || ''}</td>
-                  {/* 4. 작업요소: FC별 */}
-                  <td style={{ ...cellStyle, background: '#e3f2fd' }}>{row.fc?.workElem || ''}</td>
+                  {/* 3. 4M: FC별 - 마지막 행 병합 */}
+                  {row.showFc && <td rowSpan={row.fcRowSpan} style={{ ...cellStyle, background: '#e3f2fd', textAlign: 'center' }}>{row.fc?.m4 || ''}</td>}
+                  {/* 4. 작업요소: FC별 - 마지막 행 병합 */}
+                  {row.showFc && <td rowSpan={row.fcRowSpan} style={{ ...cellStyle, background: '#e3f2fd' }}>{row.fc?.workElem || ''}</td>}
                   
-                  {/* ===== 기능분석 8열 (역전개: 1:1 매칭) ===== */}
-                  {/* 1. 구분: FE scope - FM 병합 */}
-                  {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#e8f5e9', textAlign: 'center' }}>{row.fe ? getScopeAbbr(row.fe.scope) : ''}</td>}
-                  {/* 2. 완제품기능: 빈칸 - FM 병합 */}
-                  {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#e8f5e9' }}></td>}
-                  {/* 3. 요구사항: FE → 역전개 - FM 병합 */}
-                  {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#c8e6c9', fontWeight: 600 }}>{row.fe?.text || ''}</td>}
-                  {/* 4. 공정기능: 빈칸 - FM 병합 */}
-                  {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#e8f5e9' }}></td>}
-                  {/* 5. 제품특성: FM → 역전개 - FM 병합 */}
-                  {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#c8e6c9', fontWeight: 600 }}>{row.fmText}</td>}
-                  {/* 6. 4M: FC별 */}
-                  <td style={{ ...cellStyle, background: '#e8f5e9', textAlign: 'center' }}>{row.fc?.m4 || ''}</td>
-                  {/* 7. 작업요소기능: 빈칸 */}
-                  <td style={{ ...cellStyle, background: '#e8f5e9' }}></td>
-                  {/* 8. 공정특성: FC → 역전개 */}
-                  <td style={{ ...cellStyle, background: '#c8e6c9', fontWeight: 600 }}>{row.fc?.text || ''}</td>
+                  {/* ===== 기능분석 8열 (DB 연결 데이터 표시) ===== */}
+                  {/* 1. 구분: 기능분석 DB에서 조회 - FM 병합 */}
+                  {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#e8f5e9', textAlign: 'center' }}>{row.fe?.funcData?.typeName || (row.fe ? getScopeAbbr(row.fe.scope) : '')}</td>}
+                  {/* 2. 완제품기능: 기능분석 DB에서 조회 - FM 병합 */}
+                  {row.showFm && <td rowSpan={row.fmRowSpan} style={row.fe?.funcData ? { ...cellStyle, background: '#e8f5e9' } : { ...cellStyle, background: '#ffebee', color: '#c62828', fontStyle: 'italic' }}>{row.fe?.funcData?.funcName || '(미연결)'}</td>}
+                  {/* 3. 요구사항: 기능분석 DB에서 조회 - FM 병합 */}
+                  {row.showFm && <td rowSpan={row.fmRowSpan} style={row.fe?.funcData ? { ...cellStyle, background: '#c8e6c9', fontWeight: 600 } : { ...cellStyle, background: '#ffebee', color: '#c62828', fontStyle: 'italic' }}>{row.fe?.funcData?.reqName || '(미연결)'}</td>}
+                  {/* 4. 공정기능: 기능분석 DB에서 조회 - FM 병합 */}
+                  {row.showFm && <td rowSpan={row.fmRowSpan} style={row.l2FuncData ? { ...cellStyle, background: '#e8f5e9' } : { ...cellStyle, background: '#ffebee', color: '#c62828', fontStyle: 'italic' }}>{row.l2FuncData?.funcName || '(미연결)'}</td>}
+                  {/* 5. 제품특성: 기능분석 DB에서 조회 - FM 병합 */}
+                  {row.showFm && <td rowSpan={row.fmRowSpan} style={row.l2FuncData ? { ...cellStyle, background: '#c8e6c9', fontWeight: 600 } : { ...cellStyle, background: '#ffebee', color: '#c62828', fontStyle: 'italic' }}>{row.l2FuncData?.productCharName || '(미연결)'}</td>}
+                  {/* 6. 4M: FC별 - 마지막 행 병합 */}
+                  {row.showFc && <td rowSpan={row.fcRowSpan} style={{ ...cellStyle, background: '#e8f5e9', textAlign: 'center' }}>{row.fc?.m4 || ''}</td>}
+                  {/* 7. 작업요소기능: 기능분석 DB에서 조회 - 마지막 행 병합 */}
+                  {row.showFc && <td rowSpan={row.fcRowSpan} style={row.fc?.funcData ? { ...cellStyle, background: '#e8f5e9' } : (row.fc ? { ...cellStyle, background: '#ffebee', color: '#c62828', fontStyle: 'italic' } : { ...cellStyle, background: '#fafafa' })}>{row.fc?.funcData?.funcName || (row.fc ? '(미연결)' : '')}</td>}
+                  {/* 8. 공정특성: 기능분석 DB에서 조회 - 마지막 행 병합 */}
+                  {row.showFc && <td rowSpan={row.fcRowSpan} style={row.fc?.funcData ? { ...cellStyle, background: '#c8e6c9', fontWeight: 600 } : (row.fc ? { ...cellStyle, background: '#ffebee', color: '#c62828', fontStyle: 'italic' } : { ...cellStyle, background: '#fafafa' })}>{row.fc?.funcData?.processCharName || (row.fc ? '(미연결)' : '')}</td>}
                   
                   {/* ===== 고장분석 6열 ===== */}
-                  {/* 1. 구분: FE scope */}
-                  <td style={{ ...cellStyle, background: '#fffde7', textAlign: 'center' }}>{row.fe ? getScopeAbbr(row.fe.scope) : ''}</td>
-                  {/* 2. 고장영향: FE text */}
-                  <td style={{ ...cellStyle, background: row.fe ? '#fffde7' : '#fafafa' }}>{row.fe?.text || ''}</td>
-                  {/* 3. 심각도: FE severity */}
-                  <td style={{ ...cellStyle, background: row.fe ? '#fffde7' : '#fafafa', textAlign: 'center', fontWeight: 700, color: (row.fe?.severity || 0) >= 8 ? '#c62828' : '#333' }}>{row.fe?.severity || ''}</td>
+                  {/* 1. 구분: FE scope - 마지막 행 병합 */}
+                  {row.showFe && <td rowSpan={row.feRowSpan} style={{ ...cellStyle, background: '#fffde7', textAlign: 'center' }}>{row.fe ? getScopeAbbr(row.fe.scope) : ''}</td>}
+                  {/* 2. 고장영향: FE text - 마지막 행 병합 */}
+                  {row.showFe && <td rowSpan={row.feRowSpan} style={{ ...cellStyle, background: '#fffde7' }}>{row.fe?.text || ''}</td>}
+                  {/* 3. 심각도: FE severity - 마지막 행 병합 */}
+                  {row.showFe && <td rowSpan={row.feRowSpan} style={{ ...cellStyle, background: '#fffde7', textAlign: 'center', fontWeight: 700, color: (row.fe?.severity || 0) >= 8 ? '#c62828' : '#333' }}>{row.fe?.severity || ''}</td>}
                   {/* 4. 고장형태: FM text - FM 병합 */}
                   {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#fff8e1', textAlign: 'center', fontWeight: 700 }}>{row.fmText}</td>}
-                  {/* 5. 작업요소: FC workElem */}
-                  <td style={{ ...cellStyle, background: row.fc ? '#fffde7' : '#fafafa' }}>{row.fc?.workElem || ''}</td>
-                  {/* 6. 고장원인: FC text */}
-                  <td style={{ ...cellStyle, background: row.fc ? '#fffde7' : '#fafafa' }}>{row.fc?.text || ''}</td>
+                  {/* 5. 작업요소: FC workElem - 마지막 행 병합 */}
+                  {row.showFc && <td rowSpan={row.fcRowSpan} style={{ ...cellStyle, background: '#fffde7' }}>{row.fc?.workElem || ''}</td>}
+                  {/* 6. 고장원인: FC text - 마지막 행 병합 */}
+                  {row.showFc && <td rowSpan={row.fcRowSpan} style={{ ...cellStyle, background: '#fffde7' }}>{row.fc?.text || ''}</td>}
                   
                   {/* ===== 리스크분석 8열 ===== */}
                   <td style={{ ...cellStyle, background: '#fce4ec' }}></td>
