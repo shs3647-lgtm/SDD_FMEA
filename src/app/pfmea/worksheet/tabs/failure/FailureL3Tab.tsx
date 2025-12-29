@@ -32,20 +32,37 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
   // 확정 상태
   const isConfirmed = state.failureL3Confirmed || false;
 
-  // 누락 건수 계산
-  const missingCount = useMemo(() => {
-    let count = 0;
+  // 플레이스홀더 패턴 체크 함수
+  const isMissing = (name: string | undefined) => {
+    if (!name) return true;
+    const trimmed = name.trim();
+    if (trimmed === '' || trimmed === '-') return true;
+    if (name.includes('클릭')) return true;
+    if (name.includes('추가')) return true;
+    if (name.includes('선택')) return true;
+    if (name.includes('입력')) return true;
+    if (name.includes('필요')) return true;
+    return false;
+  };
+
+  // 항목별 누락 건수 분리 계산
+  const missingCounts = useMemo(() => {
+    let failureCauseCount = 0;   // 고장원인 누락
+    
     state.l2.forEach(proc => {
       (proc.l3 || []).forEach(we => {
         const causes = we.failureCauses || [];
-        if (causes.length === 0 && we.name && !we.name.includes('클릭')) count++;
+        if (causes.length === 0 && we.name && !isMissing(we.name)) failureCauseCount++;
         causes.forEach(c => {
-          if (!c.name || c.name === '클릭' || c.name.includes('추가')) count++;
+          if (isMissing(c.name)) failureCauseCount++;
         });
       });
     });
-    return count;
+    return { failureCauseCount, total: failureCauseCount };
   }, [state.l2]);
+  
+  // 총 누락 건수 (기존 호환성)
+  const missingCount = missingCounts.total;
 
   // 확정 핸들러
   const handleConfirm = useCallback(() => {
@@ -249,7 +266,12 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
               3. 작업요소의 기능 및 공정특성
             </th>
             <th style={{ background: FAIL_COLORS.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
-              3. 작업요소의 기능 및 공정특성
+              3. 고장원인(FC)
+              {missingCount > 0 && (
+                <span style={{ marginLeft: '8px', background: '#fff', color: '#c62828', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 700 }}>
+                  누락 {missingCount}건
+                </span>
+              )}
             </th>
           </tr>
           
@@ -265,10 +287,15 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
               공정특성
             </th>
             <th style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '4px', fontSize: '9px', fontWeight: 700, textAlign: 'center' }}>
-              SC
+              특별특성
             </th>
             <th style={{ background: FAIL_COLORS.cellAlt, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700, textAlign: 'center' }}>
               고장원인(FC)
+              {missingCounts.failureCauseCount > 0 && (
+                <span style={{ marginLeft: '4px', background: '#c62828', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: '9px' }}>
+                  {missingCounts.failureCauseCount}
+                </span>
+              )}
             </th>
           </tr>
         </thead>
@@ -328,7 +355,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
                       onClick={() => setModal({ type: 'l3FailureCause', processId: row.proc.id, weId: row.we.id, title: `${row.we.name} 고장원인`, itemCode: 'FC1' })} 
                     />
                   ) : (
-                    <span style={{ color: '#999', fontSize: '10px', padding: '8px', display: 'block' }}>-</span>
+                    <span style={{ color: '#c62828', fontSize: '10px', fontWeight: 600, padding: '8px', display: 'block' }}>-</span>
                   )}
                 </td>
               </tr>

@@ -21,6 +21,7 @@ interface StructureTabProps {
   setIsProcessModalOpen: (open: boolean) => void;
   setIsWorkElementModalOpen: (open: boolean) => void;
   setTargetL2Id: (id: string | null) => void;
+  saveToLocalStorage?: () => void; // 영구 저장 함수
 }
 
 // 4M 셀 - 읽기 전용 표시 (수정/삭제는 작업요소 모달에서)
@@ -33,17 +34,18 @@ function M4Cell({ value }: { value: string }) {
 
   return (
     <td style={m4CellStyle}>
-      {value || <span style={{ color: '#999' }}>-</span>}
+      {value || <span style={{ color: '#c62828', fontWeight: 600 }}>-</span>}
     </td>
   );
 }
 
 function EditableL3Cell({ 
-  value, l3Id, l2Id, state, setState, setDirty, handleSelect, setTargetL2Id, setIsWorkElementModalOpen 
+  value, l3Id, l2Id, state, setState, setDirty, handleSelect, setTargetL2Id, setIsWorkElementModalOpen, saveToLocalStorage 
 }: { 
   value: string; l3Id: string; l2Id: string; state: WorksheetState; setState: React.Dispatch<React.SetStateAction<WorksheetState>>; 
   setDirty: (dirty: boolean) => void; handleSelect: (type: 'L1' | 'L2' | 'L3', id: string | null) => void;
   setTargetL2Id: (id: string | null) => void; setIsWorkElementModalOpen: (open: boolean) => void;
+  saveToLocalStorage?: () => void;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
@@ -60,6 +62,7 @@ function EditableL3Cell({
         }))
       }));
       setDirty(true);
+      saveToLocalStorage?.(); // 영구 저장
     }
     setIsEditing(false);
   };
@@ -121,7 +124,7 @@ function EditableL3Cell({
       onDoubleClick={handleDoubleClick}
       title={isPlaceholder ? '클릭: 작업요소 추가' : '클릭: 모달 | 더블클릭: 텍스트 수정'}
     >
-      {isPlaceholder ? <span style={{ color: '#e65100', fontWeight: 700 }}>🔍 클릭</span> : <span style={{ fontWeight: 400 }}>{value}</span>}
+      {isPlaceholder ? <span style={{ color: '#c62828', fontWeight: 700 }}>🔍 클릭</span> : <span style={{ fontWeight: 400 }}>{value}</span>}
     </td>
   );
 }
@@ -130,13 +133,40 @@ export function StructureColgroup() {
   return <colgroup><col style={{ width: '30%' }} /><col style={{ width: '30%' }} /><col style={{ width: '20px' }} /><col /></colgroup>;
 }
 
-export function StructureHeader({ onProcessModalOpen }: { onProcessModalOpen: () => void; }) {
+interface MissingCounts {
+  l1Count: number;  // 완제품 공정 누락
+  l2Count: number;  // 메인공정명 누락
+  l3Count: number;  // 작업요소 누락
+}
+
+export function StructureHeader({ onProcessModalOpen, missingCounts }: { onProcessModalOpen: () => void; missingCounts?: MissingCounts }) {
   return (
     <>
       <tr>
-        <th style={{ width: '30%', background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>1. 완제품 공정명</th>
-        <th onClick={onProcessModalOpen} className="cursor-pointer hover:bg-green-600" style={{ width: '30%', background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>2. 메인 공정명 🔍</th>
-        <th colSpan={2} style={{ background: '#f57c00', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>3. 작업 요소명</th>
+        <th style={{ width: '30%', background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
+          1. 완제품 공정명
+          {missingCounts && missingCounts.l1Count > 0 && (
+            <span style={{ marginLeft: '6px', background: '#fff', color: '#c62828', padding: '1px 6px', borderRadius: '8px', fontSize: '9px', fontWeight: 700 }}>
+              {missingCounts.l1Count}
+            </span>
+          )}
+        </th>
+        <th onClick={onProcessModalOpen} className="cursor-pointer hover:bg-green-600" style={{ width: '30%', background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
+          2. 메인 공정명 🔍
+          {missingCounts && missingCounts.l2Count > 0 && (
+            <span style={{ marginLeft: '6px', background: '#fff', color: '#c62828', padding: '1px 6px', borderRadius: '8px', fontSize: '9px', fontWeight: 700 }}>
+              {missingCounts.l2Count}
+            </span>
+          )}
+        </th>
+        <th colSpan={2} style={{ background: '#f57c00', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
+          3. 작업 요소명
+          {missingCounts && missingCounts.l3Count > 0 && (
+            <span style={{ marginLeft: '6px', background: '#fff', color: '#c62828', padding: '1px 6px', borderRadius: '8px', fontSize: '9px', fontWeight: 700 }}>
+              {missingCounts.l3Count}
+            </span>
+          )}
+        </th>
       </tr>
       <tr>
         <th style={{ background: '#90caf9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>완제품명+라인</th>
@@ -149,7 +179,7 @@ export function StructureHeader({ onProcessModalOpen }: { onProcessModalOpen: ()
 }
 
 export function StructureRow({
-  row, idx, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown, handleSelect, setIsProcessModalOpen, setIsWorkElementModalOpen, setTargetL2Id,
+  row, idx, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown, handleSelect, setIsProcessModalOpen, setIsWorkElementModalOpen, setTargetL2Id, saveToLocalStorage,
 }: StructureTabProps & { row: FlatRow; idx: number }) {
   // 완제품 공정명과 메인 공정명이 1:1로 병합되도록 l2Spans 사용
   const spanCount = l2Spans[idx];
@@ -184,22 +214,67 @@ export function StructureRow({
           }}
           onClick={() => { handleSelect('L2', row.l2Id); setIsProcessModalOpen(true); }}
         >
-          {row.l2Name.includes('클릭') ? <span className="text-green-600 font-bold">🔍 클릭하여 공정 선택</span> : <span style={{ fontWeight: 600 }}>{row.l2No} {row.l2Name} 🔍</span>}
+          {row.l2Name.includes('클릭') ? <span style={{ color: '#c62828', fontWeight: 700 }}>🔍 클릭하여 공정 선택</span> : <span style={{ fontWeight: 600 }}>{row.l2No} {row.l2Name} 🔍</span>}
         </td>
       )}
       <M4Cell value={row.m4} />
-      <EditableL3Cell value={row.l3Name} l3Id={row.l3Id} l2Id={row.l2Id} state={state} setState={setState} setDirty={setDirty} handleSelect={handleSelect} setTargetL2Id={setTargetL2Id} setIsWorkElementModalOpen={setIsWorkElementModalOpen} />
+      <EditableL3Cell value={row.l3Name} l3Id={row.l3Id} l2Id={row.l2Id} state={state} setState={setState} setDirty={setDirty} handleSelect={handleSelect} setTargetL2Id={setTargetL2Id} setIsWorkElementModalOpen={setIsWorkElementModalOpen} saveToLocalStorage={saveToLocalStorage} />
     </>
   );
 }
 
 export default function StructureTab(props: StructureTabProps) {
-  const { rows, setIsProcessModalOpen } = props;
+  const { rows, setIsProcessModalOpen, state } = props;
+  
+  // 누락 건수 계산 (rows 배열 기반 - 화면에 표시되는 것과 일치)
+  const missingCounts = React.useMemo(() => {
+    const isMissing = (name: string | undefined | null) => {
+      if (name === null || name === undefined) return true;
+      if (!name) return true;
+      const trimmed = String(name).trim();
+      if (trimmed === '' || trimmed === '-') return true;
+      if (String(name).includes('클릭')) return true;
+      if (String(name).includes('추가')) return true;
+      if (String(name).includes('선택')) return true;
+      if (String(name).includes('입력')) return true;
+      if (String(name).includes('필요')) return true;
+      return false;
+    };
+    
+    let l1Count = 0;  // 완제품 공정 누락
+    let l2Count = 0;  // 메인공정명 누락 (중복 제거)
+    let l3Count = 0;  // 작업요소 누락
+    let m4Count = 0;  // 4M 누락
+    
+    // 완제품 공정명 체크
+    if (isMissing(state.l1.name)) l1Count++;
+    
+    // 중복 제거를 위한 Set
+    const checkedL2 = new Set<string>();
+    
+    // rows 배열 기반으로 체크 (화면에 표시되는 것과 일치)
+    rows.forEach(row => {
+      // 메인공정명 누락 체크 (중복 제거)
+      if (!checkedL2.has(row.l2Id) && isMissing(row.l2Name)) {
+        l2Count++;
+        checkedL2.add(row.l2Id);
+      }
+      
+      // 작업요소명 누락 체크
+      if (isMissing(row.l3Name)) l3Count++;
+      
+      // 4M 누락 체크
+      if (isMissing(row.m4)) m4Count++;
+    });
+    
+    return { l1Count, l2Count, l3Count: l3Count + m4Count };
+  }, [state.l1.name, rows]);
+  
   return (
     <>
       <StructureColgroup />
       <thead style={{ position: 'sticky', top: 0, zIndex: 20, background: '#fff' }}>
-        <StructureHeader onProcessModalOpen={() => setIsProcessModalOpen(true)} />
+        <StructureHeader onProcessModalOpen={() => setIsProcessModalOpen(true)} missingCounts={missingCounts} />
       </thead>
       <tbody>
         {rows.map((row, idx) => (

@@ -1,19 +1,15 @@
 /**
  * @file FailureModeSelectModal.tsx
- * @description 고장형태(FM) 선택 모달 - 상위 항목(제품특성) 고정 연결
- * 
- * FMEA 논리 구조:
- * 제품특성 → 고장형태 (1:N 연결)
- * 모달에서 상위 제품특성이 고정되고, 해당 특성에 연결된 고장형태만 선택/추가
+ * @description 고장형태(FM) 선택 모달 - 표준화 적용
+ * @version 2.0.0 - 표준화
+ * @updated 2025-12-29
  */
 
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import BaseModal from '@/components/modals/BaseModal';
 
-// 기본 고장형태 옵션
-const DEFAULT_FAILURE_MODES = [
+const DEFAULT_MODES = [
   { id: 'FM_1', value: '규격 미달', category: '기본' },
   { id: 'FM_2', value: '규격 초과', category: '기본' },
   { id: 'FM_3', value: '변형', category: '기본' },
@@ -28,6 +24,11 @@ const DEFAULT_FAILURE_MODES = [
   { id: 'FM_12', value: '마모', category: '기본' },
 ];
 
+const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
+  '기본': { bg: '#e8f5e9', text: '#2e7d32' },
+  '추가': { bg: '#fff3e0', text: '#e65100' },
+};
+
 interface FailureMode {
   id: string;
   name: string;
@@ -37,13 +38,10 @@ interface FailureModeSelectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (modes: FailureMode[]) => void;
-  // 상위 항목 (고정 표시)
   parentType: 'productChar' | 'processChar';
-  parentName: string; // 제품특성명 또는 공정특성명
+  parentName: string;
   parentId: string;
-  // 현재 연결된 고장형태
   currentModes: FailureMode[];
-  // 추가 컨텍스트
   processName?: string;
   functionName?: string;
 }
@@ -52,343 +50,183 @@ export default function FailureModeSelectModal({
   isOpen,
   onClose,
   onSave,
-  parentType,
   parentName,
-  parentId,
-  currentModes,
   processName,
   functionName,
+  currentModes,
 }: FailureModeSelectModalProps) {
-  const [selectedModes, setSelectedModes] = useState<Set<string>>(new Set());
-  const [newValue, setNewValue] = useState('');
+  const [items, setItems] = useState<{ id: string; value: string; category: string }[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState('list');
-  const [customModes, setCustomModes] = useState<{ id: string; value: string; category: string }[]>([]);
+  const [newValue, setNewValue] = useState('');
 
-  // 모든 옵션 (기본 + 사용자 추가)
-  const allOptions = useMemo(() => {
-    return [...DEFAULT_FAILURE_MODES, ...customModes];
-  }, [customModes]);
-
-  // 필터링된 옵션
-  const filteredOptions = useMemo(() => {
-    if (!search.trim()) return allOptions;
-    const q = search.toLowerCase();
-    return allOptions.filter(opt => opt.value.toLowerCase().includes(q));
-  }, [allOptions, search]);
-
-  // 초기화 - 현재 선택된 항목 설정
   useEffect(() => {
-    if (isOpen) {
-      const currentNames = new Set(currentModes.map(m => m.name));
-      setSelectedModes(currentNames);
-      
-      // 사용자 추가 항목 복원
-      const customItems = currentModes
-        .filter(m => !DEFAULT_FAILURE_MODES.find(d => d.value === m.name))
-        .map(m => ({ id: m.id, value: m.name, category: '추가' }));
-      setCustomModes(customItems);
-    }
+    if (!isOpen) return;
+    
+    let allItems = [...DEFAULT_MODES];
+    
+    currentModes.forEach((m) => {
+      if (!allItems.find(i => i.value === m.name)) {
+        allItems.push({ id: m.id, value: m.name, category: '추가' });
+      }
+    });
+    
+    setItems(allItems);
+    
+    const selected = new Set<string>();
+    currentModes.forEach(m => {
+      const found = allItems.find(i => i.value === m.name);
+      if (found) selected.add(found.id);
+    });
+    setSelectedIds(selected);
   }, [isOpen, currentModes]);
 
-  const toggleSelect = useCallback((value: string) => {
-    setSelectedModes(prev => {
+  const filteredItems = useMemo(() => {
+    if (!search.trim()) return items;
+    const q = search.toLowerCase();
+    return items.filter(i => i.value.toLowerCase().includes(q));
+  }, [items, search]);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(value)) newSet.delete(value);
-      else newSet.add(value);
+      if (newSet.has(id)) newSet.delete(id);
+      else newSet.add(id);
       return newSet;
     });
   }, []);
 
-  const handleAddNew = useCallback(() => {
-    if (!newValue.trim()) return;
-    const trimmed = newValue.trim();
-    
-    // 중복 체크
-    if (allOptions.find(o => o.value === trimmed)) {
-      alert('이미 존재하는 항목입니다.');
-      return;
-    }
-    
-    // 추가
-    const newItem = { id: `custom_${Date.now()}`, value: trimmed, category: '추가' };
-    setCustomModes(prev => [...prev, newItem]);
-    setSelectedModes(prev => new Set([...prev, trimmed]));
-    
-    // localStorage에 저장
-    try {
-      const savedData = localStorage.getItem('pfmea_master_data');
-      const masterData = savedData ? JSON.parse(savedData) : [];
-      masterData.push({ 
-        id: newItem.id, 
-        itemCode: 'FM', 
-        value: trimmed, 
-        category: '추가',
-        createdAt: new Date().toISOString()
-      });
-      localStorage.setItem('pfmea_master_data', JSON.stringify(masterData));
-      console.log('[FailureModeSelectModal] 새 항목 저장됨:', trimmed);
-    } catch (e) {
-      console.error('데이터 저장 오류:', e);
-    }
-    
-    setNewValue('');
-  }, [newValue, allOptions]);
+  const selectAll = () => setSelectedIds(new Set(filteredItems.map(i => i.id)));
+  const deselectAll = () => setSelectedIds(new Set());
 
-  const handleSave = useCallback(() => {
-    const modes: FailureMode[] = [];
-    
-    selectedModes.forEach(name => {
-      const existing = currentModes.find(m => m.name === name);
-      if (existing) {
-        modes.push(existing);
-      } else {
-        modes.push({ id: `fm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, name });
-      }
-    });
-    
+  const handleApply = () => {
+    const modes: FailureMode[] = items
+      .filter(i => selectedIds.has(i.id))
+      .map(i => {
+        const existing = currentModes.find(m => m.name === i.value);
+        return existing || { id: i.id, name: i.value };
+      });
     onSave(modes);
     onClose();
-  }, [selectedModes, currentModes, onSave, onClose]);
+  };
 
-  const selectAll = () => setSelectedModes(new Set(filteredOptions.map(o => o.value)));
-  const deselectAll = () => setSelectedModes(new Set());
-  
-  // 모두 삭제 후 저장
-  const clearAndSave = () => {
-    if (!window.confirm('모든 고장형태를 삭제하시겠습니까?')) return;
+  const handleDeleteAll = () => {
+    if (!confirm('모든 항목을 삭제하시겠습니까?')) return;
     onSave([]);
     onClose();
   };
 
-  const parentLabel = parentType === 'productChar' ? '제품특성' : '공정특성';
-  const parentColor = parentType === 'productChar' ? '#1b5e20' : '#1565c0';
+  const handleAddSave = () => {
+    if (!newValue.trim()) return;
+    const newItem = { id: `new_${Date.now()}`, value: newValue.trim(), category: '추가' };
+    setItems(prev => [...prev, newItem]);
+    setSelectedIds(prev => new Set([...prev, newItem.id]));
+    setNewValue('');
+  };
+
+  const minRows = 10;
+
+  if (!isOpen) return null;
 
   return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={`고장형태(FM) 선택`}
-      icon="⚠️"
-      width="650px"
-      tabs={[
-        { id: 'list', label: '목록에서 선택', icon: '📋' },
-        { id: 'manual', label: '직접 입력', icon: '✏️' }
-      ]}
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-      onSave={handleSave}
-      saveDisabled={selectedModes.size === 0}
-      footerContent={
-        <span className="text-sm font-bold text-blue-600">
-          ✓ {selectedModes.size}개 선택
-        </span>
-      }
-    >
-      {/* 상위 항목 고정 표시 영역 */}
-      <div 
-        className="px-4 py-3 border-b-2 shrink-0"
-        style={{ 
-          background: `linear-gradient(135deg, ${parentColor}15, ${parentColor}08)`,
-          borderColor: parentColor 
-        }}
-      >
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-lg">🔗</span>
-          <span className="text-sm font-bold" style={{ color: parentColor }}>
-            연결된 {parentLabel} (고정)
-          </span>
-        </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          {processName && (
-            <span className="px-3 py-1.5 bg-blue-600 text-white text-sm font-bold rounded-lg shadow-sm">
-              📦 {processName}
-            </span>
-          )}
-          {functionName && (
-            <span className="px-3 py-1.5 bg-green-700 text-white text-sm font-bold rounded-lg shadow-sm">
-              ⚙️ {functionName}
-            </span>
-          )}
-          <span 
-            className="px-4 py-2 text-white text-sm font-bold rounded-lg shadow-md"
-            style={{ background: parentColor }}
-          >
-            🏷️ {parentName}
-          </span>
-        </div>
-        <p className="text-xs text-gray-600 mt-2 italic">
-          * 위 {parentLabel}에 연결될 고장형태를 선택하세요. 고장형태는 이 특성의 하위 항목으로 저장됩니다.
-        </p>
-      </div>
-
-      {activeTab === 'list' ? (
-        <div className="flex flex-col flex-1 overflow-hidden">
-          {/* 검색 및 버튼 */}
-          <div className="px-4 py-3 border-b flex items-center gap-2 bg-gray-50/50 shrink-0">
-            <div className="relative flex-1">
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="고장형태 검색..."
-                className="w-full pl-9 pr-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-red-500 outline-none transition-all shadow-sm"
-              />
-              <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
-            </div>
-            <div className="flex gap-1">
-              <button onClick={selectAll} className="px-3 py-2 text-xs font-bold bg-red-500 text-white rounded-md hover:bg-red-600 shadow-sm transition-colors">전체선택</button>
-              <button onClick={deselectAll} className="px-3 py-2 text-xs font-bold bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 shadow-sm transition-colors">해제</button>
-              <button onClick={clearAndSave} className="px-3 py-2 text-xs font-bold bg-red-700 text-white rounded-md hover:bg-red-800 shadow-sm transition-colors">🗑️ 모두삭제</button>
-            </div>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="bg-white rounded-lg shadow-2xl w-[600px] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()} style={{ maxHeight: '70vh' }}>
+        {/* 헤더 */}
+        <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-orange-600 to-orange-700 text-white">
+          <div className="flex items-center gap-2">
+            <span>⚠️</span>
+            <h2 className="text-xs font-bold">고장형태(FM) 선택</h2>
           </div>
-
-          {/* 고장형태 테이블 */}
-          <div className="flex-1 overflow-auto p-1 bg-gray-50/20">
-            <table className="w-full text-[10px] border-collapse">
-              <tbody>
-              {filteredOptions.map(opt => {
-                const isSelected = selectedModes.has(opt.value);
-                const isCurrent = currentModes.some(m => m.name === opt.value);
-                
-                return (
-                  <tr 
-                    key={opt.id}
-                    onClick={() => toggleSelect(opt.value)}
-                    className={`cursor-pointer transition-all border-b border-gray-100 ${
-                      isSelected 
-                        ? isCurrent ? 'bg-green-50' : 'bg-red-50'
-                        : 'bg-white hover:bg-red-50/30'
-                    }`}
-                    style={{ height: '26px' }}
-                  >
-                    {/* 체크박스 */}
-                    <td className="w-5 text-center">
-                      <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center mx-auto ${
-                        isSelected 
-                          ? isCurrent ? 'bg-green-500 border-green-500' : 'bg-red-500 border-red-500' 
-                          : 'bg-white border-gray-300'
-                      }`}>
-                        {isSelected && <span className="text-white text-[7px] font-bold">✓</span>}
-                      </div>
-                    </td>
-
-                    {/* 카테고리 배지 */}
-                    <td className="w-9 px-0.5">
-                      <span 
-                        className={`text-[7px] font-bold px-1 py-0.5 rounded whitespace-nowrap ${
-                          opt.category === '추가' 
-                            ? 'bg-orange-100 text-orange-700' 
-                            : 'bg-gray-100 text-gray-600'
-                        }`}
-                      >
-                        {opt.category}
-                      </span>
-                    </td>
-
-                    {/* 이름 */}
-                    <td className="px-1.5">
-                      <div className={`truncate font-medium ${
-                        isSelected ? (isCurrent ? 'text-green-800' : 'text-red-800') : 'text-gray-700'
-                      }`} title={opt.value}>
-                        {opt.value}
-                        {isCurrent && <span className="ml-1 text-[8px] text-green-600">(현재)</span>}
-                      </div>
-                    </td>
-
-                    {/* 개별 삭제 버튼 */}
-                    <td className="w-5 text-center">
-                      {isSelected && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleSelect(opt.value);
-                          }}
-                          className="text-red-400 hover:text-red-600 text-[10px]"
-                          title="선택 해제"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-              </tbody>
-            </table>
-          </div>
+          <button onClick={onClose} className="text-[10px] px-2 py-0.5 bg-white/20 hover:bg-white/30 rounded">닫기</button>
         </div>
-      ) : (
-        <div className="p-6 flex flex-col flex-1 bg-gray-50/20">
-          <div className="bg-white p-4 rounded-xl border shadow-sm mb-6">
-            <h3 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-              <span className="text-red-500">➕</span> 새 고장형태 등록
-            </h3>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newValue}
-                onChange={(e) => setNewValue(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && newValue.trim()) handleAddNew(); }}
-                placeholder="새로운 고장형태를 입력하세요..."
-                className="flex-1 px-4 py-2.5 text-sm border rounded-lg focus:ring-2 focus:ring-red-500 outline-none shadow-sm"
-              />
-              <button
-                onClick={handleAddNew}
-                disabled={!newValue.trim()}
-                className="px-6 py-2.5 text-sm font-bold bg-red-500 text-white rounded-lg hover:bg-red-600 shadow-md transition-all disabled:bg-gray-200 active:scale-95"
-              >
-                추가
-              </button>
-            </div>
-          </div>
 
-          {/* 입력된 항목 표시 - 체크박스 포함 */}
-          <div className="flex-1">
-            <h3 className="text-sm font-bold text-gray-700 mb-3 px-1">
-              추가된 항목 ({customModes.length})
-              <span className="ml-2 text-red-600">- 선택: {customModes.filter(m => selectedModes.has(m.value)).length}개</span>
-            </h3>
-            <div className="space-y-2 max-h-[200px] overflow-auto">
-              {customModes.map(item => {
-                const isSelected = selectedModes.has(item.value);
-                return (
-                  <div 
-                    key={item.id} 
-                    onClick={() => toggleSelect(item.value)}
-                    className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
-                      isSelected ? 'bg-red-50 border-red-400' : 'bg-white border-gray-200 hover:border-red-300'
-                    }`}
-                  >
-                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${
-                      isSelected ? 'bg-red-500 border-red-500' : 'bg-white border-gray-300'
-                    }`}>
-                      {isSelected && <span className="text-white text-[8px] font-bold">✓</span>}
-                    </div>
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 border border-orange-200">추가</span>
-                    <span className={`flex-1 text-sm ${isSelected ? 'text-red-800 font-medium' : 'text-gray-700'}`}>{item.value}</span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setCustomModes(prev => prev.filter(m => m.id !== item.id));
-                        setSelectedModes(prev => {
-                          const newSet = new Set(prev);
-                          newSet.delete(item.value);
-                          return newSet;
-                        });
-                      }}
-                      className="text-red-400 hover:text-red-600 text-sm px-1"
-                    >
-                      ✕
-                    </button>
+        {/* 상위 항목 고정 표시 */}
+        {(processName || functionName || parentName) && (
+          <div className="px-3 py-2 border-b bg-gradient-to-r from-orange-50 to-amber-50 flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-bold text-orange-700 shrink-0">📌 상위항목:</span>
+            {processName && (
+              <span className="px-2 py-1 text-[10px] font-bold bg-blue-600 text-white rounded">{processName}</span>
+            )}
+            {functionName && (
+              <span className="px-2 py-1 text-[10px] font-bold bg-green-600 text-white rounded max-w-[200px] truncate" title={functionName}>{functionName}</span>
+            )}
+            {parentName && (
+              <span className="px-2 py-1 text-[10px] font-bold bg-purple-600 text-white rounded max-w-[200px] truncate" title={parentName}>{parentName}</span>
+            )}
+          </div>
+        )}
+
+        {/* 검색 + 버튼 */}
+        <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-2">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="🔍 고장형태 검색..."
+            className="flex-1 px-2 py-1 text-[10px] border rounded focus:outline-none focus:ring-1 focus:ring-orange-500"
+          />
+          <button onClick={selectAll} className="px-2 py-1 text-[10px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600">전체</button>
+          <button onClick={deselectAll} className="px-2 py-1 text-[10px] font-bold bg-gray-300 text-gray-700 rounded hover:bg-gray-400">해제</button>
+          <button onClick={handleApply} className="px-2 py-1 text-[10px] font-bold bg-green-600 text-white rounded hover:bg-green-700">적용</button>
+          <button onClick={handleDeleteAll} className="px-2 py-1 text-[10px] font-bold bg-red-500 text-white rounded hover:bg-red-600">삭제</button>
+        </div>
+
+        {/* 새 항목 입력 */}
+        <div className="px-3 py-1.5 border-b bg-green-50 flex items-center gap-1">
+          <span className="text-[10px] font-bold text-green-700">+</span>
+          <input
+            type="text"
+            value={newValue}
+            onChange={(e) => setNewValue(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddSave()}
+            placeholder="새 고장형태 입력..."
+            className="flex-1 px-2 py-0.5 text-[10px] border rounded focus:outline-none focus:ring-1 focus:ring-green-500"
+          />
+          <button onClick={handleAddSave} disabled={!newValue.trim()} className="px-2 py-0.5 text-[10px] font-bold bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50">저장</button>
+        </div>
+
+        {/* 리스트 */}
+        <div className="overflow-auto p-2" style={{ height: '280px', minHeight: '280px' }}>
+          <div className="grid grid-cols-2 gap-1">
+            {filteredItems.map(item => {
+              const isSelected = selectedIds.has(item.id);
+              const isCurrent = currentModes.some(m => m.name === item.value);
+              const catColor = CATEGORY_COLORS[item.category] || CATEGORY_COLORS['기본'];
+              
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => toggleSelect(item.id)}
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer transition-all ${
+                    isSelected ? (isCurrent ? 'bg-green-50 border-green-400' : 'bg-orange-50 border-orange-400') : 'bg-white border-gray-200 hover:border-orange-300'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                    isSelected ? (isCurrent ? 'bg-green-500 border-green-500' : 'bg-orange-500 border-orange-500') : 'bg-white border-gray-300'
+                  }`}>
+                    {isSelected && <span className="text-white text-[8px] font-bold">✓</span>}
                   </div>
-                );
-              })}
-            </div>
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0" style={{ background: catColor.bg, color: catColor.text }}>{item.category}</span>
+                  <span className={`flex-1 text-[10px] truncate ${isSelected ? 'font-medium' : ''}`}>{item.value}</span>
+                  {isSelected && <button onClick={(e) => { e.stopPropagation(); toggleSelect(item.id); }} className="text-red-400 hover:text-red-600 text-xs shrink-0">✕</button>}
+                </div>
+              );
+            })}
+            {Array.from({ length: Math.max(0, minRows - filteredItems.length) }).map((_, idx) => (
+              <div key={`empty-${idx}`} className="flex items-center gap-2 px-2 py-1.5 rounded border border-gray-100 bg-gray-50/50">
+                <div className="w-4 h-4 rounded border border-gray-200 bg-white shrink-0" />
+                <span className="text-[9px] text-gray-300">--</span>
+                <span className="flex-1 text-[10px] text-gray-300">-</span>
+              </div>
+            ))}
           </div>
         </div>
-      )}
-    </BaseModal>
+
+        {/* 푸터 */}
+        <div className="px-3 py-2 border-t bg-gray-50 flex items-center justify-center">
+          <span className="text-xs font-bold text-orange-600">✓ {selectedIds.size}개 선택</span>
+        </div>
+      </div>
+    </div>
   );
 }
-

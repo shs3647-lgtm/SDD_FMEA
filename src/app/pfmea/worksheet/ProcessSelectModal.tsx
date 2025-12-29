@@ -1,7 +1,13 @@
+/**
+ * @file ProcessSelectModal.tsx
+ * @description 공정 선택 모달 - 표준화된 컴팩트 테이블 형태
+ * @version 2.0.0 - 표준화
+ * @updated 2025-12-29
+ */
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import BaseModal from '@/components/modals/BaseModal';
 
 interface ProcessItem {
   id: string;
@@ -11,19 +17,19 @@ interface ProcessItem {
 
 interface ProcessWithL3Info {
   name: string;
-  l3Count: number; // 하위 작업요소 수 (유효한 것만)
+  l3Count: number;
 }
 
 interface ProcessSelectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (selectedProcesses: ProcessItem[]) => void;
-  onDelete?: (processIds: string[]) => void; // 삭제 콜백
-  existingProcessNames?: string[]; // 현재 선택된 공정명들
-  existingProcessesInfo?: ProcessWithL3Info[]; // 하위 작업요소 정보
+  onDelete?: (processIds: string[]) => void;
+  existingProcessNames?: string[];
+  existingProcessesInfo?: ProcessWithL3Info[];
 }
 
-// 기초정보에서 공정명 로드 (LocalStorage)
+// 기초정보에서 공정명 로드
 const loadProcessesFromBasicInfo = (): ProcessItem[] => {
   if (typeof window === 'undefined') return [];
   
@@ -64,7 +70,6 @@ const loadProcessesFromBasicInfo = (): ProcessItem[] => {
       { id: 'p10', no: '90', name: '검사' },
       { id: 'p11', no: '100', name: '완성검사' },
       { id: 'p12', no: '110', name: '포장' },
-      { id: 'p13', no: '120', name: '출하' },
     ];
   } catch (e) {
     console.error('Failed to load processes:', e);
@@ -82,15 +87,15 @@ export default function ProcessSelectModal({
 }: ProcessSelectModalProps) {
   const [processes, setProcesses] = useState<ProcessItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [searchTerm, setSearchTerm] = useState('');
-  const [deleteMode, setDeleteMode] = useState(false);
+  const [search, setSearch] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       const loaded = loadProcessesFromBasicInfo();
       setProcesses(loaded);
       
-      // 기존 선택된 공정들을 미리 체크
       const preSelected = new Set<string>();
       loaded.forEach(p => {
         if (existingProcessNames.includes(p.name)) {
@@ -98,38 +103,40 @@ export default function ProcessSelectModal({
         }
       });
       setSelectedIds(preSelected);
-      setSearchTerm('');
+      setSearch('');
+      setEditingId(null);
     }
   }, [isOpen, existingProcessNames]);
 
   const filteredProcesses = useMemo(() => {
+    if (!search.trim()) return processes;
+    const q = search.toLowerCase();
     return processes.filter(p => 
-      (p.no.includes(searchTerm) || p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+      p.no.includes(q) || p.name.toLowerCase().includes(q)
     );
-  }, [processes, searchTerm]);
+  }, [processes, search]);
   
   const toggleSelect = useCallback((id: string) => {
+    if (editingId) return;
     setSelectedIds(prev => {
       const newSet = new Set(prev);
       if (newSet.has(id)) newSet.delete(id);
       else newSet.add(id);
       return newSet;
     });
-  }, []);
+  }, [editingId]);
 
   const selectAll = () => setSelectedIds(new Set(filteredProcesses.map(p => p.id)));
   const deselectAll = () => setSelectedIds(new Set());
   
-  // 전체 해제 후 바로 저장 (모두 삭제)
   const clearAndSave = () => {
     const totalL3Count = existingProcessesInfo.reduce((sum, p) => sum + p.l3Count, 0);
     const message = `⚠️ 모든 데이터를 삭제하시겠습니까?\n\n` +
       `• 공정: ${existingProcessNames.length}개\n` +
-      `• 하위 작업요소: ${totalL3Count}개\n\n` +
-      `삭제된 데이터는 복구할 수 없습니다.`;
+      `• 하위 작업요소: ${totalL3Count}개`;
     
     if (!window.confirm(message)) return;
-    onSave([]); // 빈 배열 전달
+    onSave([]);
     onClose();
   };
 
@@ -137,198 +144,183 @@ export default function ProcessSelectModal({
     const selected = processes.filter(p => selectedIds.has(p.id));
     const selectedNames = new Set(selected.map(p => p.name));
     
-    // 선택 해제된 공정 중 하위 작업요소가 있는 것 확인
     const removedWithL3 = existingProcessesInfo.filter(p => 
       !selectedNames.has(p.name) && p.l3Count > 0
     );
     
     if (removedWithL3.length > 0) {
       const details = removedWithL3.map(p => `• ${p.name}: ${p.l3Count}개 작업요소`).join('\n');
-      const confirmed = window.confirm(
-        `⚠️ 선택 해제된 공정에 하위 작업요소가 있습니다.\n\n${details}\n\n이 공정들과 하위 작업요소를 모두 삭제하시겠습니까?`
-      );
-      if (!confirmed) return;
+      if (!window.confirm(`⚠️ 하위 작업요소가 있는 공정이 해제됩니다.\n\n${details}\n\n삭제하시겠습니까?`)) return;
     }
     
     onSave(selected);
     onClose();
   };
 
-  const handleDeleteSelected = () => {
-    if (selectedIds.size === 0) return;
-    const selectedNames = processes.filter(p => selectedIds.has(p.id)).map(p => p.name);
-    if (!window.confirm(`선택한 ${selectedIds.size}개 공정을 삭제하시겠습니까?\n\n${selectedNames.join(', ')}`)) return;
-    
-    if (onDelete) {
-      onDelete(Array.from(selectedIds));
-    }
-    setSelectedIds(new Set());
-    setDeleteMode(false);
-    onClose();
+  // 더블클릭 수정
+  const handleDoubleClick = (proc: ProcessItem) => {
+    setEditingId(proc.id);
+    setEditValue(proc.name);
   };
 
-  const handleDeleteSingle = (id: string, name: string) => {
-    if (!window.confirm(`"${name}" 공정을 삭제하시겠습니까?`)) return;
-    if (onDelete) {
-      onDelete([id]);
+  const handleEditSave = () => {
+    if (editingId && editValue.trim()) {
+      setProcesses(prev => prev.map(p => 
+        p.id === editingId ? { ...p, name: editValue.trim() } : p
+      ));
     }
+    setEditingId(null);
+  };
+
+  const handleDeleteSingle = (proc: ProcessItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const procInfo = existingProcessesInfo.find(p => p.name === proc.name);
+    const l3Count = procInfo?.l3Count || 0;
+    
+    const message = l3Count > 0
+      ? `"${proc.name}" 공정과 하위 ${l3Count}개 작업요소를 삭제하시겠습니까?`
+      : `"${proc.name}" 공정을 삭제하시겠습니까?`;
+    
+    if (!window.confirm(message)) return;
+    
+    const newSelectedIds = new Set(selectedIds);
+    newSelectedIds.delete(proc.id);
+    const selected = processes.filter(p => newSelectedIds.has(p.id));
+    onSave(selected);
     onClose();
   };
 
   const isCurrentlySelected = (name: string) => existingProcessNames.includes(name);
 
+  if (!isOpen) return null;
+
   return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="공정 선택 (다중선택)"
-      icon="🏭"
-      width="550px"
-      onSave={handleSave}
-      saveDisabled={selectedIds.size === 0}
-      footerContent={
-        <span className="text-sm font-bold text-blue-600">
-          ✓ {selectedIds.size}개 선택
-        </span>
-      }
+    <div 
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40"
+      onClick={onClose}
     >
-      {/* 검색 및 컨트롤 */}
-      <div className="px-4 py-3 border-b flex items-center gap-2 bg-gray-50/50">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="공정명 또는 번호 검색..."
-            className="w-full pl-9 pr-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm"
-          />
-          <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
-        </div>
-        <div className="flex gap-1">
-          <button 
-            onClick={selectAll} 
-            className="px-3 py-2 text-xs font-bold bg-blue-500 text-white rounded-md hover:bg-blue-600 shadow-sm transition-colors whitespace-nowrap"
-          >
-            전체선택
-          </button>
-          <button 
-            onClick={deselectAll} 
-            className="px-3 py-2 text-xs font-bold bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 shadow-sm transition-colors whitespace-nowrap"
-          >
-            해제
-          </button>
-          <button 
-            onClick={clearAndSave} 
-            className="px-3 py-2 text-xs font-bold bg-red-500 text-white rounded-md hover:bg-red-600 shadow-sm transition-colors whitespace-nowrap"
-          >
-            🗑️ 모두삭제
-          </button>
-        </div>
-      </div>
-      
-      {/* 삭제 모드 안내 */}
-      {deleteMode && (
-        <div className="px-4 py-2 bg-red-50 border-b border-red-200 flex items-center justify-between">
-          <span className="text-xs text-red-700 font-medium">🗑️ 삭제할 공정을 선택하세요</span>
-          <button
-            onClick={handleDeleteSelected}
-            disabled={selectedIds.size === 0}
-            className={`px-3 py-1 text-xs font-bold rounded transition-colors ${
-              selectedIds.size > 0 
-                ? 'bg-red-500 text-white hover:bg-red-600' 
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            선택 삭제 ({selectedIds.size}개)
-          </button>
-        </div>
-      )}
-
-      {/* 리스트 그리드 */}
-      <div className="flex-1 overflow-auto p-4 bg-gray-50/20">
-        {filteredProcesses.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-gray-400 py-16">
-            <span className="text-4xl mb-4">🏭</span>
-            <p className="font-medium">등록된 공정이 없거나 검색 결과가 없습니다.</p>
+      <div 
+        className="bg-white rounded-lg shadow-2xl w-[600px] max-h-[70vh] flex flex-col overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* 헤더 */}
+        <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+          <div className="flex items-center gap-2">
+            <span className="text-base">🏭</span>
+            <h2 className="text-xs font-bold">공정 선택 (다중선택)</h2>
           </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <button onClick={onClose} className="text-[10px] px-2 py-0.5 bg-white/20 hover:bg-white/30 rounded">닫기</button>
+        </div>
+
+        {/* 검색 + 버튼: [전체][해제][적용][삭제] */}
+        <div className="px-4 py-2 border-b bg-gray-50 flex items-center gap-2">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="🔍 공정명 또는 번호 검색..."
+              className="w-full px-3 py-1.5 text-xs border rounded focus:ring-1 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          <button onClick={selectAll} className="px-2 py-1 text-[10px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600">전체</button>
+          <button onClick={deselectAll} className="px-2 py-1 text-[10px] font-bold bg-gray-200 text-gray-700 rounded hover:bg-gray-300">해제</button>
+          <button onClick={handleSave} className="px-2 py-1 text-[10px] font-bold bg-green-600 text-white rounded hover:bg-green-700">적용</button>
+          <button onClick={clearAndSave} className="px-2 py-1 text-[10px] font-bold bg-red-500 text-white rounded hover:bg-red-600">삭제</button>
+        </div>
+
+        {/* 컴팩트 테이블 - 고정 높이 */}
+        <div className="overflow-auto p-2" style={{ height: '320px', minHeight: '320px' }}>
+          <div className="grid grid-cols-2 gap-1">
             {filteredProcesses.map(proc => {
-              const isSelected = selectedIds.has(proc.id);
-              const isCurrent = isCurrentlySelected(proc.name);
-              
-              return (
-                <div 
-                  key={proc.id}
-                  onClick={() => toggleSelect(proc.id)}
-                  className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all shadow-sm group ${
-                    isSelected 
-                      ? isCurrent 
-                        ? 'bg-green-50 border-green-400 ring-1 ring-green-400' 
-                        : 'bg-blue-50 border-blue-400 ring-1 ring-blue-400'
-                      : 'bg-white border-gray-200 hover:border-blue-300 hover:shadow-md'
-                  }`}
-                >
-                  {/* 체크박스 */}
-                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                    isSelected 
-                      ? isCurrent ? 'bg-green-500 border-green-500' : 'bg-blue-500 border-blue-500' 
-                      : 'bg-white border-gray-300 group-hover:border-blue-400'
-                  }`}>
-                    {isSelected && <span className="text-white text-[10px] font-bold">✓</span>}
+                const isSelected = selectedIds.has(proc.id);
+                const isCurrent = isCurrentlySelected(proc.name);
+                const isEditing = editingId === proc.id;
+                
+                return (
+                  <div
+                    key={proc.id}
+                    onClick={() => toggleSelect(proc.id)}
+                    onDoubleClick={() => handleDoubleClick(proc)}
+                    className={`flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer transition-all ${
+                      isSelected 
+                        ? isCurrent 
+                          ? 'bg-green-50 border-green-400' 
+                          : 'bg-blue-50 border-blue-400'
+                        : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50/30'
+                    }`}
+                  >
+                    {/* 체크박스 */}
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                      isSelected 
+                        ? isCurrent ? 'bg-green-500 border-green-500' : 'bg-blue-500 border-blue-500'
+                        : 'bg-white border-gray-300'
+                    }`}>
+                      {isSelected && <span className="text-white text-[8px] font-bold">✓</span>}
+                    </div>
+
+                    {/* 번호 */}
+                    <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded min-w-[28px] text-center">
+                      {proc.no}
+                    </span>
+
+                    {/* 이름 (수정 모드 or 표시 모드) */}
+                    <div className="flex-1 min-w-0">
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={handleEditSave}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleEditSave();
+                            if (e.key === 'Escape') setEditingId(null);
+                          }}
+                          autoFocus
+                          className="w-full px-1 py-0.5 text-xs border border-blue-400 rounded focus:outline-none"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <span className={`text-xs truncate block ${
+                          isSelected ? (isCurrent ? 'text-green-800 font-medium' : 'text-blue-800 font-medium') : 'text-gray-700'
+                        }`}>
+                          {proc.name}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 삭제 버튼 */}
+                    {isCurrent && (
+                      <button
+                        onClick={(e) => handleDeleteSingle(proc, e)}
+                        className="text-red-400 hover:text-red-600 text-xs shrink-0"
+                        title="삭제"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
-
-                  {/* 공정번호 배지 */}
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shadow-inner shrink-0 ${
-                    isCurrent ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                  }`}>
-                    {proc.no}
-                  </span>
-
-                  {/* 이름 */}
-                  <span className={`flex-1 text-sm truncate font-medium ${
-                    isSelected ? (isCurrent ? 'text-green-900' : 'text-blue-900') : 'text-gray-700'
-                  }`}>
-                    {proc.name}
-                    {isCurrent && <span className="ml-1 text-[9px] font-normal text-green-600">(현재)</span>}
-                  </span>
-                  
-                  {/* 개별 삭제 버튼 (현재 선택된 것만) */}
-                  {isCurrent && (
-                    <button
-                      onClick={(e) => { 
-                        e.stopPropagation(); 
-                        // 해당 공정의 하위 작업요소 수 확인
-                        const procInfo = existingProcessesInfo.find(p => p.name === proc.name);
-                        const l3Count = procInfo?.l3Count || 0;
-                        
-                        const message = l3Count > 0
-                          ? `⚠️ 공정과 하위 작업요소를 모두 삭제하시겠습니까?\n\n` +
-                            `• 공정: ${proc.name}\n` +
-                            `• 하위 작업요소: ${l3Count}개\n\n` +
-                            `삭제된 데이터는 복구할 수 없습니다.`
-                          : `"${proc.name}" 공정을 삭제하시겠습니까?`;
-                        
-                        if (!window.confirm(message)) return;
-                        // 해당 항목 선택 해제 후 저장
-                        const newSelectedIds = new Set(selectedIds);
-                        newSelectedIds.delete(proc.id);
-                        const selected = processes.filter(p => newSelectedIds.has(p.id));
-                        onSave(selected);
-                        onClose();
-                      }}
-                      className="p-1.5 text-red-500 hover:bg-red-100 rounded-full transition-colors font-bold"
-                      title="이 공정 삭제"
-                    >
-                      ✕
-                    </button>
-                  )}
+                );
+              })}
+              {/* 빈 행 채우기 - 최소 12개 행 유지 */}
+              {Array.from({ length: Math.max(0, 12 - filteredProcesses.length) }).map((_, idx) => (
+                <div
+                  key={`empty-${idx}`}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded border border-gray-100 bg-gray-50/50"
+                >
+                  <div className="w-4 h-4 rounded border border-gray-200 bg-white shrink-0" />
+                  <span className="text-[10px] font-bold text-gray-300 bg-gray-100 px-1.5 py-0.5 rounded min-w-[28px] text-center">--</span>
+                  <span className="flex-1 text-xs text-gray-300">-</span>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              ))}
+            </div>
+        </div>
+
+        {/* 푸터 - 선택 수 표시만 */}
+        <div className="px-3 py-2 border-t bg-gray-50 flex items-center justify-center">
+          <span className="text-xs font-bold text-blue-600">✓ {selectedIds.size}개 선택</span>
+        </div>
       </div>
-    </BaseModal>
+    </div>
   );
 }

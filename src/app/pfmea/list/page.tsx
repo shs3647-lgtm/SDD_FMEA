@@ -361,7 +361,26 @@ export default function FMEAListPage() {
                   </a>
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-left align-middle">
-                  {p.project?.projectName ? p.project.projectName : <span className="text-gray-400 italic">미입력</span>}
+                  {p.project?.projectName ? (
+                    <a 
+                      href={`/apqp/list`}
+                      className="text-blue-600 hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {p.project.projectName}
+                    </a>
+                  ) : (
+                    <span 
+                      className="text-red-500 italic cursor-pointer hover:underline font-semibold"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // APQP 리스트로 이동 (선택 모드), 없으면 등록화면으로 자동 이동
+                        window.location.href = `/apqp/list?mode=select&fmeaId=${p.id}`;
+                      }}
+                    >
+                      미입력
+                    </span>
+                  )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-left align-middle">
                   {p.fmeaInfo?.subject || p.project?.productName ? (
@@ -372,25 +391,74 @@ export default function FMEAListPage() {
                     >
                       {p.fmeaInfo?.subject || p.project?.productName}
                     </a>
-                  ) : <span className="text-gray-400 italic">미입력</span>}
+                  ) : (
+                    <span 
+                      className="text-red-500 italic cursor-pointer hover:underline font-semibold"
+                      onClick={(e) => { e.stopPropagation(); window.location.href = `/pfmea/register?id=${p.id}`; }}
+                    >
+                      미입력
+                    </span>
+                  )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                  {p.project?.customer ? p.project.customer : <span className="text-gray-400 italic">미입력</span>}
+                  {p.project?.customer ? p.project.customer : (
+                    <span 
+                      className="text-red-500 italic cursor-pointer hover:underline font-semibold"
+                      onClick={(e) => { e.stopPropagation(); window.location.href = `/pfmea/register?id=${p.id}`; }}
+                    >
+                      미입력
+                    </span>
+                  )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                  {p.fmeaInfo?.modelYear ? p.fmeaInfo.modelYear : <span className="text-gray-400 italic">미입력</span>}
+                  {p.fmeaInfo?.modelYear ? p.fmeaInfo.modelYear : (
+                    <span 
+                      className="text-red-500 italic cursor-pointer hover:underline font-semibold"
+                      onClick={(e) => { e.stopPropagation(); window.location.href = `/pfmea/register?id=${p.id}`; }}
+                    >
+                      미입력
+                    </span>
+                  )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                  {p.fmeaInfo?.designResponsibility || p.project?.department ? (p.fmeaInfo?.designResponsibility || p.project?.department) : <span className="text-gray-400 italic">미입력</span>}
+                  {p.fmeaInfo?.designResponsibility || p.project?.department ? (p.fmeaInfo?.designResponsibility || p.project?.department) : (
+                    <span 
+                      className="text-red-500 italic cursor-pointer hover:underline font-semibold"
+                      onClick={(e) => { e.stopPropagation(); window.location.href = `/pfmea/register?id=${p.id}`; }}
+                    >
+                      미입력
+                    </span>
+                  )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                  {p.fmeaInfo?.fmeaResponsibleName || p.project?.leader ? (p.fmeaInfo?.fmeaResponsibleName || p.project?.leader) : <span className="text-gray-400 italic">미입력</span>}
+                  {p.fmeaInfo?.fmeaResponsibleName || p.project?.leader ? (p.fmeaInfo?.fmeaResponsibleName || p.project?.leader) : (
+                    <span 
+                      className="text-red-500 italic cursor-pointer hover:underline font-semibold"
+                      onClick={(e) => { e.stopPropagation(); window.location.href = `/pfmea/register?id=${p.id}`; }}
+                    >
+                      미입력
+                    </span>
+                  )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                  {p.fmeaInfo?.fmeaStartDate || p.project?.startDate ? (p.fmeaInfo?.fmeaStartDate || p.project?.startDate) : <span className="text-gray-400 italic">미입력</span>}
+                  {p.fmeaInfo?.fmeaStartDate || p.project?.startDate ? (p.fmeaInfo?.fmeaStartDate || p.project?.startDate) : (
+                    <span 
+                      className="text-red-500 italic cursor-pointer hover:underline font-semibold"
+                      onClick={(e) => { e.stopPropagation(); window.location.href = `/pfmea/register?id=${p.id}`; }}
+                    >
+                      미입력
+                    </span>
+                  )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                  {p.fmeaInfo?.fmeaRevisionDate ? p.fmeaInfo.fmeaRevisionDate : <span className="text-gray-400 italic">미입력</span>}
+                  {p.fmeaInfo?.fmeaRevisionDate ? p.fmeaInfo.fmeaRevisionDate : (
+                    <span 
+                      className="text-red-500 italic cursor-pointer hover:underline font-semibold"
+                      onClick={(e) => { e.stopPropagation(); window.location.href = `/pfmea/register?id=${p.id}`; }}
+                    >
+                      미입력
+                    </span>
+                  )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">{p.revisionNo || 'Rev.00'}</td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">

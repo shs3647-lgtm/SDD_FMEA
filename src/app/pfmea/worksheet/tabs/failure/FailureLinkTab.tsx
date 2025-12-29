@@ -726,7 +726,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
                 color: viewMode === 'result' ? '#fff' : '#1976d2' 
               }}
             >
-              분석결과 (FE:{new Set(savedLinks.flatMap(l => l.fes?.map((f: any) => f.id) || [])).size} FM:{new Set(savedLinks.map(l => l.fmId)).size} FC:{new Set(savedLinks.flatMap(l => l.fcs?.map((f: any) => f.id) || [])).size})
+              분석결과 (FE:{new Set(savedLinks.map(l => l.feId).filter(Boolean)).size} FM:{new Set(savedLinks.map(l => l.fmId)).size} FC:{new Set(savedLinks.map(l => l.fcId).filter(Boolean)).size})
             </button>
           </div>
           

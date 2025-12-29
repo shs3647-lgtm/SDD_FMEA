@@ -322,11 +322,8 @@ function PFMEARegisterPageContent() {
               </td>
               <td className={headerCell} style={{ width: '8%' }}>FMEA명</td>
               <td className={`${inputCell}`} style={{ width: '17%' }}>
-                <div className="flex items-center gap-1">
-                  <input type="text" value={fmeaInfo.subject} onChange={(e) => updateField('subject', e.target.value)}
-                    className="flex-1 h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="시스템, 서브시스템 및/또는 구성품" />
-                  <button onClick={() => setBizInfoModalOpen(true)} className="text-blue-500 hover:text-blue-700">🔍</button>
-                </div>
+                <input type="text" value={fmeaInfo.subject} onChange={(e) => updateField('subject', e.target.value)}
+                  className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="시스템, 서브시스템 및/또는 구성품" />
               </td>
               <td className={headerCell} style={{ width: '10%' }}>FMEA ID 번호</td>
               <td className={`${inputCell}`} style={{ width: '10%' }}>
@@ -365,8 +362,11 @@ function PFMEARegisterPageContent() {
             <tr className="bg-[#e3f2fd]" style={{ height: '32px' }}>
               <td className={headerCell}>고객 명</td>
               <td className={`${inputCell}`}>
-                <input type="text" value={fmeaInfo.customerName} onChange={(e) => updateField('customerName', e.target.value)}
-                  className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="고객(들) 또는 제품 패밀리 명" />
+                <div className="flex items-center gap-1">
+                  <input type="text" value={fmeaInfo.customerName} onChange={(e) => updateField('customerName', e.target.value)}
+                    className="flex-1 h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="고객(들) 또는 제품 패밀리 명" />
+                  <button onClick={() => setBizInfoModalOpen(true)} className="text-blue-500 hover:text-blue-700" title="고객정보 검색">🔍</button>
+                </div>
               </td>
               <td className={headerCell}>개정 일자</td>
               <td className={`${inputCell}`}>

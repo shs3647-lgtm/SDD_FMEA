@@ -137,6 +137,198 @@ export async function exportFunctionL1(state: WorksheetState, fmeaName: string) 
 }
 
 /**
+ * 2L 메인공정 기능분석 Excel 내보내기 (화면과 1:1 일치)
+ */
+export async function exportFunctionL2(state: WorksheetState, fmeaName: string) {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('2L 메인공정기능', {
+    properties: { tabColor: { argb: '1B5E20' } },
+    views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }]
+  });
+
+  const columns = [
+    { header: '공정NO+공정명', key: 'processName', width: 25 },
+    { header: '메인공정기능', key: 'function', width: 40 },
+    { header: '제품특성', key: 'productChar', width: 25 },
+    { header: '특별특성', key: 'specialChar', width: 15 },
+  ];
+
+  worksheet.columns = columns;
+
+  // 헤더 설정
+  const headerRow = worksheet.getRow(1);
+  columns.forEach((col, idx) => {
+    const cell = headerRow.getCell(idx + 1);
+    cell.value = col.header;
+    applyHeaderStyle(cell, '1B5E20');
+  });
+  headerRow.height = 25;
+
+  // 데이터 작성
+  let rowNum = 2;
+  const processes = state.l2 || [];
+
+  processes.forEach((proc: any) => {
+    if (!proc.name || proc.name.includes('클릭')) return;
+
+    const procStartRow = rowNum;
+    const functions = proc.functions || [];
+    
+    if (functions.length === 0) {
+      const row = worksheet.getRow(rowNum);
+      row.getCell(1).value = `${proc.no}. ${proc.name}`;
+      [1, 2, 3, 4].forEach(i => applyDataStyle(row.getCell(i), rowNum % 2 === 0));
+      rowNum++;
+    } else {
+      functions.forEach((fn: any) => {
+        const fnStartRow = rowNum;
+        const pChars = fn.productChars || [];
+        
+        if (pChars.length === 0) {
+          const row = worksheet.getRow(rowNum);
+          row.getCell(1).value = `${proc.no}. ${proc.name}`;
+          row.getCell(2).value = fn.name;
+          [1, 2, 3, 4].forEach(i => applyDataStyle(row.getCell(i), rowNum % 2 === 0));
+          rowNum++;
+        } else {
+          pChars.forEach((pc: any) => {
+            const row = worksheet.getRow(rowNum);
+            row.getCell(1).value = `${proc.no}. ${proc.name}`;
+            row.getCell(2).value = fn.name;
+            row.getCell(3).value = pc.name;
+            row.getCell(4).value = pc.specialChar || '';
+            [1, 2, 3, 4].forEach(i => applyDataStyle(row.getCell(i), rowNum % 2 === 0));
+            rowNum++;
+          });
+        }
+
+        // 기능 셀 병합
+        if (rowNum > fnStartRow + 1) {
+          worksheet.mergeCells(fnStartRow, 2, rowNum - 1, 2);
+        }
+      });
+    }
+
+    // 공정 셀 병합
+    if (rowNum > procStartRow + 1) {
+      worksheet.mergeCells(procStartRow, 1, rowNum - 1, 1);
+    }
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  saveExcelFile(buffer, `${fmeaName}_2L_메인공정기능`);
+}
+
+/**
+ * 3L 작업요소 기능분석 Excel 내보내기 (화면과 1:1 일치)
+ */
+export async function exportFunctionL3(state: WorksheetState, fmeaName: string) {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('3L 작업요소기능', {
+    properties: { tabColor: { argb: '1B5E20' } },
+    views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }]
+  });
+
+  const columns = [
+    { header: '공정명', key: 'processName', width: 25 },
+    { header: '4M', key: 'm4', width: 10 },
+    { header: '작업요소', key: 'workElem', width: 25 },
+    { header: '작업요소기능', key: 'function', width: 40 },
+    { header: '공정특성', key: 'processChar', width: 25 },
+    { header: '특별특성', key: 'specialChar', width: 15 },
+  ];
+
+  worksheet.columns = columns;
+
+  // 헤더 설정
+  const headerRow = worksheet.getRow(1);
+  columns.forEach((col, idx) => {
+    const cell = headerRow.getCell(idx + 1);
+    cell.value = col.header;
+    applyHeaderStyle(cell, '1B5E20');
+  });
+  headerRow.height = 25;
+
+  // 데이터 작성
+  let rowNum = 2;
+  const processes = state.l2 || [];
+
+  processes.forEach((proc: any) => {
+    if (!proc.name || proc.name.includes('클릭')) return;
+
+    const procStartRow = rowNum;
+    const l3List = proc.l3 || [];
+    
+    if (l3List.length === 0) {
+      const row = worksheet.getRow(rowNum);
+      row.getCell(1).value = `${proc.no}. ${proc.name}`;
+      [1, 2, 3, 4, 5, 6].forEach(i => applyDataStyle(row.getCell(i), rowNum % 2 === 0));
+      rowNum++;
+    } else {
+      l3List.forEach((we: any) => {
+        const weStartRow = rowNum;
+        const functions = we.functions || [];
+        
+        if (functions.length === 0) {
+          const row = worksheet.getRow(rowNum);
+          row.getCell(1).value = `${proc.no}. ${proc.name}`;
+          row.getCell(2).value = we.m4 || '';
+          row.getCell(3).value = we.name;
+          [1, 2, 3, 4, 5, 6].forEach(i => applyDataStyle(row.getCell(i), rowNum % 2 === 0));
+          rowNum++;
+        } else {
+          functions.forEach((fn: any) => {
+            const fnStartRow = rowNum;
+            const pChars = fn.processChars || [];
+            
+            if (pChars.length === 0) {
+              const row = worksheet.getRow(rowNum);
+              row.getCell(1).value = `${proc.no}. ${proc.name}`;
+              row.getCell(2).value = we.m4 || '';
+              row.getCell(3).value = we.name;
+              row.getCell(4).value = fn.name;
+              [1, 2, 3, 4, 5, 6].forEach(i => applyDataStyle(row.getCell(i), rowNum % 2 === 0));
+              rowNum++;
+            } else {
+              pChars.forEach((pc: any) => {
+                const row = worksheet.getRow(rowNum);
+                row.getCell(1).value = `${proc.no}. ${proc.name}`;
+                row.getCell(2).value = we.m4 || '';
+                row.getCell(3).value = we.name;
+                row.getCell(4).value = fn.name;
+                row.getCell(5).value = pc.name;
+                row.getCell(6).value = pc.specialChar || '';
+                [1, 2, 3, 4, 5, 6].forEach(i => applyDataStyle(row.getCell(i), rowNum % 2 === 0));
+                rowNum++;
+              });
+            }
+
+            // 기능 셀 병합
+            if (rowNum > fnStartRow + 1) {
+              worksheet.mergeCells(fnStartRow, 4, rowNum - 1, 4);
+            }
+          });
+        }
+
+        // 작업요소/4M 셀 병합
+        if (rowNum > weStartRow + 1) {
+          worksheet.mergeCells(weStartRow, 2, rowNum - 1, 2);
+          worksheet.mergeCells(weStartRow, 3, rowNum - 1, 3);
+        }
+      });
+    }
+
+    // 공정 셀 병합
+    if (rowNum > procStartRow + 1) {
+      worksheet.mergeCells(procStartRow, 1, rowNum - 1, 1);
+    }
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  saveExcelFile(buffer, `${fmeaName}_3L_작업요소기능`);
+}
+
+/**
  * 전체보기 40열 Excel 내보내기 (1L -> 2L -> 3L 연계 중심)
  */
 export async function exportAllViewExcel(state: WorksheetState, fmeaName: string) {

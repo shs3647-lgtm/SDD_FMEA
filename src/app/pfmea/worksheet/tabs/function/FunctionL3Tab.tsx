@@ -16,6 +16,7 @@ import SpecialCharSelectModal, { SPECIAL_CHAR_DATA } from '@/components/modals/S
 function SpecialCharBadge({ value, onClick }: { value: string; onClick: () => void }) {
   const charData = SPECIAL_CHAR_DATA.find(d => d.symbol === value);
   
+  // 특별특성 미지정 시 (★ 사용 금지 - 현대차 특별특성과 혼동)
   if (!value) {
     return (
       <button
@@ -23,15 +24,16 @@ function SpecialCharBadge({ value, onClick }: { value: string; onClick: () => vo
         style={{
           padding: '4px 8px',
           background: '#f5f5f5',
-          border: '1px dashed #ccc',
+          border: '1px dashed #9e9e9e',
           borderRadius: '4px',
           fontSize: '10px',
-          color: '#999',
+          color: '#9e9e9e',
+          fontWeight: 600,
           cursor: 'pointer',
           width: '100%'
         }}
       >
-        🏷️ 선택
+        - 미지정
       </button>
     );
   }
@@ -50,7 +52,7 @@ function SpecialCharBadge({ value, onClick }: { value: string; onClick: () => vo
         cursor: 'pointer',
         whiteSpace: 'nowrap'
       }}
-      title={charData?.description || value}
+      title={charData?.meaning || value}
     >
       {value}
     </button>
@@ -79,30 +81,46 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
   // 확정 상태 (state.l3Confirmed 사용)
   const isConfirmed = state.l3Confirmed || false;
 
-  // 누락 건수 계산
-  const missingCount = React.useMemo(() => {
-    let count = 0;
+  // 누락 건수 계산 (플레이스홀더 패턴 모두 체크)
+  const isMissing = (name: string | undefined) => {
+    if (!name) return true;
+    const trimmed = name.trim();
+    if (trimmed === '' || trimmed === '-') return true;
+    if (name.includes('클릭')) return true;
+    if (name.includes('추가')) return true;
+    if (name.includes('선택')) return true;
+    if (name.includes('입력')) return true;
+    if (name.includes('필요')) return true;
+    return false;
+  };
+
+  // 항목별 누락 건수 분리 계산 (특별특성은 누락건 제외)
+  const missingCounts = React.useMemo(() => {
+    let functionCount = 0;  // 작업요소기능 누락
+    let charCount = 0;      // 공정특성 누락
+    
     state.l2.forEach(proc => {
       const l3List = proc.l3 || [];
       l3List.forEach(we => {
-        // 작업요소명 체크
-        if (!we.name || we.name === '클릭' || we.name.includes('추가')) count++;
         // 작업요소 기능 체크
         const funcs = we.functions || [];
-        if (funcs.length === 0) count++;
+        if (funcs.length === 0) functionCount++;
         funcs.forEach(f => {
-          if (!f.name || f.name === '클릭' || f.name.includes('추가')) count++;
+          if (isMissing(f.name)) functionCount++;
           // 공정특성 체크
           const chars = f.processChars || [];
-          if (chars.length === 0) count++;
+          if (chars.length === 0) charCount++;
           chars.forEach(c => {
-            if (!c.name || c.name === '클릭' || c.name.includes('추가')) count++;
+            if (isMissing(c.name)) charCount++;
           });
         });
       });
     });
-    return count;
+    return { functionCount, charCount, total: functionCount + charCount };
   }, [state.l2]);
+  
+  // 총 누락 건수 (기존 호환성)
+  const missingCount = missingCounts.total;
 
   // 확정 핸들러
   const handleConfirm = useCallback(() => {
@@ -118,7 +136,8 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
   // 수정 핸들러
   const handleEdit = useCallback(() => {
     setState(prev => ({ ...prev, l3Confirmed: false }));
-  }, [setState]);
+    saveToLocalStorage?.(); // 영구 저장
+  }, [setState, saveToLocalStorage]);
 
   // 작업요소 기능 인라인 편집 핸들러 (더블클릭)
   const handleInlineEditFunction = useCallback((procId: string, l3Id: string, funcId: string, newValue: string) => {
@@ -234,7 +253,8 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
     
     setDirty(true);
     setModal(null);
-  }, [modal, setState, setDirty]);
+    saveToLocalStorage?.(); // 영구 저장
+  }, [modal, setState, setDirty, saveToLocalStorage]);
 
   const handleDelete = useCallback((deletedValues: string[]) => {
     if (!modal) return;
@@ -406,6 +426,11 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
             </th>
             <th colSpan={3} style={{ background: '#5c6bc0', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
               3. 작업요소 기능/공정특성/특별특성
+              {missingCount > 0 && (
+                <span style={{ marginLeft: '8px', background: '#f44336', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '10px' }}>
+                  누락 {missingCount}건
+                </span>
+              )}
             </th>
           </tr>
           
@@ -422,9 +447,19 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
             </th>
             <th style={{ background: '#c5cae9', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
               작업요소기능
+              {missingCounts.functionCount > 0 && (
+                <span style={{ marginLeft: '4px', background: '#f44336', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: '9px' }}>
+                  {missingCounts.functionCount}
+                </span>
+              )}
             </th>
             <th style={{ background: '#c5cae9', border: `1px solid ${COLORS.line}`, borderRight: '3px solid #ff9800', padding: '6px', fontSize: '10px', fontWeight: 700 }}>
               공정특성
+              {missingCounts.charCount > 0 && (
+                <span style={{ marginLeft: '4px', background: '#f44336', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: '9px' }}>
+                  {missingCounts.charCount}
+                </span>
+              )}
             </th>
             <th style={{ background: '#ff9800', color: 'white', border: `1px solid ${COLORS.line}`, borderLeft: 'none', padding: '6px', fontSize: '10px', fontWeight: 700, textAlign: 'center' }}>
               특별특성

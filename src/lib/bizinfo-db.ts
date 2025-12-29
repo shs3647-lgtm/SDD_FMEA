@@ -46,6 +46,24 @@ export function deleteProject(id: string): void {
   localStorage.setItem(BIZINFO_STORAGE_KEYS.projects, JSON.stringify(projects));
 }
 
+// 프로젝트 저장 (신규 또는 수정)
+export function saveProject(project: BizInfoProject): BizInfoProject {
+  const now = new Date().toISOString();
+  const projects = getAllProjects();
+  const existingIndex = projects.findIndex(p => p.id === project.id);
+  
+  if (existingIndex >= 0) {
+    // 수정
+    projects[existingIndex] = { ...project, updatedAt: now };
+  } else {
+    // 신규
+    projects.push({ ...project, createdAt: now, updatedAt: now });
+  }
+  
+  localStorage.setItem(BIZINFO_STORAGE_KEYS.projects, JSON.stringify(projects));
+  return project;
+}
+
 // 샘플 프로젝트 기초정보 생성 (10개)
 export function createSampleProjects(): void {
   if (getAllProjects().length > 0) {

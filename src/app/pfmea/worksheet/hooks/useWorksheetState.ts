@@ -1,6 +1,7 @@
 /**
  * @file useWorksheetState.ts
- * @description FMEA 워크시트 상태 관리 Hook (원자성 데이터 및 분리 탭 반영)
+ * @description FMEA 워크시트 상태 관리 Hook (원자성 DB 스키마 적용)
+ * @version 2.0.0 - 원자성 관계형 DB 구조 적용
  */
 
 'use client';
@@ -16,6 +17,18 @@ import {
   createInitialState, 
   uid 
 } from '../constants';
+import {
+  FMEAWorksheetDB,
+  FlattenedRow,
+  flattenDB,
+  createEmptyDB,
+} from '../schema';
+import {
+  loadWorksheetDB,
+  saveWorksheetDB,
+  migrateToAtomicDB,
+  convertToLegacyFormat,
+} from '../migration';
 
 interface UseWorksheetStateReturn {
   state: WorksheetState;
@@ -42,6 +55,10 @@ interface UseWorksheetStateReturn {
   deleteL2: (l2Id: string) => void;
   deleteL3: (l2Id: string, l3Id: string) => void;
   handleProcessSelect: (selectedProcesses: Array<{ processNo: string; processName: string }>) => void;
+  // 원자성 DB 접근
+  atomicDB: FMEAWorksheetDB | null;
+  flattenedRows: FlattenedRow[];
+  saveAtomicDB: () => void;
 }
 
 export function useWorksheetState(): UseWorksheetStateReturn {
@@ -50,6 +67,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
   const selectedFmeaId = searchParams.get('id');
   
   const [state, setState] = useState<WorksheetState>(createInitialState);
+  const [atomicDB, setAtomicDB] = useState<FMEAWorksheetDB | null>(null);
   const [dirty, setDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState('');
@@ -58,45 +76,99 @@ export function useWorksheetState(): UseWorksheetStateReturn {
   
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // 원자성 DB 저장
+  const saveAtomicDB = useCallback(() => {
+    if (!atomicDB) return;
+    
+    setIsSaving(true);
+    try {
+      // 현재 state를 원자성 DB로 마이그레이션
+      const legacyData = {
+        fmeaId: atomicDB.fmeaId,
+        l1: state.l1,
+        l2: state.l2,
+        failureLinks: (state as any).failureLinks || [],
+        structureConfirmed: (state as any).structureConfirmed || false,
+        l1Confirmed: (state as any).l1Confirmed || false,
+        l2Confirmed: (state as any).l2Confirmed || false,
+        l3Confirmed: (state as any).l3Confirmed || false,
+        failureL1Confirmed: (state as any).failureL1Confirmed || false,
+        failureL2Confirmed: (state as any).failureL2Confirmed || false,
+        failureL3Confirmed: (state as any).failureL3Confirmed || false,
+      };
+      
+      const newAtomicDB = migrateToAtomicDB(legacyData);
+      saveWorksheetDB(newAtomicDB);
+      setAtomicDB(newAtomicDB);
+      
+      console.log('[원자성 DB 저장] 완료:', {
+        fmeaId: newAtomicDB.fmeaId,
+        l2Structures: newAtomicDB.l2Structures.length,
+        l3Structures: newAtomicDB.l3Structures.length,
+        failureModes: newAtomicDB.failureModes.length,
+        failureLinks: newAtomicDB.failureLinks.length,
+      });
+      
+      setDirty(false);
+      setLastSaved(new Date().toLocaleTimeString('ko-KR'));
+    } catch (e) {
+      console.error('[원자성 DB 저장] 오류:', e);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [atomicDB, state]);
+
+  // 기존 호환 저장 함수 (레거시 + 원자성 동시 저장)
   const saveToLocalStorage = useCallback(() => {
-    // currentFmea가 있으면 그 ID 사용, 없으면 selectedFmeaId 사용
     const targetId = selectedFmeaId || currentFmea?.id;
     if (!targetId) {
-      console.warn('[저장] FMEA ID가 없어 저장할 수 없습니다. FMEA를 먼저 선택하세요.');
+      console.warn('[저장] FMEA ID가 없어 저장할 수 없습니다.');
       return;
     }
     
     setIsSaving(true);
     try {
+      // 1. 레거시 형식으로 저장 (하위호환)
       const worksheetData = {
         fmeaId: targetId,
         l1: state.l1,
         l2: state.l2,
-        tab: state.tab, // 현재 탭 저장
-        // 구조분석 확정 상태
+        tab: state.tab,
         structureConfirmed: (state as any).structureConfirmed || false,
-        // 기능분석 확정 상태
         l1Confirmed: (state as any).l1Confirmed || false,
         l2Confirmed: (state as any).l2Confirmed || false,
         l3Confirmed: (state as any).l3Confirmed || false,
-        // 고장분석 확정 상태
         failureL1Confirmed: (state as any).failureL1Confirmed || false,
         failureL2Confirmed: (state as any).failureL2Confirmed || false,
         failureL3Confirmed: (state as any).failureL3Confirmed || false,
-        // 고장연결 데이터 (영구 저장)
         failureLinks: (state as any).failureLinks || [],
         savedAt: new Date().toISOString(),
       };
       localStorage.setItem(`pfmea_worksheet_${targetId}`, JSON.stringify(worksheetData));
-      // 고장형태 저장 확인 로그
+      
+      // 2. 원자성 DB로도 저장
+      const newAtomicDB = migrateToAtomicDB(worksheetData);
+      saveWorksheetDB(newAtomicDB);
+      setAtomicDB(newAtomicDB);
+      
+      // 로그
       const l2WithModes = state.l2.filter((p: any) => (p.failureModes || []).length > 0);
       console.log('[저장] 워크시트 데이터 저장 완료:', targetId, '탭:', state.tab);
-      console.log('[저장] 고장형태 있는 공정 수:', l2WithModes.length, l2WithModes.map((p: any) => `${p.name}: ${(p.failureModes || []).length}개`));
+      console.log('[저장] 원자성 DB:', {
+        l2Structs: newAtomicDB.l2Structures.length,
+        l3Structs: newAtomicDB.l3Structures.length,
+        failureModes: newAtomicDB.failureModes.length,
+        failureLinks: newAtomicDB.failureLinks.length,
+      });
+      
       setDirty(false);
       setLastSaved(new Date().toLocaleTimeString('ko-KR'));
-    } catch (e) { console.error('저장 오류:', e); }
-    finally { setIsSaving(false); }
-  }, [selectedFmeaId, currentFmea?.id, state.l1, state.l2, state.tab, (state as any).failureLinks]);
+    } catch (e) { 
+      console.error('저장 오류:', e); 
+    } finally { 
+      setIsSaving(false); 
+    }
+  }, [selectedFmeaId, currentFmea?.id, state]);
 
   const triggerAutoSave = useCallback(() => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -110,6 +182,8 @@ export function useWorksheetState(): UseWorksheetStateReturn {
 
   // FMEA 목록 로드 및 자동 선택
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     const stored = localStorage.getItem('pfmea-projects');
     if (stored) {
       try {
@@ -117,24 +191,52 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         setFmeaList(projects);
         
         if (selectedFmeaId) {
-          // URL에 ID가 있으면 해당 FMEA 선택
           const found = projects.find(p => p.id === selectedFmeaId);
           if (found) setCurrentFmea(found);
         } else if (projects.length > 0) {
-          // URL에 ID가 없으면 첫 번째 FMEA 자동 선택 및 리다이렉트
           setCurrentFmea(projects[0]);
           router.push(`/pfmea/worksheet?id=${projects[0].id}`);
         }
-      } catch (e) { console.error('FMEA 목록 로드 실패:', e); }
+      } catch (e) { 
+        console.error('FMEA 목록 로드 실패:', e); 
+      }
     }
   }, [selectedFmeaId, router]);
 
-  // 워크시트 데이터 로드 (FMEA ID 변경 시)
+  // 워크시트 데이터 로드 (FMEA ID 변경 시) - 원자성 DB 우선
   useEffect(() => {
     if (typeof window === 'undefined' || !selectedFmeaId) return;
     
     console.log('[워크시트] 데이터 로드 시작:', selectedFmeaId);
-    // 키 명칭 통일 시도: pfmea_worksheet_... 와 fmea-worksheet-... 둘 다 확인
+    
+    // 원자성 DB 로드 시도
+    const loadedDB = loadWorksheetDB(selectedFmeaId);
+    
+    if (loadedDB && loadedDB.l2Structures.length > 0) {
+      console.log('[워크시트] 원자성 DB 발견:', loadedDB);
+      setAtomicDB(loadedDB);
+      
+      // 원자성 DB를 레거시 형식으로 변환하여 state에 적용
+      const legacy = convertToLegacyFormat(loadedDB);
+      
+      setState(prev => ({ 
+        ...prev, 
+        l1: legacy.l1 as any, 
+        l2: legacy.l2 as any,
+        failureLinks: legacy.failureLinks || [],
+        structureConfirmed: legacy.structureConfirmed || false,
+        l1Confirmed: legacy.l1Confirmed || false,
+        l2Confirmed: legacy.l2Confirmed || false,
+        l3Confirmed: legacy.l3Confirmed || false,
+        failureL1Confirmed: legacy.failureL1Confirmed || false,
+        failureL2Confirmed: legacy.failureL2Confirmed || false,
+        failureL3Confirmed: legacy.failureL3Confirmed || false,
+      }));
+      setDirty(false);
+      return;
+    }
+    
+    // 레거시 데이터 로드 시도
     const keys = [`pfmea_worksheet_${selectedFmeaId}`, `fmea-worksheet-${selectedFmeaId}`];
     let savedData = null;
     for (const key of keys) {
@@ -145,34 +247,73 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
-        console.log('[워크시트] 저장된 데이터 발견:', parsed);
+        console.log('[워크시트] 레거시 데이터 발견:', parsed);
         
         if (parsed.l1 && parsed.l2) {
-          // [데이터 마이그레이션 및 방어 코드]
+          // 마이그레이션 및 방어 코드
           const migratedL1 = {
             ...parsed.l1,
             types: parsed.l1.types || []
           };
           
-          const migratedL2 = parsed.l2.map((p: any) => ({
-            ...p,
-            functions: p.functions || [],
-            productChars: p.productChars || [],
-            failureModes: p.failureModes || [], 
-            l3: (p.l3 || []).map((we: any) => ({
-              ...we,
-              m4: we.m4 === 'MT' ? 'IM' : (we.m4 || ''),
-              functions: we.functions || [],
-              processChars: we.processChars || [],
-              failureCauses: we.failureCauses || [] 
-            }))
-          }));
+          const isEmptyValue = (val: string | undefined | null): boolean => {
+            if (!val) return true;
+            const trimmed = String(val).trim();
+            return trimmed === '' || trimmed === '-';
+          };
+          
+          const migratedL2 = parsed.l2
+            .filter((p: any) => {
+              const hasName = !isEmptyValue(p.name);
+              const hasL3 = (p.l3 || []).length > 0;
+              const hasFunctions = (p.functions || []).length > 0;
+              return hasName || hasL3 || hasFunctions;
+            })
+            .map((p: any) => ({
+              ...p,
+              functions: p.functions || [],
+              productChars: p.productChars || [],
+              failureModes: p.failureModes || [], 
+              l3: (p.l3 || [])
+                .filter((we: any) => {
+                  const hasName = !isEmptyValue(we.name);
+                  const hasM4 = !isEmptyValue(we.m4);
+                  const hasFunctions = (we.functions || []).length > 0;
+                  return hasName || hasM4 || hasFunctions;
+                })
+                .map((we: any) => ({
+                  ...we,
+                  m4: we.m4 === 'MT' ? 'IM' : (we.m4 || ''),
+                  functions: we.functions || [],
+                  processChars: we.processChars || [],
+                  failureCauses: we.failureCauses || [] 
+                }))
+            }));
+          
+          console.log('[데이터 정리] 원본 공정 수:', parsed.l2.length, '→ 정리 후:', migratedL2.length);
+
+          // 원자성 DB로 마이그레이션
+          const atomicData = migrateToAtomicDB({
+            fmeaId: selectedFmeaId,
+            l1: migratedL1,
+            l2: migratedL2,
+            failureLinks: parsed.failureLinks || [],
+            structureConfirmed: parsed.structureConfirmed,
+            l1Confirmed: parsed.l1Confirmed,
+            l2Confirmed: parsed.l2Confirmed,
+            l3Confirmed: parsed.l3Confirmed,
+            failureL1Confirmed: parsed.failureL1Confirmed,
+            failureL2Confirmed: parsed.failureL2Confirmed,
+            failureL3Confirmed: parsed.failureL3Confirmed,
+          });
+          setAtomicDB(atomicData);
+          saveWorksheetDB(atomicData);
 
           setState(prev => ({ 
             ...prev, 
             l1: migratedL1, 
             l2: migratedL2,
-            failureLinks: parsed.failureLinks || [], // 고장연결 데이터 복구
+            failureLinks: parsed.failureLinks || [],
             tab: parsed.tab || prev.tab,
             structureConfirmed: parsed.structureConfirmed || false,
             l1Confirmed: parsed.l1Confirmed || false,
@@ -189,7 +330,9 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       }
     } else {
       console.log('[워크시트] 저장된 데이터 없음, 초기화 진행');
-      // 데이터가 아예 없는 경우 기본 틀 생성
+      const emptyDB = createEmptyDB(selectedFmeaId);
+      setAtomicDB(emptyDB);
+      
       setState(prev => ({
         ...prev,
         l1: { id: uid(), name: '', types: [], failureScopes: [] },
@@ -207,15 +350,20 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     if (e.key === 'Enter') { e.preventDefault(); saveToLocalStorage(); }
   }, [saveToLocalStorage]);
 
-  const handleInputBlur = useCallback(() => { if (dirty) saveToLocalStorage(); }, [dirty, saveToLocalStorage]);
+  const handleInputBlur = useCallback(() => { 
+    if (dirty) saveToLocalStorage(); 
+  }, [dirty, saveToLocalStorage]);
 
   const handleFmeaChange = useCallback((fmeaId: string) => {
     if (fmeaId === '__NEW__') {
       setState(createInitialState());
+      setAtomicDB(null);
       setCurrentFmea(null);
       setDirty(false);
       router.push('/pfmea/worksheet');
-    } else { router.push(`/pfmea/worksheet?id=${fmeaId}`); }
+    } else { 
+      router.push(`/pfmea/worksheet?id=${fmeaId}`); 
+    }
   }, [router]);
 
   const handleSelect = useCallback((type: 'L1' | 'L2' | 'L3', id: string | null) => {
@@ -233,7 +381,10 @@ export function useWorksheetState(): UseWorksheetStateReturn {
   }, [state.l2.length]);
 
   const addL3 = useCallback((l2Id: string) => {
-    const newElement: WorkElement = { id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10, functions: [], processChars: [] };
+    const newElement: WorkElement = { 
+      id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10, 
+      functions: [], processChars: [] 
+    };
     setState(prev => ({
       ...prev,
       l2: prev.l2.map(p => p.id === l2Id ? { ...p, l3: [...p.l3, newElement] } : p)
@@ -242,7 +393,10 @@ export function useWorksheetState(): UseWorksheetStateReturn {
   }, []);
 
   const deleteL2 = useCallback((l2Id: string) => {
-    if (state.l2.length <= 1) { alert('최소 1개의 공정이 필요합니다.'); return; }
+    if (state.l2.length <= 1) { 
+      alert('최소 1개의 공정이 필요합니다.'); 
+      return; 
+    }
     setState(prev => ({ ...prev, l2: prev.l2.filter(p => p.id !== l2Id) }));
     setDirty(true);
   }, [state.l2.length]);
@@ -252,7 +406,10 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       ...prev,
       l2: prev.l2.map(p => {
         if (p.id === l2Id) {
-          if (p.l3.length <= 1) { alert('최소 1개의 작업요소가 필요합니다.'); return p; }
+          if (p.l3.length <= 1) { 
+            alert('최소 1개의 작업요소가 필요합니다.'); 
+            return p; 
+          }
           return { ...p, l3: p.l3.filter(w => w.id !== l3Id) };
         }
         return p;
@@ -261,29 +418,17 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     setDirty(true);
   }, []);
 
-  /**
-   * 공정 선택 핸들러 - 완전히 재작성 (TDD Case 1)
-   * 
-   * 동작:
-   * 1. 선택된 공정만 유지 (선택 해제된 공정 + 하위 작업요소 완전 삭제)
-   * 2. 새로 선택된 공정 추가 (기존에 없던 것만)
-   * 3. 최소 1개 공정 보장
-   */
   const handleProcessSelect = useCallback((selectedProcesses: Array<{ processNo: string; processName: string }>) => {
     const selectedNames = new Set(selectedProcesses.map(p => p.processName));
     
     setState(prev => {
-      // 1. 기존 공정 중 선택된 것만 유지 (선택 해제된 공정은 하위 l3 포함 삭제)
       const keptProcesses = prev.l2.filter(p => {
-        // placeholder 공정은 무조건 제거
         if (!p.name || p.name.includes('클릭') || p.name.includes('선택')) {
           return false;
         }
-        // 선택 목록에 있으면 유지
         return selectedNames.has(p.name);
       });
       
-      // 2. 새로 추가할 공정 (기존에 없던 것만)
       const existingNames = new Set(keptProcesses.map(p => p.name));
       const newProcesses: Process[] = selectedProcesses
         .filter(p => !existingNames.has(p.processName))
@@ -297,10 +442,8 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           l3: [{ id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10, functions: [], processChars: [] }]
         }));
       
-      // 3. 결과 병합
       const result = [...keptProcesses, ...newProcesses];
       
-      // 4. 최소 1개 공정 보장
       if (result.length === 0) {
         return {
           ...prev,
@@ -321,18 +464,20 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     setDirty(true);
   }, []);
 
-  // ============ 평탄화된 행 데이터 (구조분석용 - L2/L3 기준) ============
+  // 원자성 DB 기반 평탄화된 행 (고장연결 결과용)
+  const flattenedRows = useMemo(() => {
+    if (!atomicDB) return [];
+    return flattenDB(atomicDB);
+  }, [atomicDB]);
+
+  // 레거시 평탄화 (기존 화면 호환)
   const rows = useMemo(() => {
     const result: FlatRow[] = [];
-    
-    // L2/L3 트리 평탄화
     const l2Data = state.l2 || [];
     if (l2Data.length === 0) return result;
 
-    // 고장연결 데이터가 있으면 그것을 기반으로 행 생성 (1:1 매칭 보장)
     const failureLinks = (state as any).failureLinks || [];
     if (failureLinks.length > 0) {
-      // FM별 그룹핑
       const fmGroups = new Map<string, { fmId: string; fmText: string; fmProcess: string; fes: any[]; fcs: any[] }>();
       failureLinks.forEach((link: any) => {
         if (!fmGroups.has(link.fmId)) {
@@ -350,36 +495,44 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       fmGroups.forEach((group) => {
         const maxRows = Math.max(group.fes.length, group.fcs.length, 1);
         for (let i = 0; i < maxRows; i++) {
-        const fe = group.fes[i] || null;
-        const fc = group.fcs[i] || null;
-        
-        // 1L 정보 찾기 (기능, 구분)
-        let l1Type = fe?.scope || '';
-        let l1Func = '';
-        let l1Req = fe?.text || '';
+          const fe = group.fes[i] || null;
+          const fc = group.fcs[i] || null;
+          
+          let l1TypeId = '';
+          let l1Type = fe?.scope || '';
+          let l1FuncId = '';
+          let l1Func = '';
+          let l1ReqId = fe?.id || '';
+          let l1Req = fe?.text || '';
 
-        if (fe?.id) {
-          state.l1.types.forEach(t => {
-            t.functions.forEach(f => {
-              if (f.requirements.some(r => r.id === fe.id)) {
-                l1Type = t.name;
-                l1Func = f.name;
-              }
+          if (fe?.id) {
+            state.l1.types.forEach(t => {
+              t.functions.forEach(f => {
+                const matchingReq = f.requirements.find(r => r.id === fe.id);
+                if (matchingReq) {
+                  l1TypeId = t.id;
+                  l1Type = t.name;
+                  l1FuncId = f.id;
+                  l1Func = f.name;
+                  l1ReqId = matchingReq.id;
+                }
+              });
             });
-          });
-        }
-        
-        // 공정 정보 찾기
-        const proc = l2Data.find(p => p.name === group.fmProcess || p.name.includes(group.fmProcess));
-        
-        result.push({
-          l1Id: state.l1.id,
-          l1Name: state.l1.name,
-          l1Type: l1Type,
-          l1Function: l1Func,
-          l1Requirement: l1Req,
-          l1FailureEffect: fe?.text || '',
-          l1Severity: fe?.severity?.toString() || '',
+          }
+          
+          const proc = l2Data.find(p => p.name === group.fmProcess || p.name.includes(group.fmProcess));
+          
+          result.push({
+            l1Id: state.l1.id,
+            l1Name: state.l1.name,
+            l1TypeId: l1TypeId,
+            l1Type: l1Type,
+            l1FunctionId: l1FuncId,
+            l1Function: l1Func,
+            l1RequirementId: l1ReqId,
+            l1Requirement: l1Req,
+            l1FailureEffect: fe?.text || '',
+            l1Severity: fe?.severity?.toString() || '',
             l2Id: proc?.id || '',
             l2No: proc?.no || '',
             l2Name: proc?.name || group.fmProcess,
@@ -398,9 +551,8 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       return result;
     }
 
-    // 고장연결이 없으면 기존 구조분석 방식 (L2/L3 기준)
+    // 기존 구조분석 방식
     let rowIdx = 0;
-    // ... 기존 로직 ...
     const l1Types = state.l1?.types || [];
     const l1FlatData: { typeId: string; type: string; funcId: string; func: string; reqId: string; req: string }[] = [];
     l1Types.forEach(type => {
@@ -424,9 +576,12 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     l2Data.forEach(proc => {
       const l3Data = proc.l3 || [];
       if (l3Data.length === 0) {
-        const l1Item = l1FlatData[rowIdx % Math.max(l1FlatData.length, 1)] || { type: '', func: '', req: '' };
+        const l1Item = l1FlatData[rowIdx % Math.max(l1FlatData.length, 1)] || { typeId: '', type: '', funcId: '', func: '', reqId: '', req: '' };
         result.push({
-          l1Id: state.l1.id, l1Name: state.l1.name, l1Type: l1Item.type, l1Function: l1Item.func, l1Requirement: l1Item.req,
+          l1Id: state.l1.id, l1Name: state.l1.name,
+          l1TypeId: l1Item.typeId, l1Type: l1Item.type,
+          l1FunctionId: l1Item.funcId, l1Function: l1Item.func,
+          l1RequirementId: l1Item.reqId, l1Requirement: l1Item.req,
           l1FailureEffect: '', l1Severity: '',
           l2Id: proc.id, l2No: proc.no, l2Name: proc.name, l2Functions: proc.functions || [],
           l2ProductChars: (proc.functions || []).flatMap((f: any) => f.productChars || []),
@@ -436,9 +591,12 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         rowIdx++;
       } else {
         l3Data.forEach(we => {
-          const l1Item = l1FlatData[rowIdx % Math.max(l1FlatData.length, 1)] || { type: '', func: '', req: '' };
+          const l1Item = l1FlatData[rowIdx % Math.max(l1FlatData.length, 1)] || { typeId: '', type: '', funcId: '', func: '', reqId: '', req: '' };
           result.push({
-            l1Id: state.l1.id, l1Name: state.l1.name, l1Type: l1Item.type, l1Function: l1Item.func, l1Requirement: l1Item.req,
+            l1Id: state.l1.id, l1Name: state.l1.name,
+            l1TypeId: l1Item.typeId, l1Type: l1Item.type,
+            l1FunctionId: l1Item.funcId, l1Function: l1Item.func,
+            l1RequirementId: l1Item.reqId, l1Requirement: l1Item.req,
             l1FailureEffect: '', l1Severity: '',
             l2Id: proc.id, l2No: proc.no, l2Name: proc.name, l2Functions: proc.functions || [],
             l2ProductChars: (proc.functions || []).flatMap((f: any) => f.productChars || []),
@@ -481,5 +639,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     state, setState, dirty, setDirty, isSaving, lastSaved, fmeaList, currentFmea, selectedFmeaId, handleFmeaChange,
     rows, l1Spans, l1TypeSpans, l1FuncSpans, l2Spans,
     saveToLocalStorage, handleInputKeyDown, handleInputBlur, handleSelect, addL2, addL3, deleteL2, deleteL3, handleProcessSelect,
+    // 원자성 DB
+    atomicDB, flattenedRows, saveAtomicDB,
   };
 }

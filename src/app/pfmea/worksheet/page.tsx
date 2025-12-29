@@ -1524,7 +1524,7 @@ function RiskTabFull(props: any) {
       <tbody>
         {rows.map((row: any, idx: number) => (
           <tr key={`risk-${idx}-${row.l3Id}`} style={{ height: '25px' }}>
-            <RiskRow row={row} idx={idx} state={state} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} />
+            <RiskRow row={row} />
           </tr>
         ))}
       </tbody>
@@ -1541,7 +1541,7 @@ function OptTabFull(props: any) {
       <tbody>
         {rows.map((row: any, idx: number) => (
           <tr key={`opt-${idx}-${row.l3Id}`} style={{ height: '25px' }}>
-            <OptRow row={row} idx={idx} state={state} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} />
+            <OptRow row={row} />
           </tr>
         ))}
       </tbody>
@@ -2044,7 +2044,7 @@ function EvalTabRenderer({ tab, rows, state, l1Spans, l1TypeSpans, l1FuncSpans, 
     console.log(`총 FM:${totalFM}, FE:${totalFE}, FC:${totalFC}, 행:${allRows.length}`);
     
     const handleExportExcel = () => {
-      exportAllViewExcel(state, failureLinks, (state as any).fmeaName || 'PFMEA');
+      exportAllViewExcel(state, (state as any).fmeaName || 'PFMEA');
     };
     
     return (

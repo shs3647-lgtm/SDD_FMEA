@@ -2,6 +2,19 @@
  * @file columnConfig.ts
  * @description 40열 FMEA 컬럼 정의 (공용)
  * 구조분석(4) + 기능분석(8) + 고장분석(6) + 리스크분석(8) + 최적화(14) = 40열
+ * 
+ * 약어 정의 (참조: terminology.ts):
+ * - 4M: Man(MN,사람) / Machine(MC,설비) / In-Material(IM,부자재) / Environment(EN,환경)
+ * - 구분: Your Plant(자사) / Ship to Plant(고객사) / User(사용자) ※EU 사용금지
+ * - FE: Failure Effect (고장영향)
+ * - FM: Failure Mode (고장형태)
+ * - FC: Failure Cause (고장원인)
+ * - PC: Prevention Control (예방관리)
+ * - DC: Detection Control (검출관리)
+ * - S/O/D: Severity/Occurrence/Detection (심각도/발생도/검출도)
+ * - AP: Action Priority (조치우선순위)
+ * - RPN: Risk Priority Number (위험우선순위)
+ * - SC: Special Characteristic (특별특성)
  */
 
 // 컬럼 타입 정의
@@ -34,10 +47,10 @@ export interface StepGroup {
 
 // 구조분석 2단계 (4열)
 export const STRUCTURE_COLUMNS: ColumnDef[] = [
-  { id: 'l1Name', label: '완제품 공정명', width: '80px', step: 2 },
-  { id: 'l2Name', label: 'NO+공정명', width: '90px', step: 2 },
-  { id: 'm4', label: '4M', width: '25px', step: 2, align: 'center' },
-  { id: 'l3Name', label: '작업요소', width: '80px', step: 2 },
+  { id: 'l1Name', label: '완제품 공정명', width: '80px', step: 2 },  // L1 Structure
+  { id: 'l2Name', label: 'NO+공정명', width: '90px', step: 2 },      // L2 Structure (공정번호+공정명)
+  { id: 'm4', label: '4M', width: '25px', step: 2, align: 'center' }, // 4M: MN(Man)/MC(Machine)/IM(Input Material)/EN(Environment)
+  { id: 'l3Name', label: '작업요소', width: '80px', step: 2 },       // L3 Structure
 ];
 
 // 기능분석 3단계 (8열)

@@ -43,7 +43,11 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
     effectId?: string;
     reqId?: string;
     title: string; 
-    itemCode: string 
+    itemCode: string;
+    // 상위 항목 정보 (모달에 표시)
+    parentTypeName?: string;   // 구분 (Your Plant / Ship to Plant / User)
+    parentReqName?: string;    // 요구사항
+    parentFuncName?: string;   // 완제품 기능
   } | null>(null);
 
   // SOD 모달 상태
@@ -57,21 +61,29 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
   const isConfirmed = state.failureL1Confirmed || false;
 
   // 누락 건수 계산 (state.l1.failureScopes 사용)
-  const missingCount = useMemo(() => {
-    let count = 0;
+  // 항목별 누락 건수 분리 계산 - 심각도는 선택사항이므로 누락건에서 제외
+  const missingCounts = useMemo(() => {
+    let effectCount = 0;    // 고장영향 누락 (필수)
+    // 심각도는 필수 아님 - 누락건에서 제외
+    
     const effects = state.l1?.failureScopes || [];
-    // 요구사항은 있는데 고장영향이 없는 경우
     const types = state.l1?.types || [];
+    
     types.forEach((type: any) => {
       (type.functions || []).forEach((func: any) => {
         (func.requirements || []).forEach((req: any) => {
-          const hasEffect = effects.some((e: any) => e.reqId === req.id && e.effect);
-          if (!hasEffect) count++;
+          const effect = effects.find((e: any) => e.reqId === req.id);
+          // 고장영향 체크 (필수)
+          if (!effect || !effect.effect) effectCount++;
+          // 심각도는 선택사항이므로 체크하지 않음
         });
       });
     });
-    return count;
+    return { effectCount, total: effectCount };
   }, [state.l1?.types, state.l1?.failureScopes]);
+  
+  // 총 누락 건수 (고장영향만 카운트)
+  const missingCount = missingCounts.total;
 
   // 확정 핸들러
   const handleConfirm = useCallback(() => {
@@ -285,6 +297,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
       showType: boolean;
       typeRowSpan: number;
       typeName: string;
+      funcName: string; // 완제품기능 추가
       feNo: string; // 번호 추가 (Y1, S1, U1...)
       showReq: boolean;
       reqRowSpan: number;
@@ -323,6 +336,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
             showType: isFirstInType,
             typeRowSpan: group.rowSpan,
             typeName: group.typeName,
+            funcName: reqRow.funcName, // 완제품기능 추가
             feNo, // 번호 추가
             showReq: isFirstInReq,
             reqRowSpan: reqRow.totalRowSpan,
@@ -353,26 +367,18 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
       )}
 
       <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-        <colgroup>
-          <col style={{ width: '180px' }} />
-          <col style={{ width: '100px' }} />
-          <col style={{ width: '50px' }} />
-          <col style={{ width: '180px' }} />
-          <col style={{ width: '350px' }} />
-          <col style={{ width: '60px' }} />
-          <col style={{ width: '50px' }} />
-        </colgroup>
+        <colgroup><col style={{ width: '15%' }} /><col style={{ width: '10%' }} /><col style={{ width: '22%' }} /><col style={{ width: '13%' }} /><col /><col style={{ width: '4%' }} /></colgroup>
         
         {/* 3행 헤더 구조 */}
         <thead>
           <tr>
-            <th style={{ background: STEP_COLORS.structure.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
+            <th style={{ background: STEP_COLORS.structure.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '10px 5px', fontSize: '14px', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
               P-FMEA 구조 분석(2단계)
             </th>
-            <th colSpan={2} style={{ background: STEP_COLORS.function.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
+            <th colSpan={3} style={{ background: STEP_COLORS.function.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '10px 5px', fontSize: '14px', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
               P-FMEA 기능 분석(3단계)
             </th>
-            <th colSpan={3} style={{ background: STEP_COLORS.failure.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
+            <th colSpan={2} style={{ background: STEP_COLORS.failure.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '10px 5px', fontSize: '14px', fontWeight: 900, textAlign: 'center', whiteSpace: 'nowrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px' }}>
                 <span>4단계 : 1L 고장영향(FE) 분석</span>
                 <div style={{ display: 'flex', gap: '6px' }}>
@@ -394,11 +400,16 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
             <th style={{ background: STEP_COLORS.structure.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
               1. 완제품 공정명
             </th>
-            <th colSpan={2} style={{ background: STEP_COLORS.function.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
+            <th colSpan={3} style={{ background: STEP_COLORS.function.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
               1. 완제품 공정기능/요구사항
             </th>
-            <th colSpan={4} style={{ background: STEP_COLORS.failure.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
+            <th colSpan={2} style={{ background: STEP_COLORS.failure.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
               1. 고장영향(FE) / 심각도(S)
+              {missingCount > 0 && (
+                <span style={{ marginLeft: '8px', background: '#fff', color: '#c62828', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 700 }}>
+                  누락 {missingCount}건
+                </span>
+              )}
             </th>
           </tr>
           
@@ -410,19 +421,21 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
               구분
             </th>
             <th style={{ background: STEP_COLORS.function.header3, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
-              No
+              완제품기능
             </th>
             <th style={{ background: STEP_COLORS.function.header3, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
               요구사항
             </th>
             <th style={{ background: STEP_COLORS.failure.header3, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
               고장영향(FE)
+              {missingCounts.effectCount > 0 && (
+                <span style={{ marginLeft: '4px', background: '#fff', color: '#c62828', padding: '1px 5px', borderRadius: '8px', fontSize: '9px', fontWeight: 700 }}>
+                  {missingCounts.effectCount}
+                </span>
+              )}
             </th>
             <th style={{ background: STEP_COLORS.failure.header3, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
               S
-            </th>
-            <th style={{ background: STEP_COLORS.failure.header3, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
-              삭제
             </th>
           </tr>
         </thead>
@@ -430,7 +443,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
         <tbody>
           {renderRows.length === 0 ? (
             <tr>
-              <td colSpan={7} style={{ border: `1px solid ${COLORS.line}`, padding: '30px', textAlign: 'center', color: '#999', fontSize: '12px' }}>
+              <td colSpan={6} style={{ border: `1px solid ${COLORS.line}`, padding: '30px', textAlign: 'center', color: '#999', fontSize: '12px' }}>
                 기능분석(L1)에서 요구사항을 입력하면 여기에 자동으로 표시됩니다.
               </td>
             </tr>
@@ -443,12 +456,12 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                     rowSpan={row.productRowSpan} 
                     style={{ 
                       border: `1px solid ${COLORS.line}`, 
-                      padding: '10px', 
+                      padding: '2px 4px', 
                       textAlign: 'center', 
                       background: STEP_COLORS.structure.cell, 
                       fontWeight: 700, 
                       verticalAlign: 'middle',
-                      fontSize: '12px'
+                      fontSize: '10px'
                     }}
                   >
                     {state.l1.name || '(구조분석에서 입력)'}
@@ -461,12 +474,12 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                     rowSpan={row.typeRowSpan} 
                     style={{ 
                       border: `1px solid ${COLORS.line}`, 
-                      padding: '8px', 
+                      padding: '2px 4px', 
                       textAlign: 'center', 
                       background: row.typeName === 'Your Plant' ? '#ffe0b2' : row.typeName === 'Ship to Plant' ? '#ffcc80' : row.typeName === 'User' ? '#e1bee7' : STEP_COLORS.function.cell, 
                       fontWeight: 600, 
                       verticalAlign: 'middle',
-                      fontSize: '11px',
+                      fontSize: '10px',
                       color: row.typeName === 'Your Plant' ? '#1565c0' : row.typeName === 'Ship to Plant' ? '#e65100' : row.typeName === 'User' ? '#7b1fa2' : '#333'
                     }}
                   >
@@ -474,19 +487,22 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                   </td>
                 )}
                 
-                {/* 번호 (Y1, S1, U1...) */}
+                {/* 완제품기능 (기능분석에서 연결) */}
                 <td 
                   style={{ 
                     border: `1px solid ${COLORS.line}`, 
-                    padding: '4px', 
-                    textAlign: 'center', 
-                    background: row.typeName === 'Your Plant' ? '#e3f2fd' : row.typeName === 'Ship to Plant' ? '#fff3e0' : row.typeName === 'User' ? '#f3e5f5' : '#fff', 
-                    fontWeight: 700, 
-                    fontSize: '11px',
-                    color: row.typeName === 'Your Plant' ? '#1565c0' : row.typeName === 'Ship to Plant' ? '#e65100' : row.typeName === 'User' ? '#7b1fa2' : '#333'
+                    padding: '2px 4px', 
+                    textAlign: 'left', 
+                    background: STEP_COLORS.function.cell, 
+                    fontSize: '10px',
+                    verticalAlign: 'middle',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
                   }}
+                  title={row.funcName}
                 >
-                  {row.feNo || '-'}
+                  {row.funcName || '-'}
                 </td>
                 
                 {/* 요구사항 (자동) */}
@@ -495,11 +511,11 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                     rowSpan={row.reqRowSpan} 
                     style={{ 
                       border: `1px solid ${COLORS.line}`, 
-                      padding: '8px', 
+                      padding: '2px 4px', 
                       background: STEP_COLORS.function.cell, 
                       verticalAlign: 'middle',
                       textAlign: 'center',
-                      fontSize: '11px'
+                      fontSize: '10px'
                     }}
                   >
                     {row.reqName}
@@ -517,7 +533,11 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                       effectId: row.effectId || undefined,
                       reqId: row.reqId,
                       title: '고장영향(FE) 선택', 
-                      itemCode: 'FE2' 
+                      itemCode: 'FE2',
+                      // 상위 항목 전달
+                      parentTypeName: row.typeName,
+                      parentReqName: row.reqName,
+                      parentFuncName: row.funcName
                     })} 
                   />
                 </td>
@@ -547,30 +567,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                       {row.severity || '🔍'}
                     </span>
                   ) : (
-                    <span style={{ color: '#999', fontSize: '10px' }}>-</span>
-                  )}
-                </td>
-                
-                {/* 편집 (삭제) */}
-                <td style={{ border: `1px solid ${COLORS.line}`, padding: '4px', textAlign: 'center', background: '#fff' }}>
-                  {row.effectId ? (
-                    <button
-                      onClick={() => deleteRow(row.effectId)}
-                      style={{
-                        padding: '2px 6px',
-                        background: '#f44336',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '3px',
-                        fontSize: '10px',
-                        cursor: 'pointer'
-                      }}
-                      title="행 삭제"
-                    >
-                      ✕
-                    </button>
-                  ) : (
-                    <span style={{ color: '#ccc' }}>-</span>
+                    <span style={{ color: '#c62828', fontSize: '10px', fontWeight: 600 }}>-</span>
                   )}
                 </td>
               </tr>
@@ -589,6 +586,9 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
           itemCode={modal.itemCode}
           singleSelect={false}
           currentValues={getCurrentValues()}
+          parentTypeName={modal.parentTypeName}
+          parentFunction={modal.parentFuncName}
+          parentReqName={modal.parentReqName}
         />
       )}
 

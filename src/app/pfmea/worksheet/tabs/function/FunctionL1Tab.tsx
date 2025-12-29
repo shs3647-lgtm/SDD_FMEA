@@ -28,27 +28,51 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
   // 확정 상태는 state에서 관리 (localStorage에 저장됨)
   const isConfirmed = (state as any).l1Confirmed || false;
 
-  // 누락 건수 계산: 구분, 기능, 요구사항 중 빈 항목 카운트
-  const missingCount = (() => {
-    let count = 0;
+  // 플레이스홀더 패턴 체크 함수
+  const isMissing = (name: string | undefined) => {
+    if (!name) return true;
+    const trimmed = name.trim();
+    if (trimmed === '' || trimmed === '-') return true;
+    if (name.includes('클릭')) return true;
+    if (name.includes('추가')) return true;
+    if (name.includes('선택')) return true;
+    if (name.includes('입력')) return true;
+    if (name.includes('필요')) return true;
+    return false;
+  };
+
+  // 항목별 누락 건수 분리 계산
+  const missingCounts = React.useMemo(() => {
+    let functionCount = 0;     // 완제품기능 누락
+    let requirementCount = 0;  // 요구사항 누락
+    
     // 구분이 없으면 누락
     if (state.l1.types.length === 0) {
-      count += 1; // 최소 1개 구분 필요
+      functionCount += 1;
     }
     state.l1.types.forEach(t => {
       // 기능이 없으면 누락
       if (t.functions.length === 0) {
-        count += 1;
+        functionCount += 1;
       }
       t.functions.forEach(f => {
+        // 기능 이름 체크
+        if (isMissing(f.name)) functionCount++;
         // 요구사항이 없으면 누락
         if (!f.requirements || f.requirements.length === 0) {
-          count += 1;
+          requirementCount += 1;
         }
+        // 요구사항 이름 체크
+        (f.requirements || []).forEach(r => {
+          if (isMissing(r.name)) requirementCount++;
+        });
       });
     });
-    return count;
-  })();
+    return { functionCount, requirementCount, total: functionCount + requirementCount };
+  }, [state.l1.types]);
+  
+  // 총 누락 건수 (기존 호환성)
+  const missingCount = missingCounts.total;
 
   // 확정 핸들러
   const handleConfirm = () => {
@@ -58,6 +82,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
     }
     setState((prev: any) => ({ ...prev, l1Confirmed: true }));
     setDirty(true);
+    saveToLocalStorage?.(); // 영구 저장
     alert('✅ 완제품 기능분석이 확정되었습니다.');
   };
 
@@ -65,6 +90,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
   const handleEdit = () => {
     setState((prev: any) => ({ ...prev, l1Confirmed: false }));
     setDirty(true);
+    saveToLocalStorage?.(); // 영구 저장
     alert('🔓 수정 모드로 전환되었습니다.');
   };
 
@@ -93,7 +119,8 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
       }
     }));
     setDirty(true);
-  }, [setState, setDirty]);
+    saveToLocalStorage?.(); // 영구 저장
+  }, [setState, setDirty, saveToLocalStorage]);
 
   // 인라인 편집 핸들러 - 기능 (더블클릭)
   const handleInlineEditFunction = useCallback((typeId: string, funcId: string, newValue: string) => {
@@ -114,7 +141,8 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
       }
     }));
     setDirty(true);
-  }, [setState, setDirty]);
+    saveToLocalStorage?.(); // 영구 저장
+  }, [setState, setDirty, saveToLocalStorage]);
 
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
@@ -165,7 +193,8 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
     
     setDirty(true);
     setModal(null);
-  }, [modal, setState, setDirty]);
+    saveToLocalStorage?.(); // 영구 저장
+  }, [modal, setState, setDirty, saveToLocalStorage]);
 
   // 워크시트 데이터 삭제 핸들러
   const handleDelete = useCallback((deletedValues: string[]) => {
@@ -348,6 +377,11 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
               }}
             >
               1. 완제품 공정기능/요구사항
+              {missingCount > 0 && (
+                <span style={{ marginLeft: '8px', background: '#f44336', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '10px' }}>
+                  누락 {missingCount}건
+                </span>
+              )}
             </th>
           </tr>
           
@@ -361,9 +395,19 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
             </th>
             <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
               완제품기능
+              {missingCounts.functionCount > 0 && (
+                <span style={{ marginLeft: '4px', background: '#f44336', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: '9px' }}>
+                  {missingCounts.functionCount}
+                </span>
+              )}
             </th>
             <th style={{ background: '#ffe0b2', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700, color: '#e65100' }}>
               요구사항
+              {missingCounts.requirementCount > 0 && (
+                <span style={{ marginLeft: '4px', background: '#f44336', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: '9px' }}>
+                  {missingCounts.requirementCount}
+                </span>
+              )}
             </th>
           </tr>
         </thead>
@@ -471,6 +515,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
           title={modal.title}
           itemCode={modal.itemCode}
           singleSelect={false}
+          processName={state.l1.name || '완제품 공정'}
           parentFunction={modal.parentFunction}
           parentCategory={modal.parentCategory}
           currentValues={(() => {

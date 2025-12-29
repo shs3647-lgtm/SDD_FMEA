@@ -12,6 +12,16 @@ interface SelectableCellProps {
   onDoubleClickEdit?: (newValue: string) => void; // 더블클릭 인라인 편집 콜백
 }
 
+// 누락 패턴 체크 함수
+const isMissingValue = (val: string | undefined) => {
+  if (!val) return true;
+  if (val.includes('클릭')) return true;
+  if (val.includes('추가')) return true;
+  if (val.includes('선택')) return true;
+  if (val.includes('입력')) return true;
+  return false;
+};
+
 /**
  * 선택 가능한 셀 (클릭하면 모달 열림, 더블클릭하면 인라인 편집)
  * 기능분석, 고장분석 등 모든 워크시트 탭에서 공용으로 사용
@@ -25,6 +35,7 @@ export default function SelectableCell({
   onClick,
   onDoubleClickEdit,
 }: SelectableCellProps) {
+  const isMissing = isMissingValue(value);
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -116,14 +127,19 @@ export default function SelectableCell({
         minHeight: '24px', 
         fontSize: '10px', 
         fontFamily: 'inherit',
-        color: textColor || 'inherit',
-        fontWeight: textColor ? 700 : 'inherit',
+        color: isMissing ? '#c62828' : (textColor || 'inherit'),
+        fontWeight: isMissing ? 600 : (textColor ? 700 : 'inherit'),
+        fontStyle: isMissing ? 'italic' : 'normal',
         justifyContent: textAlign === 'center' ? 'center' : textAlign === 'right' ? 'flex-end' : 'flex-start',
-        background: value ? 'transparent' : `repeating-linear-gradient(45deg, ${bgColor}, ${bgColor} 4px, #fff 4px, #fff 8px)`
+        background: isMissing ? `repeating-linear-gradient(45deg, #ffebee, #ffebee 4px, #fff 4px, #fff 8px)` : 'transparent'
       }}
       title="클릭: 모달 선택 | 더블클릭: 직접 편집"
     >
-      {value || <span className="text-gray-400 italic">🔍 {placeholder}</span>}
+      {value ? (
+        isMissing ? <span>🔍 {value}</span> : value
+      ) : (
+        <span>🔍 {placeholder}</span>
+      )}
     </div>
   );
 }

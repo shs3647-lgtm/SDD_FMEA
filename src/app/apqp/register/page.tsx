@@ -8,6 +8,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import APQPTopNav from '@/components/layout/APQPTopNav';
 import { BizInfoSelectModal } from '@/components/modals/BizInfoSelectModal';
 import { UserSelectModal } from '@/components/modals/UserSelectModal';
 import { CFTAccessLogTable } from '@/components/tables/CFTAccessLogTable';
@@ -215,7 +216,11 @@ export default function APQPRegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f0f0f0] p-4 font-[Malgun_Gothic]">
+    <>
+      {/* 상단 고정 바로가기 메뉴 */}
+      <APQPTopNav selectedApqpId={apqpId} />
+      
+      <div className="min-h-screen bg-[#f0f0f0] p-4 pt-9 font-[Malgun_Gothic]">
       {/* ===== 프로젝트 정보 섹션 헤더 + 버튼 ===== */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
@@ -431,5 +436,6 @@ export default function APQPRegisterPage() {
         onClose={() => setUserModalOpen(false)}
       />
     </div>
+    </>
   );
 }

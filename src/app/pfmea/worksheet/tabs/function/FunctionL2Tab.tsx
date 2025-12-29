@@ -25,8 +25,9 @@ function SpecialCharBadge({ value, onClick }: { value: string; onClick: () => vo
           padding: '4px',
           cursor: 'pointer',
           fontSize: '10px',
-          color: '#999',
-          background: '#fafafa',
+          color: '#9e9e9e',
+          fontWeight: 600,
+          background: '#f5f5f5',
           height: '100%',
           display: 'flex',
           alignItems: 'center',
@@ -34,7 +35,7 @@ function SpecialCharBadge({ value, onClick }: { value: string; onClick: () => vo
           whiteSpace: 'nowrap',
         }}
       >
-        ★
+        - 미지정
       </div>
     );
   }
@@ -92,27 +93,43 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
   // 확정 상태 (state.l2Confirmed 사용)
   const isConfirmed = state.l2Confirmed || false;
 
-  // 누락 건수 계산
-  const missingCount = React.useMemo(() => {
-    let count = 0;
+  // 플레이스홀더 패턴 체크 함수
+  const isMissing = (name: string | undefined) => {
+    if (!name) return true;
+    const trimmed = name.trim();
+    if (trimmed === '' || trimmed === '-') return true;
+    if (name.includes('클릭')) return true;
+    if (name.includes('추가')) return true;
+    if (name.includes('선택')) return true;
+    if (name.includes('입력')) return true;
+    if (name.includes('필요')) return true;
+    return false;
+  };
+
+  // 항목별 누락 건수 분리 계산 (특별특성은 누락건 제외)
+  const missingCounts = React.useMemo(() => {
+    let functionCount = 0;   // 메인공정기능 누락
+    let charCount = 0;       // 제품특성 누락
+    
     state.l2.forEach(proc => {
-      // 메인공정명 체크
-      if (!proc.name || proc.name === '클릭' || proc.name.includes('추가')) count++;
       // 공정기능 체크
       const funcs = proc.functions || [];
-      if (funcs.length === 0) count++;
+      if (funcs.length === 0) functionCount++;
       funcs.forEach(f => {
-        if (!f.name || f.name === '클릭' || f.name.includes('추가')) count++;
+        if (isMissing(f.name)) functionCount++;
         // 제품특성 체크
         const chars = f.productChars || [];
-        if (chars.length === 0) count++;
+        if (chars.length === 0) charCount++;
         chars.forEach(c => {
-          if (!c.name || c.name === '클릭' || c.name.includes('추가')) count++;
+          if (isMissing(c.name)) charCount++;
         });
       });
     });
-    return count;
+    return { functionCount, charCount, total: functionCount + charCount };
   }, [state.l2]);
+  
+  // 총 누락 건수 (기존 호환성)
+  const missingCount = missingCounts.total;
 
   // 확정 핸들러
   const handleConfirm = useCallback(() => {
@@ -128,7 +145,52 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
   // 수정 핸들러
   const handleEdit = useCallback(() => {
     setState(prev => ({ ...prev, l2Confirmed: false }));
-  }, [setState]);
+    saveToLocalStorage?.(); // 영구 저장
+  }, [setState, saveToLocalStorage]);
+
+  // 메인공정 기능 인라인 편집 핸들러 (더블클릭)
+  const handleInlineEditFunction = useCallback((procId: string, funcId: string, newValue: string) => {
+    setState(prev => ({
+      ...prev,
+      l2: prev.l2.map(proc => {
+        if (proc.id !== procId) return proc;
+        return {
+          ...proc,
+          functions: (proc.functions || []).map(f => {
+            if (f.id !== funcId) return f;
+            return { ...f, name: newValue };
+          })
+        };
+      })
+    }));
+    setDirty(true);
+    saveToLocalStorage?.();
+  }, [setState, setDirty, saveToLocalStorage]);
+
+  // 제품특성 인라인 편집 핸들러 (더블클릭)
+  const handleInlineEditProductChar = useCallback((procId: string, funcId: string, charId: string, newValue: string) => {
+    setState(prev => ({
+      ...prev,
+      l2: prev.l2.map(proc => {
+        if (proc.id !== procId) return proc;
+        return {
+          ...proc,
+          functions: (proc.functions || []).map(f => {
+            if (f.id !== funcId) return f;
+            return {
+              ...f,
+              productChars: (f.productChars || []).map(c => {
+                if (c.id !== charId) return c;
+                return { ...c, name: newValue };
+              })
+            };
+          })
+        };
+      })
+    }));
+    setDirty(true);
+    saveToLocalStorage?.();
+  }, [setState, setDirty, saveToLocalStorage]);
 
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
@@ -176,7 +238,8 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
     
     setDirty(true);
     setModal(null);
-  }, [modal, setState, setDirty]);
+    saveToLocalStorage?.(); // 영구 저장
+  }, [modal, setState, setDirty, saveToLocalStorage]);
 
   const handleDelete = useCallback((deletedValues: string[]) => {
     if (!modal) return;
@@ -319,6 +382,11 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
             </th>
             <th colSpan={3} style={{ background: '#7c4dff', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
               2. 메인공정 기능/제품특성
+              {missingCount > 0 && (
+                <span style={{ marginLeft: '8px', background: '#f44336', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '10px' }}>
+                  누락 {missingCount}건
+                </span>
+              )}
             </th>
           </tr>
           
@@ -329,9 +397,19 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
             </th>
             <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
               메인공정기능
+              {missingCounts.functionCount > 0 && (
+                <span style={{ marginLeft: '4px', background: '#f44336', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: '9px' }}>
+                  {missingCounts.functionCount}
+                </span>
+              )}
             </th>
             <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
               제품특성
+              {missingCounts.charCount > 0 && (
+                <span style={{ marginLeft: '4px', background: '#f44336', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: '9px' }}>
+                  {missingCounts.charCount}
+                </span>
+              )}
             </th>
             <th style={{ background: '#ffcdd2', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
               특별특성
@@ -394,7 +472,13 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                       </td>
                     )}
                     <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
-                      <SelectableCell value={f.name} placeholder="공정기능" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
+                      <SelectableCell 
+                        value={f.name} 
+                        placeholder="공정기능" 
+                        bgColor="#c8e6c9" 
+                        onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} 
+                        onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, f.id, newValue)}
+                      />
                     </td>
                     <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
                       <SelectableCell value="" placeholder="제품특성 선택" bgColor="#fff" onClick={() => setModal({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, title: '제품특성 선택', itemCode: 'A4' })} />
@@ -416,11 +500,23 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                   )}
                   {cIdx === 0 && (
                     <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
-                      <SelectableCell value={f.name} placeholder="공정기능" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
+                      <SelectableCell 
+                        value={f.name} 
+                        placeholder="공정기능" 
+                        bgColor="#c8e6c9" 
+                        onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} 
+                        onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, f.id, newValue)}
+                      />
                     </td>
                   )}
                   <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                    <SelectableCell value={c.name} placeholder="제품특성" bgColor="#fff" onClick={() => setModal({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, title: '제품특성 선택', itemCode: 'A4' })} />
+                    <SelectableCell 
+                      value={c.name} 
+                      placeholder="제품특성" 
+                      bgColor="#fff" 
+                      onClick={() => setModal({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, title: '제품특성 선택', itemCode: 'A4' })} 
+                      onDoubleClickEdit={(newValue) => handleInlineEditProductChar(proc.id, f.id, c.id, newValue)}
+                    />
                   </td>
                   <td style={{ border: `1px solid ${COLORS.line}`, padding: '0', textAlign: 'center' }}>
                     <SpecialCharBadge 

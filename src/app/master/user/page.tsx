@@ -170,9 +170,17 @@ export default function UserInfoPage() {
   return (
     <div className="min-h-screen bg-[#f0f0f0] p-4">
       {/* 헤더 */}
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-lg">👤</span>
-        <h1 className="text-base font-bold text-gray-800">사용자정보 관리</h1>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">👤</span>
+          <h1 className="text-base font-bold text-gray-800">사용자정보 관리</h1>
+        </div>
+        <button 
+          onClick={() => window.history.back()}
+          className="px-4 py-2 bg-gray-200 text-gray-700 text-xs font-semibold rounded hover:bg-gray-300 flex items-center gap-1"
+        >
+          ✕ 닫기
+        </button>
       </div>
 
       {/* 버튼 영역 */}

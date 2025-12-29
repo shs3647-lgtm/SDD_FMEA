@@ -32,19 +32,36 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
   // 확정 상태
   const isConfirmed = state.failureL2Confirmed || false;
 
-  // 누락 건수 계산
-  const missingCount = useMemo(() => {
-    let count = 0;
+  // 플레이스홀더 패턴 체크 함수
+  const isMissing = (name: string | undefined) => {
+    if (!name) return true;
+    const trimmed = name.trim();
+    if (trimmed === '' || trimmed === '-') return true;
+    if (name.includes('클릭')) return true;
+    if (name.includes('추가')) return true;
+    if (name.includes('선택')) return true;
+    if (name.includes('입력')) return true;
+    if (name.includes('필요')) return true;
+    return false;
+  };
+
+  // 항목별 누락 건수 분리 계산
+  const missingCounts = useMemo(() => {
+    let failureModeCount = 0;   // 고장형태 누락
+    
     state.l2.forEach(proc => {
-      if (!proc.name || proc.name === '클릭') return;
+      if (isMissing(proc.name)) return;
       const modes = proc.failureModes || [];
-      if (modes.length === 0) count++;
+      if (modes.length === 0) failureModeCount++;
       modes.forEach(m => {
-        if (!m.name || m.name === '클릭' || m.name.includes('추가')) count++;
+        if (isMissing(m.name)) failureModeCount++;
       });
     });
-    return count;
+    return { failureModeCount, total: failureModeCount };
   }, [state.l2]);
+  
+  // 총 누락 건수 (기존 호환성)
+  const missingCount = missingCounts.total;
 
   // 확정 핸들러
   const handleConfirm = useCallback(() => {
@@ -196,6 +213,11 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
             </th>
             <th style={{ background: FAIL_COLORS.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
               2. 메인공정 고장형태(FM)
+              {missingCount > 0 && (
+                <span style={{ marginLeft: '8px', background: '#fff', color: '#c62828', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 700 }}>
+                  누락 {missingCount}건
+                </span>
+              )}
             </th>
           </tr>
           
@@ -209,6 +231,11 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
             </th>
             <th style={{ background: FAIL_COLORS.cellAlt, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700, textAlign: 'center' }}>
               고장형태(FM)
+              {missingCounts.failureModeCount > 0 && (
+                <span style={{ marginLeft: '4px', background: '#c62828', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: '9px' }}>
+                  {missingCounts.failureModeCount}
+                </span>
+              )}
             </th>
           </tr>
         </thead>
