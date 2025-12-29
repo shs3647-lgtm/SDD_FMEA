@@ -1,3 +1,22 @@
+# FMEA Smart System
+
+## 릴리즈 정보
+
+### v1.7.0-고장연결-완성-251230 (2025-12-30)
+**롤백 포인트**: 고장연결 기능 완성
+
+#### 주요 변경사항
+- 전체보기 화면 기능분석 데이터 표시 개선
+- 마지막 행 병합 기능 구현 (FE/FC 개수 불일치 시 빈 셀 제거)
+- 구조분석, 기능분석, 고장분석 모든 열에 마지막 행 병합 적용
+
+#### 태그 정보
+```bash
+git checkout v1.7.0-고장연결-완성-251230
+```
+
+---
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
