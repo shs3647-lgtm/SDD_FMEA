@@ -27,6 +27,7 @@ interface ProcessSelectModalProps {
   onDelete?: (processIds: string[]) => void;
   existingProcessNames?: string[];
   existingProcessesInfo?: ProcessWithL3Info[];
+  productLineName?: string;  // 완제품공정명 (상위항목)
 }
 
 // 기초정보에서 공정명 로드
@@ -83,7 +84,8 @@ export default function ProcessSelectModal({
   onSave,
   onDelete,
   existingProcessNames = [],
-  existingProcessesInfo = []
+  existingProcessesInfo = [],
+  productLineName = '완제품 제조라인'
 }: ProcessSelectModalProps) {
   const [processes, setProcesses] = useState<ProcessItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -196,20 +198,34 @@ export default function ProcessSelectModal({
 
   return (
     <div 
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40"
+      className="fixed inset-0 z-[9999] flex items-start justify-end bg-black/40"
       onClick={onClose}
+      style={{ paddingTop: '80px', paddingRight: '20px' }}
     >
       <div 
-        className="bg-white rounded-lg shadow-2xl w-[600px] max-h-[70vh] flex flex-col overflow-hidden"
+        className="bg-white rounded-lg shadow-2xl w-[500px] flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()}
+        style={{ maxHeight: 'calc(100vh - 120px)' }}
       >
         {/* 헤더 */}
         <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
           <div className="flex items-center gap-2">
             <span className="text-base">🏭</span>
-            <h2 className="text-xs font-bold">공정 선택 (다중선택)</h2>
+            <h2 className="text-xs font-bold">메인공정명 선택</h2>
           </div>
           <button onClick={onClose} className="text-[10px] px-2 py-0.5 bg-white/20 hover:bg-white/30 rounded">닫기</button>
+        </div>
+
+        {/* ===== 상위항목 고정 표시 ===== */}
+        <div className="px-3 py-2 border-b bg-gradient-to-r from-red-50 to-orange-50 flex items-center gap-2">
+          <span className="text-[11px] font-bold text-red-700 shrink-0">★ 상위항목:</span>
+          <span className="text-[9px] text-gray-600 font-bold">완제품공정명:</span>
+          <span className="px-2 py-1 text-[10px] font-bold bg-blue-600 text-white rounded">{productLineName}</span>
+        </div>
+
+        {/* ===== 하위항목 라벨 ===== */}
+        <div className="px-3 py-1 border-b bg-gradient-to-r from-green-50 to-emerald-50">
+          <span className="text-[10px] font-bold text-green-700">▼ 하위항목: 메인공정명</span>
         </div>
 
         {/* 검색 + 버튼: [전체][해제][적용][삭제] */}

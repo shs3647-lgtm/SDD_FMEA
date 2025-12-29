@@ -195,13 +195,14 @@ export default function StandardSelectModal({
 
   return (
     <div 
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40"
+      className="fixed inset-0 z-[9999] flex items-start justify-end bg-black/40"
       onClick={onClose}
+      style={{ paddingTop: '80px', paddingRight: '20px' }}
     >
       <div 
-        className="bg-white rounded-lg shadow-2xl w-[650px] flex flex-col overflow-hidden"
+        className="bg-white rounded-lg shadow-2xl w-[500px] flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()}
-        style={{ maxHeight: '75vh' }}
+        style={{ maxHeight: 'calc(100vh - 120px)' }}
       >
         {/* ===== 헤더: 제목 ===== */}
         <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white">

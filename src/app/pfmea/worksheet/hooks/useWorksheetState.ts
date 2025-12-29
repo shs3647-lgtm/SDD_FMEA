@@ -476,8 +476,12 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     const l2Data = state.l2 || [];
     if (l2Data.length === 0) return result;
 
+    // failureLinks는 평가 탭에서만 사용 (구조분석/기능분석/고장분석 탭에서는 l2Data 사용)
+    const currentTab = state.tab || '';
+    const useFailureLinks = ['failure-link', 'eval-structure', 'eval-function', 'eval-failure', 'risk', 'opt', 'all'].includes(currentTab);
     const failureLinks = (state as any).failureLinks || [];
-    if (failureLinks.length > 0) {
+    
+    if (useFailureLinks && failureLinks.length > 0) {
       const fmGroups = new Map<string, { fmId: string; fmText: string; fmProcess: string; fes: any[]; fcs: any[] }>();
       failureLinks.forEach((link: any) => {
         if (!fmGroups.has(link.fmId)) {
@@ -610,7 +614,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       }
     });
     return result;
-  }, [state.l1, state.l2, (state as any).failureLinks]);
+  }, [state.l1, state.l2, state.tab, (state as any).failureLinks]);
 
   const calculateSpans = (rows: FlatRow[], key: keyof FlatRow) => {
     const spans: number[] = [];

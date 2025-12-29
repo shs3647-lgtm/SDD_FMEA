@@ -117,10 +117,12 @@ export default function SpecialCharSelectModal({
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'rgba(0,0,0,0.5)',
+        background: 'rgba(0,0,0,0.4)',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: 'flex-start',
+        justifyContent: 'flex-end',
+        paddingTop: '80px',
+        paddingRight: '20px',
         zIndex: 10000,
       }}
       onClick={onClose}
@@ -128,9 +130,9 @@ export default function SpecialCharSelectModal({
       <div
         style={{
           background: 'white',
-          borderRadius: '12px',
-          width: '600px',
-          maxHeight: '80vh',
+          borderRadius: '8px',
+          width: '500px',
+          maxHeight: 'calc(100vh - 120px)',
           display: 'flex',
           flexDirection: 'column',
           boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
@@ -141,34 +143,32 @@ export default function SpecialCharSelectModal({
         {/* 헤더 */}
         <div style={{ 
           background: 'linear-gradient(135deg, #d32f2f 0%, #c62828 100%)', 
-          padding: '16px 20px',
+          padding: '8px 12px',
           color: 'white',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>★ 특별특성 선택</h3>
-              {productCharName && (
-                <div style={{ fontSize: '12px', opacity: 0.9, marginTop: '4px' }}>
-                  제품특성: {productCharName}
-                </div>
-              )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>🏷️</span>
+              <h3 style={{ margin: 0, fontSize: '12px', fontWeight: 700 }}>특별특성 선택</h3>
             </div>
-            <button
-              onClick={onClose}
-              style={{
-                background: 'rgba(255,255,255,0.2)',
-                border: 'none',
-                color: 'white',
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                cursor: 'pointer',
-                fontSize: '18px',
-              }}
-            >
-              ×
-            </button>
+            <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}>닫기</button>
           </div>
+        </div>
+
+        {/* ===== 상위항목 고정 표시 ===== */}
+        <div style={{ padding: '8px 12px', background: 'linear-gradient(to right, #fef2f2, #fff7ed)', borderBottom: '1px solid #fecaca', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: '#b91c1c' }}>★ 상위항목:</span>
+          {productCharName && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '9px', color: '#666', fontWeight: 700 }}>제품특성:</span>
+              <span style={{ padding: '2px 8px', fontSize: '10px', fontWeight: 700, background: '#16a34a', color: 'white', borderRadius: '4px', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{productCharName}</span>
+            </div>
+          )}
+        </div>
+
+        {/* ===== 하위항목 라벨 ===== */}
+        <div style={{ padding: '4px 12px', background: 'linear-gradient(to right, #f0fdf4, #ecfdf5)', borderBottom: '1px solid #bbf7d0' }}>
+          <span style={{ fontSize: '10px', fontWeight: 700, color: '#15803d' }}>▼ 하위항목: 특별특성</span>
         </div>
 
         {/* 필터 영역 */}

@@ -354,205 +354,135 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     alert(`✅ 총 ${savedLinks.length}개의 고장연결이 저장되었습니다.`);
   }, [savedLinks, setState, setDirty, saveToLocalStorage]);
 
-  // 역전개: 고장분석 → 기능분석 변환
+  // 역전개: 고장분석 ↔ 기능분석 FK 연결 확인 (자동변환 금지!)
   const handleReverseGenerate = useCallback(() => {
     if (savedLinks.length === 0) {
       alert('⚠️ 연결된 고장이 없습니다. 먼저 고장연결을 완료하세요.');
       return;
     }
 
-    // 고장 → 기능 변환 맵
-    const failureToFunction = (failureText: string): string => {
-      // 부정형 → 긍정형 변환 규칙
-      const conversions: [RegExp, string][] = [
-        [/미달$/, '만족'],
-        [/초과$/, '관리'],
-        [/불량$/, '양호'],
-        [/부족$/, '확보'],
-        [/실수$/, '정확'],
-        [/누락$/, '완료'],
-        [/오류$/, '정상'],
-        [/불능$/, '가능'],
-        [/정지$/, '연속 운영'],
-        [/지연$/, '적시 진행'],
-        [/손상$/, '보호'],
-        [/오염$/, '청결 유지'],
-        [/이탈$/, '범위 내 유지'],
-      ];
-      
-      let result = failureText;
-      for (const [pattern, replacement] of conversions) {
-        if (pattern.test(result)) {
-          result = result.replace(pattern, replacement);
-          break;
-        }
-      }
-      // 변환이 안된 경우 접두사 추가
-      if (result === failureText) {
-        result = `${failureText} 방지`;
-      }
-      return result;
-    };
-
-    // 고장영향 → 요구사항 (1L)
-    const feToRequirements = new Map<string, { scope: string; text: string; function: string }>();
+    // FK 연결 상태 확인 (자동변환 없음 - DB에 저장된 실제 데이터만 조회)
+    // 1L: 고장영향(FE) ↔ 요구사항 연결 확인
+    const feConnections: { feText: string; feScope: string; reqId: string | null; reqName: string | null }[] = [];
     savedLinks.forEach(link => {
-      if (link.feText && !feToRequirements.has(link.feId)) {
-        feToRequirements.set(link.feId, {
-          scope: link.feScope,
-          text: link.feText,
-          function: failureToFunction(link.feText)
-        });
-      }
-    });
-
-    // 고장형태 → 공정기능 (2L)
-    const fmToProcessFunction = new Map<string, { process: string; text: string; function: string }>();
-    savedLinks.forEach(link => {
-      if (link.fmText && !fmToProcessFunction.has(link.fmId)) {
-        fmToProcessFunction.set(link.fmId, {
-          process: link.fmProcess,
-          text: link.fmText,
-          function: failureToFunction(link.fmText)
-        });
-      }
-    });
-
-    // 고장원인 → 작업요소 기능 (3L)
-    const fcToWorkFunction = new Map<string, { process: string; workElem: string; text: string; function: string }>();
-    savedLinks.forEach(link => {
-      if (link.fcText && !fcToWorkFunction.has(link.fcId)) {
-        fcToWorkFunction.set(link.fcId, {
-          process: link.fcProcess,
-          workElem: link.fcWorkElem,
-          text: link.fcText,
-          function: failureToFunction(link.fcText)
-        });
-      }
-    });
-
-    // 결과 표시
-    let resultMsg = '🔄 역전개 결과 (고장분석 → 기능분석)\n\n';
-    
-    resultMsg += '【1L 요구사항】\n';
-    feToRequirements.forEach((v, id) => {
-      resultMsg += `  ${v.scope}: "${v.text}" → "${v.function}"\n`;
-    });
-    
-    resultMsg += '\n【2L 공정기능】\n';
-    fmToProcessFunction.forEach((v, id) => {
-      resultMsg += `  ${v.process}: "${v.text}" → "${v.function}"\n`;
-    });
-    
-    resultMsg += '\n【3L 작업요소 기능】\n';
-    fcToWorkFunction.forEach((v, id) => {
-      resultMsg += `  ${v.workElem}: "${v.text}" → "${v.function}"\n`;
-    });
-
-    alert(resultMsg);
-
-    // 실제 기능분석 데이터 업데이트 (선택적)
-    const confirmUpdate = window.confirm('기능분석 데이터에 역전개 결과를 반영하시겠습니까?');
-    if (confirmUpdate) {
-      // 공정명 비교 함수 (번호 제외하고 비교)
-      const normalizeProcessName = (name: string): string => {
-        // "10 자재입고" -> "자재입고", "자재입고" -> "자재입고"
-        return name.replace(/^\d+\s*/, '').trim();
-      };
-      const matchProcess = (a: string, b: string): boolean => {
-        const na = normalizeProcessName(a);
-        const nb = normalizeProcessName(b);
-        return na === nb || a === b || a.includes(nb) || b.includes(na);
-      };
-
-      let addedL2Count = 0;
-      let addedL3Count = 0;
-
-      setState((prev: any) => {
-        // 1L: 요구사항 업데이트 - 생략 (복잡한 구조)
-        
-        // 2L: 공정기능 업데이트 (l2[].functions[] 에 추가)
-        const updatedL2 = prev.l2.map((proc: any) => {
-          const matchingFuncs: { function: string; text: string }[] = [];
-          fmToProcessFunction.forEach((v, id) => {
-            // 공정명 유연 매칭
-            if (matchProcess(v.process, proc.name) || matchProcess(v.process, `${proc.no} ${proc.name}`)) {
-              matchingFuncs.push(v);
-            }
+      if (link.feId && !feConnections.some(c => c.feText === link.feText)) {
+        // failureScopes에서 reqId 조회
+        const failureScope = (state.l1?.failureScopes || []).find((fs: any) => fs.id === link.feId) as any;
+        const reqId = failureScope?.reqId || null;
+        // 요구사항 이름 조회
+        let reqName: string | null = null;
+        if (reqId) {
+          (state.l1?.types || []).forEach((type: any) => {
+            (type.functions || []).forEach((func: any) => {
+              const req = (func.requirements || []).find((r: any) => r.id === reqId);
+              if (req) reqName = req.name;
+            });
           });
-          
-          if (matchingFuncs.length === 0) return proc;
-          
-          const existingFuncNames = new Set((proc.functions || []).map((f: any) => f.name));
-          const newFuncs = matchingFuncs
-            .filter(mf => !existingFuncNames.has(mf.function))
-            .map(mf => ({
-              id: uid(),
-              name: mf.function,
-              productChars: [],
-              reversedFrom: mf.text
-            }));
-          
-          addedL2Count += newFuncs.length;
-          
-          return {
-            ...proc,
-            functions: [...(proc.functions || []), ...newFuncs]
-          };
-        });
+        }
+        feConnections.push({ feText: link.feText, feScope: link.feScope, reqId, reqName });
+      }
+    });
 
-        // 3L: 작업요소 기능 업데이트 (l2[].l3[].functions[] 에 추가)
-        const finalL2 = updatedL2.map((proc: any) => {
-          const updatedL3 = (proc.l3 || []).map((we: any) => {
-            const matchingFuncs: { function: string; text: string }[] = [];
-            fcToWorkFunction.forEach((v, id) => {
-              // 작업요소명 또는 공정명으로 매칭
-              const weMatch = v.workElem === we.name || we.name.includes(v.workElem) || v.workElem.includes(we.name);
-              const procMatch = matchProcess(v.process, proc.name) || matchProcess(v.process, `${proc.no} ${proc.name}`);
-              if (weMatch || procMatch) {
-                matchingFuncs.push(v);
+    // 2L: 고장형태(FM) ↔ 제품특성 연결 확인
+    const fmConnections: { fmText: string; fmProcess: string; productCharName: string | null }[] = [];
+    savedLinks.forEach(link => {
+      if (link.fmId && !fmConnections.some(c => c.fmText === link.fmText)) {
+        // 공정에서 제품특성 조회
+        const procName = (link.fmProcess || '').replace(/^\d+\s*/, '').trim();
+        let productCharName: string | null = null;
+        (state.l2 || []).forEach((proc: any) => {
+          if (proc.name === procName || proc.name.includes(procName) || procName.includes(proc.name)) {
+            (proc.functions || []).forEach((func: any) => {
+              if ((func.productChars || []).length > 0) {
+                productCharName = func.productChars[0].name;
               }
             });
-            
-            if (matchingFuncs.length === 0) return we;
-            
-            const existingFuncNames = new Set((we.functions || []).map((f: any) => f.name));
-            const newFuncs = matchingFuncs
-              .filter(mf => !existingFuncNames.has(mf.function))
-              .map(mf => ({
-                id: uid(),
-                name: mf.function,
-                reversedFrom: mf.text
-              }));
-            
-            addedL3Count += newFuncs.length;
-            
-            return {
-              ...we,
-              functions: [...(we.functions || []), ...newFuncs]
-            };
-          });
-          
-          return { ...proc, l3: updatedL3 };
+          }
         });
+        fmConnections.push({ fmText: link.fmText, fmProcess: link.fmProcess, productCharName });
+      }
+    });
 
-        console.log('역전개 결과:', { addedL2Count, addedL3Count, fmToProcessFunction: Array.from(fmToProcessFunction.entries()), fcToWorkFunction: Array.from(fcToWorkFunction.entries()) });
+    // 3L: 고장원인(FC) ↔ 공정특성 연결 확인
+    const fcConnections: { fcText: string; workElem: string; processCharName: string | null }[] = [];
+    savedLinks.forEach(link => {
+      if (link.fcId && !fcConnections.some(c => c.fcText === link.fcText)) {
+        // 작업요소에서 공정특성 조회
+        let processCharName: string | null = null;
+        (state.l2 || []).forEach((proc: any) => {
+          (proc.l3 || []).forEach((we: any) => {
+            if (we.name === link.fcWorkElem || we.name.includes(link.fcWorkElem) || (link.fcWorkElem || '').includes(we.name)) {
+              (we.functions || []).forEach((func: any) => {
+                if ((func.processChars || []).length > 0) {
+                  processCharName = func.processChars[0].name;
+                }
+              });
+            }
+          });
+        });
+        fcConnections.push({ fcText: link.fcText, workElem: link.fcWorkElem, processCharName });
+      }
+    });
 
-        return {
-          ...prev,
-          l2: finalL2
-        };
-      });
-      
-      setDirty(true);
-      saveToLocalStorage?.();
-      
-      // 결과 메시지
-      const l2Count = fmToProcessFunction.size;
-      const l3Count = fcToWorkFunction.size;
-      alert(`✅ 기능분석에 역전개 결과가 반영되었습니다!\n\n• 2L 공정기능: ${l2Count}개 추가\n• 3L 작업요소 기능: ${l3Count}개 추가\n\n기능분석 탭(2L/3L)에서 확인하세요.`);
+    // 연결 상태 표시 (DB 데이터 그대로 표시, 자동변환 없음!)
+    let resultMsg = '📊 역전개 - DB 연결 상태 확인 (자동변환 없음)\n\n';
+    
+    resultMsg += '【1L 고장영향 ↔ 요구사항】\n';
+    const feLinked = feConnections.filter(c => c.reqName).length;
+    const feMissing = feConnections.length - feLinked;
+    resultMsg += `  ✓ 연결됨: ${feLinked}건 / ✗ 미연결: ${feMissing}건\n`;
+    feConnections.forEach(c => {
+      if (c.reqName) {
+        resultMsg += `    ✅ ${c.feScope}: "${c.feText}" ↔ "${c.reqName}"\n`;
+      } else {
+        resultMsg += `    ❌ ${c.feScope}: "${c.feText}" → (기능분석 데이터 없음)\n`;
+      }
+    });
+    
+    resultMsg += '\n【2L 고장형태 ↔ 제품특성】\n';
+    const fmLinked = fmConnections.filter(c => c.productCharName).length;
+    const fmMissing = fmConnections.length - fmLinked;
+    resultMsg += `  ✓ 연결됨: ${fmLinked}건 / ✗ 미연결: ${fmMissing}건\n`;
+    fmConnections.forEach(c => {
+      if (c.productCharName) {
+        resultMsg += `    ✅ ${c.fmProcess}: "${c.fmText}" ↔ "${c.productCharName}"\n`;
+      } else {
+        resultMsg += `    ❌ ${c.fmProcess}: "${c.fmText}" → (기능분석 데이터 없음)\n`;
+      }
+    });
+    
+    resultMsg += '\n【3L 고장원인 ↔ 공정특성】\n';
+    const fcLinked = fcConnections.filter(c => c.processCharName).length;
+    const fcMissing = fcConnections.length - fcLinked;
+    resultMsg += `  ✓ 연결됨: ${fcLinked}건 / ✗ 미연결: ${fcMissing}건\n`;
+    fcConnections.forEach(c => {
+      if (c.processCharName) {
+        resultMsg += `    ✅ ${c.workElem}: "${c.fcText}" ↔ "${c.processCharName}"\n`;
+      } else {
+        resultMsg += `    ❌ ${c.workElem}: "${c.fcText}" → (기능분석 데이터 없음)\n`;
+      }
+    });
+
+    resultMsg += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    resultMsg += '⚠️ 미연결 항목은 기능분석 탭(1L/2L/3L)에서\n   직접 입력해야 합니다.\n';
+    resultMsg += '📝 FMEA는 자동생성이 아닌, 실제 분석 결과입니다.\n';
+
+    alert(resultMsg);
+    
+    // 기능분석 탭으로 이동 안내
+    if (feMissing > 0 || fmMissing > 0 || fcMissing > 0) {
+      const goToFunction = window.confirm(
+        `미연결 항목이 있습니다.\n\n` +
+        `• 1L 요구사항: ${feMissing}건 미연결\n` +
+        `• 2L 제품특성: ${fmMissing}건 미연결\n` +
+        `• 3L 공정특성: ${fcMissing}건 미연결\n\n` +
+        `기능분석 탭(2L 메인공정 기능)으로 이동하시겠습니까?`
+      );
+      if (goToFunction) {
+        setState((prev: any) => ({ ...prev, tab: 'function-l2' }));
+      }
     }
-  }, [savedLinks, setState, setDirty, saveToLocalStorage]);
+  }, [savedLinks, state.l1, state.l2, setState]);
 
   return (
     <div style={{ display: 'flex', height: '100%', background: COLORS.bg, overflow: 'hidden' }}>

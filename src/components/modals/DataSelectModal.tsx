@@ -391,13 +391,14 @@ export default function DataSelectModal({
 
   return (
     <div 
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40"
+      className="fixed inset-0 z-[9999] flex items-start justify-end bg-black/40"
       onClick={onClose}
+      style={{ paddingTop: '80px', paddingRight: '20px' }}
     >
       <div 
-        className="bg-white rounded-lg shadow-2xl w-[600px] flex flex-col overflow-hidden"
+        className="bg-white rounded-lg shadow-2xl w-[500px] flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()}
-        style={{ maxHeight: '70vh' }}
+        style={{ maxHeight: 'calc(100vh - 120px)' }}
       >
         {/* ===== 헤더: 제목 + 닫기 ===== */}
         <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
@@ -408,64 +409,76 @@ export default function DataSelectModal({
           <button onClick={onClose} className="text-[10px] px-2 py-0.5 bg-white/20 hover:bg-white/30 rounded">닫기</button>
         </div>
 
-        {/* ===== 상위 항목 고정 표시 (명확한 라벨 포함) ===== */}
-        {(processName || workElementName || parentCategory || parentFunction || parentReqName || parentTypeName) && (
-          <div className="px-3 py-2 border-b bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200">
-            <div className="flex items-center gap-1 mb-1">
-              <span className="text-[11px] font-bold text-amber-700">📌 상위항목 (자동연결)</span>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              {processName && (
-                <div className="flex items-center gap-1">
-                  <span className="text-[9px] text-gray-500">공정:</span>
-                  <span className="px-2 py-1 text-[10px] font-bold bg-blue-600 text-white rounded">
-                    {processName}
-                  </span>
-                </div>
-              )}
-              {workElementName && (
-                <div className="flex items-center gap-1">
-                  <span className="text-[9px] text-gray-500">작업요소:</span>
-                  <span className="px-2 py-1 text-[10px] font-bold bg-purple-600 text-white rounded">
-                    {workElementName}
-                  </span>
-                </div>
-              )}
-              {parentTypeName && (
-                <div className="flex items-center gap-1">
-                  <span className="text-[9px] text-gray-500">구분:</span>
-                  <span className="px-2 py-1 text-[10px] font-bold bg-teal-600 text-white rounded">
-                    {parentTypeName}
-                  </span>
-                </div>
-              )}
-              {parentCategory && (
-                <div className="flex items-center gap-1">
-                  <span className="text-[9px] text-gray-500">분류:</span>
-                  <span className="px-2 py-1 text-[10px] font-bold bg-orange-600 text-white rounded">
-                    {parentCategory}
-                  </span>
-                </div>
-              )}
-              {parentFunction && (
-                <div className="flex items-center gap-1">
-                  <span className="text-[9px] text-gray-500">기능:</span>
-                  <span className="px-2 py-1 text-[10px] font-bold bg-green-600 text-white rounded max-w-[250px] truncate" title={parentFunction}>
-                    {parentFunction}
-                  </span>
-                </div>
-              )}
-              {parentReqName && (
-                <div className="flex items-center gap-1">
-                  <span className="text-[9px] text-gray-500">요구사항:</span>
-                  <span className="px-2 py-1 text-[10px] font-bold bg-indigo-600 text-white rounded max-w-[250px] truncate" title={parentReqName}>
-                    {parentReqName}
-                  </span>
-                </div>
-              )}
-            </div>
+        {/* ===== 상위 항목 고정 표시 ===== */}
+        <div className="px-3 py-2 border-b bg-gradient-to-r from-red-50 to-orange-50 border-red-200">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] font-bold text-red-700 shrink-0">★ 상위항목:</span>
+            
+            {/* C3 요구사항: 상위는 완제품기능 */}
+            {itemCode === 'C3' && parentFunction && (
+              <div className="flex items-center gap-1">
+                <span className="text-[9px] text-gray-600 font-bold">완제품기능:</span>
+                <span className="px-2 py-1 text-[10px] font-bold bg-green-600 text-white rounded max-w-[300px] truncate" title={parentFunction}>
+                  {parentFunction}
+                </span>
+              </div>
+            )}
+            
+            {/* FM1 고장형태: 상위는 제품특성 */}
+            {itemCode === 'FM1' && parentFunction && (
+              <div className="flex items-center gap-1">
+                <span className="text-[9px] text-gray-600 font-bold">제품특성:</span>
+                <span className="px-2 py-1 text-[10px] font-bold bg-green-600 text-white rounded max-w-[300px] truncate" title={parentFunction}>
+                  {parentFunction}
+                </span>
+              </div>
+            )}
+            
+            {/* FC1 고장원인: 상위는 공정특성 */}
+            {itemCode === 'FC1' && parentFunction && (
+              <div className="flex items-center gap-1">
+                <span className="text-[9px] text-gray-600 font-bold">공정특성:</span>
+                <span className="px-2 py-1 text-[10px] font-bold bg-green-600 text-white rounded max-w-[300px] truncate" title={parentFunction}>
+                  {parentFunction}
+                </span>
+              </div>
+            )}
+            
+            {/* FE2 고장영향: 상위는 요구사항 */}
+            {itemCode === 'FE2' && parentReqName && (
+              <div className="flex items-center gap-1">
+                <span className="text-[9px] text-gray-600 font-bold">요구사항:</span>
+                <span className="px-2 py-1 text-[10px] font-bold bg-indigo-600 text-white rounded max-w-[300px] truncate" title={parentReqName}>
+                  {parentReqName}
+                </span>
+              </div>
+            )}
+            
+            {/* 기본 표시: 위 조건에 해당하지 않는 경우 */}
+            {!['C3', 'FM1', 'FC1', 'FE2'].includes(itemCode) && (
+              <>
+                {processName && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-[9px] text-gray-600 font-bold">공정명:</span>
+                    <span className="px-2 py-1 text-[10px] font-bold bg-blue-600 text-white rounded">{processName}</span>
+                  </div>
+                )}
+                {parentTypeName && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-[9px] text-gray-600 font-bold">구분:</span>
+                    <span className="px-2 py-1 text-[10px] font-bold bg-teal-600 text-white rounded">{parentTypeName}</span>
+                  </div>
+                )}
+                {parentFunction && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-[9px] text-gray-600 font-bold">기능:</span>
+                    <span className="px-2 py-1 text-[10px] font-bold bg-green-600 text-white rounded max-w-[250px] truncate" title={parentFunction}>{parentFunction}</span>
+                  </div>
+                )}
+              </>
+            )}
           </div>
-        )}
+        </div>
 
         {/* ===== 검색/입력 통합 + 버튼: 엔터=추가, [전체][해제][적용][삭제] ===== */}
         <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-2">
@@ -511,6 +524,11 @@ export default function DataSelectModal({
           <button onClick={deselectAll} className="px-2 py-1 text-[10px] font-bold bg-gray-300 text-gray-700 rounded hover:bg-gray-400">해제</button>
           <button onClick={handleApply} className="px-2 py-1 text-[10px] font-bold bg-green-600 text-white rounded hover:bg-green-700">적용</button>
           <button onClick={handleDeleteAll} className="px-2 py-1 text-[10px] font-bold bg-red-500 text-white rounded hover:bg-red-600">삭제</button>
+        </div>
+
+        {/* ===== 하위항목 라벨 ===== */}
+        <div className="px-3 py-1 border-b bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+          <span className="text-[11px] font-bold text-blue-700">▼ 하위항목: {itemInfo.label}</span>
         </div>
 
         {/* ===== 리스트 (고정 높이, 2열 그리드) ===== */}

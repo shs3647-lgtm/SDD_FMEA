@@ -21,7 +21,16 @@ const FAIL_COLORS = {
 };
 
 export default function FailureL2Tab({ state, setState, setDirty, saveToLocalStorage }: FailureTabProps) {
-  const [modal, setModal] = useState<{ type: string; processId: string; funcId?: string; title: string; itemCode: string } | null>(null);
+  const [modal, setModal] = useState<{ 
+    type: string; 
+    processId: string; 
+    funcId?: string; 
+    title: string; 
+    itemCode: string;
+    // 상위항목 정보 (고장형태의 상위는 제품특성)
+    parentProductChar?: string;
+    processName?: string;
+  } | null>(null);
 
   // 공정 목록 (드롭다운용)
   const processList = useMemo(() => 
@@ -314,7 +323,15 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
                       value={mode?.name || ''} 
                       placeholder={rowIdx === 0 ? "고장형태 선택" : ""} 
                       bgColor={mode ? "#fff" : FAIL_COLORS.cell} 
-                      onClick={() => setModal({ type: 'l2FailureMode', processId: proc.id, title: `${proc.no}. ${proc.name} 고장형태`, itemCode: 'FM1' })} 
+                      onClick={() => setModal({ 
+                        type: 'l2FailureMode', 
+                        processId: proc.id, 
+                        title: `${proc.no}. ${proc.name} 고장형태`, 
+                        itemCode: 'FM1',
+                        // 상위항목: 제품특성 (고장형태의 상위는 제품특성!)
+                        parentProductChar: productChar?.name || '',
+                        processName: `${proc.no}. ${proc.name}`
+                      })} 
                     />
                   </td>
                 </tr>
@@ -333,6 +350,9 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
           title={modal.title}
           itemCode={modal.itemCode}
           singleSelect={false}
+          // 상위항목: 공정명 + 제품특성 (고장형태의 상위는 제품특성!)
+          processName={modal.processName || processList.find(p => p.id === modal.processId)?.name}
+          parentFunction={modal.parentProductChar}
           currentValues={(() => {
             if (modal.type === 'l2FailureMode') {
               const proc = state.l2.find(p => p.id === modal.processId);
@@ -340,7 +360,6 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
             }
             return [];
           })()}
-          processName={processList.find(p => p.id === modal.processId)?.name}
           processList={processList}
           onProcessChange={(newProcId) => setModal(modal ? { ...modal, processId: newProcId } : null)}
         />

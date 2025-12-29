@@ -141,8 +141,8 @@ export default function FailureCauseSelectModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-white rounded-lg shadow-2xl w-[600px] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()} style={{ maxHeight: '70vh' }}>
+    <div className="fixed inset-0 z-[9999] flex items-start justify-end bg-black/40" onClick={onClose} style={{ paddingTop: '80px', paddingRight: '20px' }}>
+      <div className="bg-white rounded-lg shadow-2xl w-[500px] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()} style={{ maxHeight: 'calc(100vh - 120px)' }}>
         {/* 헤더 */}
         <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-amber-600 to-amber-700 text-white">
           <div className="flex items-center gap-2">
@@ -152,24 +152,33 @@ export default function FailureCauseSelectModal({
           <button onClick={onClose} className="text-[10px] px-2 py-0.5 bg-white/20 hover:bg-white/30 rounded">닫기</button>
         </div>
 
-        {/* 상위 항목 고정 표시 */}
-        {(processName || workElementName || functionName || parentName) && (
-          <div className="px-3 py-2 border-b bg-gradient-to-r from-amber-50 to-yellow-50 flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-bold text-amber-700 shrink-0">📌 상위항목:</span>
-            {processName && (
-              <span className="px-2 py-1 text-[10px] font-bold bg-blue-600 text-white rounded">{processName}</span>
-            )}
-            {workElementName && (
-              <span className="px-2 py-1 text-[10px] font-bold bg-purple-600 text-white rounded">{workElementName}</span>
-            )}
-            {functionName && (
+        {/* ===== 상위항목 고정 표시 ===== */}
+        <div className="px-3 py-2 border-b bg-gradient-to-r from-red-50 to-orange-50 flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] font-bold text-red-700 shrink-0">★ 상위항목:</span>
+          {functionName && (
+            <div className="flex items-center gap-1">
+              <span className="text-[9px] text-gray-600 font-bold">공정특성:</span>
               <span className="px-2 py-1 text-[10px] font-bold bg-green-600 text-white rounded max-w-[150px] truncate" title={functionName}>{functionName}</span>
-            )}
-            {parentName && (
-              <span className="px-2 py-1 text-[10px] font-bold bg-teal-600 text-white rounded max-w-[150px] truncate" title={parentName}>{parentName}</span>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+          {workElementName && (
+            <div className="flex items-center gap-1">
+              <span className="text-[9px] text-gray-600 font-bold">작업요소:</span>
+              <span className="px-2 py-1 text-[10px] font-bold bg-purple-600 text-white rounded">{workElementName}</span>
+            </div>
+          )}
+          {processName && (
+            <div className="flex items-center gap-1">
+              <span className="text-[9px] text-gray-600 font-bold">공정:</span>
+              <span className="px-2 py-1 text-[10px] font-bold bg-blue-600 text-white rounded">{processName}</span>
+            </div>
+          )}
+        </div>
+
+        {/* ===== 하위항목 라벨 ===== */}
+        <div className="px-3 py-1 border-b bg-gradient-to-r from-green-50 to-emerald-50">
+          <span className="text-[10px] font-bold text-green-700">▼ 하위항목: 고장원인(FC)</span>
+        </div>
 
         {/* 4M 필터 + 검색 + 버튼 */}
         <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-2">
