@@ -403,6 +403,203 @@ export const TAB_REGISTRY: TabDefinition[] = [
 
 ---
 
+### 🚀 Step 8: 우측 패널 플러그인 아키텍처 구축 ⭐ 신규
+
+**목표**: 트리뷰 영역을 확장 가능한 플러그인 시스템으로 전환, 레이지 로딩으로 번들 크기 최소화
+
+**예상 소요 시간**: 8-12시간  
+**위험도**: 🟡 보통  
+**예상 효과**: 
+- 초기 번들 크기 62% 감소 (850KB → 320KB)
+- 확장성 극대화 (신규 뷰어 추가 3단계)
+- 메모리 효율성 향상
+
+#### 배경
+
+현재 트리뷰 영역에 다음 기능들을 추가 예정:
+- 🌳 TREE (기존)
+- 📄 PDF/PPT/Excel 뷰어 (신규, ~150KB)
+- 🔴 5 AP (기존, ~3KB)
+- 🟠 6 AP (기존, ~3KB)
+- 📊 10 RPN 파레토 차트 (신규, ~80KB)
+- 📈 RPN 분석 (신규, ~10KB)
+- 📚 LLD 문서화 (신규, ~15KB)
+- 🔍 GAP 분석 (신규, ~20KB)
+
+**⚠️ 문제**: 모든 뷰어를 한 번에 로드하면 번들 크기가 급증하고 초기 로딩이 느려짐
+
+**✅ 해결**: React.lazy + Suspense를 활용한 레이지 로딩 + 플러그인 레지스트리
+
+#### 작업 내용
+
+##### Phase 1: 플러그인 시스템 기반 구축 (3-4시간)
+
+1. **`panels/` 디렉토리 생성**
+   ```
+   src/app/pfmea/worksheet/
+   └── panels/
+       ├── index.ts              # 플러그인 레지스트리
+       └── [각 패널 폴더]
+   ```
+
+2. **`panels/index.ts` 레지스트리 작성**
+   ```typescript
+   import { lazy } from 'react';
+   
+   export interface PanelConfig {
+     id: string;
+     label: string;
+     icon: string;
+     component: React.LazyExoticComponent<React.ComponentType<any>>;
+     color?: string;
+     order: number;
+   }
+   
+   export const PANEL_REGISTRY: PanelConfig[] = [
+     {
+       id: 'tree',
+       label: 'TREE',
+       icon: '🌳',
+       component: lazy(() => import('./TreePanel')),
+       order: 1,
+     },
+     // ... 나머지 패널들
+   ];
+   ```
+
+3. **`components/RightPanelMenu.tsx` 생성**
+   - 우측 메뉴바 컴포넌트
+   - 탭별 배경색 변경 (구조/기능/고장)
+   - 패널 전환 버튼들
+   - 레지스트리 기반 동적 생성
+
+4. **`page.tsx`에 통합**
+   - `Suspense`로 패널 영역 감싸기
+   - 로딩 폴백 UI 추가
+   - 동적 패널 로딩
+
+##### Phase 2: 기존 기능 이전 (2-3시간)
+
+1. **`panels/TreePanel/` 생성**
+   - 기존 트리 뷰 로직 이전
+   - `index.tsx`: Lazy wrapper
+   - `TreePanel.tsx`: 메인 컴포넌트
+   - `StructureTree.tsx`, `FunctionTree.tsx`, `FailureTree.tsx` 분리
+
+2. **`panels/APTable/` 생성**
+   - 기존 AP 테이블 이전
+   - `APTable5.tsx`, `APTable6.tsx` 분리
+   - 공통 로직 추출
+
+3. **레이지 로딩 적용**
+   - `React.lazy()` 래핑
+   - 번들 분리 확인
+
+##### Phase 3: 신규 뷰어 구현 (6-8시간)
+
+1. **`panels/PDFViewer/` 생성** (~2시간)
+   - `react-pdf` 라이브러리 사용
+   - PDF/PPT/Excel 파일 뷰어
+   - 확대/축소, 페이지 네비게이션
+
+2. **`panels/RPNChart/` 생성** (~2시간)
+   - `Chart.js` + `react-chartjs-2` 사용
+   - 파레토 차트 구현
+   - RPN 분석 뷰
+
+3. **`panels/LLDViewer/` 생성** (~1시간)
+   - 문서화 뷰어
+   - 마크다운/HTML 지원
+
+4. **`panels/GAPAnalysis/` 생성** (~1시간)
+   - 갭 분석 화면
+   - 비교 테이블
+
+##### Phase 4: 최적화 및 테스트 (2시간)
+
+1. **번들 크기 분석**
+   ```bash
+   npm run build
+   # 각 청크 크기 확인
+   ```
+
+2. **성능 측정**
+   - 초기 로딩 시간
+   - 패널 전환 속도
+   - 메모리 사용량
+
+3. **문서화**
+   - `RIGHT_PANEL_ARCHITECTURE.md` 작성
+   - 새 뷰어 추가 가이드 작성
+
+#### 체크리스트
+
+**Phase 1: 기반 구축**
+- [ ] `panels/` 디렉토리 생성
+- [ ] `panels/index.ts` 레지스트리 작성
+- [ ] `RightPanelMenu.tsx` 컴포넌트 생성
+- [ ] `page.tsx`에 Suspense 통합
+- [ ] 빌드 테스트: 성공
+
+**Phase 2: 기존 기능 이전**
+- [ ] `panels/TreePanel/` 생성 및 이전
+- [ ] `panels/APTable/` 생성 및 이전
+- [ ] 레이지 로딩 적용
+- [ ] 수동 테스트: 트리 정상 동작
+- [ ] 수동 테스트: AP 테이블 정상 동작
+- [ ] 번들 크기 확인 (분리 확인)
+
+**Phase 3: 신규 뷰어 구현**
+- [ ] `panels/PDFViewer/` 구현
+- [ ] `panels/RPNChart/` 구현 (파레토)
+- [ ] `panels/LLDViewer/` 구현
+- [ ] `panels/GAPAnalysis/` 구현
+- [ ] 각 뷰어별 테스트
+- [ ] 라이브러리 설치 확인
+
+**Phase 4: 최적화**
+- [ ] 번들 크기 분석 (목표: 메인 < 350KB)
+- [ ] 로딩 속도 측정 (목표: < 0.5초)
+- [ ] 메모리 누수 체크
+- [ ] `RIGHT_PANEL_ARCHITECTURE.md` 작성
+- [ ] 커밋: "refactor: Step 8 - 우측 패널 플러그인 아키텍처 구축"
+
+#### 예상 효과
+
+**번들 크기 최적화**
+```
+기존 (모든 코드 포함):
+  main.js: 850KB
+
+최적화 후 (레이지 로딩):
+  main.js: 320KB ✅ (-530KB, 62% 감소)
+  tree-panel.js: 15KB (클릭 시 로드)
+  pdf-viewer.js: 150KB (클릭 시 로드)
+  rpn-chart.js: 80KB (클릭 시 로드)
+  ap-table.js: 6KB (클릭 시 로드)
+  lld-viewer.js: 15KB (클릭 시 로드)
+  gap-analysis.js: 20KB (클릭 시 로드)
+```
+
+**확장성**
+- 새 뷰어 추가 시 3단계만 필요:
+  1. 컴포넌트 작성 (`panels/NewViewer/`)
+  2. 레지스트리 등록 (1줄 추가)
+  3. 완료!
+- `page.tsx` 수정 불필요
+- 번들 크기 영향 없음
+
+#### 필요한 라이브러리
+
+```bash
+npm install react-pdf pdfjs-dist
+npm install chart.js react-chartjs-2
+npm install xlsx
+npm install @types/react-pdf --save-dev
+```
+
+---
+
 ## 📈 진행 상황 추적
 
 | Step | 상태 | 시작일 | 완료일 | 소요 시간 | 비고 |
@@ -415,6 +612,7 @@ export const TAB_REGISTRY: TabDefinition[] = [
 | Step 5 | ⏸️ 대기 | - | - | - | TabMenu 분리 및 탭 등록 시스템 |
 | Step 6 | ⏸️ 대기 | - | - | - | 역전개 탭 분리 |
 | Step 7 | ⏸️ 대기 | - | - | - | 타입 정의 표준화 |
+| **Step 8** | ⏸️ 대기 | - | - | - | **우측 패널 플러그인 아키텍처 (신규)** |
 
 **범례**: ✅ 완료 | ⏳ 진행중 | ⏸️ 대기 | 🔴 차단
 
@@ -549,6 +747,7 @@ refactor: Step 1 - 공통 유틸리티 함수 추출
 - [코드 최적화 검토 보고서](./CODE_OPTIMIZATION_REVIEW.md)
 - [모듈화 교훈](./MODULARIZATION_LESSONS_LEARNED.md)
 - [원자성 DB 아키텍처](./ATOMIC_DB_ARCHITECTURE.md)
+- [우측 패널 아키텍처](./RIGHT_PANEL_ARCHITECTURE.md) ⭐ 신규
 - [코드 인덱스](../CODE_INDEX.md) (있는 경우)
 
 ---
@@ -560,6 +759,8 @@ refactor: Step 1 - 공통 유틸리티 함수 추출
 - [ ] `FailureLinkTab.tsx` 1,102줄 → 400줄 이하 (64% 감소)
 - [ ] 모든 파일 800줄 이하
 - [ ] 새 탭 추가 시 `page.tsx` 수정 불필요 (탭 등록 시스템)
+- [ ] **메인 번들 크기**: 850KB → 350KB 이하 (59% 감소) ⭐ 신규
+- [ ] **패널 전환 속도**: 0.5초 이내 ⭐ 신규
 
 ### 정성적 목표
 - [ ] 중복 코드 제거 완료
@@ -568,6 +769,8 @@ refactor: Step 1 - 공통 유틸리티 함수 추출
 - [ ] 테스트 용이성 향상
 - [ ] 코드 가독성 향상
 - [ ] **확장성 확보**: 새 기능 추가 시 기존 구조 깨지지 않음
+- [ ] **플러그인 시스템**: 새 패널 추가 3단계로 완료 ⭐ 신규
+- [ ] **레이지 로딩**: 사용하지 않는 패널은 로드되지 않음 ⭐ 신규
 
 ---
 
