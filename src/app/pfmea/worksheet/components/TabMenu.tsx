@@ -105,37 +105,6 @@ export default function TabMenu({ state, setState }: TabMenuProps) {
           <div className="w-px h-5 bg-white/30 mx-2" />
           <StepToggleButtons state={state} setState={setState} />
         </div>
-
-        <div className="flex items-center gap-2">
-          <div className="w-px h-5 bg-white/30" />
-          <button
-            onClick={() => setState(prev => ({ ...prev, tab: 'all', levelView: 'all', visibleSteps: [2, 3, 4, 5, 6] }))}
-            style={{
-              background: state.tab === 'all' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
-              border: state.tab === 'all' ? '1px solid rgba(255,255,255,0.5)' : '1px solid rgba(255,255,255,0.2)',
-              borderRadius: '4px',
-              color: '#fff',
-              padding: '4px 12px',
-              fontSize: '12px',  // 10px → 12px
-              fontWeight: state.tab === 'all' ? 600 : 400,  // 표준화
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseOver={(e) => {
-              if (state.tab !== 'all') {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (state.tab !== 'all') {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-              }
-            }}
-          >
-            전체보기
-          </button>
-        </div>
       </div>
     </div>
   );

@@ -613,6 +613,78 @@ function FMEAWorksheetPageContent() {
               background: '#f0f4f8',
             }}
           >
+            {/* 우측 메뉴바 (탭별 색상) */}
+            <div style={{
+              height: '32px',
+              background: (() => {
+                if (state.tab === 'structure') return 'linear-gradient(to right, #42a5f5, #5c6bc0, #42a5f5)';
+                if (state.tab.startsWith('function')) return 'linear-gradient(to right, #66bb6a, #81c784, #66bb6a)';
+                if (state.tab.startsWith('failure')) return 'linear-gradient(to right, #ffa726, #ffb74d, #ffa726)';
+                return 'linear-gradient(to right, #3949ab, #5c6bc0, #3949ab)';
+              })(),
+              borderTop: '1px solid rgba(255,255,255,0.4)',
+              borderBottom: '1px solid rgba(255,255,255,0.4)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              paddingRight: '8px',
+              gap: '6px',
+              position: 'sticky',
+              top: '64px',
+              zIndex: 70,
+            }}>
+              <button
+                className="px-3 py-1 rounded transition-all"
+                style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  border: 'none',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: 400,
+                  cursor: 'pointer',
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+              >
+                📊RPN
+              </button>
+              <button
+                className="px-3 py-1 rounded transition-all"
+                style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  border: 'none',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: 400,
+                  cursor: 'pointer',
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+              >
+                📚LLD
+              </button>
+              <button
+                onClick={() => setState(prev => ({ ...prev, tab: 'all', levelView: 'all', visibleSteps: [2, 3, 4, 5, 6] }))}
+                className="px-3 py-1 rounded transition-all"
+                style={{
+                  background: state.tab === 'all' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)',
+                  border: 'none',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: state.tab === 'all' ? 600 : 400,
+                  cursor: 'pointer',
+                }}
+                onMouseOver={(e) => {
+                  if (state.tab !== 'all') e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
+                }}
+                onMouseOut={(e) => {
+                  if (state.tab !== 'all') e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+                }}
+              >
+                전체보기
+              </button>
+            </div>
+
             {/* 탭에 따라 1:1 대응 트리 표시 */}
             {state.tab === 'structure' && (
               <>
