@@ -46,7 +46,7 @@ export default function TabMenu({ state, setState }: TabMenuProps) {
         height: '32px',
         position: 'sticky', 
         top: '64px',  // PFMEATopNav(32px) + TopMenuBar(32px) 아래
-        zIndex: 45,
+        zIndex: 80,  // 사이드바(9999)보다 낮게
         fontFamily: '"Segoe UI", "Malgun Gothic", Arial, sans-serif',
         borderTop: '1px solid rgba(255,255,255,0.4)',  // 상단 구분선 (더 밝게)
         borderBottom: '1px solid rgba(255,255,255,0.4)',  // 하단 구분선

@@ -284,7 +284,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-50 h-screen',
+        'fixed left-0 top-0 h-screen',
         // 네이비 그라데이션 배경
         'bg-gradient-to-b from-[#1a237e] via-[#283593] to-[#1a237e]',
         'flex flex-col',
@@ -292,6 +292,7 @@ export function Sidebar() {
         'shadow-xl',
         isHovered ? 'w-[180px]' : 'w-12'
       )}
+      style={{ zIndex: 9999 }}  // 최상위 레이어
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => {
         setIsHovered(false);

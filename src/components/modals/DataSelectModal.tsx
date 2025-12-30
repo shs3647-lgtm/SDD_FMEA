@@ -396,7 +396,7 @@ export default function DataSelectModal({
       style={{ paddingTop: '80px', paddingRight: '20px' }}
     >
       <div 
-        className="bg-white rounded-lg shadow-2xl w-[500px] flex flex-col overflow-hidden"
+        className="bg-white rounded-lg shadow-2xl w-[350px] flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()}
         style={{ maxHeight: 'calc(100vh - 120px)' }}
       >

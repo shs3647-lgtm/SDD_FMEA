@@ -606,7 +606,7 @@ function FMEAWorksheetPageContent() {
           {state.tab !== 'all' && state.tab !== 'failure-link' && (
           <div 
             style={{ 
-              width: '280px', 
+              width: '350px',  // 280px → 350px 통일
               flexShrink: 0,
               display: 'flex',
               flexDirection: 'column',

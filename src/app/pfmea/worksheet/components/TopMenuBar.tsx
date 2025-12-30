@@ -50,7 +50,7 @@ export default function TopMenuBar({
         borderBottom: '1px solid rgba(255,255,255,0.3)',  // 하단 구분선
         position: 'sticky',
         top: '32px',  // PFMEATopNav 아래
-        zIndex: 50,
+        zIndex: 90,  // 사이드바(9999)보다 낮게
       }}
     >
       {/* FMEA명 */}

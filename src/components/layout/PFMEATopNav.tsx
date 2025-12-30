@@ -40,7 +40,7 @@ export default function PFMEATopNav({ selectedFmeaId }: PFMEATopNavProps) {
         top: 0,
         left: '53px',  // 사이드바(48px) + 구분선(5px) = 53px
         right: 0,
-        zIndex: 999,  // 사이드바보다 낮게
+        zIndex: 100,  // 사이드바(9999)보다 낮게
         display: 'flex', 
         alignItems: 'center',
         background: 'linear-gradient(to right, #1a237e, #283593, #1a237e)',  // 1단계 - 가장 어두움
