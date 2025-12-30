@@ -618,12 +618,12 @@ function FMEAWorksheetPageContent() {
               background: '#f0f4f8',
             }}
           >
-            {/* 플러그인 메뉴바 (TabMenu와 같은 높이) */}
+            {/* 플러그인 메뉴바 (파란색 배경) */}
             <div style={{
               height: '32px',
-              background: 'linear-gradient(to right, #3949ab, #5c6bc0, #3949ab)',
-              borderTop: '1px solid rgba(255,255,255,0.4)',
-              borderBottom: '1px solid rgba(255,255,255,0.4)',
+              background: 'linear-gradient(to right, #1976d2, #42a5f5, #1976d2)',
+              borderTop: '1px solid rgba(255,255,255,0.5)',
+              borderBottom: '1px solid rgba(255,255,255,0.5)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -670,48 +670,6 @@ function FMEAWorksheetPageContent() {
                 }}
               >
                 PDF
-              </button>
-              <button
-                onClick={() => setShowAPModal(true)}
-                className="rounded transition-all"
-                style={{
-                  background: '#f44336',
-                  border: 'none',
-                  color: '#fff',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  padding: '3px 8px',
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.filter = 'brightness(1.1)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.filter = 'brightness(1)';
-                }}
-              >
-                5AP
-              </button>
-              <button
-                onClick={() => setShow6APModal(true)}
-                className="rounded transition-all"
-                style={{
-                  background: '#ff9800',
-                  border: 'none',
-                  color: '#fff',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  padding: '3px 8px',
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.filter = 'brightness(1.1)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.filter = 'brightness(1)';
-                }}
-              >
-                6AP
               </button>
               <button
                 className="rounded transition-all"

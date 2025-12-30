@@ -193,30 +193,30 @@ export default function TopMenuBar({
         <button 
           onClick={onOpenSpecialChar} 
           className="px-3 py-1 text-white rounded hover:brightness-110 transition-all" 
-          style={{ background: '#ffc107', fontSize: '12px', fontWeight: 600 }}
+          style={{ background: '#5c6bc0', fontSize: '12px', fontWeight: 600 }}
         >
           ⭐특별특성
         </button>
         <button 
           onClick={onOpenSOD} 
           className="px-3 py-1 text-white rounded hover:brightness-110 transition-all" 
-          style={{ background: '#4caf50', fontSize: '12px', fontWeight: 600 }}
+          style={{ background: '#7986cb', fontSize: '12px', fontWeight: 600 }}
         >
           📊SOD
         </button>
         <button 
           onClick={onOpen5AP} 
           className="px-3 py-1 text-white rounded hover:brightness-110 transition-all" 
-          style={{ background: '#f44336', fontSize: '12px', fontWeight: 600 }}
+          style={{ background: '#5c6bc0', fontSize: '12px', fontWeight: 600 }}
         >
-          🔴5AP
+          5AP
         </button>
         <button 
           onClick={onOpen6AP} 
           className="px-3 py-1 text-white rounded hover:brightness-110 transition-all" 
-          style={{ background: '#ff9800', fontSize: '12px', fontWeight: 600 }}
+          style={{ background: '#7986cb', fontSize: '12px', fontWeight: 600 }}
         >
-          🟠6AP
+          6AP
         </button>
       </div>
     </div>

@@ -15,11 +15,11 @@ interface StepToggleButtonsProps {
 
 export default function StepToggleButtons({ state, setState }: StepToggleButtonsProps) {
   const steps = [
-    { step: 2, label: '2ST', color: '#42a5f5' },  // 구조분석 색상
-    { step: 3, label: '3ST', color: '#66bb6a' },  // 기능분석 색상
-    { step: 4, label: '4ST', color: '#ffa726' },  // 고장분석 색상
-    { step: 5, label: '5ST', color: '#f44336' },  // 리스크 색상
-    { step: 6, label: '6ST', color: '#ff9800' },  // 최적화 색상
+    { step: 2, label: '2ST', color: '#5c6bc0' },  // 네이비 계열
+    { step: 3, label: '3ST', color: '#7986cb' },  // 네이비 밝음
+    { step: 4, label: '4ST', color: '#5c6bc0' },  // 네이비 계열
+    { step: 5, label: '5ST', color: '#7986cb' },  // 네이비 밝음
+    { step: 6, label: '6ST', color: '#5c6bc0' },  // 네이비 계열
   ];
 
   const toggleStep = (step: number) => {

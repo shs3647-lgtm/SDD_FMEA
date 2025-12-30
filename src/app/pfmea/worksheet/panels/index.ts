@@ -41,6 +41,13 @@ export interface PanelConfig {
  * 레이지 로딩으로 각 패널은 클릭할 때만 로드됨
  * 이로 인해 초기 번들 크기가 크게 감소
  */
+/**
+ * 플러그인 패널 레지스트리
+ * 
+ * 우측 트리뷰 영역에 표시되는 패널들
+ * - 5AP/6AP: TopMenuBar에서 모달로 표시 (여기서 제거)
+ * - LLD: TopMenuBar로 이동 (여기서 제거)
+ */
 export const PANEL_REGISTRY: PanelConfig[] = [
   {
     id: 'tree',
@@ -55,52 +62,13 @@ export const PANEL_REGISTRY: PanelConfig[] = [
     icon: '📄',
     component: lazy(() => import('./PDFViewer')),
     order: 2,
-    // 예시: PDF 파일이 있을 때만 활성화
-    // enabled: (state) => !!state.pdfUrl,
-  },
-  {
-    id: '5ap',
-    label: '5 AP',
-    icon: '🔴',
-    component: lazy(() => import('./APTable/APTable5')),
-    color: '#f44336',
-    order: 3,
-  },
-  {
-    id: '6ap',
-    label: '6 AP',
-    icon: '🟠',
-    component: lazy(() => import('./APTable/APTable6')),
-    color: '#ff9800',
-    order: 4,
-  },
-  {
-    id: '10rpn',
-    label: '10 RPN',
-    icon: '📊',
-    component: lazy(() => import('./RPNChart/ParetoChart')),
-    order: 5,
   },
   {
     id: 'rpn',
     label: 'RPN',
-    icon: '📈',
-    component: lazy(() => import('./RPNChart/RPNAnalysis')),
-    order: 6,
-  },
-  {
-    id: 'lld',
-    label: 'LLD',
-    icon: '📚',
-    component: lazy(() => import('./LLDViewer')),
-    order: 7,
-  },
-  {
-    id: 'gap',
-    label: 'GAP',
-    icon: '🔍',
-    component: lazy(() => import('./GAPAnalysis')),
-    order: 8,
+    icon: '📊',
+    component: lazy(() => import('./RPNChart/ParetoChart')),
+    order: 3,
   },
 ];
 
