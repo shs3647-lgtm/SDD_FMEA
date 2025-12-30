@@ -44,24 +44,25 @@ export default function PFMEATopNav({ selectedFmeaId }: PFMEATopNavProps) {
         display: 'flex', 
         alignItems: 'center',
         background: 'linear-gradient(to right, #1a237e, #283593, #1a237e)',  // 사이드바 색상과 동일
-        height: '28px',  // 더 컴팩트하게
-        fontFamily: '"Malgun Gothic", sans-serif',
-        paddingLeft: '0',  // 좌측 정렬
-        marginLeft: '0',   // 사이드바와 간격 제거
+        height: '32px',  // 사이드바와 통일 (28px → 32px)
+        fontFamily: '"Segoe UI", "Malgun Gothic", Arial, sans-serif',  // 워크시트와 통일
+        paddingLeft: '0',
+        marginLeft: '0',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',  // 그림자 추가
       }}
     >
       {/* 바로가기 레이블 */}
       <div 
         style={{ 
-          padding: '0 8px 0 4px',  /* 좌측 4px 패딩 추가 */
-          color: 'rgba(255,255,255,0.7)', 
-          fontSize: '10px', 
-          fontWeight: 'bold',
+          padding: '0 12px 0 8px',
+          color: 'rgba(255,255,255,0.8)',  // 가독성 향상
+          fontSize: '11px',  // 10px → 11px
+          fontWeight: 600,  // 표준화
           borderRight: '1px solid rgba(255,255,255,0.2)',
           height: '100%',
           display: 'flex',
           alignItems: 'center',
-          minWidth: '50px',
+          minWidth: '60px',
         }}
       >
         바로가기
@@ -73,29 +74,31 @@ export default function PFMEATopNav({ selectedFmeaId }: PFMEATopNavProps) {
           key={item.path}
           onClick={() => handleNavigation(item.path)}
           style={{
-            padding: '0 12px',
+            padding: '0 16px',  // 12px → 16px (여유 공간)
             height: '100%',
             background: isActive(item.path) ? 'rgba(255,255,255,0.15)' : 'transparent',
             color: 'white',
             border: 'none',
             borderRight: index < menuItems.length - 1 ? '1px solid rgba(255,255,255,0.15)' : 'none',
             cursor: 'pointer',
-            fontSize: '11px',
-            fontWeight: isActive(item.path) ? 'bold' : 'normal',
+            fontSize: '12px',  // 11px → 12px (사이드바와 통일)
+            fontWeight: isActive(item.path) ? 600 : 400,  // 표준화 (bold/normal → 600/400)
             display: 'flex',
             alignItems: 'center',
-            gap: '4px',
-            transition: 'background 0.2s',
+            gap: '6px',  // 4px → 6px
+            transition: 'all 0.2s ease',  // 부드러운 전환
             whiteSpace: 'nowrap',
           }}
           onMouseOver={(e) => {
             if (!isActive(item.path)) {
               e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+              e.currentTarget.style.transform = 'translateY(-1px)';  // 살짝 위로
             }
           }}
           onMouseOut={(e) => {
             if (!isActive(item.path)) {
               e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.transform = 'translateY(0)';
             }
           }}
         >
