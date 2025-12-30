@@ -213,12 +213,12 @@ export const COLORS = {
   },
 } as const;
 
-// ============ 폰트 표준 (최종 확정 2025-12-30) ============
+// ============ 폰트 표준 (최종 확정 2025-12-30, 데이터 12px로 증가) ============
 export const FONT_SIZES = {
   pageHeader: '13px',    // 페이지 헤더 (P-FMEA 구조분석)
   header1: '12px',       // 1단 헤더 (1. 완제품 공정명)
   header2: '12px',       // 2단 헤더 (완제품명+라인)
-  cell: '11px',          // 데이터 셀
+  cell: '12px',          // 데이터 셀 (11px → 12px 증가)
   small: '10px',         // 작은 텍스트 (배지 등)
 } as const;
 

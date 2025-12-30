@@ -37,9 +37,9 @@ background: 연한 색상
 color: black
 ```
 
-### 4. 데이터 셀
+### 4. 데이터 셀 ⭐ (사용자 피드백 반영)
 ```typescript
-fontSize: 11px
+fontSize: 12px  // 11px → 12px 증가 (가독성 향상)
 fontWeight: 400  // 일반
 height: 26px
 ```
