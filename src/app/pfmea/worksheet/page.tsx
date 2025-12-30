@@ -613,26 +613,40 @@ function FMEAWorksheetPageContent() {
               background: '#f0f4f8',
             }}
           >
-            {/* 우측 메뉴바 (탭별 색상) */}
+            {/* 우측 플러그인 메뉴바 (표준 네이비 계열) */}
             <div style={{
               height: '32px',
-              background: (() => {
-                if (state.tab === 'structure') return 'linear-gradient(to right, #42a5f5, #5c6bc0, #42a5f5)';
-                if (state.tab.startsWith('function')) return 'linear-gradient(to right, #66bb6a, #81c784, #66bb6a)';
-                if (state.tab.startsWith('failure')) return 'linear-gradient(to right, #ffa726, #ffb74d, #ffa726)';
-                return 'linear-gradient(to right, #3949ab, #5c6bc0, #3949ab)';
-              })(),
+              background: 'linear-gradient(to right, #5c6bc0, #7986cb, #5c6bc0)',
               borderTop: '1px solid rgba(255,255,255,0.4)',
               borderBottom: '1px solid rgba(255,255,255,0.4)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'flex-end',
-              paddingRight: '8px',
+              justifyContent: 'flex-start',
+              paddingLeft: '8px',
               gap: '6px',
               position: 'sticky',
               top: '64px',
               zIndex: 70,
             }}>
+              <button
+                className="px-3 py-1 rounded transition-all"
+                style={{
+                  background: 'rgba(255,255,255,0.3)',
+                  border: 'none',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.4)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.3)';
+                }}
+              >
+                🌳 TREE
+              </button>
               <button
                 className="px-3 py-1 rounded transition-all"
                 style={{
@@ -643,10 +657,71 @@ function FMEAWorksheetPageContent() {
                   fontWeight: 400,
                   cursor: 'pointer',
                 }}
-                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
-                onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+                }}
               >
-                📊RPN
+                📄 PDF
+              </button>
+              <button
+                className="px-3 py-1 rounded transition-all"
+                style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  border: 'none',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: 400,
+                  cursor: 'pointer',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+                }}
+              >
+                🔴 5AP
+              </button>
+              <button
+                className="px-3 py-1 rounded transition-all"
+                style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  border: 'none',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: 400,
+                  cursor: 'pointer',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+                }}
+              >
+                🟠 6AP
+              </button>
+              <button
+                className="px-3 py-1 rounded transition-all"
+                style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  border: 'none',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: 400,
+                  cursor: 'pointer',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+                }}
+              >
+                📊 RPN
               </button>
             </div>
 
