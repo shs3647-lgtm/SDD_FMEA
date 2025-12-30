@@ -1472,19 +1472,15 @@ function TabMenu({ state, setState }: TabMenuProps) {
             })}
           </div>
 
-          {/* 단계별 토글 버튼 - 전체보기(All) 선택 시에만 표시 */}
-          {state.tab === 'all' && (
-            <>
-              <div className="w-px h-4 bg-gray-300 mx-1" />
-              <StepToggleButtons state={state} setState={setState} />
-            </>
-          )}
+          {/* 단계별 토글 버튼 - 모든 탭에서 표시 */}
+          <div className="w-px h-4 bg-gray-300 mx-1" />
+          <StepToggleButtons state={state} setState={setState} />
         </div>
 
         <div className="flex items-center gap-1" style={{ marginLeft: '4px' }}>
           <div className="w-px h-4 bg-gray-300" />
           <button
-            onClick={() => setState(prev => ({ ...prev, tab: 'all', levelView: 'all' }))}
+            onClick={() => setState(prev => ({ ...prev, tab: 'all', levelView: 'all', visibleSteps: [2, 3, 4, 5, 6] }))}
             style={{
               background: state.tab === 'all' ? COLORS.blue : '#fff',
               border: `1px solid ${COLORS.blue}`,
