@@ -91,6 +91,16 @@ fmea-smart-system\
   - 총 약 200줄 감소
 - **상태**: 빌드 성공, 테스트 통과
 
+### 2025-12-30: Step 2 평가 탭 분리 완료
+- **커밋**: `refactor: Step 2 part1 - eval-structure tab split` (468400f)
+- **내용**: 
+  - tabs/evaluation/ 디렉토리 생성
+  - EvalStructureTab.tsx (116줄), EvalFunctionTab.tsx (195줄), EvalFailureTab.tsx (112줄) 생성
+  - constants.ts에 색상 정의 추가 (structure, function, failure, risk, opt)
+  - page.tsx: 365줄 감소 (2,629줄 → 2,264줄)
+- **상태**: 빌드 성공, 개발 서버 실행 중
+- **테스트 URL**: http://localhost:3000/pfmea/worksheet
+
 ---
 
 ## 코드프리즈 (Code Freeze) 정책

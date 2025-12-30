@@ -164,6 +164,22 @@ export const COLORS = {
   mc: { bg: '#fff3e6', border: '#ffd2a6', color: '#8a4f00' },
   im: { bg: '#f0fff2', border: '#bdeac5', color: '#1b6b2a' },
   en: { bg: '#fef0ff', border: '#f0bdf5', color: '#7a1a88' },
+  // 분석 단계별 색상
+  structure: { main: '#1a237e', header: '#3949ab', cell: '#e3f2fd' },
+  function: { main: '#2e7d32', header: '#43a047', cell: '#e8f5e9' },
+  failure: { main: '#c62828', header: '#e53935', cell: '#ffebee' },
+  risk: { 
+    main: '#f57c00', 
+    prevention: { header: '#fff3e0', cell: '#ffe0b2' },
+    detection: { header: '#e1f5fe', cell: '#b3e5fc' },
+    evaluation: { header: '#fce4ec', cell: '#f8bbd0' }
+  },
+  opt: {
+    main: '#00796b',
+    plan: { header: '#e0f2f1', cell: '#b2dfdb' },
+    monitor: { header: '#fff9c4', cell: '#fff59d' },
+    effect: { header: '#f3e5f5', cell: '#e1bee7' }
+  },
 } as const;
 
 // 분석 탭 (Analysis) - 개별 단계별 분석
