@@ -10,27 +10,12 @@
 
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { FailureTabProps } from './types';
-import { uid } from '../../constants';
+import { uid, COLORS, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
 // 유틸리티 함수 import
 import { 
   groupFailureLinksByFM,
   calculateLastRowMerge
 } from '../../utils';
-
-// 색상 정의
-const COLORS = {
-  blue: '#2b78c5',
-  sky: '#bfe0ff',
-  skyLight: '#d7ecff',
-  line: '#6f8fb4',
-  bg: '#f5f7fb',
-  fe: { header: '#e3f2fd', text: '#1565c0', border: '#1976d2' },
-  fm: { header: '#fff8e1', text: '#f57c00', border: '#ff9800' },
-  fc: { header: '#e8f5e9', text: '#2e7d32', border: '#4caf50' },
-  mn: '#eef7ff',
-  mc: '#ffe6e6',
-  en: '#fef0ff',
-};
 
 interface FEItem { id: string; scope: string; feNo: string; text: string; severity?: number; }
 interface FMItem { id: string; fmNo: string; processName: string; text: string; }
@@ -731,7 +716,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     <div style={{ display: 'flex', height: '100%', background: COLORS.bg, overflow: 'hidden' }}>
       {/* 좌측: 3개 테이블 (60%) */}
       <div style={{ flex: '60', borderRight: `2px solid ${COLORS.line}`, background: '#fff', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '8px 12px', background: COLORS.skyLight, borderBottom: `1px solid ${COLORS.line}`, fontSize: '13px', position: 'relative' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '8px 12px', background: COLORS.failure.light, borderBottom: `1px solid ${COLORS.line}`, fontSize: '13px', position: 'relative' }}>
           <span style={{ fontWeight: 900 }}>P-FMEA 고장 분석(4단계) - 고장연결</span>
           <div style={{ position: 'absolute', right: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <select 
@@ -740,7 +725,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
                 setSelectedProcess(e.target.value);
                 setViewMode('diagram'); // 공정 변경 시 고장사슬 화면으로 자동 전환
               }}
-              style={{ padding: '3px 8px', fontSize: '10px', borderRadius: '3px', border: '1px solid #f9a825', background: '#fff8e1', fontWeight: 600, color: '#e65100' }}
+              style={{ padding: '3px 8px', fontSize: FONT_SIZES.cell, borderRadius: '3px', border: '1px solid #f9a825', background: '#fff8e1', fontWeight: 600, color: '#e65100' }}
             >
               <option value="all">모든공정</option>
               {processList.map(proc => (
@@ -753,16 +738,16 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden', gap: '3px', padding: '3px' }}>
           {/* FE 테이블 */}
           <div style={{ flex: '0 0 25%', border: `1px solid ${COLORS.line}`, borderRadius: '4px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ padding: '6px 8px', fontWeight: 900, fontSize: '10px', background: COLORS.fe.header, color: COLORS.fe.text, textAlign: 'center' }}>
+            <div style={{ padding: '6px 8px', fontWeight: 900, fontSize: FONT_SIZES.cell, background: COLORS.failure.light, color: COLORS.failure.text, textAlign: 'center' }}>
               고장영향(FE) <span style={{ fontWeight: 600, color: '#2e7d32' }}>연결:{linkStats.feLinkedCount}</span> <span style={{ fontWeight: 600, color: '#c62828' }}>누락:{linkStats.feMissingCount}</span>
             </div>
             <div style={{ flex: 1, overflowY: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: FONT_SIZES.cell }}>
                 <thead>
                   <tr>
-                    <th style={{ width: '20%', background: COLORS.sky, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700 }}>No</th>
-                    <th style={{ background: COLORS.sky, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700 }}>고장영향(FE)</th>
-                    <th style={{ width: '15%', background: COLORS.sky, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700 }}>S</th>
+                    <th style={{ width: '20%', background: COLORS.failure.light, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700 }}>No</th>
+                    <th style={{ background: COLORS.failure.light, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700 }}>고장영향(FE)</th>
+                    <th style={{ width: '15%', background: COLORS.failure.light, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700 }}>S</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -787,16 +772,16 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
 
           {/* FM 테이블 */}
           <div style={{ flex: '0 0 28%', border: `1px solid ${COLORS.line}`, borderRadius: '4px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ padding: '6px 8px', fontWeight: 900, fontSize: '10px', background: COLORS.fm.header, color: COLORS.fm.text, textAlign: 'center' }}>
+            <div style={{ padding: '6px 8px', fontWeight: 900, fontSize: FONT_SIZES.cell, background: COLORS.failure.light, color: COLORS.failure.text, textAlign: 'center' }}>
               FM({fmData.length}) <span style={{ fontWeight: 600, color: '#2e7d32' }}>연결:{linkStats.fmLinkedCount}</span> <span style={{ fontWeight: 600, color: '#c62828' }}>누락:{linkStats.fmMissingCount}</span>
             </div>
             <div style={{ flex: 1, overflowY: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: FONT_SIZES.cell }}>
                 <thead>
                   <tr>
-                    <th style={{ width: '15%', background: COLORS.sky, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700 }}>No</th>
-                    <th style={{ width: '30%', background: COLORS.sky, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700, whiteSpace: 'nowrap' }}>공정명</th>
-                    <th style={{ background: COLORS.sky, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700 }}>고장형태(FM)</th>
+                    <th style={{ width: '15%', background: COLORS.failure.light, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700 }}>No</th>
+                    <th style={{ width: '30%', background: COLORS.failure.light, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700, whiteSpace: 'nowrap' }}>공정명</th>
+                    <th style={{ background: COLORS.failure.light, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700 }}>고장형태(FM)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -807,7 +792,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
                     return (
                       <tr key={fm.id} onClick={() => selectFM(fm.id)} style={{ cursor: 'pointer' }}>
                         <td style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 700, background: noBg, color: '#fff' }}>{fm.fmNo}</td>
-                        <td style={{ padding: '4px 6px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 600, fontSize: '9px', whiteSpace: 'nowrap', background: isSelected ? '#fff8e1' : '#fff' }}>{fm.processName}</td>
+                        <td style={{ padding: '4px 6px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 600, fontSize: FONT_SIZES.small, whiteSpace: 'nowrap', background: isSelected ? '#fff8e1' : '#fff' }}>{fm.processName}</td>
                         <td style={{ padding: '4px 6px', border: '1px solid #ccc', background: isSelected ? '#fff8e1' : '#fff' }}>{fm.text}{linkStats.fmLinkedIds.has(fm.id) ? ' ✓' : ''}</td>
                       </tr>
                     );
@@ -819,28 +804,28 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
 
           {/* FC 테이블 */}
           <div style={{ flex: '1 1 47%', border: `1px solid ${COLORS.line}`, borderRadius: '4px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ padding: '6px 8px', fontWeight: 900, fontSize: '10px', background: COLORS.fc.header, color: COLORS.fc.text, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '6px 8px', fontWeight: 900, fontSize: FONT_SIZES.cell, background: COLORS.failure.light, color: COLORS.failure.text, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ flex: 1, textAlign: 'center' }}>
                 고장원인(FC) <span style={{ fontWeight: 600, color: '#2e7d32' }}>연결:{linkStats.fcLinkedCount}</span> <span style={{ fontWeight: 600, color: '#c62828' }}>누락:{linkStats.fcMissingCount}</span>
               </span>
               <select
                 value={fcLinkScope}
                 onChange={(e) => setFcLinkScope(e.target.value as 'current' | 'all')}
-                style={{ padding: '2px 4px', fontSize: '9px', borderRadius: '3px', border: '1px solid #f9a825', background: '#fff8e1', fontWeight: 600, color: '#e65100' }}
+                style={{ padding: '2px 4px', fontSize: FONT_SIZES.small, borderRadius: '3px', border: '1px solid #f9a825', background: '#fff8e1', fontWeight: 600, color: '#e65100' }}
               >
                 <option value="current">해당공정</option>
                 <option value="all">모든공정</option>
               </select>
             </div>
             <div style={{ flex: 1, overflowY: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: FONT_SIZES.cell }}>
                 <thead>
                   <tr>
-                    <th style={{ width: '8%', background: COLORS.sky, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700 }}>No</th>
-                    <th style={{ width: '14%', background: COLORS.sky, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700, whiteSpace: 'nowrap' }}>공정명</th>
-                    <th style={{ width: '8%', background: COLORS.sky, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700 }}>4M</th>
-                    <th style={{ width: '18%', background: COLORS.sky, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700 }}>작업요소</th>
-                    <th style={{ background: COLORS.sky, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700 }}>고장원인(FC)</th>
+                    <th style={{ width: '8%', background: COLORS.failure.light, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700 }}>No</th>
+                    <th style={{ width: '14%', background: COLORS.failure.light, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700, whiteSpace: 'nowrap' }}>공정명</th>
+                    <th style={{ width: '8%', background: COLORS.failure.light, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700 }}>4M</th>
+                    <th style={{ width: '18%', background: COLORS.failure.light, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700 }}>작업요소</th>
+                    <th style={{ background: COLORS.failure.light, padding: '4px', border: '1px solid #ccc', position: 'sticky', top: 0, fontWeight: 700 }}>고장원인(FC)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -853,9 +838,9 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
                     return (
                       <tr key={fc.id} onClick={() => toggleFC(fc.id)} style={{ cursor: 'pointer' }}>
                         <td style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 700, background: noBg, color: '#fff' }}>{fc.fcNo}</td>
-                        <td style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 600, fontSize: '9px', whiteSpace: 'nowrap', background: '#fff' }}>{fc.processName}</td>
+                        <td style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 600, fontSize: FONT_SIZES.small, whiteSpace: 'nowrap', background: '#fff' }}>{fc.processName}</td>
                         <td style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 600, background: '#fff' }}>{fc.m4}</td>
-                        <td style={{ padding: '4px', border: '1px solid #ccc', fontSize: '9px', background: '#fff' }}>{fc.workElem}</td>
+                        <td style={{ padding: '4px', border: '1px solid #ccc', fontSize: FONT_SIZES.small, background: '#fff' }}>{fc.workElem}</td>
                         <td style={{ padding: '4px', border: '1px solid #ccc', background: '#fff' }}>{fc.text}{isLinkedInSaved ? ' ✓' : ''}</td>
                       </tr>
                     );
@@ -870,12 +855,12 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       {/* 우측: 토글 화면 (40%) */}
       <div style={{ flex: '40', background: '#fff', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* 헤더 + 토글 버튼 */}
-        <div style={{ display: 'flex', alignItems: 'center', padding: '4px 8px', background: COLORS.skyLight, borderBottom: `1px solid ${COLORS.line}`, gap: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', padding: '4px 8px', background: COLORS.failure.light, borderBottom: `1px solid ${COLORS.line}`, gap: '4px' }}>
           {/* 고장사슬 토글 버튼 */}
           <button 
             onClick={() => setViewMode('diagram')} 
             style={{ 
-              padding: '4px 10px', fontSize: '10px', fontWeight: 700, border: '1px solid #1976d2', 
+              padding: '4px 10px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold, border: '1px solid #1976d2', 
               borderRadius: '3px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
               background: viewMode === 'diagram' ? '#1976d2' : '#fff', 
               color: viewMode === 'diagram' ? '#fff' : '#1976d2' 
@@ -899,7 +884,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
             <button 
               onClick={() => setViewMode('result')} 
               style={{ 
-                flex: 1, padding: '4px 8px', fontSize: '10px', fontWeight: 700, border: '1px solid #1976d2',
+                flex: 1, padding: '4px 8px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold, border: '1px solid #1976d2',
                 borderRadius: '3px', cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 0,
                 background: viewMode === 'result' ? '#1976d2' : '#fff', 
                 color: viewMode === 'result' ? '#fff' : '#1976d2' 
@@ -911,10 +896,10 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
           
           {/* 우측 버튼들 */}
           <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
-            <button onClick={() => handleModeChange('confirm')} disabled={!currentFMId || (linkedFEs.size === 0 && linkedFCs.size === 0)} style={{ padding: '4px 8px', fontSize: '10px', fontWeight: 700, border: '1px solid #999', borderRadius: '3px', cursor: 'pointer', background: '#2196f3', color: '#fff', opacity: (!currentFMId || (linkedFEs.size === 0 && linkedFCs.size === 0)) ? 0.5 : 1, whiteSpace: 'nowrap' }}>연결확정</button>
-            <button onClick={() => handleModeChange('edit')} style={{ padding: '4px 8px', fontSize: '10px', fontWeight: 700, border: '1px solid #999', borderRadius: '3px', cursor: 'pointer', background: editMode === 'edit' ? '#4caf50' : '#fff', color: editMode === 'edit' ? '#fff' : '#333', whiteSpace: 'nowrap' }}>수정</button>
-            <button onClick={handleReverseGenerate} disabled={savedLinks.length === 0} style={{ padding: '4px 8px', fontSize: '10px', fontWeight: 700, border: '1px solid #e65100', borderRadius: '3px', cursor: savedLinks.length > 0 ? 'pointer' : 'not-allowed', background: '#fff8e1', color: '#e65100', opacity: savedLinks.length === 0 ? 0.5 : 1, whiteSpace: 'nowrap' }}>🔄 역전개</button>
-            <button onClick={handleClearAll} disabled={savedLinks.length === 0} style={{ padding: '4px 8px', fontSize: '10px', fontWeight: 700, border: '1px solid #d32f2f', borderRadius: '3px', cursor: savedLinks.length > 0 ? 'pointer' : 'not-allowed', background: '#ffebee', color: '#d32f2f', opacity: savedLinks.length === 0 ? 0.5 : 1, whiteSpace: 'nowrap' }}>🗑️ 초기화</button>
+            <button onClick={() => handleModeChange('confirm')} disabled={!currentFMId || (linkedFEs.size === 0 && linkedFCs.size === 0)} style={{ padding: '4px 8px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold, border: '1px solid #999', borderRadius: '3px', cursor: 'pointer', background: '#2196f3', color: '#fff', opacity: (!currentFMId || (linkedFEs.size === 0 && linkedFCs.size === 0)) ? 0.5 : 1, whiteSpace: 'nowrap' }}>연결확정</button>
+            <button onClick={() => handleModeChange('edit')} style={{ padding: '4px 8px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold, border: '1px solid #999', borderRadius: '3px', cursor: 'pointer', background: editMode === 'edit' ? '#4caf50' : '#fff', color: editMode === 'edit' ? '#fff' : '#333', whiteSpace: 'nowrap' }}>수정</button>
+            <button onClick={handleReverseGenerate} disabled={savedLinks.length === 0} style={{ padding: '4px 8px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold, border: '1px solid #e65100', borderRadius: '3px', cursor: savedLinks.length > 0 ? 'pointer' : 'not-allowed', background: '#fff8e1', color: '#e65100', opacity: savedLinks.length === 0 ? 0.5 : 1, whiteSpace: 'nowrap' }}>🔄 역전개</button>
+            <button onClick={handleClearAll} disabled={savedLinks.length === 0} style={{ padding: '4px 8px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold, border: '1px solid #d32f2f', borderRadius: '3px', cursor: savedLinks.length > 0 ? 'pointer' : 'not-allowed', background: '#ffebee', color: '#d32f2f', opacity: savedLinks.length === 0 ? 0.5 : 1, whiteSpace: 'nowrap' }}>🗑️ 초기화</button>
           </div>
         </div>
         
@@ -944,11 +929,11 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
                 <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', position: 'relative', zIndex: 2 }}>
                   {/* 상단 라벨 */}
                   <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 110px 1fr 110px', width: '100%', marginBottom: '8px' }}>
-                    <div style={{ textAlign: 'center', fontWeight: 700, fontSize: '11px', color: COLORS.fe.text, background: COLORS.fe.header, padding: '3px 0', borderRadius: '3px' }}>FE(고장영향)</div>
+                    <div style={{ textAlign: 'center', fontWeight: 700, fontSize: '11px', color: COLORS.failure.text, background: COLORS.failure.light, padding: '3px 0', borderRadius: '3px' }}>FE(고장영향)</div>
                     <div></div>
-                    <div style={{ textAlign: 'center', fontWeight: 700, fontSize: '11px', color: COLORS.fm.text, background: COLORS.fm.header, padding: '3px 0', borderRadius: '3px' }}>FM(고장형태)</div>
+                    <div style={{ textAlign: 'center', fontWeight: 700, fontSize: '11px', color: COLORS.failure.text, background: COLORS.failure.light, padding: '3px 0', borderRadius: '3px' }}>FM(고장형태)</div>
                     <div></div>
-                    <div style={{ textAlign: 'center', fontWeight: 700, fontSize: '11px', color: COLORS.fc.text, background: COLORS.fc.header, padding: '3px 0', borderRadius: '3px' }}>FC(고장원인)</div>
+                    <div style={{ textAlign: 'center', fontWeight: 700, fontSize: '11px', color: COLORS.failure.text, background: COLORS.failure.light, padding: '3px 0', borderRadius: '3px' }}>FC(고장원인)</div>
                   </div>
                   
                   {/* 카드 영역 */}
@@ -956,14 +941,14 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
                     {/* FE 열 */}
                     <div ref={feColRef} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: '4px' }}>
                       {Array.from(linkedFEs.values()).map(fe => (
-                        <div key={fe.id} className="fe-card" style={{ background: '#fff', border: `2px solid ${COLORS.fe.border}`, borderRadius: '4px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)', width: '120px', overflow: 'hidden', fontSize: '9px' }}>
-                          <div style={{ padding: '3px 6px', fontWeight: 700, background: COLORS.fe.header, color: COLORS.fe.text, textAlign: 'center' }}>
+                        <div key={fe.id} className="fe-card" style={{ background: '#fff', border: `2px solid ${COLORS.failure.dark}`, borderRadius: '4px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)', width: '120px', overflow: 'hidden', fontSize: FONT_SIZES.small }}>
+                          <div style={{ padding: '3px 6px', fontWeight: 700, background: COLORS.failure.light, color: COLORS.failure.text, textAlign: 'center' }}>
                             {fe.feNo} | S:{fe.severity || '-'}
                           </div>
                           <div style={{ padding: '4px 6px', lineHeight: 1.3, color: '#333', textAlign: 'center' }}>{fe.text}</div>
                         </div>
                       ))}
-                      {linkedFEs.size === 0 && <div style={{ color: '#bbb', fontSize: '9px', textAlign: 'center' }}>FE 클릭</div>}
+                      {linkedFEs.size === 0 && <div style={{ color: '#bbb', fontSize: FONT_SIZES.small, textAlign: 'center' }}>FE 클릭</div>}
                     </div>
 
                     {/* 왼쪽 간격 (화살표 영역) */}
@@ -971,8 +956,8 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
 
                     {/* FM 열 */}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                      <div ref={fmNodeRef} style={{ background: '#fff', border: `2px solid ${COLORS.fm.border}`, borderRadius: '4px', boxShadow: '0 2px 4px rgba(0,0,0,0.15)', width: '110px', overflow: 'hidden', fontSize: '9px' }}>
-                        <div style={{ padding: '3px 6px', fontWeight: 700, background: COLORS.fm.header, color: COLORS.fm.text, borderBottom: '1px solid #ffe0b2', textAlign: 'center' }}>{currentFM.fmNo}</div>
+                      <div ref={fmNodeRef} style={{ background: '#fff', border: `2px solid ${COLORS.failure.dark}`, borderRadius: '4px', boxShadow: '0 2px 4px rgba(0,0,0,0.15)', width: '110px', overflow: 'hidden', fontSize: FONT_SIZES.small }}>
+                        <div style={{ padding: '3px 6px', fontWeight: 700, background: COLORS.failure.light, color: COLORS.failure.text, borderBottom: '1px solid #ffe0b2', textAlign: 'center' }}>{currentFM.fmNo}</div>
                         <div style={{ padding: '4px 6px', lineHeight: 1.3, color: '#333', fontWeight: 600, textAlign: 'center' }}>{currentFM.text}</div>
                       </div>
                     </div>
@@ -983,12 +968,12 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
                     {/* FC 열 */}
                     <div ref={fcColRef} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', gap: '4px' }}>
                       {Array.from(linkedFCs.values()).map(fc => (
-                        <div key={fc.id} className="fc-card" style={{ background: '#fff', border: `2px solid ${COLORS.fc.border}`, borderRadius: '4px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)', width: '110px', overflow: 'hidden', fontSize: '9px' }}>
-                          <div style={{ padding: '3px 6px', fontWeight: 700, background: COLORS.fc.header, color: COLORS.fc.text, textAlign: 'center' }}>{fc.fcNo}</div>
+                        <div key={fc.id} className="fc-card" style={{ background: '#fff', border: `2px solid ${COLORS.failure.dark}`, borderRadius: '4px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)', width: '110px', overflow: 'hidden', fontSize: FONT_SIZES.small }}>
+                          <div style={{ padding: '3px 6px', fontWeight: 700, background: COLORS.failure.light, color: COLORS.failure.text, textAlign: 'center' }}>{fc.fcNo}</div>
                           <div style={{ padding: '4px 6px', lineHeight: 1.3, color: '#333', textAlign: 'center' }}>{fc.text}</div>
                         </div>
                       ))}
-                      {linkedFCs.size === 0 && <div style={{ color: '#bbb', fontSize: '9px' }}>FC 클릭</div>}
+                      {linkedFCs.size === 0 && <div style={{ color: '#bbb', fontSize: FONT_SIZES.small }}>FC 클릭</div>}
                     </div>
                   </div>
                 </div>
@@ -1080,12 +1065,12 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
             
             return (
               <div style={{ padding: '8px', height: '100%', overflowY: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: FONT_SIZES.cell }}>
                   <thead>
                     <tr>
-                      <th colSpan={4} style={{ background: COLORS.fe.header, padding: '6px', textAlign: 'center', fontWeight: 700, border: `1px solid ${COLORS.line}`, color: COLORS.fe.text }}>고장영향(FE)</th>
-                      <th rowSpan={2} style={{ width: '14%', background: COLORS.fm.header, padding: '6px', textAlign: 'center', fontWeight: 700, border: `1px solid ${COLORS.line}`, color: COLORS.fm.text, verticalAlign: 'middle' }}>고장형태(FM)</th>
-                      <th colSpan={4} style={{ background: COLORS.fc.header, padding: '6px', textAlign: 'center', fontWeight: 700, border: `1px solid ${COLORS.line}`, color: COLORS.fc.text }}>고장원인(FC)</th>
+                      <th colSpan={4} style={{ background: COLORS.failure.light, padding: '6px', textAlign: 'center', fontWeight: 700, border: `1px solid ${COLORS.line}`, color: COLORS.failure.text }}>고장영향(FE)</th>
+                      <th rowSpan={2} style={{ width: '14%', background: COLORS.failure.light, padding: '6px', textAlign: 'center', fontWeight: 700, border: `1px solid ${COLORS.line}`, color: COLORS.failure.text, verticalAlign: 'middle' }}>고장형태(FM)</th>
+                      <th colSpan={4} style={{ background: COLORS.failure.light, padding: '6px', textAlign: 'center', fontWeight: 700, border: `1px solid ${COLORS.line}`, color: COLORS.failure.text }}>고장원인(FC)</th>
                     </tr>
                     <tr>
                       <th style={{ width: '6%', background: '#e3f2fd', padding: '4px', border: '1px solid #ccc', fontWeight: 600 }}>No</th>
@@ -1112,27 +1097,27 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
                           {/* FE 영역: showFe가 true일 때만 렌더링 (rowSpan 사용) */}
                           {row.showFe && (
                             <>
-                              <td rowSpan={row.feRowSpan} style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 700, color: COLORS.fe.text, verticalAlign: 'middle', background: '#e3f2fd' }}>{row.fe?.feNo || ''}</td>
-                              <td rowSpan={row.feRowSpan} style={{ padding: '2px 4px', border: '1px solid #ccc', fontSize: '9px', verticalAlign: 'middle', whiteSpace: 'nowrap', textAlign: 'center', background: '#e3f2fd' }}>
+                              <td rowSpan={row.feRowSpan} style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 700, color: COLORS.failure.text, verticalAlign: 'middle', background: '#e3f2fd' }}>{row.fe?.feNo || ''}</td>
+                              <td rowSpan={row.feRowSpan} style={{ padding: '2px 4px', border: '1px solid #ccc', fontSize: FONT_SIZES.small, verticalAlign: 'middle', whiteSpace: 'nowrap', textAlign: 'center', background: '#e3f2fd' }}>
                                 {row.fe?.scope === 'Your Plant' ? 'YP' : row.fe?.scope === 'Ship to Plant' ? 'SP' : row.fe?.scope === 'User' ? 'USER' : row.fe?.scope || ''}
                               </td>
-                              <td rowSpan={row.feRowSpan} style={{ padding: '4px', border: '1px solid #ccc', fontSize: '9px', verticalAlign: 'middle', background: '#e3f2fd' }}>{row.fe?.text || ''}</td>
+                              <td rowSpan={row.feRowSpan} style={{ padding: '4px', border: '1px solid #ccc', fontSize: FONT_SIZES.small, verticalAlign: 'middle', background: '#e3f2fd' }}>{row.fe?.text || ''}</td>
                               <td rowSpan={row.feRowSpan} style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 700, verticalAlign: 'middle', color: (row.fe?.severity || 0) >= 8 ? '#c62828' : (row.fe?.severity || 0) >= 5 ? '#f57f17' : '#333', background: '#e3f2fd' }}>{row.fe?.severity || ''}</td>
                             </>
                           )}
                           {/* FM 영역: 첫 번째 행에만 렌더링 (rowSpan 사용) */}
                           {row.showFm && (
                             <td rowSpan={row.totalRows} style={{ padding: '6px', border: '1px solid #ccc', background: '#fff8e1', fontWeight: 600, textAlign: 'center', verticalAlign: 'middle' }}>
-                              <div style={{ fontSize: '10px', color: COLORS.fm.text }}>{row.fm.no}</div>
+                              <div style={{ fontSize: FONT_SIZES.cell, color: COLORS.failure.text }}>{row.fm.no}</div>
                               <div>{row.fm.text}</div>
                             </td>
                           )}
                           {/* FC 영역: showFc가 true일 때만 렌더링 (rowSpan 사용) */}
                           {row.showFc && (
                             <>
-                              <td rowSpan={row.fcRowSpan} style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 700, color: COLORS.fc.text, verticalAlign: 'middle', background: linkedBg }}>{row.fc?.fcNo || ''}</td>
-                              <td rowSpan={row.fcRowSpan} style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 600, fontSize: '9px', background: linkedBg, verticalAlign: 'middle', whiteSpace: 'nowrap' }}>{row.fc?.processName || ''}</td>
-                              <td rowSpan={row.fcRowSpan} style={{ padding: '4px', border: '1px solid #ccc', fontSize: '9px', verticalAlign: 'middle', background: linkedBg }}>{row.fc?.workElem || ''}</td>
+                              <td rowSpan={row.fcRowSpan} style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 700, color: COLORS.failure.text, verticalAlign: 'middle', background: linkedBg }}>{row.fc?.fcNo || ''}</td>
+                              <td rowSpan={row.fcRowSpan} style={{ padding: '4px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 600, fontSize: FONT_SIZES.small, background: linkedBg, verticalAlign: 'middle', whiteSpace: 'nowrap' }}>{row.fc?.processName || ''}</td>
+                              <td rowSpan={row.fcRowSpan} style={{ padding: '4px', border: '1px solid #ccc', fontSize: FONT_SIZES.small, verticalAlign: 'middle', background: linkedBg }}>{row.fc?.workElem || ''}</td>
                               <td rowSpan={row.fcRowSpan} style={{ padding: '4px', border: '1px solid #ccc', verticalAlign: 'middle', background: linkedBg }}>{row.fc?.text || ''}</td>
                             </>
                           )}

@@ -7,7 +7,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { FunctionTabProps } from './types';
-import { COLORS, uid } from '../../constants';
+import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 import SpecialCharSelectModal, { SPECIAL_CHAR_DATA } from '@/components/modals/SpecialCharSelectModal';

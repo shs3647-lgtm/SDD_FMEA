@@ -9,7 +9,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { FailureTabProps } from './types';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
-import { COLORS, uid } from '../../constants';
+import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
 
 // 색상 정의
 const FAIL_COLORS = {
@@ -230,24 +230,24 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
         <thead>
           {/* 1행: 단계 구분 */}
           <tr>
-            <th colSpan={2} style={{ background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '4px 6px', fontSize: '10px', fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
+            <th colSpan={2} style={{ background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '4px 6px', fontSize: FONT_SIZES.cell, fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
               구조분석(2단계)
             </th>
-            <th colSpan={2} style={{ background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '4px 6px', fontSize: '10px', fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
+            <th colSpan={2} style={{ background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '4px 6px', fontSize: FONT_SIZES.cell, fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
               기능분석(3단계)
             </th>
-            <th style={{ background: FAIL_COLORS.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '4px 6px', fontSize: '10px', fontWeight: 800, textAlign: 'center' }}>
+            <th style={{ background: FAIL_COLORS.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '4px 6px', fontSize: FONT_SIZES.cell, fontWeight: 800, textAlign: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'nowrap' }}>
                 <span style={{ whiteSpace: 'nowrap' }}>고장분석(4단계)</span>
                 <div style={{ display: 'flex', gap: '4px' }}>
                   {isConfirmed ? (
-                    <span style={{ background: '#4caf50', color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: '10px', fontWeight: 700 }}>✓ 확정됨</span>
+                    <span style={{ background: '#4caf50', color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>✓ 확정됨</span>
                   ) : (
-                    <button type="button" onClick={handleConfirm} style={{ background: '#4caf50', color: 'white', border: 'none', padding: '2px 8px', borderRadius: '3px', fontSize: '10px', fontWeight: 700, cursor: 'pointer' }}>확정</button>
+                    <button type="button" onClick={handleConfirm} style={{ background: '#4caf50', color: 'white', border: 'none', padding: '2px 8px', borderRadius: '3px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold, cursor: 'pointer' }}>확정</button>
                   )}
-                  <span style={{ background: missingCount > 0 ? '#f44336' : '#4caf50', color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: '10px', fontWeight: 700 }}>누락 {missingCount}건</span>
+                  <span style={{ background: missingCount > 0 ? '#f44336' : '#4caf50', color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>누락 {missingCount}건</span>
                   {isConfirmed && (
-                    <button type="button" onClick={handleEdit} style={{ background: '#ff9800', color: 'white', border: 'none', padding: '2px 8px', borderRadius: '3px', fontSize: '10px', fontWeight: 700, cursor: 'pointer' }}>수정</button>
+                    <button type="button" onClick={handleEdit} style={{ background: '#ff9800', color: 'white', border: 'none', padding: '2px 8px', borderRadius: '3px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold, cursor: 'pointer' }}>수정</button>
                   )}
                 </div>
               </div>
@@ -268,7 +268,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
             <th style={{ background: FAIL_COLORS.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
               3. 고장원인(FC)
               {missingCount > 0 && (
-                <span style={{ marginLeft: '8px', background: '#fff', color: '#c62828', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 700 }}>
+                <span style={{ marginLeft: '8px', background: '#fff', color: '#c62828', padding: '2px 8px', borderRadius: '10px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>
                   누락 {missingCount}건
                 </span>
               )}
@@ -277,22 +277,22 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
           
           {/* 3행: 세부 컬럼 */}
           <tr>
-            <th style={{ background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700, textAlign: 'center' }}>
+            <th style={{ background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center' }}>
               NO+공정명
             </th>
-            <th style={{ background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700, textAlign: 'center' }}>
+            <th style={{ background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center' }}>
               작업요소
             </th>
-            <th style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700, textAlign: 'center' }}>
+            <th style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center' }}>
               공정특성
             </th>
-            <th style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '4px', fontSize: '9px', fontWeight: 700, textAlign: 'center' }}>
+            <th style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '4px', fontSize: FONT_SIZES.small, fontWeight: 700, textAlign: 'center' }}>
               특별특성
             </th>
-            <th style={{ background: FAIL_COLORS.cellAlt, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700, textAlign: 'center' }}>
+            <th style={{ background: FAIL_COLORS.cellAlt, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center' }}>
               고장원인(FC)
               {missingCounts.failureCauseCount > 0 && (
-                <span style={{ marginLeft: '4px', background: '#c62828', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: '9px' }}>
+                <span style={{ marginLeft: '4px', background: '#c62828', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: FONT_SIZES.small }}>
                   {missingCounts.failureCauseCount}
                 </span>
               )}
@@ -355,7 +355,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
                       onClick={() => setModal({ type: 'l3FailureCause', processId: row.proc.id, weId: row.we.id, title: `${row.we.name} 고장원인`, itemCode: 'FC1' })} 
                     />
                   ) : (
-                    <span style={{ color: '#c62828', fontSize: '10px', fontWeight: 600, padding: '8px', display: 'block' }}>-</span>
+                    <span style={{ color: '#c62828', fontSize: FONT_SIZES.cell, fontWeight: 600, padding: '8px', display: 'block' }}>-</span>
                   )}
                 </td>
               </tr>

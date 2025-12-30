@@ -6,7 +6,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { WorksheetState, COLORS, FlatRow } from '../constants';
+import { WorksheetState, COLORS, FlatRow, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../constants';
 
 interface StructureTabProps {
   state: WorksheetState;
@@ -28,7 +28,7 @@ interface StructureTabProps {
 function M4Cell({ value }: { value: string }) {
   const m4CellStyle: React.CSSProperties = {
     width: '20px', maxWidth: '20px', minWidth: '20px', border: `1px solid ${COLORS.line}`,
-    padding: '0', textAlign: 'center', fontSize: '8px', fontWeight: 700,
+    padding: '0', textAlign: 'center', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold,
     background: '#fff8e1',
   };
 
@@ -106,7 +106,7 @@ function EditableL3Cell({
           type="text" value={editValue} onChange={(e) => setEditValue(e.target.value)}
           onBlur={handleSave} onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false); }}
           autoFocus className="w-full px-1"
-          style={{ border: 'none', outline: '2px solid #ff9800', background: '#fff', borderRadius: '2px', fontSize: '10px', fontFamily: 'inherit' }}
+          style={{ border: 'none', outline: '2px solid #ff9800', background: '#fff', borderRadius: '2px', fontSize: FONT_SIZES.cell, fontFamily: 'inherit' }}
         />
       </td>
     );
@@ -118,7 +118,7 @@ function EditableL3Cell({
       style={{ 
         border: `1px solid ${COLORS.line}`, padding: '2px 4px', 
         background: isPlaceholder ? 'repeating-linear-gradient(45deg, #fff, #fff 4px, #fff3e0 4px, #fff3e0 8px)' : '#fff3e0', 
-        wordBreak: 'break-word', fontSize: '10px', fontFamily: 'inherit',
+        wordBreak: 'break-word', fontSize: FONT_SIZES.cell, fontFamily: 'inherit',
       }}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
@@ -143,7 +143,7 @@ export function StructureHeader({ onProcessModalOpen, missingCounts }: { onProce
   return (
     <>
       <tr>
-        <th style={{ width: '30%', background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
+        <th style={{ width: '30%', background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: HEIGHTS.header, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center', fontSize: FONT_SIZES.header1 }}>
           1. 완제품 공정명
           {missingCounts && missingCounts.l1Count > 0 && (
             <span style={{ marginLeft: '6px', background: '#fff', color: '#c62828', padding: '1px 6px', borderRadius: '8px', fontSize: '9px', fontWeight: 700 }}>
@@ -151,7 +151,7 @@ export function StructureHeader({ onProcessModalOpen, missingCounts }: { onProce
             </span>
           )}
         </th>
-        <th onClick={onProcessModalOpen} className="cursor-pointer hover:bg-green-600" style={{ width: '30%', background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
+        <th onClick={onProcessModalOpen} className="cursor-pointer hover:bg-green-600" style={{ width: '30%', background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: HEIGHTS.header, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center', fontSize: FONT_SIZES.header1 }}>
           2. 메인 공정명 🔍
           {missingCounts && missingCounts.l2Count > 0 && (
             <span style={{ marginLeft: '6px', background: '#fff', color: '#c62828', padding: '1px 6px', borderRadius: '8px', fontSize: '9px', fontWeight: 700 }}>
@@ -159,7 +159,7 @@ export function StructureHeader({ onProcessModalOpen, missingCounts }: { onProce
             </span>
           )}
         </th>
-        <th colSpan={2} style={{ background: '#f57c00', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>
+        <th colSpan={2} style={{ background: '#f57c00', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: HEIGHTS.header, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center', fontSize: FONT_SIZES.header1 }}>
           3. 작업 요소명
           {missingCounts && missingCounts.l3Count > 0 && (
             <span style={{ marginLeft: '6px', background: '#fff', color: '#c62828', padding: '1px 6px', borderRadius: '8px', fontSize: '9px', fontWeight: 700 }}>
@@ -169,10 +169,10 @@ export function StructureHeader({ onProcessModalOpen, missingCounts }: { onProce
         </th>
       </tr>
       <tr>
-        <th style={{ background: '#90caf9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>완제품명+라인</th>
-        <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>공정NO+공정명</th>
-        <th style={{ width: '20px', maxWidth: '20px', minWidth: '20px', background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '0', height: '22px', fontWeight: 700, fontSize: '8px' }}>4M</th>
-        <th style={{ background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>작업요소</th>
+        <th style={{ background: '#90caf9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: HEIGHTS.header, fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.header2 }}>완제품명+라인</th>
+        <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: HEIGHTS.header, fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.header2 }}>공정NO+공정명</th>
+        <th style={{ width: '20px', maxWidth: '20px', minWidth: '20px', background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '0', height: HEIGHTS.header, fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell }}>4M</th>
+        <th style={{ background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: HEIGHTS.header, fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.header2 }}>작업요소</th>
       </tr>
     </>
   );

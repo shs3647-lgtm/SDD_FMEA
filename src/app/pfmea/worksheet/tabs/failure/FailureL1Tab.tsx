@@ -12,7 +12,7 @@ import { FailureTabProps } from './types';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 import SODSelectModal from '@/components/modals/SODSelectModal';
-import { COLORS, uid } from '../../constants';
+import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
 
 // 색상 정의
 const STEP_COLORS = {
@@ -425,7 +425,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
             <th colSpan={2} style={{ background: STEP_COLORS.failure.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
               1. 고장영향(FE) / 심각도(S)
               {missingCount > 0 && (
-                <span style={{ marginLeft: '8px', background: '#fff', color: '#c62828', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 700 }}>
+                <span style={{ marginLeft: '8px', background: '#fff', color: '#c62828', padding: '2px 8px', borderRadius: '10px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>
                   누락 {missingCount}건
                 </span>
               )}
@@ -448,7 +448,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
             <th style={{ background: STEP_COLORS.failure.header3, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
               고장영향(FE)
               {missingCounts.effectCount > 0 && (
-                <span style={{ marginLeft: '4px', background: '#fff', color: '#c62828', padding: '1px 5px', borderRadius: '8px', fontSize: '9px', fontWeight: 700 }}>
+                <span style={{ marginLeft: '4px', background: '#fff', color: '#c62828', padding: '1px 5px', borderRadius: '8px', fontSize: FONT_SIZES.small, fontWeight: 700 }}>
                   {missingCounts.effectCount}
                 </span>
               )}
@@ -480,7 +480,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                       background: STEP_COLORS.structure.cell, 
                       fontWeight: 700, 
                       verticalAlign: 'middle',
-                      fontSize: '10px'
+                      fontSize: FONT_SIZES.cell
                     }}
                   >
                     {state.l1.name || '(구조분석에서 입력)'}
@@ -498,7 +498,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                       background: row.typeName === 'Your Plant' ? '#ffe0b2' : row.typeName === 'Ship to Plant' ? '#ffcc80' : row.typeName === 'User' ? '#e1bee7' : STEP_COLORS.function.cell, 
                       fontWeight: 600, 
                       verticalAlign: 'middle',
-                      fontSize: '10px',
+                      fontSize: FONT_SIZES.cell,
                       color: row.typeName === 'Your Plant' ? '#1565c0' : row.typeName === 'Ship to Plant' ? '#e65100' : row.typeName === 'User' ? '#7b1fa2' : '#333'
                     }}
                   >
@@ -515,7 +515,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                       padding: '2px 4px', 
                       textAlign: 'left', 
                       background: STEP_COLORS.function.cell, 
-                      fontSize: '10px',
+                      fontSize: FONT_SIZES.cell,
                       verticalAlign: 'middle',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
@@ -537,7 +537,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                       background: STEP_COLORS.function.cell, 
                       verticalAlign: 'middle',
                       textAlign: 'center',
-                      fontSize: '10px'
+                      fontSize: FONT_SIZES.cell
                     }}
                   >
                     {row.reqName}
@@ -589,7 +589,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                       {row.severity || '🔍'}
                     </span>
                   ) : (
-                    <span style={{ color: '#c62828', fontSize: '10px', fontWeight: 600 }}>-</span>
+                    <span style={{ color: '#c62828', fontSize: FONT_SIZES.cell, fontWeight: 600 }}>-</span>
                   )}
                 </td>
               </tr>

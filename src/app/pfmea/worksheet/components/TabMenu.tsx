@@ -37,7 +37,7 @@ export default function TabMenu({ state, setState }: TabMenuProps) {
   ];
   
   return (
-    <div className="flex-shrink-0 bg-white py-0.5" style={{ borderBottom: `2px solid ${COLORS.blue}`, paddingLeft: 0, paddingRight: '8px', position: 'sticky', top: 0, zIndex: 100 }}>
+    <div className="flex-shrink-0 bg-white py-0.5" style={{ borderBottom: `2px solid ${COLORS.structure.main}`, paddingLeft: 0, paddingRight: '8px', position: 'sticky', top: 0, zIndex: 100 }}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
           {/* 분석 탭 */}
@@ -45,7 +45,7 @@ export default function TabMenu({ state, setState }: TabMenuProps) {
             {analysisTabs.map(tab => {
               const isActive = state.tab === tab.id;
               const isEnabled = isTabEnabled(tab.id);
-              const activeColor = tab.id === 'structure' ? '#1a237e' : COLORS.blue;
+              const activeColor = tab.id === 'structure' ? '#1a237e' : COLORS.structure.main;
               return (
                 <button
                   key={tab.id}
@@ -90,10 +90,10 @@ export default function TabMenu({ state, setState }: TabMenuProps) {
           <button
             onClick={() => setState(prev => ({ ...prev, tab: 'all', levelView: 'all', visibleSteps: [2, 3, 4, 5, 6] }))}
             style={{
-              background: state.tab === 'all' ? COLORS.blue : '#fff',
-              border: `1px solid ${COLORS.blue}`,
+              background: state.tab === 'all' ? COLORS.structure.main : '#fff',
+              border: `1px solid ${COLORS.structure.main}`,
               borderRadius: '3px',
-              color: state.tab === 'all' ? '#fff' : COLORS.blue,
+              color: state.tab === 'all' ? '#fff' : COLORS.structure.main,
               padding: '3px 6px',
               fontSize: '10px',
               fontWeight: 700,

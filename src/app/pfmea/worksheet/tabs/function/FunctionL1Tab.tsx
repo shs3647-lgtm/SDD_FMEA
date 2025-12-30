@@ -9,7 +9,7 @@ import React, { useState, useCallback } from 'react';
 import { FunctionTabProps } from './types';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
-import { COLORS, uid } from '../../constants';
+import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
 
 // 구분(Type)별 색상 정의
 const TYPE_COLORS: Record<string, { bg: string; light: string; text: string }> = {
@@ -378,7 +378,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
             >
               1. 완제품 공정기능/요구사항
               {missingCount > 0 && (
-                <span style={{ marginLeft: '8px', background: '#f44336', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '10px' }}>
+                <span style={{ marginLeft: '8px', background: '#f44336', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: FONT_SIZES.cell }}>
                   누락 {missingCount}건
                 </span>
               )}
@@ -387,24 +387,24 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
           
           {/* 3행: 세부 컬럼 */}
           <tr style={{ background: '#e3f2fd' }}>
-            <th style={{ background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
+            <th style={{ background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>
               완제품 공정명
             </th>
-            <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
+            <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>
               구분
             </th>
-            <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
+            <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>
               완제품기능
               {missingCounts.functionCount > 0 && (
-                <span style={{ marginLeft: '4px', background: '#f44336', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: '9px' }}>
+                <span style={{ marginLeft: '4px', background: '#f44336', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: FONT_SIZES.small }}>
                   {missingCounts.functionCount}
                 </span>
               )}
             </th>
-            <th style={{ background: '#ffe0b2', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700, color: '#e65100' }}>
+            <th style={{ background: '#ffe0b2', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold, color: '#e65100' }}>
               요구사항
               {missingCounts.requirementCount > 0 && (
-                <span style={{ marginLeft: '4px', background: '#f44336', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: '9px' }}>
+                <span style={{ marginLeft: '4px', background: '#f44336', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: FONT_SIZES.small }}>
                   {missingCounts.requirementCount}
                 </span>
               )}

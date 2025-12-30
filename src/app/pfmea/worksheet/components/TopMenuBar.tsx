@@ -38,7 +38,7 @@ export default function TopMenuBar({
   const [showImportMenu, setShowImportMenu] = React.useState(false);
 
   return (
-    <div className="flex items-center py-1 gap-2 flex-wrap" style={{ background: COLORS.blue, paddingLeft: '4px', paddingRight: '8px' }}>
+    <div className="flex items-center py-1 gap-2 flex-wrap" style={{ background: COLORS.structure.main, paddingLeft: '4px', paddingRight: '8px' }}>
       {/* FMEA명 */}
       <div className="flex items-center gap-1">
         <span className="text-white text-xs font-bold cursor-pointer hover:underline" onClick={onNavigateToList}>📋 FMEA명:</span>

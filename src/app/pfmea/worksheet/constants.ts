@@ -157,29 +157,81 @@ export interface FMEAProject {
 }
 
 // ============ 색상 및 설정 ============
+// ============ 색상 표준 v2.0 (단순화, 부드러운 톤) ============
 export const COLORS = {
-  blue: '#2b78c5', blue2: '#1f63aa', sky: '#bfe0ff', sky2: '#d7ecff', line: '#6f8fb4',
-  bg: '#f5f7fb', warn: '#ffe1e1', text: '#0e223a', navy: '#1a237e',
+  // 공통 색상
+  bg: '#f5f7fb',
+  text: '#333',
+  line: '#e0e0e0',
+  white: '#fff',
+  gray: '#9e9e9e',
+  warn: '#ffe1e1',
+  
+  // 4M 색상 (유지)
   mn: { bg: '#eef7ff', border: '#cfe0f4', color: '#1f4f86' },
   mc: { bg: '#fff3e6', border: '#ffd2a6', color: '#8a4f00' },
   im: { bg: '#f0fff2', border: '#bdeac5', color: '#1b6b2a' },
   en: { bg: '#fef0ff', border: '#f0bdf5', color: '#7a1a88' },
-  // 분석 단계별 색상
-  structure: { main: '#1a237e', header: '#3949ab', cell: '#e3f2fd' },
-  function: { main: '#2e7d32', header: '#43a047', cell: '#e8f5e9' },
-  failure: { main: '#c62828', header: '#e53935', cell: '#ffebee' },
+  
+  // ============ 3가지 메인 색상 (v2.0) ============
+  // 1. 구조분석 (밝은 파란색)
+  structure: { 
+    main: '#42a5f5',      // 부드러운 파란색
+    light: '#e3f2fd',     // 배경
+    dark: '#1976d2',      // 테두리/강조
+    text: '#0d47a1'       // 텍스트
+  },
+  
+  // 2. 기능분석 (밝은 초록색)
+  function: { 
+    main: '#66bb6a',      // 부드러운 초록색
+    light: '#e8f5e9',     // 배경
+    dark: '#388e3c',      // 테두리/강조
+    text: '#1b5e20'       // 텍스트
+  },
+  
+  // 3. 고장분석 (부드러운 주황색) ⭐ 붉은색 대체
+  failure: { 
+    main: '#ffa726',      // 부드러운 주황색 (빨간색 제거)
+    light: '#fff3e0',     // 배경
+    dark: '#f57c00',      // 테두리/강조
+    text: '#e65100'       // 텍스트
+  },
+  
+  // 리스크/최적화는 고장분석 색상 재사용
   risk: { 
-    main: '#f57c00', 
+    main: '#ffa726',      // 고장분석과 동일
     prevention: { header: '#fff3e0', cell: '#ffe0b2' },
-    detection: { header: '#e1f5fe', cell: '#b3e5fc' },
-    evaluation: { header: '#fce4ec', cell: '#f8bbd0' }
+    detection: { header: '#e3f2fd', cell: '#bbdefb' },
+    evaluation: { header: '#fff3e0', cell: '#ffecb3' }
   },
   opt: {
-    main: '#00796b',
-    plan: { header: '#e0f2f1', cell: '#b2dfdb' },
-    monitor: { header: '#fff9c4', cell: '#fff59d' },
-    effect: { header: '#f3e5f5', cell: '#e1bee7' }
+    main: '#ffa726',      // 고장분석과 동일
+    plan: { header: '#e3f2fd', cell: '#bbdefb' },
+    monitor: { header: '#fff3e0', cell: '#ffe0b2' },
+    effect: { header: '#e8f5e9', cell: '#c8e6c9' }
   },
+} as const;
+
+// ============ 폰트 표준 (최종 확정 2025-12-30) ============
+export const FONT_SIZES = {
+  pageHeader: '13px',    // 페이지 헤더 (P-FMEA 구조분석)
+  header1: '12px',       // 1단 헤더 (1. 완제품 공정명)
+  header2: '12px',       // 2단 헤더 (완제품명+라인)
+  cell: '11px',          // 데이터 셀
+  small: '10px',         // 작은 텍스트 (배지 등)
+} as const;
+
+export const FONT_WEIGHTS = {
+  normal: 400,           // 일반 (페이지 헤더, 데이터)
+  semibold: 600,         // 헤더, 강조
+  bold: 700,             // 특별 강조 (최소 사용)
+} as const;
+
+export const HEIGHTS = {
+  pageHeader: 'auto',    // 페이지 헤더
+  header: '24px',        // 1단, 2단 헤더 통일
+  row: '26px',           // 데이터 행
 } as const;
 
 // 분석 탭 (Analysis) - 개별 단계별 분석
