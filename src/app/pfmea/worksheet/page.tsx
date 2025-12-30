@@ -26,9 +26,6 @@ import {
   DocTab, DocHeader, DocRow,
 } from './tabs';
 import { FailureTab as FailureTabNew, FailureL1Tab, FailureL2Tab, FailureL3Tab } from './tabs/failure';
-import EvalStructureTab from './tabs/evaluation/EvalStructureTab';
-import EvalFunctionTab from './tabs/evaluation/EvalFunctionTab';
-import EvalFailureTab from './tabs/evaluation/EvalFailureTab';
 import { 
   exportFMEAWorksheet, 
   exportStructureAnalysis, 
@@ -91,6 +88,10 @@ function FMEAWorksheetPageContent() {
   
   // 트리 접기/펼치기 상태
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  
+  // 전체보기 탭의 AP 테이블 표시 상태
+  const [showAPInAll, setShowAPInAll] = useState(false);
+  const [apStageInAll, setApStageInAll] = useState<5 | 6>(5);
   
   const toggleCollapse = useCallback((procId: string) => {
     setCollapsedIds(prev => {
@@ -574,8 +575,8 @@ function FMEAWorksheetPageContent() {
                 <FunctionTabFull {...tabProps} />
               ) : state.tab.startsWith('failure') ? (
                 <FailureTabFull {...tabProps} />
-              ) : state.tab.startsWith('eval-') || state.tab === 'risk' || state.tab === 'opt' || state.tab === 'all' ? (
-                /* 평가 탭: 통합 화면 (40열 구조) */
+              ) : state.tab === 'all' ? (
+                /* 전체보기 탭: 통합 화면 (40열 구조) */
                 <EvalTabRenderer 
                   tab={state.tab} 
                   rows={rows} 
@@ -599,7 +600,7 @@ function FMEAWorksheetPageContent() {
           {state.tab !== 'all' && state.tab !== 'failure-link' && (
           <div 
             style={{ 
-              width: (state.tab === 'risk' || state.tab === 'opt') ? '280px' : '280px', 
+              width: '280px', 
               flexShrink: 0,
               display: 'flex',
               flexDirection: 'column',
@@ -1000,33 +1001,77 @@ function FMEAWorksheetPageContent() {
               );
             })()}
 
-            {/* 리스크분석 탭: 5단계 AP 테이블 표시 */}
-            {state.tab === 'risk' && (
-              <APTableInline onClose={() => {}} stage={5} />
-            )}
-
-            {/* 최적화 탭: 6단계 AP 테이블 표시 */}
-            {state.tab === 'opt' && (
-              <APTableInline onClose={() => {}} stage={6} />
-            )}
-            
-            {/* 전체보기 탭: 전체 구조 표시 */}
+            {/* 전체보기 탭: 전체 구조 표시 + AP 테이블 전환 */}
             {(state.tab === 'all') && (
               <>
-                <div style={{ background: '#455a64', color: 'white', padding: '8px 12px', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
-                  📊 전체 구조
+                <div style={{ background: '#455a64', color: 'white', padding: '6px 10px', fontSize: '11px', fontWeight: 700, flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>📊 {showAPInAll ? `${apStageInAll}AP 기준표` : '전체 구조'}</span>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button 
+                      onClick={() => setShowAPInAll(false)}
+                      style={{ 
+                        padding: '2px 6px', 
+                        fontSize: '9px', 
+                        background: !showAPInAll ? '#fff' : 'rgba(255,255,255,0.3)', 
+                        color: !showAPInAll ? '#455a64' : '#fff',
+                        border: 'none', 
+                        borderRadius: '2px', 
+                        cursor: 'pointer',
+                        fontWeight: !showAPInAll ? 700 : 400
+                      }}
+                    >
+                      구조
+                    </button>
+                    <button 
+                      onClick={() => { setShowAPInAll(true); setApStageInAll(5); }}
+                      style={{ 
+                        padding: '2px 6px', 
+                        fontSize: '9px', 
+                        background: showAPInAll && apStageInAll === 5 ? '#fff' : 'rgba(255,255,255,0.3)', 
+                        color: showAPInAll && apStageInAll === 5 ? '#455a64' : '#fff',
+                        border: 'none', 
+                        borderRadius: '2px', 
+                        cursor: 'pointer',
+                        fontWeight: showAPInAll && apStageInAll === 5 ? 700 : 400
+                      }}
+                    >
+                      5AP
+                    </button>
+                    <button 
+                      onClick={() => { setShowAPInAll(true); setApStageInAll(6); }}
+                      style={{ 
+                        padding: '2px 6px', 
+                        fontSize: '9px', 
+                        background: showAPInAll && apStageInAll === 6 ? '#fff' : 'rgba(255,255,255,0.3)', 
+                        color: showAPInAll && apStageInAll === 6 ? '#455a64' : '#fff',
+                        border: 'none', 
+                        borderRadius: '2px', 
+                        cursor: 'pointer',
+                        fontWeight: showAPInAll && apStageInAll === 6 ? 700 : 400
+                      }}
+                    >
+                      6AP
+                    </button>
+                  </div>
                 </div>
-                <div style={{ flex: 1, overflow: 'auto', padding: '8px', background: '#eceff1' }}>
-                  <div style={{ fontSize: '10px', color: '#666', marginBottom: '8px' }}>
-                    <strong>L1:</strong> {state.l1.name} ({state.l1.types.length}개 구분)
+                
+                {!showAPInAll ? (
+                  <div style={{ flex: 1, overflow: 'auto', padding: '8px', background: '#eceff1' }}>
+                    <div style={{ fontSize: '10px', color: '#666', marginBottom: '8px' }}>
+                      <strong>L1:</strong> {state.l1.name} ({state.l1.types.length}개 구분)
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#666', marginBottom: '8px' }}>
+                      <strong>L2:</strong> {state.l2.filter(p => !p.name.includes('클릭')).length}개 공정
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#666' }}>
+                      <strong>L3:</strong> {state.l2.reduce((sum, p) => sum + p.l3.filter(w => !w.name.includes('추가')).length, 0)}개 작업요소
+                    </div>
                   </div>
-                  <div style={{ fontSize: '10px', color: '#666', marginBottom: '8px' }}>
-                    <strong>L2:</strong> {state.l2.filter(p => !p.name.includes('클릭')).length}개 공정
+                ) : (
+                  <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <APTableInline onClose={() => setShowAPInAll(false)} showClose={false} stage={apStageInAll} />
                   </div>
-                  <div style={{ fontSize: '10px', color: '#666' }}>
-                    <strong>L3:</strong> {state.l2.reduce((sum, p) => sum + p.l3.filter(w => !w.name.includes('추가')).length, 0)}개 작업요소
-                  </div>
-                </div>
+                )}
               </>
             )}
           </div>
@@ -1427,53 +1472,6 @@ function TabMenu({ state, setState }: TabMenuProps) {
             })}
           </div>
 
-          {/* 구분선 */}
-          <div style={{ width: '2px', height: '20px', background: '#1976d2', margin: '0 4px' }} />
-
-          {/* 평가 탭 (고장연결 후 활성화) - 5개: 구조분석, 기능분석, 고장분석, 리스크분석, 최적화 */}
-          <div className="flex gap-px">
-            {[
-              { id: 'eval-structure', label: '구조분석', step: 2 },
-              { id: 'eval-function', label: '기능분석', step: 3 },
-              { id: 'eval-failure', label: '고장분석', step: 4 },
-              { id: 'risk', label: '리스크분석', step: 5 },
-              { id: 'opt', label: '최적화', step: 6 },
-            ].map(tab => {
-              const isActive = state.tab === tab.id;
-              const isEnabled = hasFailureLinks;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    if (!isEnabled) {
-                      alert('⚠️ 고장연결을 먼저 완료해주세요.');
-                      return;
-                    }
-                    setState(prev => ({ ...prev, tab: tab.id }));
-                  }}
-                  className="font-bold"
-                  style={{
-                    padding: '3px 6px',
-                    fontSize: '10px',
-                    background: isActive ? '#4caf50' : isEnabled ? '#e8f5e9' : '#e0e0e0',
-                    borderTop: `1px solid ${isActive ? '#4caf50' : isEnabled ? '#a5d6a7' : '#bdbdbd'}`,
-                    borderRight: `1px solid ${isActive ? '#4caf50' : isEnabled ? '#a5d6a7' : '#bdbdbd'}`,
-                    borderLeft: `1px solid ${isActive ? '#4caf50' : isEnabled ? '#a5d6a7' : '#bdbdbd'}`,
-                    borderBottom: 'none',
-                    borderRadius: '2px 2px 0 0',
-                    color: isActive ? '#fff' : isEnabled ? '#2e7d32' : '#9e9e9e',
-                    cursor: isEnabled ? 'pointer' : 'not-allowed',
-                    whiteSpace: 'nowrap',
-                  }}
-                  title={!isEnabled ? '고장연결 완료 후 사용 가능' : ''}
-                >
-                  {tab.label}
-                  {!isEnabled && <span style={{ marginLeft: '2px', fontSize: '7px' }}>🔒</span>}
-                </button>
-              );
-            })}
-          </div>
-          
           {/* 단계별 토글 버튼 - 전체보기(All) 선택 시에만 표시 */}
           {state.tab === 'all' && (
             <>
@@ -1691,21 +1689,6 @@ function EvalTabRenderer({ tab, rows, state, l1Spans, l1TypeSpans, l1FuncSpans, 
   // 고장연결 데이터
   const failureLinks = (state as any).failureLinks || [];
   
-  // eval-structure 탭: 고장연결 결과 기반 구조분석 (공정명 중심 셀합치기)
-  if (tab === 'eval-structure' && failureLinks.length > 0) {
-    return <EvalStructureTab failureLinks={failureLinks} state={state} />;
-  }
-
-  // eval-function 탭: 고장연결 결과 기반 기능분석 (DB 연결 데이터 표시)
-  if (tab === 'eval-function' && failureLinks.length > 0) {
-    return <EvalFunctionTab failureLinks={failureLinks} state={state} />;
-  }
-
-  // eval-failure 탭: 고장연결 결과 표시
-  if (tab === 'eval-failure' && failureLinks.length > 0) {
-    return <EvalFailureTab failureLinks={failureLinks} />;
-  }
-
   // 전체보기(all) 탭: 고장연결 결과 기반 40열 테이블
   if (tab === 'all' && failureLinks.length > 0) {
     // ========== 1. FM별 그룹핑 + 기능분석 데이터 조회 (유틸리티 함수 사용) ==========

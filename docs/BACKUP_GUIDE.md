@@ -101,6 +101,31 @@ fmea-smart-system\
 - **상태**: 빌드 성공, 개발 서버 실행 중
 - **테스트 URL**: http://localhost:3000/pfmea/worksheet
 
+### 2025-12-30: 백업 - 평가 탭 제거 전
+- **커밋**: `checkpoint: before removing evaluation tabs` (be06a7d)
+- **태그**: `v1.8.2-평가탭삭제전-251230`
+- **내용**: 
+  - 평가 탭 5개 제거 전 안전한 상태 백업
+  - page.tsx: 2,264줄
+  - 평가 탭: eval-structure, eval-function, eval-failure, risk, opt
+  - AP 테이블 포함 (5AP/6AP)
+- **상태**: 안전한 롤백 포인트 확보
+- **다음 작업**: 평가 탭 제거 및 all 탭에 AP 통합
+
+### 2025-12-30: 평가 탭 제거 완료
+- **커밋**: `refactor: remove evaluation tabs, simplify to analysis + all`
+- **내용**:
+  - 평가 탭 5개 제거 (eval-structure, eval-function, eval-failure, risk, opt)
+  - 평가 컴포넌트 3개 파일 삭제 (423줄)
+  - all 탭에 AP 테이블 통합 (5AP/6AP 전환 가능)
+  - 탭 메뉴 단순화: 분석 탭 8개 + 전체보기 1개
+  - page.tsx: 2,264줄 → 2,252줄
+- **결과**:
+  - 더 단순하고 명확한 구조
+  - 분석 작업 → 전체보기 확인 (5AP/6AP 포함)
+  - 빌드 성공, 타입 체크 통과
+- **테스트 URL**: http://localhost:3000/pfmea/worksheet
+
 ---
 
 ## 코드프리즈 (Code Freeze) 정책
