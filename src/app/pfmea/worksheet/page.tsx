@@ -382,7 +382,12 @@ function FMEAWorksheetPageContent() {
 
   return (
     <>
-      <PFMEATopNav selectedFmeaId={currentFmea?.id} />
+      <PFMEATopNav 
+        selectedFmeaId={currentFmea?.id} 
+        fmCount={state.l2.reduce((sum, p) => sum + (p.failureModes?.length || 0), 0)}
+        feCount={(state.l1.failureScopes || []).filter((s: any) => s.effect).length}
+        fcCount={state.l2.reduce((sum, p) => sum + (p.l3 || []).reduce((s2, w) => s2 + (w.failureCauses?.length || 0), 0), 0)}
+      />
       
       <div className="h-full flex flex-col" style={{ fontFamily: 'Segoe UI, Malgun Gothic, Arial, sans-serif', background: COLORS.bg, color: COLORS.text, paddingTop: '28px' }}>
         
@@ -447,84 +452,68 @@ function FMEAWorksheetPageContent() {
             border: '2px solid #00587a',
           }}
         >
-          {/* ===== 상단: 탭 메뉴 + 패널 선택 ===== */}
+          {/* ===== 상단: 탭 메뉴 + 패널 선택 (고정 영역) ===== */}
           <div style={{ 
             flexShrink: 0, 
             display: 'flex', 
-            alignItems: 'stretch',
-            height: '36px',
+            flexDirection: 'column',
+            position: 'sticky',
+            top: 0,
+            zIndex: 100,
           }}>
-            {/* 탭 메뉴 영역 (좌측) - 진한 네이비 */}
+            {/* 탭 메뉴 행 */}
             <div style={{ 
-              flex: 1,
-              background: 'linear-gradient(to right, #1a237e, #283593, #1a237e)',
+              display: 'flex', 
+              alignItems: 'stretch',
+              height: '36px',
             }}>
-              <TabMenu 
-                state={state} 
-                setState={setState} 
-                onOpen5AP={() => setShowAPModal(true)}
-                onOpen6AP={() => setShow6APModal(true)}
-              />
-            </div>
-            
-            {/* 패널 선택 메뉴 영역 (우측) - 350px 고정, 청록색 계열 */}
-            {state.tab !== 'all' && state.tab !== 'failure-link' && (
+              {/* 탭 메뉴 영역 (좌측) */}
               <div style={{ 
-                width: '350px',
-                flexShrink: 0,
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                gap: '8px', 
-                padding: '0 12px',
-                background: 'linear-gradient(to right, #00695c, #00897b, #00695c)',
-                borderLeft: '3px solid #ffd600',
-                boxShadow: 'inset 2px 0 4px rgba(0,0,0,0.2)',
+                flex: 1,
+                background: 'linear-gradient(to right, #1a237e, #283593, #1a237e)',
+                paddingRight: '0',  // absolute 요소 정렬을 위해 제거
               }}>
-                <span style={{ 
-                  fontSize: '10px', 
-                  color: 'rgba(255,255,255,0.7)', 
-                  fontWeight: 600,
-                  marginRight: '4px',
-                }}>
-                  패널
-                </span>
-                {PANEL_REGISTRY.map(panel => (
-                  <button
-                    key={panel.id}
-                    onClick={() => setActivePanelId(panel.id)}
-                    style={{
-                      padding: '5px 14px',
-                      fontSize: '11px',
-                      fontWeight: activePanelId === panel.id ? 700 : 500,
-                      background: activePanelId === panel.id ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)',
-                      border: activePanelId === panel.id ? '1px solid #4db6ac' : '1px solid transparent',
-                      borderRadius: '4px',
-                      color: activePanelId === panel.id ? '#b2dfdb' : '#fff',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      transition: 'all 0.2s ease',
-                    }}
-                    onMouseOver={(e) => {
-                      if (activePanelId !== panel.id) {
-                        e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
-                        e.currentTarget.style.color = '#b2dfdb';
-                      }
-                    }}
-                    onMouseOut={(e) => {
-                      if (activePanelId !== panel.id) {
-                        e.currentTarget.style.background = 'rgba(0,0,0,0.15)';
-                        e.currentTarget.style.color = '#fff';
-                      }
-                    }}
-                  >
-                    {panel.icon} {panel.label}
-                  </button>
-                ))}
+                <div style={{ marginRight: '280px' }}>
+                  <TabMenu 
+                    state={state} 
+                    setState={setState} 
+                    onOpen5AP={() => setShowAPModal(true)}
+                    onOpen6AP={() => setShow6APModal(true)}
+                  />
+                </div>
               </div>
-            )}
+              
+              {/* 우측 탭 메뉴 영역: 6단계 AP - 절대 위치 고정 (270px) */}
+              <div style={{ 
+                position: 'absolute',
+                right: '0px',
+                top: '0px',
+                width: '270px',
+                height: '36px',
+                display: 'flex', 
+                alignItems: 'stretch',
+                background: 'linear-gradient(to right, #1a237e, #283593)',
+                borderLeft: '1px solid #ffd600',
+                boxSizing: 'border-box',
+              }}>
+              <div style={{ width: '80px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid rgba(255,255,255,0.25)', boxSizing: 'border-box', flexShrink: 0 }}>
+                <span style={{ color: '#ffd600', fontSize: '11px', fontWeight: 700, lineHeight: '1', whiteSpace: 'nowrap' }}>6단계 AP:</span>
+              </div>
+              <div style={{ width: '60px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid rgba(255,255,255,0.25)', boxSizing: 'border-box', flexShrink: 0 }}>
+                <span style={{ color: '#ef5350', fontSize: '11px', fontWeight: 700, lineHeight: '1', whiteSpace: 'nowrap' }}>H:0</span>
+              </div>
+              <div style={{ width: '65px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid rgba(255,255,255,0.25)', boxSizing: 'border-box', flexShrink: 0 }}>
+                <span style={{ color: '#ffc107', fontSize: '11px', fontWeight: 700, lineHeight: '1', whiteSpace: 'nowrap' }}>M:0</span>
+              </div>
+              <div style={{ width: '65px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', flexShrink: 0 }}>
+                <span style={{ color: '#66bb6a', fontSize: '11px', fontWeight: 700, lineHeight: '1', whiteSpace: 'nowrap' }}>L:0</span>
+              </div>
+            </div>
+            </div>
+            {/* 구분선 */}
+            <div style={{ height: '1px', background: '#ffd600', width: '100%' }} />
           </div>
-
+          
           {/* ===== 콘텐츠 영역 (좌측:워크시트 / 우측:패널) ===== */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
             {/* ===== 좌측: 워크시트 영역 ===== */}
@@ -687,14 +676,15 @@ function FMEAWorksheetPageContent() {
           {state.tab !== 'all' && state.tab !== 'failure-link' && (
           <div 
             style={{ 
-              width: '350px',  // 280px → 350px 통일
+              width: '350px',
               flexShrink: 0,
               display: 'flex',
               flexDirection: 'column',
               background: '#f0f4f8',
+              borderLeft: '4px solid #00587a',
             }}
           >
-            {/* 패널 콘텐츠 (레이지 로딩) */}
+            {/* 패널 콘텐츠 (레이지 로딩) - 메뉴는 상단 바로가기 영역에 있음 */}
             <Suspense fallback={
               <div style={{ 
                 display: 'flex', 
@@ -757,7 +747,7 @@ function FMEAWorksheetPageContent() {
                             <tr key={idx}>
                               <td style={{ padding: '2px 3px', border: '1px solid #ccc', textAlign: 'center' }}>{link.feScope}</td>
                               <td style={{ padding: '2px 3px', border: '1px solid #ccc' }}>{link.feText}</td>
-                              <td style={{ padding: '2px 3px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 'bold', color: link.severity >= 8 ? '#c62828' : '#333' }}>{link.severity}</td>
+                              <td style={{ padding: '2px 3px', border: '1px solid #ccc', textAlign: 'center', fontWeight: 'bold', color: link.severity >= 8 ? '#f57c00' : '#333' }}>{link.severity}</td>
                               {idx === 0 && (
                                 <td rowSpan={resultLinks.length} style={{ padding: '2px 3px', border: '1px solid #ccc', background: '#fff8e1', fontWeight: 'bold', textAlign: 'center', verticalAlign: 'middle' }}>{link.fmText}</td>
                               )}
@@ -973,11 +963,14 @@ function StructureTabFull(props: any) {
         <StructureHeader onProcessModalOpen={() => setIsProcessModalOpen(true)} />
       </thead>
       <tbody>
-        {rows.map((row: any, idx: number) => (
-          <tr key={`structure-${idx}-${row.l3Id}`} style={{ height: '25px' }}>
-            <StructureRow row={row} idx={idx} state={state} setState={setState} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} setDirty={setDirty} handleInputBlur={handleInputBlur} handleInputKeyDown={handleInputKeyDown} handleSelect={handleSelect} setIsProcessModalOpen={setIsProcessModalOpen} setIsWorkElementModalOpen={setIsWorkElementModalOpen} setTargetL2Id={setTargetL2Id} />
-          </tr>
-        ))}
+        {rows.map((row: any, idx: number) => {
+          const zebraBg = idx % 2 === 1 ? COLORS.structure.zebra : COLORS.structure.light;
+          return (
+            <tr key={`structure-${idx}-${row.l3Id}`} style={{ height: '25px', background: zebraBg }}>
+              <StructureRow row={row} idx={idx} state={state} setState={setState} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} setDirty={setDirty} handleInputBlur={handleInputBlur} handleInputKeyDown={handleInputKeyDown} handleSelect={handleSelect} setIsProcessModalOpen={setIsProcessModalOpen} setIsWorkElementModalOpen={setIsWorkElementModalOpen} setTargetL2Id={setTargetL2Id} zebraBg={zebraBg} />
+            </tr>
+          );
+        })}
       </tbody>
     </>
   );

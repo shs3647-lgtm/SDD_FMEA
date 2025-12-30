@@ -33,7 +33,7 @@ interface TopMenuBarProps {
 
 export default function TopMenuBar({ 
   fmeaList, currentFmea, selectedFmeaId, dirty, isSaving, lastSaved, currentTab, importMessage, fileInputRef,
-  onFmeaChange, onSave, onNavigateToList, onExport, onImportClick, onImportFile, onDownloadTemplate, onOpenSpecialChar, onOpenSOD, onOpen5AP, onOpen6AP 
+  onFmeaChange, onSave, onNavigateToList, onExport, onImportClick, onImportFile, onDownloadTemplate, onOpenSpecialChar, onOpenSOD, onOpen5AP, onOpen6AP
 }: TopMenuBarProps) {
   const [showImportMenu, setShowImportMenu] = React.useState(false);
 
@@ -43,7 +43,7 @@ export default function TopMenuBar({
       style={{ 
         background: 'linear-gradient(to right, #1a237e, #283593, #1a237e)',  // 진한 네이비
         paddingLeft: '8px', 
-        paddingRight: '12px',
+        paddingRight: '0',  // absolute 요소 정렬을 위해 제거
         height: '32px',
         fontFamily: '"Segoe UI", "Malgun Gothic", Arial, sans-serif',
         borderTop: '1px solid rgba(255,255,255,0.3)',  // 상단 구분선
@@ -197,7 +197,7 @@ export default function TopMenuBar({
       <div className="w-px h-5 bg-white/30" />
 
       {/* 특별특성/SOD/5AP/6AP/LLD */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5" style={{ marginRight: '280px' }}>
         <button 
           onClick={onOpenSpecialChar} 
           className="px-3 py-1 rounded transition-all" 
@@ -242,6 +242,34 @@ export default function TopMenuBar({
         >
           📚LLD
         </button>
+      </div>
+
+      {/* 우측 영역: 5단계 AP - 절대 위치 고정 (270px) */}
+      <div style={{ flex: 1 }} />
+      <div style={{ 
+        position: 'absolute',
+        right: '0px',
+        top: '0px',
+        width: '270px',
+        height: '32px',
+        display: 'flex', 
+        alignItems: 'stretch', 
+        borderLeft: '1px solid #ffd600',
+        background: 'linear-gradient(to right, #1a237e, #283593)',
+        boxSizing: 'border-box',
+      }}>
+        <div style={{ width: '80px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid rgba(255,255,255,0.25)', boxSizing: 'border-box', flexShrink: 0 }}>
+          <span style={{ color: '#ffd600', fontSize: '11px', fontWeight: 700, lineHeight: '1', whiteSpace: 'nowrap' }}>5단계 AP:</span>
+        </div>
+        <div style={{ width: '60px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid rgba(255,255,255,0.25)', boxSizing: 'border-box', flexShrink: 0 }}>
+          <span style={{ color: '#ef5350', fontSize: '11px', fontWeight: 700, lineHeight: '1', whiteSpace: 'nowrap' }}>H:0</span>
+        </div>
+        <div style={{ width: '65px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid rgba(255,255,255,0.25)', boxSizing: 'border-box', flexShrink: 0 }}>
+          <span style={{ color: '#ffc107', fontSize: '11px', fontWeight: 700, lineHeight: '1', whiteSpace: 'nowrap' }}>M:0</span>
+        </div>
+        <div style={{ width: '65px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', flexShrink: 0 }}>
+          <span style={{ color: '#66bb6a', fontSize: '11px', fontWeight: 700, lineHeight: '1', whiteSpace: 'nowrap' }}>L:0</span>
+        </div>
       </div>
     </div>
   );

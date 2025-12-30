@@ -11,13 +11,13 @@ import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
 
-// 색상 정의
+// 색상 정의 - 네이비 기반 고급스러운 디자인
 const FAIL_COLORS = {
-  header1: '#6a1b9a',
-  header2: '#8e24aa',
-  header3: '#ab47bc',
-  cell: '#f3e5f5',
-  cellAlt: '#e1bee7',
+  header1: '#1a237e',   // 딥 인디고
+  header2: '#3949ab',   // 인디고
+  header3: '#5c6bc0',   // 라이트 인디고
+  cell: '#f5f6fc',      // 아주 연한 인디고
+  cellAlt: '#e8eaf6',   // 연한 인디고
 };
 
 export default function FailureL3Tab({ state, setState, setDirty, saveToLocalStorage }: FailureTabProps) {
@@ -245,7 +245,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
                   ) : (
                     <button type="button" onClick={handleConfirm} style={{ background: '#4caf50', color: 'white', border: 'none', padding: '2px 8px', borderRadius: '3px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold, cursor: 'pointer' }}>확정</button>
                   )}
-                  <span style={{ background: missingCount > 0 ? '#f44336' : '#4caf50', color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>누락 {missingCount}건</span>
+                  <span style={{ background: missingCount > 0 ? '#f57c00' : '#4caf50', color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>누락 {missingCount}건</span>
                   {isConfirmed && (
                     <button type="button" onClick={handleEdit} style={{ background: '#ff9800', color: 'white', border: 'none', padding: '2px 8px', borderRadius: '3px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold, cursor: 'pointer' }}>수정</button>
                   )}
@@ -268,7 +268,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
             <th style={{ background: FAIL_COLORS.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center' }}>
               3. 고장원인(FC)
               {missingCount > 0 && (
-                <span style={{ marginLeft: '8px', background: '#fff', color: '#c62828', padding: '2px 8px', borderRadius: '10px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>
+                <span style={{ marginLeft: '8px', background: '#fff', color: '#f57c00', padding: '2px 8px', borderRadius: '10px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>
                   누락 {missingCount}건
                 </span>
               )}
@@ -292,7 +292,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
             <th style={{ background: FAIL_COLORS.cellAlt, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center' }}>
               고장원인(FC)
               {missingCounts.failureCauseCount > 0 && (
-                <span style={{ marginLeft: '4px', background: '#c62828', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: FONT_SIZES.small }}>
+                <span style={{ marginLeft: '4px', background: '#f57c00', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: FONT_SIZES.small }}>
                   {missingCounts.failureCauseCount}
                 </span>
               )}
@@ -323,26 +323,29 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
             // 기능분석에서 입력한 공정특성 가져오기 (we.functions[].processChars[] 에서)
             const processChars = (row.we?.functions || []).flatMap((f: any) => f.processChars || []);
             const processChar = processChars[0];
+            const zebraBg = idx % 2 === 1 ? COLORS.failure.zebra : COLORS.failure.light;
+            const structureZebra = idx % 2 === 1 ? COLORS.structure.zebra : COLORS.structure.light;
+            const functionZebra = idx % 2 === 1 ? COLORS.function.zebra : COLORS.function.light;
             
             return (
-              <tr key={`${row.proc.id}-${row.we?.id || 'empty'}-${row.cause?.id || idx}`}>
+              <tr key={`${row.proc.id}-${row.we?.id || 'empty'}-${row.cause?.id || idx}`} style={{ background: zebraBg }}>
                 {row.procRowSpan > 0 && (
-                  <td rowSpan={row.procRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '6px', textAlign: 'center', background: '#e3f2fd', fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle', fontSize: FONT_SIZES.header1 }}>
+                  <td rowSpan={row.procRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '6px', textAlign: 'center', background: structureZebra, fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle', fontSize: FONT_SIZES.header1 }}>
                     {row.proc.no}. {row.proc.name}
                   </td>
                 )}
                 {row.weRowSpan > 0 && (
-                  <td rowSpan={row.weRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '6px', textAlign: 'center', background: '#bbdefb', verticalAlign: 'middle', fontSize: FONT_SIZES.header1 }}>
+                  <td rowSpan={row.weRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '6px', textAlign: 'center', background: structureZebra, verticalAlign: 'middle', fontSize: FONT_SIZES.header1 }}>
                     {row.we?.name || '(작업요소 없음)'}
                   </td>
                 )}
                 {row.weRowSpan > 0 && (
-                  <td rowSpan={row.weRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '6px', textAlign: 'center', background: '#c8e6c9', verticalAlign: 'middle', fontSize: FONT_SIZES.header1 }}>
+                  <td rowSpan={row.weRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '6px', textAlign: 'center', background: functionZebra, verticalAlign: 'middle', fontSize: FONT_SIZES.header1 }}>
                     {processChar?.name || '(기능분석에서 입력)'}
                   </td>
                 )}
                 {row.weRowSpan > 0 && (
-                  <td rowSpan={row.weRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '6px', textAlign: 'center', background: '#c8e6c9', verticalAlign: 'middle', fontSize: FONT_SIZES.header1 }}>
+                  <td rowSpan={row.weRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '6px', textAlign: 'center', background: functionZebra, verticalAlign: 'middle', fontSize: FONT_SIZES.header1 }}>
                     {processChar?.specialChar || '-'}
                   </td>
                 )}
@@ -351,11 +354,11 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
                     <SelectableCell 
                       value={row.cause?.name || ''} 
                       placeholder="고장원인 선택" 
-                      bgColor={row.cause ? '#fff' : FAIL_COLORS.cell} 
+                      bgColor={zebraBg} 
                       onClick={() => setModal({ type: 'l3FailureCause', processId: row.proc.id, weId: row.we.id, title: `${row.we.name} 고장원인`, itemCode: 'FC1' })} 
                     />
                   ) : (
-                    <span style={{ color: '#c62828', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold, padding: '8px', display: 'block' }}>-</span>
+                    <span style={{ color: COLORS.failure.dark, fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold, padding: '8px', display: 'block' }}>-</span>
                   )}
                 </td>
               </tr>

@@ -45,13 +45,62 @@ export default function AllTabRenderer({
   // 전체보기일 때만 가로 스크롤 활성화
   const isAllView = tab === 'all';
 
-  // 색상 정의 (조기 반환 전에 정의)
+  // ========== 🎨 고급스럽고 차분한 색상 시스템 ==========
+  // 주황색: S, O, D, AP, RPN 핵심 지표에만 사용
+  // 일반 컬럼: 파란색, 네이비, 녹색 계열 (차분하고 깔끔하게)
   const COLORS = {
-    structure: { main: '#1565c0', header: '#bbdefb', cell: '#e3f2fd' },
-    function: { main: '#1b5e20', header: '#c8e6c9', cell: '#e8f5e9' },
-    failure: { main: '#c62828', header: '#fff9c4', cell: '#fffde7' },
-    risk: { main: '#6a1b9a', prevention: { header: '#c8e6c9', cell: '#e8f5e9' }, detection: { header: '#bbdefb', cell: '#e3f2fd' }, evaluation: { header: '#f8bbd9', cell: '#fce4ec' } },
-    opt: { main: '#2e7d32', plan: { header: '#bbdefb', cell: '#e3f2fd' }, monitor: { header: '#ffe0b2', cell: '#fff3e0' }, effect: { header: '#c8e6c9', cell: '#e8f5e9' } },
+    // 구조분석 (2단계) - 블루 계열
+    structure: { 
+      main: '#1565c0',  // 헤더1행 - 딥블루
+      header: '#90caf9', cell: '#e3f2fd',  // 호환성 (하위 탭용)
+      l1: { h2: '#1976d2', h3: '#90caf9', cell: '#e3f2fd' },  // 1L: 파랑
+      l2: { h2: '#3949ab', h3: '#9fa8da', cell: '#e8eaf6' },  // 2L: 네이비
+      l3: { h2: '#388e3c', h3: '#a5d6a7', cell: '#e8f5e9' },  // 3L: 녹색
+    },
+    // 기능분석 (3단계) - 그린 계열
+    function: { 
+      main: '#2e7d32',  // 헤더1행 - 딥그린
+      header: '#a5d6a7', cell: '#e8f5e9',  // 호환성 (하위 탭용)
+      l1: { h2: '#1e88e5', h3: '#90caf9', cell: '#e3f2fd' },  // 1L: 파랑
+      l2: { h2: '#5c6bc0', h3: '#b3b9e8', cell: '#e8eaf6' },  // 2L: 네이비
+      l3: { h2: '#43a047', h3: '#a5d6a7', cell: '#e8f5e9' },  // 3L: 녹색
+    },
+    // 고장분석 (4단계) - 네이비 계열 (전체 통일)
+    failure: { 
+      main: '#1a237e',  // 헤더1행 - 딥 인디고 (네이비)
+      header: '#9fa8da', cell: '#e8eaf6',  // 호환성 (하위 탭용)
+      l1: { h2: '#1976d2', h3: '#90caf9', cell: '#e3f2fd' },  // 1L: 파랑 (FE)
+      l2: { h2: '#3949ab', h3: '#9fa8da', cell: '#e8eaf6' },  // 2L: 인디고 (FM)
+      l3: { h2: '#43a047', h3: '#a5d6a7', cell: '#e8f5e9' },  // 3L: 녹색 (FC)
+    },
+    // 리스크분석 (5단계) - 네이비 계열
+    risk: { 
+      main: '#1a237e',  // 헤더1행 - 딥 인디고
+      prevention: { header: '#9fa8da', h2: '#3949ab', h3: '#9fa8da', cell: '#e8eaf6' },
+      detection: { header: '#7986cb', h2: '#303f9f', h3: '#7986cb', cell: '#e8eaf6' },
+      evaluation: { header: '#5c6bc0', h2: '#283593', h3: '#5c6bc0', cell: '#e3e7f7' },
+    },
+    // 최적화 (6단계) - 그린 계열
+    opt: { 
+      main: '#1b5e20',  // 헤더1행 - 딥그린
+      plan: { header: '#81c784', h2: '#2e7d32', h3: '#81c784', cell: '#e8f5e9' },
+      monitor: { header: '#a5d6a7', h2: '#388e3c', h3: '#a5d6a7', cell: '#f1f8e9' },
+      effect: { header: '#c8e6c9', h2: '#43a047', h3: '#c8e6c9', cell: '#f9fbe7' }
+    },
+    // 핵심 지표 강조색 - 고급스럽고 은은한 색상
+    indicator: {
+      severity: { bg: '#ffccbc', text: '#bf360c' },    // S - 연한 살구색 + 진한 글씨
+      occurrence: { bg: '#ffe0b2', text: '#e65100' },  // O - 연한 피치 + 진한 글씨
+      detection: { bg: '#fff3e0', text: '#ff6f00' },   // D - 아주 연한 크림 + 주황 글씨
+      ap: { bg: '#fff8e1', text: '#ff8f00' },          // AP - 연한 아이보리 + 주황 글씨
+      rpn: { bg: '#ffebee', text: '#c62828' },         // RPN - 연한 핑크 + 진한 빨강 글씨
+      rpnHigh: { bg: '#ffcdd2', text: '#b71c1c' },     // RPN 높음 - 연한 핑크 + 진한 빨강
+    },
+    // 구분/4M 컬럼 (차분한 그레이 블루)
+    special: {
+      scope: { h3: '#78909c', cell: '#eceff1' },   // 구분 컬럼
+      m4: { h3: '#546e7a', cell: '#cfd8dc' },      // 4M 컬럼
+    }
   };
   
   // 고장연결 데이터
@@ -151,177 +200,208 @@ export default function AllTabRenderer({
       exportAllViewExcel(state, (state as any).fmeaName || 'PFMEA');
     };
     
+    // AP 분석 결과 계산 (5단계, 6단계) - 상위 컴포넌트에서 사용
+    const apCounts5 = { H: 0, M: 0, L: 0 };
+    const apCounts6 = { H: 0, M: 0, L: 0 };
+    allRows.forEach(row => {
+      const severity = row.fe?.severity || 0;
+      if (severity >= 8) apCounts5.H++;
+      else if (severity >= 5) apCounts5.M++;
+      else if (severity >= 1) apCounts5.L++;
+    });
+    
+    // FMEA STATUS 정보를 state에 저장 (상위 컴포넌트에서 읽을 수 있도록)
+    if (typeof window !== 'undefined') {
+      (window as any).__FMEA_STATUS__ = {
+        totalFM, totalFE, totalFC, totalRows: allRows.length,
+        apCounts5, apCounts6
+      };
+    }
+    
     return (
       <div style={{ width: '100%' }}>
-        {/* 전체보기 헤더 */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#1565c0', color: '#fff', marginBottom: '4px' }}>
-          <div style={{ fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.header1 }}>
-            📊 P-FMEA 전체보기 (FM:{totalFM} FE:{totalFE} FC:{totalFC}) - 총 {allRows.length}행
-          </div>
-          <button
-            onClick={handleExportExcel}
-            style={{
-              padding: '6px 14px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold,
-              background: '#4caf50', color: '#fff', border: 'none',
-              borderRadius: '4px', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: '6px'
-            }}
-          >
-            📥 Excel 내보내기
-          </button>
-        </div>
+        {/* 테이블 영역 - 헤더 삭제, 바로 테이블 시작 */}
         <div style={{ overflowX: 'auto', width: '100%' }}>
         <table style={{ minWidth: '2800px', borderCollapse: 'collapse' }}>
           <thead style={stickyTheadStyle}>
-            {/* 1행: 단계 대분류 */}
+            {/* 1행: 단계 대분류 - 차분하고 고급스러운 색상 */}
             <tr>
-              <th colSpan={4} style={{ background: '#1565c0', color: '#fff', border: BORDER, padding: '4px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 구조분석(2단계)</th>
-              <th colSpan={8} style={{ background: '#1b5e20', color: '#fff', border: BORDER, padding: '4px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 기능분석(3단계)</th>
-              <th colSpan={6} style={{ background: '#c62828', color: '#fff', border: BORDER, padding: '4px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 고장분석(4단계)</th>
-              <th colSpan={8} style={{ background: '#6a1b9a', color: '#fff', border: BORDER, padding: '4px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 리스크분석(5단계)</th>
-              <th colSpan={14} style={{ background: '#e65100', color: '#fff', border: BORDER, padding: '4px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 최적화(6단계)</th>
+              <th colSpan={4} style={{ background: COLORS.structure.main, color: '#fff', border: BORDER, padding: '4px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 구조분석(2단계)</th>
+              <th colSpan={8} style={{ background: COLORS.function.main, color: '#fff', border: BORDER, padding: '4px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 기능분석(3단계)</th>
+              <th colSpan={6} style={{ background: COLORS.failure.main, color: '#fff', border: BORDER, padding: '4px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 고장분석(4단계)</th>
+              <th colSpan={8} style={{ background: COLORS.risk.main, color: '#fff', border: BORDER, padding: '4px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 리스크분석(5단계)</th>
+              <th colSpan={14} style={{ background: COLORS.opt.main, color: '#fff', border: BORDER, padding: '4px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 최적화(6단계)</th>
             </tr>
-            {/* 2행: 서브그룹 */}
+            {/* 2행: 서브그룹 - 레벨별 색상 (1L=파랑, 2L=네이비, 3L=녹색) */}
             <tr>
-              <th style={{ background: '#bbdefb', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>1.완제품</th>
-              <th style={{ background: '#bbdefb', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>2.메인공정</th>
-              <th colSpan={2} style={{ background: '#bbdefb', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>3.작업요소</th>
-              <th colSpan={3} style={{ background: '#c8e6c9', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>1.완제품기능/요구사항</th>
-              <th colSpan={2} style={{ background: '#c8e6c9', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>2.공정기능/제품특성</th>
-              <th colSpan={3} style={{ background: '#c8e6c9', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>3.작업요소기능/공정특성</th>
-              <th colSpan={3} style={{ background: '#fff9c4', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>1.고장영향(FE)</th>
-              <th style={{ background: '#fff9c4', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>2.고장형태</th>
-              <th colSpan={2} style={{ background: '#fff9c4', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>3.고장원인(FC)</th>
-              <th colSpan={2} style={{ background: '#e1bee7', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>예방관리</th>
-              <th colSpan={2} style={{ background: '#e1bee7', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>검출관리</th>
-              <th colSpan={4} style={{ background: '#e1bee7', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>리스크평가</th>
-              <th colSpan={4} style={{ background: '#ffe0b2', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>계획</th>
-              <th colSpan={3} style={{ background: '#ffe0b2', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>모니터링</th>
-              <th colSpan={7} style={{ background: '#ffe0b2', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>효과평가</th>
+              <th style={{ background: COLORS.structure.l1.h2, color: '#fff', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>1.완제품</th>
+              <th style={{ background: COLORS.structure.l2.h2, color: '#fff', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>2.메인공정</th>
+              <th colSpan={2} style={{ background: COLORS.structure.l3.h2, color: '#fff', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>3.작업요소</th>
+              <th colSpan={3} style={{ background: COLORS.function.l1.h2, color: '#fff', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>1.완제품기능/요구사항</th>
+              <th colSpan={2} style={{ background: COLORS.function.l2.h2, color: '#fff', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>2.공정기능/제품특성</th>
+              <th colSpan={3} style={{ background: COLORS.function.l3.h2, color: '#fff', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>3.작업요소기능/공정특성</th>
+              <th colSpan={3} style={{ background: COLORS.failure.l1.h2, color: '#fff', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>1.고장영향(FE)</th>
+              <th style={{ background: COLORS.failure.l2.h2, color: '#fff', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>2.고장형태</th>
+              <th colSpan={2} style={{ background: COLORS.failure.l3.h2, color: '#fff', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>3.고장원인(FC)</th>
+              <th colSpan={2} style={{ background: COLORS.risk.prevention.h2, color: '#fff', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>예방관리</th>
+              <th colSpan={2} style={{ background: COLORS.risk.detection.h2, color: '#fff', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>검출관리</th>
+              <th colSpan={4} style={{ background: COLORS.risk.evaluation.h2, color: '#fff', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>리스크평가</th>
+              <th colSpan={4} style={{ background: COLORS.opt.plan.h2, color: '#fff', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>계획</th>
+              <th colSpan={3} style={{ background: COLORS.opt.monitor.h2, color: '#fff', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>모니터링</th>
+              <th colSpan={7} style={{ background: COLORS.opt.effect.h2, color: '#fff', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>효과평가</th>
             </tr>
-            {/* 3행: 컬럼명 */}
+            {/* 3행: 컬럼명 - 헤더2행의 연한 버전 */}
             <tr>
               {/* 구조분석 4열 */}
-              <th style={{ width: '60px', background: '#e3f2fd', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>완제품</th>
-              <th style={{ width: '80px', background: '#e3f2fd', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>NO+공정명</th>
-              <th style={{ width: '60px', background: '#e3f2fd', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>4M</th>
-              <th style={{ width: '70px', background: '#e3f2fd', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>작업요소</th>
+              <th style={{ width: '60px', background: COLORS.structure.l1.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>완제품</th>
+              <th style={{ width: '80px', background: COLORS.structure.l2.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>NO+공정명</th>
+              <th style={{ width: '30px', background: COLORS.special.m4.h3, color: '#fff', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.bold }}>4M</th>
+              <th style={{ width: '70px', background: COLORS.structure.l3.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>작업요소</th>
               {/* 기능분석 8열 */}
-              <th style={{ width: '35px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>구분</th>
-              <th style={{ width: '80px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>완제품기능</th>
-              <th style={{ width: '70px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>요구사항</th>
-              <th style={{ width: '80px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>공정기능</th>
-              <th style={{ width: '60px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>제품특성</th>
-              <th style={{ width: '60px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>4M</th>
-              <th style={{ width: '70px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>작업요소기능</th>
-              <th style={{ width: '60px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>공정특성</th>
+              <th style={{ width: '35px', background: COLORS.special.scope.h3, color: '#fff', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>구분</th>
+              <th style={{ width: '80px', background: COLORS.function.l1.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>완제품기능</th>
+              <th style={{ width: '70px', background: COLORS.function.l1.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>요구사항</th>
+              <th style={{ width: '80px', background: COLORS.function.l2.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>공정기능</th>
+              <th style={{ width: '60px', background: COLORS.function.l2.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>제품특성</th>
+              <th style={{ width: '30px', background: COLORS.special.m4.h3, color: '#fff', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.bold }}>4M</th>
+              <th style={{ width: '70px', background: COLORS.function.l3.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>작업요소기능</th>
+              <th style={{ width: '60px', background: COLORS.function.l3.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>공정특성</th>
               {/* 고장분석 6열 */}
-              <th style={{ width: '35px', background: '#fffde7', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>구분</th>
-              <th style={{ width: '80px', background: '#fffde7', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>고장영향</th>
-              <th style={{ width: '25px', background: '#fffde7', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>S</th>
-              <th style={{ width: '80px', background: '#fffde7', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>고장형태</th>
-              <th style={{ width: '60px', background: '#fffde7', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>작업요소</th>
-              <th style={{ width: '80px', background: '#fffde7', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>고장원인</th>
+              <th style={{ width: '35px', background: COLORS.special.scope.h3, color: '#fff', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>구분</th>
+              <th style={{ width: '80px', background: COLORS.failure.l1.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>고장영향</th>
+              <th style={{ width: '25px', background: COLORS.indicator.severity.bg, color: COLORS.indicator.severity.text, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.bold }}>S</th>
+              <th style={{ width: '80px', background: COLORS.failure.l2.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>고장형태</th>
+              <th style={{ width: '60px', background: COLORS.failure.l3.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>작업요소</th>
+              <th style={{ width: '80px', background: COLORS.failure.l3.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>고장원인</th>
               {/* 리스크분석 8열 */}
-              <th style={{ width: '70px', background: '#fce4ec', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>예방관리</th>
-              <th style={{ width: '25px', background: '#fce4ec', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>O</th>
-              <th style={{ width: '70px', background: '#fce4ec', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>검출관리</th>
-              <th style={{ width: '25px', background: '#fce4ec', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>D</th>
-              <th style={{ width: '25px', background: '#fce4ec', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>AP</th>
-              <th style={{ width: '30px', background: '#fce4ec', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>RPN</th>
-              <th style={{ width: '40px', background: '#fce4ec', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>특별특성</th>
-              <th style={{ width: '60px', background: '#fce4ec', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>습득교훈</th>
+              <th style={{ width: '70px', background: COLORS.risk.prevention.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>예방관리</th>
+              <th style={{ width: '25px', background: COLORS.indicator.occurrence.bg, color: COLORS.indicator.occurrence.text, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.bold }}>O</th>
+              <th style={{ width: '70px', background: COLORS.risk.detection.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>검출관리</th>
+              <th style={{ width: '25px', background: COLORS.indicator.detection.bg, color: COLORS.indicator.detection.text, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.bold }}>D</th>
+              <th style={{ width: '25px', background: COLORS.indicator.ap.bg, color: COLORS.indicator.ap.text, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.bold }}>AP</th>
+              <th style={{ width: '30px', background: COLORS.indicator.rpn.bg, color: COLORS.indicator.rpn.text, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.bold }}>RPN</th>
+              <th style={{ width: '40px', background: COLORS.risk.evaluation.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>특별특성</th>
+              <th style={{ width: '60px', background: COLORS.risk.evaluation.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>습득교훈</th>
               {/* 최적화 14열 */}
-              <th style={{ width: '70px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>예방개선</th>
-              <th style={{ width: '70px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>검출개선</th>
-              <th style={{ width: '50px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>책임자</th>
-              <th style={{ width: '50px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>목표일</th>
-              <th style={{ width: '35px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>상태</th>
-              <th style={{ width: '60px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>개선근거</th>
-              <th style={{ width: '50px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>완료일</th>
-              <th style={{ width: '25px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>S</th>
-              <th style={{ width: '25px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>O</th>
-              <th style={{ width: '25px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>D</th>
-              <th style={{ width: '40px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>특별특성</th>
-              <th style={{ width: '25px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>AP</th>
-              <th style={{ width: '30px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>RPN</th>
-              <th style={{ width: '50px', background: '#fff3e0', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>비고</th>
+              <th style={{ width: '70px', background: COLORS.opt.plan.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>예방개선</th>
+              <th style={{ width: '70px', background: COLORS.opt.plan.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>검출개선</th>
+              <th style={{ width: '50px', background: COLORS.opt.plan.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>책임자</th>
+              <th style={{ width: '50px', background: COLORS.opt.plan.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>목표일</th>
+              <th style={{ width: '35px', background: COLORS.opt.monitor.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>상태</th>
+              <th style={{ width: '60px', background: COLORS.opt.monitor.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>개선근거</th>
+              <th style={{ width: '50px', background: COLORS.opt.monitor.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>완료일</th>
+              <th style={{ width: '25px', background: COLORS.indicator.severity.bg, color: COLORS.indicator.severity.text, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.bold }}>S</th>
+              <th style={{ width: '25px', background: COLORS.indicator.occurrence.bg, color: COLORS.indicator.occurrence.text, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.bold }}>O</th>
+              <th style={{ width: '25px', background: COLORS.indicator.detection.bg, color: COLORS.indicator.detection.text, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.bold }}>D</th>
+              <th style={{ width: '40px', background: COLORS.opt.effect.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>특별특성</th>
+              <th style={{ width: '25px', background: COLORS.indicator.ap.bg, color: COLORS.indicator.ap.text, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.bold }}>AP</th>
+              <th style={{ width: '30px', background: COLORS.indicator.rpn.bg, color: COLORS.indicator.rpn.text, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.bold }}>RPN</th>
+              <th style={{ width: '50px', background: COLORS.opt.effect.h3, border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>비고</th>
             </tr>
           </thead>
           <tbody>
             {allRows.map((row, idx) => {
-              const cellStyle = { border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, verticalAlign: 'middle' as const };
-              const getScopeAbbr = (s: string) => s === 'Your Plant' ? 'YP' : s === 'Ship to Plant' ? 'SP' : s === 'User' ? 'U' : '';
+              const zebraBg = idx % 2 === 1 ? '#f5f5f5' : '#fff';
+              const cellStyle = { border: BORDER, padding: '2px', fontSize: FONT_SIZES.small, verticalAlign: 'middle' as const, background: zebraBg };
+              const getScopeAbbr = (s: string) => s === 'Your Plant' ? 'YOUR PLANT' : s === 'Ship to Plant' ? 'SHIP TO PLANT' : s === 'User' ? 'USER' : '';
+              
+              // 구조분석 4M 찾기: state.l2에서 작업요소명으로 찾기
+              const getStructureM4 = () => {
+                if (!row.fc?.workElem) return '';
+                // state.l2에서 공정명과 작업요소명으로 매칭
+                const process = state.l2?.find((p: any) => p.name === row.processName || `${p.no}. ${p.name}` === row.processName);
+                if (!process) return '';
+                const workElem = process.l3?.find((w: any) => w.name === row.fc?.workElem);
+                return workElem?.m4 || '';
+              };
+              const structureM4 = getStructureM4();
+              
+              // RPN 계산: S × O × D (임시 더미 데이터 - 실제 데이터는 state에서)
+              const severity = row.fe?.severity || 0;
+              const occurrence = 0; // TODO: state에서 가져오기
+              const detection = 0; // TODO: state에서 가져오기
+              const rpn = severity * occurrence * detection;
+              
+              // AP 계산: Severity × (Occurrence + Detection) / 2 (간이 공식)
+              const ap = occurrence && detection ? Math.round(severity * (occurrence + detection) / 2) : 0;
               
               return (
-                <tr key={`all-${idx}`} style={{ borderTop: row.showFm ? '2px solid #666' : undefined }}>
+                <tr key={`all-${idx}`} style={{ borderTop: row.showFm ? '2px solid #666' : undefined, background: zebraBg }}>
                   {/* ===== 구조분석 4열 ===== */}
                   {/* 1. 완제품 공정명: 전체 병합 */}
-                  {idx === 0 && <td rowSpan={allRows.length} style={{ ...cellStyle, background: '#e3f2fd', fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center' }}>{state.l1?.name || ''}</td>}
+                  {idx === 0 && <td rowSpan={allRows.length} style={{ ...cellStyle, background: COLORS.structure.l1.cell, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center' }}>{state.l1?.name || ''}</td>}
                   {/* 2. 메인공정명: 공정별 병합 */}
-                  {row.showProcess && row.processRowSpan > 0 && <td rowSpan={row.processRowSpan} style={{ ...cellStyle, background: '#e3f2fd' }}>{row.processName}</td>}
-                  {/* 3. 4M: FC별 - 마지막 행 병합 */}
-                  {row.showFc && <td rowSpan={row.fcRowSpan} style={{ ...cellStyle, background: '#e3f2fd', textAlign: 'center' }}>{row.fc?.m4 || ''}</td>}
+                  {row.showProcess && row.processRowSpan > 0 && <td rowSpan={row.processRowSpan} style={{ ...cellStyle, background: COLORS.structure.l2.cell, textAlign: 'center' }}>{row.processName}</td>}
+                  {/* 3. 4M: 구조분석 데이터에서 가져오기 - FC별 - 마지막 행 병합 */}
+                  {row.showFc && <td rowSpan={row.fcRowSpan} style={{ ...cellStyle, background: COLORS.special.m4.cell, textAlign: 'center', fontWeight: FONT_WEIGHTS.bold }}>{structureM4 || ''}</td>}
                   {/* 4. 작업요소: FC별 - 마지막 행 병합 */}
-                  {row.showFc && <td rowSpan={row.fcRowSpan} style={{ ...cellStyle, background: '#e3f2fd' }}>{row.fc?.workElem || ''}</td>}
+                  {row.showFc && <td rowSpan={row.fcRowSpan} style={{ ...cellStyle, background: COLORS.structure.l3.cell }}>{row.fc?.workElem || ''}</td>}
                   
                   {/* ===== 기능분석 8열 (DB 연결 데이터 표시) ===== */}
                   {/* 1. 구분: 기능분석 DB에서 조회 - FM 병합 */}
-                  {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#e8f5e9', textAlign: 'center' }}>{row.fe?.funcData?.typeName || (row.fe ? getScopeAbbr(row.fe.scope) : '')}</td>}
+                  {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: COLORS.special.scope.cell, textAlign: 'center' }}>{row.fe?.funcData?.typeName || (row.fe ? getScopeAbbr(row.fe.scope) : '')}</td>}
                   {/* 2. 완제품기능: 기능분석 DB에서 조회 - FM 병합 */}
-                  {row.showFm && <td rowSpan={row.fmRowSpan} style={row.fe?.funcData ? { ...cellStyle, background: '#e8f5e9' } : { ...cellStyle, background: '#ffebee', color: '#c62828', fontStyle: 'italic' }}>{row.fe?.funcData?.funcName || '(미연결)'}</td>}
+                  {row.showFm && <td rowSpan={row.fmRowSpan} style={row.fe?.funcData ? { ...cellStyle, background: COLORS.function.l1.cell } : { ...cellStyle, background: '#fafafa', color: '#999', fontStyle: 'italic' }}>{row.fe?.funcData?.funcName || '(미연결)'}</td>}
                   {/* 3. 요구사항: 기능분석 DB에서 조회 - FM 병합 */}
-                  {row.showFm && <td rowSpan={row.fmRowSpan} style={row.fe?.funcData ? { ...cellStyle, background: '#c8e6c9', fontWeight: 600 } : { ...cellStyle, background: '#ffebee', color: '#c62828', fontStyle: 'italic' }}>{row.fe?.funcData?.reqName || '(미연결)'}</td>}
+                  {row.showFm && <td rowSpan={row.fmRowSpan} style={row.fe?.funcData ? { ...cellStyle, background: COLORS.function.l1.cell, fontWeight: 600, textAlign: 'center' } : { ...cellStyle, background: '#fafafa', color: '#999', fontStyle: 'italic', textAlign: 'center' }}>{row.fe?.funcData?.reqName || '(미연결)'}</td>}
                   {/* 4. 공정기능: 기능분석 DB에서 조회 - FM 병합 */}
-                  {row.showFm && <td rowSpan={row.fmRowSpan} style={row.l2FuncData ? { ...cellStyle, background: '#e8f5e9' } : { ...cellStyle, background: '#ffebee', color: '#c62828', fontStyle: 'italic' }}>{row.l2FuncData?.funcName || '(미연결)'}</td>}
+                  {row.showFm && <td rowSpan={row.fmRowSpan} style={row.l2FuncData ? { ...cellStyle, background: COLORS.function.l2.cell } : { ...cellStyle, background: '#fafafa', color: '#999', fontStyle: 'italic' }}>{row.l2FuncData?.funcName || '(미연결)'}</td>}
                   {/* 5. 제품특성: 기능분석 DB에서 조회 - FM 병합 */}
-                  {row.showFm && <td rowSpan={row.fmRowSpan} style={row.l2FuncData ? { ...cellStyle, background: '#c8e6c9', fontWeight: 600 } : { ...cellStyle, background: '#ffebee', color: '#c62828', fontStyle: 'italic' }}>{row.l2FuncData?.productCharName || '(미연결)'}</td>}
-                  {/* 6. 4M: FC별 - 마지막 행 병합 */}
-                  {row.showFc && <td rowSpan={row.fcRowSpan} style={{ ...cellStyle, background: '#e8f5e9', textAlign: 'center' }}>{row.fc?.m4 || ''}</td>}
+                  {row.showFm && <td rowSpan={row.fmRowSpan} style={row.l2FuncData ? { ...cellStyle, background: COLORS.function.l2.cell, fontWeight: 600, textAlign: 'center' } : { ...cellStyle, background: '#fafafa', color: '#999', fontStyle: 'italic', textAlign: 'center' }}>{row.l2FuncData?.productCharName || '(미연결)'}</td>}
+                  {/* 6. 4M: 구조분석 데이터에서 가져오기 - FC별 - 마지막 행 병합 */}
+                  {row.showFc && <td rowSpan={row.fcRowSpan} style={{ ...cellStyle, background: COLORS.special.m4.cell, textAlign: 'center', fontWeight: FONT_WEIGHTS.bold }}>{structureM4 || ''}</td>}
                   {/* 7. 작업요소기능: 기능분석 DB에서 조회 - 마지막 행 병합 */}
-                  {row.showFc && <td rowSpan={row.fcRowSpan} style={row.fc?.funcData ? { ...cellStyle, background: '#e8f5e9' } : (row.fc ? { ...cellStyle, background: '#ffebee', color: '#c62828', fontStyle: 'italic' } : { ...cellStyle, background: '#fafafa' })}>{row.fc?.funcData?.funcName || (row.fc ? '(미연결)' : '')}</td>}
+                  {row.showFc && <td rowSpan={row.fcRowSpan} style={row.fc?.funcData ? { ...cellStyle, background: COLORS.function.l3.cell } : (row.fc ? { ...cellStyle, background: '#fafafa', color: '#999', fontStyle: 'italic' } : { ...cellStyle, background: '#fafafa' })}>{row.fc?.funcData?.funcName || (row.fc ? '(미연결)' : '')}</td>}
                   {/* 8. 공정특성: 기능분석 DB에서 조회 - 마지막 행 병합 */}
-                  {row.showFc && <td rowSpan={row.fcRowSpan} style={row.fc?.funcData ? { ...cellStyle, background: '#c8e6c9', fontWeight: 600 } : (row.fc ? { ...cellStyle, background: '#ffebee', color: '#c62828', fontStyle: 'italic' } : { ...cellStyle, background: '#fafafa' })}>{row.fc?.funcData?.processCharName || (row.fc ? '(미연결)' : '')}</td>}
+                  {row.showFc && <td rowSpan={row.fcRowSpan} style={row.fc?.funcData ? { ...cellStyle, background: COLORS.function.l3.cell, fontWeight: 600, textAlign: 'center' } : (row.fc ? { ...cellStyle, background: '#fafafa', color: '#999', fontStyle: 'italic', textAlign: 'center' } : { ...cellStyle, background: '#fafafa', textAlign: 'center' })}>{row.fc?.funcData?.processCharName || (row.fc ? '(미연결)' : '')}</td>}
                   
                   {/* ===== 고장분석 6열 ===== */}
                   {/* 1. 구분: FE scope - 마지막 행 병합 */}
-                  {row.showFe && <td rowSpan={row.feRowSpan} style={{ ...cellStyle, background: '#fffde7', textAlign: 'center' }}>{row.fe ? getScopeAbbr(row.fe.scope) : ''}</td>}
+                  {row.showFe && <td rowSpan={row.feRowSpan} style={{ ...cellStyle, background: COLORS.special.scope.cell, textAlign: 'center' }}>{row.fe ? getScopeAbbr(row.fe.scope) : ''}</td>}
                   {/* 2. 고장영향: FE text - 마지막 행 병합 */}
-                  {row.showFe && <td rowSpan={row.feRowSpan} style={{ ...cellStyle, background: '#fffde7' }}>{row.fe?.text || ''}</td>}
-                  {/* 3. 심각도: FE severity - 마지막 행 병합 */}
-                  {row.showFe && <td rowSpan={row.feRowSpan} style={{ ...cellStyle, background: '#fffde7', textAlign: 'center', fontWeight: FONT_WEIGHTS.semibold, color: (row.fe?.severity || 0) >= 8 ? '#c62828' : '#333' }}>{row.fe?.severity || ''}</td>}
+                  {row.showFe && <td rowSpan={row.feRowSpan} style={{ ...cellStyle, background: COLORS.failure.l1.cell }}>{row.fe?.text || ''}</td>}
+                  {/* 3. 심각도: FE severity - 마지막 행 병합 (주황색 강조) */}
+                  {row.showFe && <td rowSpan={row.feRowSpan} style={{ ...cellStyle, background: (row.fe?.severity || 0) >= 8 ? COLORS.indicator.severity.bg : COLORS.indicator.ap.bg, color: (row.fe?.severity || 0) >= 8 ? '#fff' : '#000', textAlign: 'center', fontWeight: FONT_WEIGHTS.bold }}>{row.fe?.severity || ''}</td>}
                   {/* 4. 고장형태: FM text - FM 병합 */}
-                  {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#fff8e1', textAlign: 'center', fontWeight: FONT_WEIGHTS.semibold }}>{row.fmText}</td>}
+                  {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: COLORS.failure.l2.cell, textAlign: 'center', fontWeight: FONT_WEIGHTS.semibold }}>{row.fmText}</td>}
                   {/* 5. 작업요소: FC workElem - 마지막 행 병합 */}
-                  {row.showFc && <td rowSpan={row.fcRowSpan} style={{ ...cellStyle, background: '#fffde7' }}>{row.fc?.workElem || ''}</td>}
+                  {row.showFc && <td rowSpan={row.fcRowSpan} style={{ ...cellStyle, background: COLORS.failure.l3.cell }}>{row.fc?.workElem || ''}</td>}
                   {/* 6. 고장원인: FC text - 마지막 행 병합 */}
-                  {row.showFc && <td rowSpan={row.fcRowSpan} style={{ ...cellStyle, background: '#fffde7' }}>{row.fc?.text || ''}</td>}
+                  {row.showFc && <td rowSpan={row.fcRowSpan} style={{ ...cellStyle, background: COLORS.failure.l3.cell }}>{row.fc?.text || ''}</td>}
                   
                   {/* ===== 리스크분석 8열 ===== */}
-                  <td style={{ ...cellStyle, background: '#fce4ec' }}></td>
-                  <td style={{ ...cellStyle, background: '#fce4ec', textAlign: 'center' }}></td>
-                  <td style={{ ...cellStyle, background: '#fce4ec' }}></td>
-                  <td style={{ ...cellStyle, background: '#fce4ec', textAlign: 'center' }}></td>
-                  <td style={{ ...cellStyle, background: '#fce4ec', textAlign: 'center' }}></td>
-                  <td style={{ ...cellStyle, background: '#fce4ec', textAlign: 'center' }}></td>
-                  <td style={{ ...cellStyle, background: '#fce4ec', textAlign: 'center' }}></td>
-                  <td style={{ ...cellStyle, background: '#fce4ec' }}></td>
+                  {/* 1. 예방관리(PC) - 네이비 계열 */}
+                  <td style={{ ...cellStyle, background: COLORS.risk.prevention.cell }}></td>
+                  {/* 2. 발생도(O) - 주황색 강조 */}
+                  <td style={{ ...cellStyle, background: COLORS.indicator.occurrence.bg, color: COLORS.indicator.occurrence.text, textAlign: 'center', fontWeight: FONT_WEIGHTS.bold }}>{occurrence || ''}</td>
+                  {/* 3. 검출관리(DC) - 네이비 계열 */}
+                  <td style={{ ...cellStyle, background: COLORS.risk.detection.cell }}></td>
+                  {/* 4. 검출도(D) - 주황색 강조 */}
+                  <td style={{ ...cellStyle, background: COLORS.indicator.detection.bg, color: COLORS.indicator.detection.text, textAlign: 'center', fontWeight: FONT_WEIGHTS.bold }}>{detection || ''}</td>
+                  {/* 5. AP - 황금색 강조 */}
+                  <td style={{ ...cellStyle, background: COLORS.indicator.ap.bg, color: COLORS.indicator.ap.text, textAlign: 'center', fontWeight: FONT_WEIGHTS.bold }}>{ap || ''}</td>
+                  {/* 6. RPN - 빨간색 강조 */}
+                  <td style={{ ...cellStyle, background: rpn >= 100 ? COLORS.indicator.rpnHigh.bg : COLORS.indicator.rpn.bg, color: rpn >= 100 ? COLORS.indicator.rpnHigh.text : COLORS.indicator.rpn.text, textAlign: 'center', fontWeight: FONT_WEIGHTS.bold }}>{rpn || ''}</td>
+                  {/* 7. 특별특성 */}
+                  <td style={{ ...cellStyle, background: COLORS.risk.evaluation.cell, textAlign: 'center' }}></td>
+                  {/* 8. 습득교훈 */}
+                  <td style={{ ...cellStyle, background: COLORS.risk.evaluation.cell }}></td>
                   
                   {/* ===== 최적화 14열 ===== */}
-                  <td style={{ ...cellStyle, background: '#fff3e0' }}></td>
-                  <td style={{ ...cellStyle, background: '#fff3e0' }}></td>
-                  <td style={{ ...cellStyle, background: '#fff3e0' }}></td>
-                  <td style={{ ...cellStyle, background: '#fff3e0' }}></td>
-                  <td style={{ ...cellStyle, background: '#fff3e0' }}></td>
-                  <td style={{ ...cellStyle, background: '#fff3e0' }}></td>
-                  <td style={{ ...cellStyle, background: '#fff3e0' }}></td>
-                  <td style={{ ...cellStyle, background: '#fff3e0', textAlign: 'center' }}></td>
-                  <td style={{ ...cellStyle, background: '#fff3e0', textAlign: 'center' }}></td>
-                  <td style={{ ...cellStyle, background: '#fff3e0', textAlign: 'center' }}></td>
-                  <td style={{ ...cellStyle, background: '#fff3e0', textAlign: 'center' }}></td>
-                  <td style={{ ...cellStyle, background: '#fff3e0', textAlign: 'center' }}></td>
-                  <td style={{ ...cellStyle, background: '#fff3e0', textAlign: 'center' }}></td>
-                  <td style={{ ...cellStyle, background: '#fff3e0' }}></td>
+                  <td style={{ ...cellStyle, background: COLORS.opt.plan.cell }}></td>
+                  <td style={{ ...cellStyle, background: COLORS.opt.plan.cell }}></td>
+                  <td style={{ ...cellStyle, background: COLORS.opt.plan.cell }}></td>
+                  <td style={{ ...cellStyle, background: COLORS.opt.plan.cell }}></td>
+                  <td style={{ ...cellStyle, background: COLORS.opt.monitor.cell }}></td>
+                  <td style={{ ...cellStyle, background: COLORS.opt.monitor.cell }}></td>
+                  <td style={{ ...cellStyle, background: COLORS.opt.monitor.cell }}></td>
+                  <td style={{ ...cellStyle, background: COLORS.indicator.severity.bg, color: COLORS.indicator.severity.text, textAlign: 'center', fontWeight: FONT_WEIGHTS.bold }}></td>
+                  <td style={{ ...cellStyle, background: COLORS.indicator.occurrence.bg, color: COLORS.indicator.occurrence.text, textAlign: 'center', fontWeight: FONT_WEIGHTS.bold }}></td>
+                  <td style={{ ...cellStyle, background: COLORS.indicator.detection.bg, color: COLORS.indicator.detection.text, textAlign: 'center', fontWeight: FONT_WEIGHTS.bold }}></td>
+                  <td style={{ ...cellStyle, background: COLORS.opt.effect.cell, textAlign: 'center' }}></td>
+                  <td style={{ ...cellStyle, background: COLORS.indicator.ap.bg, color: COLORS.indicator.ap.text, textAlign: 'center', fontWeight: FONT_WEIGHTS.bold }}></td>
+                  <td style={{ ...cellStyle, background: COLORS.indicator.rpn.bg, color: COLORS.indicator.rpn.text, textAlign: 'center', fontWeight: FONT_WEIGHTS.bold }}></td>
+                  <td style={{ ...cellStyle, background: COLORS.opt.effect.cell }}></td>
                 </tr>
               );
             })}
@@ -376,9 +456,10 @@ export default function AllTabRenderer({
         {rows.length === 0 ? (
           <tr><td colSpan={totalCols} style={{ textAlign: 'center', padding: '40px', color: '#999', fontSize: FONT_SIZES.header1 }}>데이터가 없습니다.</td></tr>
         ) : rows.map((row, idx) => {
-          const cellStyle = { border: BORDER, padding: '2px 3px', fontSize: FONT_SIZES.small, background: '#fff' };
+          const zebraBg = idx % 2 === 1 ? '#f5f5f5' : '#fff';
+          const cellStyle = { border: BORDER, padding: '2px 3px', fontSize: FONT_SIZES.small, background: zebraBg };
           return (
-            <tr key={`eval-${row.l1Id}-${row.l2Id}-${row.l3Id}-${idx}`} style={{ height: '22px' }}>
+            <tr key={`eval-${row.l1Id}-${row.l2Id}-${row.l3Id}-${idx}`} style={{ height: '22px', background: zebraBg }}>
               {visibleSteps.includes(2) && <>{l1Spans[idx] > 0 && <td rowSpan={l1Spans[idx]} style={{ ...cellStyle, background: COLORS.structure.cell }}>{row.l1Name}</td>}{l2Spans[idx] > 0 && <td rowSpan={l2Spans[idx]} style={{ ...cellStyle, background: COLORS.structure.cell }}>{row.l2No} {row.l2Name}</td>}<td style={{ ...cellStyle, background: COLORS.structure.cell, textAlign: 'center' }}>{row.m4}</td><td style={{ ...cellStyle, background: COLORS.structure.cell }}>{row.l3Name}</td></>}
               {visibleSteps.includes(3) && <>
                 <td style={{ ...cellStyle, background: COLORS.function.cell }}>{row.l1Type || ''}</td>

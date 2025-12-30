@@ -40,7 +40,7 @@ const COLORS = {
   // 3단계 기능분석 - 녹색
   function: { main: '#1b5e20', header: '#c8e6c9', cell: '#e8f5e9' },
   // 4단계 고장분석 - 노랑/빨강
-  failure: { main: '#c62828', header: '#fff9c4', cell: '#fffde7' },
+  failure: { main: '#f57c00', header: '#ffe0b2', cell: '#fff3e0' },
   // 5단계 리스크분석 - 보라/분홍
   risk: { 
     main: '#6a1b9a', 
@@ -63,19 +63,19 @@ export function AllViewHeader() {
     <>
       {/* 1행: 단계 대분류 */}
       <tr>
-        <th colSpan={4} style={{ background: COLORS.structure.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>
+        <th colSpan={4} style={{ background: COLORS.structure.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '12px', textAlign: 'center' }}>
           P-FMEA 구조 분석(2단계)
         </th>
-        <th colSpan={8} style={{ background: COLORS.function.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>
+        <th colSpan={8} style={{ background: COLORS.function.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '12px', textAlign: 'center' }}>
           P-FMEA 기능 분석(3단계)
         </th>
-        <th colSpan={6} style={{ background: COLORS.failure.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>
+        <th colSpan={6} style={{ background: COLORS.failure.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '12px', textAlign: 'center' }}>
           P-FMEA 고장 분석(4단계)
         </th>
-        <th colSpan={8} style={{ background: COLORS.risk.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>
+        <th colSpan={8} style={{ background: COLORS.risk.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '12px', textAlign: 'center' }}>
           P-FMEA 리스크 분석(5단계)
         </th>
-        <th colSpan={14} style={{ background: COLORS.opt.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>
+        <th colSpan={14} style={{ background: COLORS.opt.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '12px', textAlign: 'center' }}>
           P-FMEA 최적화(6단계)
         </th>
       </tr>
@@ -157,11 +157,11 @@ export function AllViewHeader() {
 }
 
 // ============ 데이터 행 ============
-function AllViewRow({ row, idx, l1Spans, l2Spans }: { row: FlatRow; idx: number; l1Spans: number[]; l2Spans: number[] }) {
-  const cellStyle = { border: BORDER, padding: '2px 3px', fontSize: '8px', background: '#fff' };
+function AllViewRow({ row, idx, l1Spans, l2Spans, zebraBg = '#fff' }: { row: FlatRow; idx: number; l1Spans: number[]; l2Spans: number[]; zebraBg?: string }) {
+  const cellStyle = { border: BORDER, padding: '2px 3px', fontSize: '8px', background: zebraBg };
   
   return (
-    <tr style={{ height: '22px' }}>
+    <tr style={{ height: '22px', background: zebraBg }}>
       {/* 구조분석 4열 */}
       {l1Spans[idx] > 0 && <td rowSpan={l1Spans[idx]} style={{ ...cellStyle, background: COLORS.structure.cell }}>{row.l1Name}</td>}
       {l2Spans[idx] > 0 && <td rowSpan={l2Spans[idx]} style={{ ...cellStyle, background: COLORS.structure.cell }}>{row.l2No} {row.l2Name}</td>}
@@ -216,7 +216,7 @@ export default function AllViewTab({ rows, state, l1Spans, l2Spans }: AllViewTab
           </tr>
         ) : (
           rows.map((row, idx) => (
-            <AllViewRow key={`all-${row.l1Id}-${row.l2Id}-${row.l3Id}-${idx}`} row={row} idx={idx} l1Spans={l1Spans} l2Spans={l2Spans} />
+            <AllViewRow key={`all-${row.l1Id}-${row.l2Id}-${row.l3Id}-${idx}`} row={row} idx={idx} l1Spans={l1Spans} l2Spans={l2Spans} zebraBg={idx % 2 === 1 ? '#f5f5f5' : '#fff'} />
           ))
         )}
       </tbody>

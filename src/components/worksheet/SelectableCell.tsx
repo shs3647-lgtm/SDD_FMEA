@@ -108,7 +108,7 @@ export default function SelectableCell({
           height: '100%',
           minHeight: '24px',
           padding: '2px 4px',
-          fontSize: '10px',
+          fontSize: '12px',
           border: '2px solid #1976d2',
           borderRadius: '2px',
           outline: 'none',
@@ -125,13 +125,13 @@ export default function SelectableCell({
       onDoubleClick={handleDoubleClick}
       style={{ 
         minHeight: '24px', 
-        fontSize: '10px', 
+        fontSize: '12px', 
         fontFamily: 'inherit',
-        color: isMissing ? '#c62828' : (textColor || 'inherit'),
+        color: isMissing ? '#f57c00' : (textColor || 'inherit'),
         fontWeight: isMissing ? 600 : (textColor ? 700 : 'inherit'),
         fontStyle: isMissing ? 'italic' : 'normal',
         justifyContent: textAlign === 'center' ? 'center' : textAlign === 'right' ? 'flex-end' : 'flex-start',
-        background: isMissing ? `repeating-linear-gradient(45deg, #ffebee, #ffebee 4px, #fff 4px, #fff 8px)` : 'transparent'
+        background: isMissing ? `repeating-linear-gradient(45deg, #fff3e0, #fff3e0 4px, #fff 4px, #fff 8px)` : 'transparent'
       }}
       title="클릭: 모달 선택 | 더블클릭: 직접 편집"
     >

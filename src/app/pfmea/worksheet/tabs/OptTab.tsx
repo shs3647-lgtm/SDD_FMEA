@@ -74,13 +74,13 @@ export function OptHeader() {
 
       {/* 2행: 서브그룹 */}
       <tr>
-        <th colSpan={4} style={{ background: COLORS_OPT.plan.headerBg, border: BORDER, padding: '4px', height: '24px', fontWeight: 700, fontSize: '11px', textAlign: 'center' }}>
+        <th colSpan={4} style={{ background: COLORS_OPT.plan.headerBg, border: BORDER, padding: '4px', height: '24px', fontWeight: 700, fontSize: '12px', textAlign: 'center' }}>
           계획
         </th>
-        <th colSpan={3} style={{ background: COLORS_OPT.monitor.headerBg, border: BORDER, padding: '4px', height: '24px', fontWeight: 700, fontSize: '11px', textAlign: 'center' }}>
+        <th colSpan={3} style={{ background: COLORS_OPT.monitor.headerBg, border: BORDER, padding: '4px', height: '24px', fontWeight: 700, fontSize: '12px', textAlign: 'center' }}>
           결과 모니터링
         </th>
-        <th colSpan={7} style={{ background: COLORS_OPT.effect.headerBg, border: BORDER, padding: '4px', height: '24px', fontWeight: 700, fontSize: '11px', textAlign: 'center' }}>
+        <th colSpan={7} style={{ background: COLORS_OPT.effect.headerBg, border: BORDER, padding: '4px', height: '24px', fontWeight: 700, fontSize: '12px', textAlign: 'center' }}>
           효과 평가
         </th>
       </tr>
@@ -89,19 +89,19 @@ export function OptHeader() {
       <tr>
         {/* 계획 (4열) */}
         {PLAN_COLS.map(col => (
-          <th key={col} style={{ background: COLORS_OPT.plan.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+          <th key={col} style={{ background: COLORS_OPT.plan.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
             {col}
           </th>
         ))}
         {/* 결과 모니터링 (3열) */}
         {MONITOR_COLS.map(col => (
-          <th key={col} style={{ background: COLORS_OPT.monitor.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+          <th key={col} style={{ background: COLORS_OPT.monitor.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
             {col}
           </th>
         ))}
         {/* 효과 평가 (7열) */}
         {EFFECT_COLS.map(col => (
-          <th key={col} style={{ background: COLORS_OPT.effect.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+          <th key={col} style={{ background: COLORS_OPT.effect.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
             {col}
           </th>
         ))}
@@ -118,15 +118,15 @@ export function OptRow({ row }: { row: FlatRow }) {
     <>
       {/* 계획 (4열) */}
       {PLAN_COLS.map((_, idx) => (
-        <td key={`plan-${idx}`} style={{ border: BORDER, padding: '2px 4px', fontSize: '10px', background: '#fafafa' }}></td>
+        <td key={`plan-${idx}`} style={{ border: BORDER, padding: '2px 4px', fontSize: '12px', background: '#fafafa' }}></td>
       ))}
       {/* 결과 모니터링 (3열) */}
       {MONITOR_COLS.map((_, idx) => (
-        <td key={`monitor-${idx}`} style={{ border: BORDER, padding: '2px 4px', fontSize: '10px', background: '#fafafa' }}></td>
+        <td key={`monitor-${idx}`} style={{ border: BORDER, padding: '2px 4px', fontSize: '12px', background: '#fafafa' }}></td>
       ))}
       {/* 효과 평가 (7열) */}
       {EFFECT_COLS.map((_, idx) => (
-        <td key={`effect-${idx}`} style={{ border: BORDER, padding: '2px 4px', fontSize: '10px', textAlign: 'center', background: '#fafafa' }}></td>
+        <td key={`effect-${idx}`} style={{ border: BORDER, padding: '2px 4px', fontSize: '12px', textAlign: 'center', background: '#fafafa' }}></td>
       ))}
     </>
   );
@@ -174,7 +174,7 @@ export default function OptTab({ rows }: OptTabProps) {
           </tr>
         ) : (
           rows.map((row, idx) => (
-            <tr key={`opt-${row.l3Id}-${idx}`} style={{ height: '24px' }}>
+            <tr key={`opt-${row.l3Id}-${idx}`} style={{ height: '24px', background: idx % 2 === 1 ? '#f5f5f5' : '#fff' }}>
               <OptRow row={row} />
             </tr>
           ))
@@ -192,7 +192,7 @@ export function OptTabFull({ state, rows, l1Spans, l2Spans }: OptTabProps) {
   const COLORS = {
     structure: { main: '#1565c0', header: '#bbdefb', cell: '#e3f2fd' },
     function: { main: '#1b5e20', header: '#c8e6c9', cell: '#e8f5e9' },
-    failure: { main: '#c62828', header: '#fff9c4', cell: '#fffde7' },
+    failure: { main: '#f57c00', header: '#ffe0b2', cell: '#fff3e0' },
     risk: {
       main: '#6a1b9a',
       prevention: { header: '#c8e6c9', cell: '#e8f5e9' },
@@ -212,19 +212,19 @@ export function OptTabFull({ state, rows, l1Spans, l2Spans }: OptTabProps) {
       <thead style={{ position: 'sticky', top: 0, zIndex: 20, background: '#fff' }}>
         {/* 1행: 단계 대분류 */}
         <tr>
-          <th colSpan={4} style={{ background: COLORS.structure.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>
+          <th colSpan={4} style={{ background: COLORS.structure.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '12px', textAlign: 'center' }}>
             P-FMEA 구조 분석(2단계)
           </th>
-          <th colSpan={8} style={{ background: COLORS.function.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>
+          <th colSpan={8} style={{ background: COLORS.function.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '12px', textAlign: 'center' }}>
             P-FMEA 기능 분석(3단계)
           </th>
-          <th colSpan={6} style={{ background: COLORS.failure.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>
+          <th colSpan={6} style={{ background: COLORS.failure.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '12px', textAlign: 'center' }}>
             P-FMEA 고장 분석(4단계)
           </th>
-          <th colSpan={8} style={{ background: COLORS.risk.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>
+          <th colSpan={8} style={{ background: COLORS.risk.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '12px', textAlign: 'center' }}>
             P-FMEA 리스크 분석(5단계)
           </th>
-          <th colSpan={14} style={{ background: COLORS.opt.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>
+          <th colSpan={14} style={{ background: COLORS.opt.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '12px', textAlign: 'center' }}>
             P-FMEA 최적화(6단계)
           </th>
         </tr>
@@ -312,9 +312,10 @@ export function OptTabFull({ state, rows, l1Spans, l2Spans }: OptTabProps) {
           </tr>
         ) : (
           rows.map((row, idx) => {
-            const cellStyle = { border: BORDER, padding: '2px 3px', fontSize: '8px', background: '#fff' };
+            const zebraBg = idx % 2 === 1 ? '#f5f5f5' : '#fff';
+            const cellStyle = { border: BORDER, padding: '2px 3px', fontSize: '8px', background: zebraBg };
             return (
-              <tr key={`opt-full-${row.l1Id}-${row.l2Id}-${row.l3Id}-${idx}`} style={{ height: '22px' }}>
+              <tr key={`opt-full-${row.l1Id}-${row.l2Id}-${row.l3Id}-${idx}`} style={{ height: '22px', background: zebraBg }}>
                 {/* 구조분석 4열 */}
                 {l1Spans[idx] > 0 && <td rowSpan={l1Spans[idx]} style={{ ...cellStyle, background: COLORS.structure.cell }}>{row.l1Name}</td>}
                 {l2Spans[idx] > 0 && <td rowSpan={l2Spans[idx]} style={{ ...cellStyle, background: COLORS.structure.cell }}>{row.l2No} {row.l2Name}</td>}

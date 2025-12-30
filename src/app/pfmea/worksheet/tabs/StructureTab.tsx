@@ -25,28 +25,28 @@ interface StructureTabProps {
 }
 
 // 4M 셀 - 읽기 전용 표시 (수정/삭제는 작업요소 모달에서)
-function M4Cell({ value }: { value: string }) {
+function M4Cell({ value, zebraBg }: { value: string; zebraBg: string }) {
   const m4CellStyle: React.CSSProperties = {
     width: '80px', maxWidth: '80px', minWidth: '80px', border: `1px solid ${COLORS.line}`,
     padding: '4px', textAlign: 'center', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.bold,
-    background: '#e1f5fe',  // 연한 하늘색
-    color: '#01579b',       // 진한 파랑
+    background: zebraBg,  // 줄무늬 적용
+    color: COLORS.structure.text,
   };
 
   return (
     <td style={m4CellStyle}>
-      {value || <span style={{ color: '#c62828', fontWeight: FONT_WEIGHTS.semibold }}>-</span>}
+      {value || <span style={{ color: COLORS.failure.dark, fontWeight: FONT_WEIGHTS.semibold }}>-</span>}
     </td>
   );
 }
 
 function EditableL3Cell({ 
-  value, l3Id, l2Id, state, setState, setDirty, handleSelect, setTargetL2Id, setIsWorkElementModalOpen, saveToLocalStorage 
+  value, l3Id, l2Id, state, setState, setDirty, handleSelect, setTargetL2Id, setIsWorkElementModalOpen, saveToLocalStorage, zebraBg 
 }: { 
   value: string; l3Id: string; l2Id: string; state: WorksheetState; setState: React.Dispatch<React.SetStateAction<WorksheetState>>; 
   setDirty: (dirty: boolean) => void; handleSelect: (type: 'L1' | 'L2' | 'L3', id: string | null) => void;
   setTargetL2Id: (id: string | null) => void; setIsWorkElementModalOpen: (open: boolean) => void;
-  saveToLocalStorage?: () => void;
+  saveToLocalStorage?: () => void; zebraBg: string;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
@@ -118,14 +118,14 @@ function EditableL3Cell({
       className="cursor-pointer hover:bg-orange-100"
       style={{ 
         border: `1px solid ${COLORS.line}`, padding: '2px 4px', 
-        background: isPlaceholder ? 'repeating-linear-gradient(45deg, #fff, #fff 4px, #fff3e0 4px, #fff3e0 8px)' : '#fff3e0', 
+        background: isPlaceholder ? `repeating-linear-gradient(45deg, ${zebraBg}, ${zebraBg} 4px, ${COLORS.failure.light} 4px, ${COLORS.failure.light} 8px)` : zebraBg, 
         wordBreak: 'break-word', fontSize: FONT_SIZES.cell, fontFamily: 'inherit',
       }}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       title={isPlaceholder ? '클릭: 작업요소 추가' : '클릭: 모달 | 더블클릭: 텍스트 수정'}
     >
-      {isPlaceholder ? <span style={{ color: '#c62828', fontWeight: FONT_WEIGHTS.semibold }}>🔍 클릭</span> : <span style={{ fontWeight: 400 }}>{value}</span>}
+      {isPlaceholder ? <span style={{ color: COLORS.failure.dark, fontWeight: FONT_WEIGHTS.semibold }}>🔍 클릭</span> : <span style={{ fontWeight: 400 }}>{value}</span>}
     </td>
   );
 }
@@ -155,7 +155,7 @@ export function StructureHeader({ onProcessModalOpen, missingCounts }: { onProce
         <th style={{ width: '30%', background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: HEIGHTS.header, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center', fontSize: FONT_SIZES.header1 }}>
           1. 완제품 공정명
           {missingCounts && missingCounts.l1Count > 0 && (
-            <span style={{ marginLeft: '6px', background: '#fff', color: '#c62828', padding: '1px 6px', borderRadius: '8px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>
+            <span style={{ marginLeft: '6px', background: '#fff', color: '#f57c00', padding: '1px 6px', borderRadius: '8px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>
               {missingCounts.l1Count}
             </span>
           )}
@@ -163,7 +163,7 @@ export function StructureHeader({ onProcessModalOpen, missingCounts }: { onProce
         <th onClick={onProcessModalOpen} className="cursor-pointer hover:bg-green-600" style={{ width: '30%', background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: HEIGHTS.header, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center', fontSize: FONT_SIZES.header1 }}>
           2. 메인 공정명 🔍
           {missingCounts && missingCounts.l2Count > 0 && (
-            <span style={{ marginLeft: '6px', background: '#fff', color: '#c62828', padding: '1px 6px', borderRadius: '8px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>
+            <span style={{ marginLeft: '6px', background: '#fff', color: '#f57c00', padding: '1px 6px', borderRadius: '8px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>
               {missingCounts.l2Count}
             </span>
           )}
@@ -171,7 +171,7 @@ export function StructureHeader({ onProcessModalOpen, missingCounts }: { onProce
         <th colSpan={2} style={{ background: '#f57c00', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: HEIGHTS.header, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center', fontSize: FONT_SIZES.header1 }}>
           3. 작업 요소명
           {missingCounts && missingCounts.l3Count > 0 && (
-            <span style={{ marginLeft: '6px', background: '#fff', color: '#c62828', padding: '1px 6px', borderRadius: '8px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>
+            <span style={{ marginLeft: '6px', background: '#fff', color: '#f57c00', padding: '1px 6px', borderRadius: '8px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>
               {missingCounts.l3Count}
             </span>
           )}
@@ -188,8 +188,8 @@ export function StructureHeader({ onProcessModalOpen, missingCounts }: { onProce
 }
 
 export function StructureRow({
-  row, idx, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown, handleSelect, setIsProcessModalOpen, setIsWorkElementModalOpen, setTargetL2Id, saveToLocalStorage,
-}: StructureTabProps & { row: FlatRow; idx: number }) {
+  row, idx, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown, handleSelect, setIsProcessModalOpen, setIsWorkElementModalOpen, setTargetL2Id, saveToLocalStorage, zebraBg,
+}: StructureTabProps & { row: FlatRow; idx: number; zebraBg: string }) {
   // 완제품 공정명과 메인 공정명이 1:1로 병합되도록 l2Spans 사용
   const spanCount = l2Spans[idx];
   const showMergedCells = spanCount > 0;
@@ -201,7 +201,7 @@ export function StructureRow({
         <td 
           rowSpan={spanCount} className="text-center text-xs"
           style={{ 
-            border: `1px solid ${COLORS.line}`, padding: '4px', background: '#e3f2fd', verticalAlign: 'middle', wordBreak: 'break-word',
+            border: `1px solid ${COLORS.line}`, padding: '4px', background: zebraBg, verticalAlign: 'middle', wordBreak: 'break-word',
           }}
         >
           <input
@@ -219,15 +219,15 @@ export function StructureRow({
         <td 
           rowSpan={spanCount} className="text-center cursor-pointer hover:bg-green-200 text-xs"
           style={{ 
-            border: `1px solid ${COLORS.line}`, padding: '4px', background: row.l2Name.includes('클릭') ? '#fff' : '#e8f5e9', verticalAlign: 'middle', wordBreak: 'break-word',
+            border: `1px solid ${COLORS.line}`, padding: '4px', background: row.l2Name.includes('클릭') ? '#fff' : zebraBg, verticalAlign: 'middle', wordBreak: 'break-word',
           }}
           onClick={() => { handleSelect('L2', row.l2Id); setIsProcessModalOpen(true); }}
         >
-          {row.l2Name.includes('클릭') ? <span style={{ color: '#c62828', fontWeight: FONT_WEIGHTS.semibold }}>🔍 클릭하여 공정 선택</span> : <span style={{ fontWeight: FONT_WEIGHTS.semibold }}>{row.l2No} {row.l2Name} 🔍</span>}
+          {row.l2Name.includes('클릭') ? <span style={{ color: COLORS.failure.dark, fontWeight: FONT_WEIGHTS.semibold }}>🔍 클릭하여 공정 선택</span> : <span style={{ fontWeight: FONT_WEIGHTS.semibold }}>{row.l2No} {row.l2Name} 🔍</span>}
         </td>
       )}
-      <M4Cell value={row.m4} />
-      <EditableL3Cell value={row.l3Name} l3Id={row.l3Id} l2Id={row.l2Id} state={state} setState={setState} setDirty={setDirty} handleSelect={handleSelect} setTargetL2Id={setTargetL2Id} setIsWorkElementModalOpen={setIsWorkElementModalOpen} saveToLocalStorage={saveToLocalStorage} />
+      <M4Cell value={row.m4} zebraBg={zebraBg} />
+      <EditableL3Cell value={row.l3Name} l3Id={row.l3Id} l2Id={row.l2Id} state={state} setState={setState} setDirty={setDirty} handleSelect={handleSelect} setTargetL2Id={setTargetL2Id} setIsWorkElementModalOpen={setIsWorkElementModalOpen} saveToLocalStorage={saveToLocalStorage} zebraBg={zebraBg} />
     </>
   );
 }
@@ -286,11 +286,14 @@ export default function StructureTab(props: StructureTabProps) {
         <StructureHeader onProcessModalOpen={() => setIsProcessModalOpen(true)} missingCounts={missingCounts} />
       </thead>
       <tbody>
-        {rows.map((row, idx) => (
-          <tr key={row.l3Id} style={{ height: HEIGHTS.header }}>
-            <StructureRow {...props} row={row} idx={idx} />
-          </tr>
-        ))}
+        {rows.map((row, idx) => {
+          const zebraBg = idx % 2 === 1 ? COLORS.structure.zebra : COLORS.structure.light;
+          return (
+            <tr key={row.l3Id} style={{ height: HEIGHTS.header, background: zebraBg }}>
+              <StructureRow {...props} row={row} idx={idx} zebraBg={zebraBg} />
+            </tr>
+          );
+        })}
       </tbody>
     </>
   );

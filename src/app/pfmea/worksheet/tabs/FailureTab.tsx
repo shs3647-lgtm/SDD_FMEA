@@ -20,10 +20,11 @@ interface FailureTabProps {
   saveToLocalStorage: () => void;
 }
 
+// 색상 표준 (COLOR_STANDARD_V2.md) - 고장분석 모두 주황색 계열
 const FAIL_COLORS = {
-  l1Main: '#c62828', l1Sub: '#ef9a9a', l1Cell: '#ffebee',
-  l2Main: '#ad1457', l2Sub: '#f48fb1', l2Cell: '#fce4ec',
-  l3Main: '#6a1b9a', l3Sub: '#ce93d8', l3Cell: '#f3e5f5',
+  l1Main: '#f57c00', l1Sub: '#ffb74d', l1Cell: '#fff3e0',   // L1: 진한주황
+  l2Main: '#f57c00', l2Sub: '#ffb74d', l2Cell: '#fff3e0',   // L2: 동일
+  l3Main: '#e65100', l3Sub: '#ff9800', l3Cell: '#fff3e0',   // L3: 더 진한 주황
 };
 
 const stickyFirstColStyle: React.CSSProperties = { position: 'sticky', left: 0, zIndex: 10 };
@@ -44,7 +45,7 @@ function EditableCell({
         type="text" value={editValue} onChange={(e) => setEditValue(e.target.value)}
         onBlur={handleSave} onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false); onKeyDown(e); }}
         autoFocus className="w-full px-1"
-        style={{ border: 'none', outline: '2px solid #c62828', background: '#fff', borderRadius: '2px', fontSize: '10px', fontFamily: 'inherit', height: '22px' }}
+        style={{ border: 'none', outline: '2px solid #f57c00', background: '#fff', borderRadius: '2px', fontSize: '12px', fontFamily: 'inherit', height: '22px' }}
       />
     );
   }
@@ -53,7 +54,7 @@ function EditableCell({
     <div
       className="cursor-pointer hover:bg-red-100 w-full h-full flex items-center"
       onClick={() => { setEditValue(value); setIsEditing(true); }}
-      style={{ minHeight: '22px', fontSize: '10px', fontFamily: 'inherit' }}
+      style={{ minHeight: '22px', fontSize: '12px', fontFamily: 'inherit' }}
       title="클릭하여 수정"
     >
       {value || <span style={{ color: '#999', fontStyle: 'italic' }}>{placeholder}</span>}
@@ -67,10 +68,10 @@ function SeverityCell({ value, onChange, saveToLocalStorage }: { value: number |
       value={value || ''}
       onChange={(e) => { const newVal = e.target.value ? Number(e.target.value) : undefined; onChange(newVal); saveToLocalStorage(); }}
       className="w-full text-center"
-      style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '11px', fontWeight: 700, height: '24px', cursor: 'pointer' }}
+      style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '12px', fontWeight: 700, height: '24px', cursor: 'pointer' }}
     >
       <option value="">-</option>
-      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => <option key={n} value={n} style={{ fontWeight: n >= 8 ? 700 : 400, color: n >= 8 ? '#c62828' : 'inherit' }}>{n}</option>)}
+      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => <option key={n} value={n} style={{ fontWeight: n >= 8 ? 700 : 400, color: n >= 8 ? '#f57c00' : 'inherit' }}>{n}</option>)}
     </select>
   );
 }
@@ -83,16 +84,16 @@ export function FailureHeader() {
   return (
     <>
       <tr>
-        <th colSpan={2} style={{ ...stickyFirstColStyle, zIndex: 15, background: FAIL_COLORS.l1Main, color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>1. 고장영향(FE) / 심각도(S)</th>
-        <th style={{ background: FAIL_COLORS.l2Main, color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>2. 고장형태(FM)</th>
-        <th colSpan={2} style={{ background: FAIL_COLORS.l3Main, color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>3. 고장원인(FC)</th>
+        <th colSpan={2} style={{ ...stickyFirstColStyle, zIndex: 15, background: FAIL_COLORS.l1Main, color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '12px' }}>1. 고장영향(FE) / 심각도(S)</th>
+        <th style={{ background: FAIL_COLORS.l2Main, color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '12px' }}>2. 고장형태(FM)</th>
+        <th colSpan={2} style={{ background: FAIL_COLORS.l3Main, color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '25px', fontWeight: 900, textAlign: 'center', fontSize: '12px' }}>3. 고장원인(FC)</th>
       </tr>
       <tr>
-        <th style={{ ...stickyFirstColStyle, zIndex: 15, background: FAIL_COLORS.l1Sub, border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>고장영향(FE)</th>
-        <th style={{ background: FAIL_COLORS.l1Sub, border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px', textAlign: 'center' }}>S</th>
-        <th style={{ background: FAIL_COLORS.l2Sub, border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>고장형태(FM)</th>
-        <th style={{ background: FAIL_COLORS.l3Sub, border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>작업요소</th>
-        <th style={{ background: FAIL_COLORS.l3Sub, border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '10px' }}>고장원인(FC)</th>
+        <th style={{ ...stickyFirstColStyle, zIndex: 15, background: FAIL_COLORS.l1Sub, border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '12px' }}>고장영향(FE)</th>
+        <th style={{ background: FAIL_COLORS.l1Sub, border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '12px', textAlign: 'center' }}>S</th>
+        <th style={{ background: FAIL_COLORS.l2Sub, border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '12px' }}>고장형태(FM)</th>
+        <th style={{ background: FAIL_COLORS.l3Sub, border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '12px' }}>작업요소</th>
+        <th style={{ background: FAIL_COLORS.l3Sub, border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: '22px', fontWeight: 700, fontSize: '12px' }}>고장원인(FC)</th>
       </tr>
     </>
   );
@@ -116,7 +117,7 @@ export function FailureRow({
         </td>
       )}
       {l1Spans[idx] > 0 && (
-        <td rowSpan={l1Spans[idx]} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: row.l1Severity && Number(row.l1Severity) >= 8 ? '#ffcdd2' : FAIL_COLORS.l1Cell, verticalAlign: 'middle', textAlign: 'center' }}>
+        <td rowSpan={l1Spans[idx]} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: row.l1Severity && Number(row.l1Severity) >= 8 ? '#ffe0b2' : FAIL_COLORS.l1Cell, verticalAlign: 'middle', textAlign: 'center' }}>
           <SeverityCell value={row.l1Severity ? Number(row.l1Severity) : undefined} onChange={(val) => { setState(prev => ({ ...prev, l1: { ...prev.l1, severity: val } })); setDirty(true); }} saveToLocalStorage={saveToLocalStorage} />
         </td>
       )}
@@ -129,7 +130,7 @@ export function FailureRow({
           />
         </td>
       )}
-      <td style={{ border: `1px solid ${COLORS.line}`, padding: '2px 4px', background: FAIL_COLORS.l3Cell, fontSize: '10px', textAlign: 'center' }}>
+      <td style={{ border: `1px solid ${COLORS.line}`, padding: '2px 4px', background: FAIL_COLORS.l3Cell, fontSize: '12px', textAlign: 'center' }}>
         <span style={{ background: row.m4 === 'MN' ? '#e3f2fd' : row.m4 === 'MC' ? '#fff3e0' : row.m4 === 'IM' ? '#e8f5e9' : '#fce4ec', padding: '1px 4px', borderRadius: '3px', fontWeight: 600, fontSize: '9px' }}>[{row.m4}]</span>
         <span style={{ marginLeft: '4px' }}>{row.l3Name}</span>
       </td>
@@ -157,7 +158,7 @@ export default function FailureTab(props: FailureTabProps) {
           <tr><td colSpan={5} className="text-center text-gray-400 py-8">구조분석 탭에서 데이터를 먼저 입력하세요.</td></tr>
         ) : (
           rows.map((row, idx) => (
-            <tr key={`${row.l1TypeId}-${row.l2Id}-${row.l3Id}`} style={{ height: '28px' }}>
+            <tr key={`${row.l1TypeId}-${row.l2Id}-${row.l3Id}`} style={{ height: '28px', background: idx % 2 === 1 ? COLORS.failure.zebra : COLORS.failure.light }}>
               <FailureRow {...props} row={row} idx={idx} />
             </tr>
           ))

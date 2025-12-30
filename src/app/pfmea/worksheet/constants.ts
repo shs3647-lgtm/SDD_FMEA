@@ -177,25 +177,28 @@ export const COLORS = {
   // 1. 구조분석 (밝은 파란색)
   structure: { 
     main: '#42a5f5',      // 부드러운 파란색
-    light: '#e3f2fd',     // 배경
+    light: '#e3f2fd',     // 배경 (짝수행)
     dark: '#1976d2',      // 테두리/강조
-    text: '#0d47a1'       // 텍스트
+    text: '#0d47a1',      // 텍스트
+    zebra: '#bbdefb'      // 홀수행 (더 진한 파란색)
   },
   
   // 2. 기능분석 (밝은 초록색)
   function: { 
     main: '#66bb6a',      // 부드러운 초록색
-    light: '#e8f5e9',     // 배경
+    light: '#e8f5e9',     // 배경 (짝수행)
     dark: '#388e3c',      // 테두리/강조
-    text: '#1b5e20'       // 텍스트
+    text: '#1b5e20',      // 텍스트
+    zebra: '#c8e6c9'      // 홀수행 (더 진한 초록색)
   },
   
   // 3. 고장분석 (부드러운 주황색) ⭐ 붉은색 대체
   failure: { 
     main: '#ffa726',      // 부드러운 주황색 (빨간색 제거)
-    light: '#fff3e0',     // 배경
+    light: '#fff3e0',     // 배경 (짝수행)
     dark: '#f57c00',      // 테두리/강조
-    text: '#e65100'       // 텍스트
+    text: '#e65100',      // 텍스트
+    zebra: '#ffe0b2'      // 홀수행 (더 진한 주황색)
   },
   
   // 리스크/최적화는 고장분석 색상 재사용
@@ -218,8 +221,8 @@ export const FONT_SIZES = {
   pageHeader: '13px',    // 페이지 헤더 (P-FMEA 구조분석)
   header1: '12px',       // 1단 헤더 (1. 완제품 공정명)
   header2: '12px',       // 2단 헤더 (완제품명+라인)
-  cell: '12px',          // 데이터 셀 (11px → 12px 증가)
-  small: '10px',         // 작은 텍스트 (배지 등)
+  cell: '12px',          // 데이터 셀
+  small: '11px',         // 작은 텍스트 (배지 등) - 10px → 11px
 } as const;
 
 export const FONT_WEIGHTS = {

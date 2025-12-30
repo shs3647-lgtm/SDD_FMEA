@@ -37,7 +37,7 @@ export function TableHeader({ visibleSteps, onAPClick }: TableHeaderProps) {
               padding: '4px 6px',
               height: '28px',
               fontWeight: 900,
-              fontSize: '11px',
+              fontSize: '12px',
               textAlign: 'center',
               whiteSpace: 'nowrap',
             }}
@@ -61,7 +61,7 @@ export function TableHeader({ visibleSteps, onAPClick }: TableHeaderProps) {
                 padding: '3px 4px',
                 height: '24px',
                 fontWeight: 700,
-                fontSize: '10px',
+                fontSize: '12px',
                 textAlign: 'center',
                 whiteSpace: 'nowrap',
               }}
@@ -152,7 +152,7 @@ export function SingleStepHeader({ step, title, onAPClick }: SingleStepHeaderPro
               padding: '3px 4px',
               height: '24px',
               fontWeight: 700,
-              fontSize: '10px',
+              fontSize: '12px',
               textAlign: 'center',
               whiteSpace: 'nowrap',
             }}

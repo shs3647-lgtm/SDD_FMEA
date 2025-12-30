@@ -14,11 +14,13 @@ import DataSelectModal from '@/components/modals/DataSelectModal';
 import SODSelectModal from '@/components/modals/SODSelectModal';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
 
-// 색상 정의
+// 색상 정의 - 네이비 기반 고급스러운 디자인
 const STEP_COLORS = {
-  structure: { header1: '#1976d2', header2: '#42a5f5', header3: '#bbdefb', cell: '#e3f2fd' },
-  function: { header1: '#1b5e20', header2: '#2e7d32', header3: '#a5d6a7', cell: '#c8e6c9' },
-  failure: { header1: '#c62828', header2: '#e53935', header3: '#ffcdd2', cell: '#ffebee' },
+  structure: { header1: '#1565c0', header2: '#1976d2', header3: '#e3f2fd', cell: '#f5f9ff' },
+  function: { header1: '#2e7d32', header2: '#388e3c', header3: '#e8f5e9', cell: '#f5fbf6' },
+  failure: { header1: '#1a237e', header2: '#3949ab', header3: '#e8eaf6', cell: '#f5f6fc' },  // 네이비 계열
+  // S, O, D 강조색 (은은한 파스텔)
+  indicator: { bg: '#ffccbc', text: '#bf360c' },
 };
 
 // 기능분석에서 가져온 요구사항 데이터
@@ -406,7 +408,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                   ) : (
                     <button type="button" onClick={handleConfirm} style={{ background: '#4caf50', color: 'white', border: 'none', padding: '3px 10px', borderRadius: '3px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, cursor: 'pointer' }}>확정</button>
                   )}
-                  <span style={{ background: missingCount > 0 ? '#f44336' : '#4caf50', color: 'white', padding: '3px 10px', borderRadius: '3px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold }}>누락 {missingCount}건</span>
+                  <span style={{ background: missingCount > 0 ? '#f57c00' : '#4caf50', color: 'white', padding: '3px 10px', borderRadius: '3px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold }}>누락 {missingCount}건</span>
                   {isConfirmed && (
                     <button type="button" onClick={handleEdit} style={{ background: '#ff9800', color: 'white', border: 'none', padding: '3px 10px', borderRadius: '3px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, cursor: 'pointer' }}>수정</button>
                   )}
@@ -425,7 +427,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
             <th colSpan={2} style={{ background: STEP_COLORS.failure.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center', whiteSpace: 'nowrap' }}>
               1. 고장영향(FE) / 심각도(S)
               {missingCount > 0 && (
-                <span style={{ marginLeft: '8px', background: '#fff', color: '#c62828', padding: '2px 8px', borderRadius: '10px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>
+                <span style={{ marginLeft: '8px', background: '#fff', color: '#f57c00', padding: '2px 8px', borderRadius: '10px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>
                   누락 {missingCount}건
                 </span>
               )}
@@ -448,7 +450,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
             <th style={{ background: STEP_COLORS.failure.header3, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center', whiteSpace: 'nowrap' }}>
               고장영향(FE)
               {missingCounts.effectCount > 0 && (
-                <span style={{ marginLeft: '4px', background: '#fff', color: '#c62828', padding: '1px 5px', borderRadius: '8px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>
+                <span style={{ marginLeft: '4px', background: '#fff', color: '#f57c00', padding: '1px 5px', borderRadius: '8px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>
                   {missingCounts.effectCount}
                 </span>
               )}
@@ -467,8 +469,12 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
               </td>
             </tr>
           ) : (
-            renderRows.map((row) => (
-              <tr key={row.key}>
+            renderRows.map((row, idx) => {
+              const zebraBg = idx % 2 === 1 ? COLORS.failure.zebra : COLORS.failure.light;
+              const structureZebra = idx % 2 === 1 ? COLORS.structure.zebra : COLORS.structure.light;
+              const functionZebra = idx % 2 === 1 ? COLORS.function.zebra : COLORS.function.light;
+              return (
+              <tr key={row.key} style={{ background: zebraBg }}>
                 {/* 완제품 공정명 */}
                 {row.showProduct && (
                   <td 
@@ -477,7 +483,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                       border: `1px solid ${COLORS.line}`, 
                       padding: '2px 4px', 
                       textAlign: 'center', 
-                      background: STEP_COLORS.structure.cell, 
+                      background: structureZebra, 
                       fontWeight: FONT_WEIGHTS.semibold, 
                       verticalAlign: 'middle',
                       fontSize: FONT_SIZES.cell
@@ -495,11 +501,11 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                       border: `1px solid ${COLORS.line}`, 
                       padding: '2px 4px', 
                       textAlign: 'center', 
-                      background: row.typeName === 'Your Plant' ? '#ffe0b2' : row.typeName === 'Ship to Plant' ? '#ffcc80' : row.typeName === 'User' ? '#e1bee7' : STEP_COLORS.function.cell, 
+                      background: functionZebra, 
                       fontWeight: FONT_WEIGHTS.semibold, 
                       verticalAlign: 'middle',
                       fontSize: FONT_SIZES.cell,
-                      color: row.typeName === 'Your Plant' ? '#1565c0' : row.typeName === 'Ship to Plant' ? '#e65100' : row.typeName === 'User' ? '#7b1fa2' : '#333'
+                      color: row.typeName === 'Your Plant' ? COLORS.structure.text : row.typeName === 'Ship to Plant' ? COLORS.failure.text : row.typeName === 'User' ? '#7b1fa2' : COLORS.text
                     }}
                   >
                     {row.typeName}
@@ -514,7 +520,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                       border: `1px solid ${COLORS.line}`, 
                       padding: '2px 4px', 
                       textAlign: 'left', 
-                      background: STEP_COLORS.function.cell, 
+                      background: functionZebra, 
                       fontSize: FONT_SIZES.cell,
                       verticalAlign: 'middle',
                       whiteSpace: 'nowrap',
@@ -534,7 +540,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                     style={{ 
                       border: `1px solid ${COLORS.line}`, 
                       padding: '2px 4px', 
-                      background: STEP_COLORS.function.cell, 
+                      background: functionZebra, 
                       verticalAlign: 'middle',
                       textAlign: 'center',
                       fontSize: FONT_SIZES.cell
@@ -549,7 +555,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                   <SelectableCell 
                     value={row.effect} 
                     placeholder="고장영향 선택" 
-                    bgColor="#fff" 
+                    bgColor={zebraBg} 
                     onClick={() => setModal({ 
                       type: 'effect', 
                       effectId: row.effectId || undefined,
@@ -570,7 +576,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                     border: `1px solid ${COLORS.line}`, 
                     padding: '4px', 
                     textAlign: 'center', 
-                    background: row.severity && row.severity >= 8 ? '#ffcdd2' : row.severity && row.severity >= 5 ? '#fff9c4' : '#fff',
+                    background: row.severity && row.severity >= 8 ? COLORS.failure.zebra : row.severity && row.severity >= 5 ? '#fff9c4' : zebraBg,
                     cursor: row.effectId ? 'pointer' : 'default'
                   }}
                   onClick={() => row.effectId && setSODModal({ 
@@ -584,16 +590,17 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                     <span style={{ 
                       fontWeight: FONT_WEIGHTS.semibold, 
                       fontSize: FONT_SIZES.pageHeader,
-                      color: row.severity && row.severity >= 8 ? '#c62828' : row.severity && row.severity >= 5 ? '#f57f17' : '#333'
+                      color: row.severity && row.severity >= 8 ? COLORS.failure.text : row.severity && row.severity >= 5 ? '#f57f17' : COLORS.text
                     }}>
                       {row.severity || '🔍'}
                     </span>
                   ) : (
-                    <span style={{ color: '#c62828', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold }}>-</span>
+                    <span style={{ color: COLORS.failure.dark, fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold }}>-</span>
                   )}
                 </td>
               </tr>
-            ))
+              );
+            })
           )}
         </tbody>
       </table>

@@ -70,13 +70,13 @@ export function RiskHeader({ onAPClick }: { onAPClick?: () => void }) {
 
       {/* 2행: 서브그룹 */}
       <tr>
-        <th colSpan={2} style={{ background: COLORS_RISK.prevention.headerBg, border: BORDER, padding: '4px', height: '24px', fontWeight: 700, fontSize: '11px', textAlign: 'center' }}>
+        <th colSpan={2} style={{ background: COLORS_RISK.prevention.headerBg, border: BORDER, padding: '4px', height: '24px', fontWeight: 700, fontSize: '12px', textAlign: 'center' }}>
           현재 예방관리
         </th>
-        <th colSpan={2} style={{ background: COLORS_RISK.detection.headerBg, border: BORDER, padding: '4px', height: '24px', fontWeight: 700, fontSize: '11px', textAlign: 'center' }}>
+        <th colSpan={2} style={{ background: COLORS_RISK.detection.headerBg, border: BORDER, padding: '4px', height: '24px', fontWeight: 700, fontSize: '12px', textAlign: 'center' }}>
           현재 검출관리
         </th>
-        <th colSpan={4} style={{ background: COLORS_RISK.evaluation.headerBg, border: BORDER, padding: '4px', height: '24px', fontWeight: 700, fontSize: '11px', textAlign: 'center' }}>
+        <th colSpan={4} style={{ background: COLORS_RISK.evaluation.headerBg, border: BORDER, padding: '4px', height: '24px', fontWeight: 700, fontSize: '12px', textAlign: 'center' }}>
           리스크 평가
         </th>
       </tr>
@@ -84,36 +84,36 @@ export function RiskHeader({ onAPClick }: { onAPClick?: () => void }) {
       {/* 3행: 컬럼명 */}
       <tr>
         {/* 현재 예방관리 (2열) */}
-        <th style={{ background: COLORS_RISK.prevention.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+        <th style={{ background: COLORS_RISK.prevention.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
           예방관리(PC)
         </th>
-        <th style={{ background: COLORS_RISK.prevention.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+        <th style={{ background: COLORS_RISK.prevention.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
           발생도
         </th>
         {/* 현재 검출관리 (2열) */}
-        <th style={{ background: COLORS_RISK.detection.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+        <th style={{ background: COLORS_RISK.detection.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
           검출관리(DC)
         </th>
-        <th style={{ background: COLORS_RISK.detection.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+        <th style={{ background: COLORS_RISK.detection.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
           검출도
         </th>
         {/* 리스크 평가 (4열) */}
         <th 
           onClick={onAPClick}
           style={{ 
-            background: COLORS_RISK.evaluation.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '10px', textAlign: 'center', whiteSpace: 'nowrap',
+            background: COLORS_RISK.evaluation.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '12px', textAlign: 'center', whiteSpace: 'nowrap',
             cursor: onAPClick ? 'pointer' : 'default',
           }}
         >
           AP 📊
         </th>
-        <th style={{ background: COLORS_RISK.evaluation.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+        <th style={{ background: COLORS_RISK.evaluation.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
           RPN
         </th>
-        <th style={{ background: COLORS_RISK.evaluation.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+        <th style={{ background: COLORS_RISK.evaluation.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
           특별특성
         </th>
-        <th style={{ background: COLORS_RISK.evaluation.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+        <th style={{ background: COLORS_RISK.evaluation.cellBg, border: BORDER, padding: '3px', height: '22px', fontWeight: 600, fontSize: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
           습득교훈
         </th>
       </tr>
@@ -128,16 +128,16 @@ export function RiskRow({ row }: { row: FlatRow }) {
   return (
     <>
       {/* 현재 예방관리 (2열) */}
-      <td style={{ border: BORDER, padding: '2px 4px', fontSize: '10px', background: '#fafafa' }}></td>
-      <td style={{ border: BORDER, padding: '2px 4px', fontSize: '10px', background: '#fafafa', textAlign: 'center' }}></td>
+      <td style={{ border: BORDER, padding: '2px 4px', fontSize: '12px', background: '#fafafa' }}></td>
+      <td style={{ border: BORDER, padding: '2px 4px', fontSize: '12px', background: '#fafafa', textAlign: 'center' }}></td>
       {/* 현재 검출관리 (2열) */}
-      <td style={{ border: BORDER, padding: '2px 4px', fontSize: '10px', background: '#fafafa' }}></td>
-      <td style={{ border: BORDER, padding: '2px 4px', fontSize: '10px', background: '#fafafa', textAlign: 'center' }}></td>
+      <td style={{ border: BORDER, padding: '2px 4px', fontSize: '12px', background: '#fafafa' }}></td>
+      <td style={{ border: BORDER, padding: '2px 4px', fontSize: '12px', background: '#fafafa', textAlign: 'center' }}></td>
       {/* 리스크 평가 (4열) */}
-      <td style={{ border: BORDER, padding: '2px 4px', fontSize: '10px', textAlign: 'center', background: '#fafafa' }}></td>
-      <td style={{ border: BORDER, padding: '2px 4px', fontSize: '10px', textAlign: 'center', background: '#fafafa' }}></td>
-      <td style={{ border: BORDER, padding: '2px 4px', fontSize: '10px', textAlign: 'center', background: '#fafafa' }}></td>
-      <td style={{ border: BORDER, padding: '2px 4px', fontSize: '10px', background: '#fafafa' }}></td>
+      <td style={{ border: BORDER, padding: '2px 4px', fontSize: '12px', textAlign: 'center', background: '#fafafa' }}></td>
+      <td style={{ border: BORDER, padding: '2px 4px', fontSize: '12px', textAlign: 'center', background: '#fafafa' }}></td>
+      <td style={{ border: BORDER, padding: '2px 4px', fontSize: '12px', textAlign: 'center', background: '#fafafa' }}></td>
+      <td style={{ border: BORDER, padding: '2px 4px', fontSize: '12px', background: '#fafafa' }}></td>
     </>
   );
 }
@@ -178,7 +178,7 @@ export default function RiskTab({ rows, onAPClick }: RiskTabProps) {
           </tr>
         ) : (
           rows.map((row, idx) => (
-            <tr key={`risk-${row.l3Id}-${idx}`} style={{ height: '24px' }}>
+            <tr key={`risk-${row.l3Id}-${idx}`} style={{ height: '24px', background: idx % 2 === 1 ? '#f5f5f5' : '#fff' }}>
               <RiskRow row={row} />
             </tr>
           ))
@@ -196,7 +196,7 @@ export function RiskTabFull({ state, rows, l1Spans, l2Spans, onAPClick }: RiskTa
   const COLORS = {
     structure: { main: '#1565c0', header: '#bbdefb', cell: '#e3f2fd' },
     function: { main: '#1b5e20', header: '#c8e6c9', cell: '#e8f5e9' },
-    failure: { main: '#c62828', header: '#fff9c4', cell: '#fffde7' },
+    failure: { main: '#f57c00', header: '#ffe0b2', cell: '#fff3e0' },
     risk: {
       main: '#6a1b9a',
       prevention: { header: '#c8e6c9', cell: '#e8f5e9' },
@@ -210,16 +210,16 @@ export function RiskTabFull({ state, rows, l1Spans, l2Spans, onAPClick }: RiskTa
       <thead style={{ position: 'sticky', top: 0, zIndex: 20, background: '#fff' }}>
         {/* 1행: 단계 대분류 */}
         <tr>
-          <th colSpan={4} style={{ background: COLORS.structure.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>
+          <th colSpan={4} style={{ background: COLORS.structure.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '12px', textAlign: 'center' }}>
             P-FMEA 구조 분석(2단계)
           </th>
-          <th colSpan={8} style={{ background: COLORS.function.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>
+          <th colSpan={8} style={{ background: COLORS.function.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '12px', textAlign: 'center' }}>
             P-FMEA 기능 분석(3단계)
           </th>
-          <th colSpan={6} style={{ background: COLORS.failure.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>
+          <th colSpan={6} style={{ background: COLORS.failure.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '12px', textAlign: 'center' }}>
             P-FMEA 고장 분석(4단계)
           </th>
-          <th colSpan={8} style={{ background: COLORS.risk.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '10px', textAlign: 'center' }}>
+          <th colSpan={8} style={{ background: COLORS.risk.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: '12px', textAlign: 'center' }}>
             P-FMEA 리스크 분석(5단계)
           </th>
         </tr>
@@ -280,9 +280,10 @@ export function RiskTabFull({ state, rows, l1Spans, l2Spans, onAPClick }: RiskTa
           </tr>
         ) : (
           rows.map((row, idx) => {
-            const cellStyle = { border: BORDER, padding: '2px 3px', fontSize: '8px', background: '#fff' };
+            const zebraBg = idx % 2 === 1 ? '#f5f5f5' : '#fff';
+            const cellStyle = { border: BORDER, padding: '2px 3px', fontSize: '8px', background: zebraBg };
             return (
-              <tr key={`risk-full-${row.l1Id}-${row.l2Id}-${row.l3Id}-${idx}`} style={{ height: '22px' }}>
+              <tr key={`risk-full-${row.l1Id}-${row.l2Id}-${row.l3Id}-${idx}`} style={{ height: '22px', background: zebraBg }}>
                 {/* 구조분석 4열 */}
                 {l1Spans[idx] > 0 && <td rowSpan={l1Spans[idx]} style={{ ...cellStyle, background: COLORS.structure.cell }}>{row.l1Name}</td>}
                 {l2Spans[idx] > 0 && <td rowSpan={l2Spans[idx]} style={{ ...cellStyle, background: COLORS.structure.cell }}>{row.l2No} {row.l2Name}</td>}

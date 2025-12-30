@@ -358,7 +358,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                       확정
                     </button>
                   )}
-                  <span style={{ background: missingCount > 0 ? '#f44336' : '#4caf50', color: 'white', padding: '3px 10px', borderRadius: '3px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold }}>
+                  <span style={{ background: missingCount > 0 ? '#f57c00' : '#4caf50', color: 'white', padding: '3px 10px', borderRadius: '3px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold }}>
                     누락 {missingCount}건
                   </span>
                   {isConfirmed && (
@@ -377,13 +377,13 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
           
           {/* 2행: 항목 그룹 */}
           <tr>
-            <th style={{ background: '#42a5f5', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center' }}>
+            <th style={{ background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center' }}>
               2. 메인공정명
             </th>
-            <th colSpan={3} style={{ background: '#7c4dff', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center' }}>
+            <th colSpan={3} style={{ background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center' }}>
               2. 메인공정 기능/제품특성
               {missingCount > 0 && (
-                <span style={{ marginLeft: '8px', background: '#f44336', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: FONT_SIZES.cell }}>
+                <span style={{ marginLeft: '8px', background: '#f57c00', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: FONT_SIZES.cell }}>
                   누락 {missingCount}건
                 </span>
               )}
@@ -391,27 +391,27 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
           </tr>
           
           {/* 3행: 세부 컬럼 */}
-          <tr style={{ background: '#e3f2fd' }}>
-            <th style={{ background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold }}>
+          <tr style={{ background: '#e8f5e9' }}>
+            <th style={{ background: '#e3f2fd', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold }}>
               공정NO+공정명
             </th>
-            <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold }}>
+            <th style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold }}>
               메인공정기능
               {missingCounts.functionCount > 0 && (
-                <span style={{ marginLeft: '4px', background: '#f44336', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: FONT_SIZES.small }}>
+                <span style={{ marginLeft: '4px', background: '#f57c00', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: FONT_SIZES.small }}>
                   {missingCounts.functionCount}
                 </span>
               )}
             </th>
-            <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold }}>
+            <th style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold }}>
               제품특성
               {missingCounts.charCount > 0 && (
-                <span style={{ marginLeft: '4px', background: '#f44336', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: FONT_SIZES.small }}>
+                <span style={{ marginLeft: '4px', background: '#f57c00', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: FONT_SIZES.small }}>
                   {missingCounts.charCount}
                 </span>
               )}
             </th>
-            <th style={{ background: '#ffcdd2', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold }}>
+            <th style={{ background: '#fff3e0', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold }}>
               특별특성
             </th>
           </tr>
@@ -419,121 +419,124 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
         
         <tbody>
           {state.l2.length === 0 ? (
-            <tr>
-              <td style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: FONT_WEIGHTS.semibold }}>
+            <tr style={{ background: COLORS.function.light }}>
+              <td style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: COLORS.structure.light, fontWeight: FONT_WEIGHTS.semibold }}>
                 (구조분석에서 공정 추가)
               </td>
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                <SelectableCell value="" placeholder="공정기능 선택" bgColor="#c8e6c9" onClick={() => {}} />
+                <SelectableCell value="" placeholder="공정기능 선택" bgColor={COLORS.function.light} onClick={() => {}} />
               </td>
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                <SelectableCell value="" placeholder="제품특성 선택" bgColor="#c8e6c9" onClick={() => {}} />
+                <SelectableCell value="" placeholder="제품특성 선택" bgColor={COLORS.function.light} onClick={() => {}} />
               </td>
-              <td style={{ border: `1px solid ${COLORS.line}`, padding: '4px', textAlign: 'center', background: '#ffebee', color: '#999', fontSize: FONT_SIZES.cell }}>
+              <td style={{ border: `1px solid ${COLORS.line}`, padding: '4px', textAlign: 'center', background: COLORS.failure.light, color: '#999', fontSize: FONT_SIZES.cell }}>
                 -
               </td>
             </tr>
-          ) : state.l2.map((proc, pIdx) => {
-            const funcs = proc.functions || [];
-            const procRowSpan = funcs.length === 0 ? 1 : funcs.reduce((a, f) => a + Math.max(1, (f.productChars || []).length), 0);
-            
-            // 공정에 기능이 없는 경우
-            if (funcs.length === 0) {
-              return (
-                <tr key={proc.id}>
-                  <td rowSpan={procRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' }}>
-                    {proc.no}. {proc.name}
-                  </td>
-                  <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                    <SelectableCell value="" placeholder="공정기능 선택" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
-                  </td>
-                  <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                    <SelectableCell value="" placeholder="제품특성 선택" bgColor="#c8e6c9" onClick={() => {}} />
-                  </td>
-                  <td style={{ border: `1px solid ${COLORS.line}`, padding: '4px', textAlign: 'center', background: '#ffebee', color: '#999', fontSize: FONT_SIZES.cell }}>
-                    -
-                  </td>
-                </tr>
-              );
-            }
-            
-            // 공정에 기능이 있는 경우
-            return funcs.map((f, fIdx) => {
-              const chars = f.productChars || [];
-              const funcRowSpan = Math.max(1, chars.length);
+          ) : (() => {
+            let globalRowIdx = 0;
+            return state.l2.map((proc, pIdx) => {
+              const funcs = proc.functions || [];
+              const procRowSpan = funcs.length === 0 ? 1 : funcs.reduce((a, f) => a + Math.max(1, (f.productChars || []).length), 0);
               
-              // 기능에 제품특성이 없는 경우
-              if (chars.length === 0) {
+              // 공정에 기능이 없는 경우
+              if (funcs.length === 0) {
                 return (
-                  <tr key={f.id}>
-                    {fIdx === 0 && (
-                      <td rowSpan={procRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' }}>
-                        {proc.no}. {proc.name}
-                      </td>
-                    )}
-                    <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
-                      <SelectableCell 
-                        value={f.name} 
-                        placeholder="공정기능" 
-                        bgColor="#c8e6c9" 
-                        onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} 
-                        onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, f.id, newValue)}
-                      />
+                  <tr key={proc.id} style={{ background: globalRowIdx++ % 2 === 1 ? COLORS.function.zebra : COLORS.function.light }}>
+                    <td rowSpan={procRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: COLORS.structure.light, fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' }}>
+                      {proc.no}. {proc.name}
                     </td>
                     <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                      <SelectableCell value="" placeholder="제품특성 선택" bgColor="#fff" onClick={() => setModal({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, title: '제품특성 선택', itemCode: 'A4' })} />
+                      <SelectableCell value="" placeholder="공정기능 선택" bgColor={COLORS.function.light} onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
                     </td>
-                    <td style={{ border: `1px solid ${COLORS.line}`, padding: '4px', textAlign: 'center', background: '#ffebee', color: '#999', fontSize: FONT_SIZES.cell }}>
+                    <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
+                      <SelectableCell value="" placeholder="제품특성 선택" bgColor={COLORS.function.light} onClick={() => {}} />
+                    </td>
+                    <td style={{ border: `1px solid ${COLORS.line}`, padding: '4px', textAlign: 'center', background: COLORS.failure.light, color: '#999', fontSize: FONT_SIZES.cell }}>
                       -
                     </td>
                   </tr>
                 );
               }
               
-              // 기능에 제품특성이 있는 경우
-              return chars.map((c, cIdx) => (
-                <tr key={c.id}>
-                  {fIdx === 0 && cIdx === 0 && (
-                    <td rowSpan={procRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' }}>
-                      {proc.no}. {proc.name}
-                    </td>
-                  )}
-                  {cIdx === 0 && (
-                    <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
+              // 공정에 기능이 있는 경우
+              return funcs.map((f, fIdx) => {
+                const chars = f.productChars || [];
+                const funcRowSpan = Math.max(1, chars.length);
+                
+                // 기능에 제품특성이 없는 경우
+                if (chars.length === 0) {
+                  return (
+                    <tr key={f.id} style={{ background: globalRowIdx++ % 2 === 1 ? COLORS.function.zebra : COLORS.function.light }}>
+                      {fIdx === 0 && (
+                        <td rowSpan={procRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: COLORS.structure.light, fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' }}>
+                          {proc.no}. {proc.name}
+                        </td>
+                      )}
+                      <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
+                        <SelectableCell 
+                          value={f.name} 
+                          placeholder="공정기능" 
+                          bgColor={COLORS.function.light} 
+                          onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} 
+                          onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, f.id, newValue)}
+                        />
+                      </td>
+                      <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
+                        <SelectableCell value="" placeholder="제품특성 선택" bgColor={COLORS.function.zebra} onClick={() => setModal({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, title: '제품특성 선택', itemCode: 'A4' })} />
+                      </td>
+                      <td style={{ border: `1px solid ${COLORS.line}`, padding: '4px', textAlign: 'center', background: COLORS.failure.light, color: '#999', fontSize: FONT_SIZES.cell }}>
+                        -
+                      </td>
+                    </tr>
+                  );
+                }
+                
+                // 기능에 제품특성이 있는 경우
+                return chars.map((c, cIdx) => (
+                  <tr key={c.id} style={{ background: globalRowIdx++ % 2 === 1 ? COLORS.function.zebra : COLORS.function.light }}>
+                    {fIdx === 0 && cIdx === 0 && (
+                      <td rowSpan={procRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: COLORS.structure.light, fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' }}>
+                        {proc.no}. {proc.name}
+                      </td>
+                    )}
+                    {cIdx === 0 && (
+                      <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
+                        <SelectableCell 
+                          value={f.name} 
+                          placeholder="공정기능" 
+                          bgColor={COLORS.function.light} 
+                          onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} 
+                          onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, f.id, newValue)}
+                        />
+                      </td>
+                    )}
+                    <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
                       <SelectableCell 
-                        value={f.name} 
-                        placeholder="공정기능" 
-                        bgColor="#c8e6c9" 
-                        onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} 
-                        onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, f.id, newValue)}
+                        value={c.name} 
+                        placeholder="제품특성" 
+                        bgColor={COLORS.function.zebra} 
+                        onClick={() => setModal({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, title: '제품특성 선택', itemCode: 'A4' })} 
+                        onDoubleClickEdit={(newValue) => handleInlineEditProductChar(proc.id, f.id, c.id, newValue)}
                       />
                     </td>
-                  )}
-                  <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                    <SelectableCell 
-                      value={c.name} 
-                      placeholder="제품특성" 
-                      bgColor="#fff" 
-                      onClick={() => setModal({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, title: '제품특성 선택', itemCode: 'A4' })} 
-                      onDoubleClickEdit={(newValue) => handleInlineEditProductChar(proc.id, f.id, c.id, newValue)}
-                    />
-                  </td>
-                  <td style={{ border: `1px solid ${COLORS.line}`, padding: '0', textAlign: 'center' }}>
-                    <SpecialCharBadge 
-                      value={(c as any).specialChar || ''} 
-                      onClick={() => setSpecialCharModal({ 
-                        procId: proc.id, 
-                        funcId: f.id, 
-                        charId: c.id, 
-                        charName: c.name,
-                        currentValue: (c as any).specialChar || ''
-                      })} 
-                    />
-                  </td>
-                </tr>
-              ));
+                    <td style={{ border: `1px solid ${COLORS.line}`, padding: '0', textAlign: 'center' }}>
+                      <SpecialCharBadge 
+                        value={(c as any).specialChar || ''} 
+                        onClick={() => setSpecialCharModal({ 
+                          procId: proc.id, 
+                          funcId: f.id, 
+                          charId: c.id, 
+                          charName: c.name,
+                          currentValue: (c as any).specialChar || ''
+                        })} 
+                      />
+                    </td>
+                  </tr>
+                ));
+              });
             });
-          })}
+          })()}
         </tbody>
       </table>
 

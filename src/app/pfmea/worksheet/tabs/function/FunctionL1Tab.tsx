@@ -326,7 +326,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                   </button>
                   <span style={{
                     padding: '4px 10px',
-                    background: missingCount > 0 ? '#f44336' : '#4caf50',
+                    background: missingCount > 0 ? '#f57c00' : '#4caf50',
                     color: 'white',
                     borderRadius: '4px',
                     fontSize: FONT_SIZES.header1,
@@ -361,7 +361,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
           <tr>
             <th 
               style={{ 
-                background: '#42a5f5', color: 'white', 
+                background: '#1976d2', color: 'white', 
                 border: `1px solid ${COLORS.line}`, padding: '6px', 
                 fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center'
               }}
@@ -371,14 +371,14 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
             <th 
               colSpan={3}
               style={{ 
-                background: '#2e7d32', color: 'white', 
+                background: '#388e3c', color: 'white', 
                 border: `1px solid ${COLORS.line}`, padding: '6px', 
                 fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center'
               }}
             >
               1. 완제품 공정기능/요구사항
               {missingCount > 0 && (
-                <span style={{ marginLeft: '8px', background: '#f44336', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: FONT_SIZES.cell }}>
+                <span style={{ marginLeft: '8px', background: '#f57c00', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: FONT_SIZES.cell }}>
                   누락 {missingCount}건
                 </span>
               )}
@@ -386,25 +386,25 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
           </tr>
           
           {/* 3행: 세부 컬럼 */}
-          <tr style={{ background: '#e3f2fd' }}>
-            <th style={{ background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>
+          <tr style={{ background: '#e8f5e9' }}>
+            <th style={{ background: '#e3f2fd', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>
               완제품 공정명
             </th>
-            <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>
+            <th style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>
               구분
             </th>
-            <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>
+            <th style={{ background: '#c8e6c9', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>
               완제품기능
               {missingCounts.functionCount > 0 && (
-                <span style={{ marginLeft: '4px', background: '#f44336', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: FONT_SIZES.small }}>
+                <span style={{ marginLeft: '4px', background: '#f57c00', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: FONT_SIZES.small }}>
                   {missingCounts.functionCount}
                 </span>
               )}
             </th>
-            <th style={{ background: '#ffe0b2', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold, color: '#e65100' }}>
+            <th style={{ background: '#fff3e0', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold, color: '#e65100' }}>
               요구사항
               {missingCounts.requirementCount > 0 && (
-                <span style={{ marginLeft: '4px', background: '#f44336', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: FONT_SIZES.small }}>
+                <span style={{ marginLeft: '4px', background: '#f57c00', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: FONT_SIZES.small }}>
                   {missingCounts.requirementCount}
                 </span>
               )}
@@ -414,95 +414,98 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
         
         <tbody>
           {state.l1.types.length === 0 ? (
-            <tr>
-              <td style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: FONT_WEIGHTS.semibold }}>
+            <tr style={{ background: COLORS.function.light }}>
+              <td style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: COLORS.structure.light, fontWeight: FONT_WEIGHTS.semibold }}>
                 {state.l1.name || '(구조분석에서 입력)'}
               </td>
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                <SelectableCell value="" placeholder="구분 선택" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
+                <SelectableCell value="" placeholder="구분 선택" bgColor={COLORS.function.light} onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
               </td>
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                <SelectableCell value="" placeholder="기능 선택" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l1Function', id: '', title: '완제품 기능 선택', itemCode: 'C2' })} />
+                <SelectableCell value="" placeholder="기능 선택" bgColor={COLORS.function.light} onClick={() => setModal({ type: 'l1Function', id: '', title: '완제품 기능 선택', itemCode: 'C2' })} />
               </td>
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                <SelectableCell value="" placeholder="요구사항 선택" bgColor="#c8e6c9" onClick={() => setModal({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
+                <SelectableCell value="" placeholder="요구사항 선택" bgColor={COLORS.function.light} onClick={() => setModal({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
               </td>
             </tr>
-          ) : state.l1.types.map((t, tIdx) => {
-            // 각 구분(type)별 행 수 계산
-            const typeRowSpan = t.functions.length === 0 ? 1 : t.functions.reduce((a, f) => a + Math.max(1, f.requirements.length), 0);
-            
-            return t.functions.length === 0 ? (
-              <tr key={t.id}>
-                {/* 완제품 공정명 - 각 구분과 1:1 매칭 */}
-                <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' }}>
-                  {state.l1.name || '(구조분석에서 입력)'}
-                </td>
-                <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: getTypeColor(t.name).light, verticalAlign: 'middle' }}>
-                  <SelectableCell value={t.name} placeholder="구분" bgColor={getTypeColor(t.name).light} textColor={getTypeColor(t.name).text} textAlign="center" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
-                </td>
-                <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                  <SelectableCell value="" placeholder="기능 선택" bgColor="#fce4ec" onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} />
-                </td>
-                <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                  <SelectableCell value="" placeholder="요구사항 선택" bgColor="#fce4ec" onClick={() => setModal({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
-                </td>
-              </tr>
-            ) : t.functions.map((f, fIdx) => {
-              const funcRowSpan = Math.max(1, f.requirements.length);
+          ) : (() => {
+            let globalRowIdx = 0;
+            return state.l1.types.map((t, tIdx) => {
+              // 각 구분(type)별 행 수 계산
+              const typeRowSpan = t.functions.length === 0 ? 1 : t.functions.reduce((a, f) => a + Math.max(1, f.requirements.length), 0);
               
-              return f.requirements.length === 0 ? (
-                <tr key={f.id}>
-                  {/* 완제품 공정명 - 각 구분의 첫 행에서만 표시 (1:1 매칭) */}
-                  {fIdx === 0 && (
-                    <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' }}>
-                      {state.l1.name || '(구조분석에서 입력)'}
-                    </td>
-                  )}
-                  {fIdx === 0 && (
-                    <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: getTypeColor(t.name).light, verticalAlign: 'middle' }}>
-                      <SelectableCell value={t.name} placeholder="구분" bgColor={getTypeColor(t.name).light} textColor={getTypeColor(t.name).text} textAlign="center" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
-                    </td>
-                  )}
-                  <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
-                    <SelectableCell value={f.name} placeholder="기능" bgColor="#fce4ec" textColor="#000000" onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} onDoubleClickEdit={(newValue) => handleInlineEditFunction(t.id, f.id, newValue)} />
+              return t.functions.length === 0 ? (
+                <tr key={t.id} style={{ background: globalRowIdx++ % 2 === 1 ? COLORS.function.zebra : COLORS.function.light }}>
+                  {/* 완제품 공정명 - 각 구분과 1:1 매칭 */}
+                  <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: COLORS.structure.light, fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' }}>
+                    {state.l1.name || '(구조분석에서 입력)'}
+                  </td>
+                  <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: getTypeColor(t.name).light, verticalAlign: 'middle' }}>
+                    <SelectableCell value={t.name} placeholder="구분" bgColor={getTypeColor(t.name).light} textColor={getTypeColor(t.name).text} textAlign="center" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
                   </td>
                   <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                    <SelectableCell value="" placeholder="요구사항 선택" bgColor="#fff3e0" textColor="#e65100" onClick={() => setModal({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} />
+                    <SelectableCell value="" placeholder="기능 선택" bgColor={COLORS.function.light} onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} />
+                  </td>
+                  <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
+                    <SelectableCell value="" placeholder="요구사항 선택" bgColor={COLORS.function.light} onClick={() => setModal({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
                   </td>
                 </tr>
-              ) : f.requirements.map((r, rIdx) => (
-                <tr key={r.id}>
-                  {/* 완제품 공정명 - 각 구분의 첫 행에서만 표시 (1:1 매칭) */}
-                  {fIdx === 0 && rIdx === 0 && (
-                    <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' }}>
-                      {state.l1.name || '(구조분석에서 입력)'}
-                    </td>
-                  )}
-                  {fIdx === 0 && rIdx === 0 && (
-                    <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: getTypeColor(t.name).light, verticalAlign: 'middle' }}>
-                      <SelectableCell value={t.name} placeholder="구분" bgColor={getTypeColor(t.name).light} textColor={getTypeColor(t.name).text} textAlign="center" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
-                    </td>
-                  )}
-                  {rIdx === 0 && (
+              ) : t.functions.map((f, fIdx) => {
+                const funcRowSpan = Math.max(1, f.requirements.length);
+                
+                return f.requirements.length === 0 ? (
+                  <tr key={f.id} style={{ background: globalRowIdx++ % 2 === 1 ? COLORS.function.zebra : COLORS.function.light }}>
+                    {/* 완제품 공정명 - 각 구분의 첫 행에서만 표시 (1:1 매칭) */}
+                    {fIdx === 0 && (
+                      <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: COLORS.structure.light, fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' }}>
+                        {state.l1.name || '(구조분석에서 입력)'}
+                      </td>
+                    )}
+                    {fIdx === 0 && (
+                      <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: getTypeColor(t.name).light, verticalAlign: 'middle' }}>
+                        <SelectableCell value={t.name} placeholder="구분" bgColor={getTypeColor(t.name).light} textColor={getTypeColor(t.name).text} textAlign="center" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
+                      </td>
+                    )}
                     <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
-                      <SelectableCell value={f.name} placeholder="기능" bgColor="#fce4ec" textColor="#000000" onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} onDoubleClickEdit={(newValue) => handleInlineEditFunction(t.id, f.id, newValue)} />
+                      <SelectableCell value={f.name} placeholder="기능" bgColor={COLORS.function.light} textColor="#000000" onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} onDoubleClickEdit={(newValue) => handleInlineEditFunction(t.id, f.id, newValue)} />
                     </td>
-                  )}
-                  <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
-                    <SelectableCell 
-                      value={r.name} 
-                      placeholder="요구사항" 
-                      bgColor="#fff3e0" 
-                      textColor="#e65100" 
-                      onClick={() => setModal({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} 
-                      onDoubleClickEdit={(newValue) => handleInlineEditRequirement(t.id, f.id, r.id, newValue)}
-                    />
-                  </td>
-                </tr>
-              ));
+                    <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
+                      <SelectableCell value="" placeholder="요구사항 선택" bgColor={COLORS.function.zebra} textColor={COLORS.function.text} onClick={() => setModal({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} />
+                    </td>
+                  </tr>
+                ) : f.requirements.map((r, rIdx) => (
+                  <tr key={r.id} style={{ background: globalRowIdx++ % 2 === 1 ? COLORS.function.zebra : COLORS.function.light }}>
+                    {/* 완제품 공정명 - 각 구분의 첫 행에서만 표시 (1:1 매칭) */}
+                    {fIdx === 0 && rIdx === 0 && (
+                      <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: COLORS.structure.light, fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' }}>
+                        {state.l1.name || '(구조분석에서 입력)'}
+                      </td>
+                    )}
+                    {fIdx === 0 && rIdx === 0 && (
+                      <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: getTypeColor(t.name).light, verticalAlign: 'middle' }}>
+                        <SelectableCell value={t.name} placeholder="구분" bgColor={getTypeColor(t.name).light} textColor={getTypeColor(t.name).text} textAlign="center" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
+                      </td>
+                    )}
+                    {rIdx === 0 && (
+                      <td rowSpan={funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', verticalAlign: 'middle' }}>
+                        <SelectableCell value={f.name} placeholder="기능" bgColor={COLORS.function.light} textColor="#000000" onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} onDoubleClickEdit={(newValue) => handleInlineEditFunction(t.id, f.id, newValue)} />
+                      </td>
+                    )}
+                    <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
+                      <SelectableCell 
+                        value={r.name} 
+                        placeholder="요구사항" 
+                        bgColor={COLORS.function.zebra} 
+                        textColor={COLORS.function.text} 
+                        onClick={() => setModal({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} 
+                        onDoubleClickEdit={(newValue) => handleInlineEditRequirement(t.id, f.id, r.id, newValue)}
+                      />
+                    </td>
+                  </tr>
+                ));
+              });
             });
-          })}
+          })()}
         </tbody>
       </table>
 

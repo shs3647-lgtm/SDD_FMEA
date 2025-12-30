@@ -22,9 +22,10 @@
 ```typescript
 structure: {
   main: '#42a5f5',        // 밝은 파란색 (메인)
-  light: '#e3f2fd',       // 배경
+  light: '#e3f2fd',       // 배경 (짝수행)
   dark: '#1976d2',        // 테두리/강조
-  text: '#0d47a1'         // 텍스트
+  text: '#0d47a1',        // 텍스트
+  zebra: '#bbdefb'        // 홀수행 (줄무늬)
 }
 ```
 
@@ -39,9 +40,10 @@ structure: {
 ```typescript
 function: {
   main: '#66bb6a',        // 밝은 초록색 (메인)
-  light: '#e8f5e9',       // 배경
+  light: '#e8f5e9',       // 배경 (짝수행)
   dark: '#388e3c',        // 테두리/강조
-  text: '#1b5e20'         // 텍스트
+  text: '#1b5e20',        // 텍스트
+  zebra: '#c8e6c9'        // 홀수행 (줄무늬)
 }
 ```
 
@@ -56,9 +58,10 @@ function: {
 ```typescript
 failure: {
   main: '#ffa726',        // 부드러운 주황색 (메인) ← 붉은색 대체
-  light: '#fff3e0',       // 배경
+  light: '#fff3e0',       // 배경 (짝수행)
   dark: '#f57c00',        // 테두리/강조
-  text: '#e65100'         // 텍스트
+  text: '#e65100',        // 텍스트
+  zebra: '#ffe0b2'        // 홀수행 (줄무늬)
 }
 ```
 
@@ -91,6 +94,42 @@ opt: '#e65100'
 ---
 
 ## 📐 적용 가이드
+
+### 줄무늬 패턴 (Zebra Striping) 🦓
+
+> **모든 테이블에 필수 적용**
+
+테이블 행의 가독성 향상을 위해 홀수/짝수 행에 다른 배경색을 적용합니다.
+
+```typescript
+// 줄무늬 적용 방식
+const zebraBg = idx % 2 === 1 ? COLORS.[category].zebra : COLORS.[category].light;
+
+// 예시: 구조분석 테이블
+<tr style={{ background: idx % 2 === 1 ? COLORS.structure.zebra : COLORS.structure.light }}>
+  ...
+</tr>
+
+// 예시: 기능분석 테이블
+<tr style={{ background: idx % 2 === 1 ? COLORS.function.zebra : COLORS.function.light }}>
+  ...
+</tr>
+
+// 예시: 고장분석 테이블
+<tr style={{ background: idx % 2 === 1 ? COLORS.failure.zebra : COLORS.failure.light }}>
+  ...
+</tr>
+```
+
+**줄무늬 색상:**
+| 분류 | 짝수행 (light) | 홀수행 (zebra) |
+|------|---------------|---------------|
+| 구조분석 | `#e3f2fd` | `#bbdefb` |
+| 기능분석 | `#e8f5e9` | `#c8e6c9` |
+| 고장분석 | `#fff3e0` | `#ffe0b2` |
+| 일반 | `#fff` | `#f5f5f5` |
+
+---
 
 ### 색상 사용 규칙
 
@@ -237,23 +276,26 @@ export const COLORS = {
   // 구조분석 (파란색)
   structure: {
     main: '#42a5f5',
-    light: '#e3f2fd',
+    light: '#e3f2fd',     // 짝수행
     dark: '#1976d2',
-    text: '#0d47a1'
+    text: '#0d47a1',
+    zebra: '#bbdefb'      // 홀수행 🦓
   },
   // 기능분석 (초록색)
   function: {
     main: '#66bb6a',
-    light: '#e8f5e9',
+    light: '#e8f5e9',     // 짝수행
     dark: '#388e3c',
-    text: '#1b5e20'
+    text: '#1b5e20',
+    zebra: '#c8e6c9'      // 홀수행 🦓
   },
   // 고장분석 (주황색)
   failure: {
     main: '#ffa726',
-    light: '#fff3e0',
+    light: '#fff3e0',     // 짝수행
     dark: '#f57c00',
-    text: '#e65100'
+    text: '#e65100',
+    zebra: '#ffe0b2'      // 홀수행 🦓
   },
   // 공통 색상
   bg: '#f5f7fb',

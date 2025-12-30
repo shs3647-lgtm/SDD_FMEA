@@ -4,6 +4,10 @@ import { usePathname } from 'next/navigation';
 
 interface PFMEATopNavProps {
   selectedFmeaId?: string;
+  rightContent?: React.ReactNode;
+  fmCount?: number;
+  feCount?: number;
+  fcCount?: number;
 }
 
 /**
@@ -12,7 +16,7 @@ interface PFMEATopNavProps {
  * - 스크롤해도 항상 보이도록 고정
  * - 모든 PFMEA 화면에서 사용
  */
-export default function PFMEATopNav({ selectedFmeaId }: PFMEATopNavProps) {
+export default function PFMEATopNav({ selectedFmeaId, rightContent, fmCount = 0, feCount = 0, fcCount = 0 }: PFMEATopNavProps) {
   const pathname = usePathname();
   
   const menuItems = [
@@ -47,6 +51,7 @@ export default function PFMEATopNav({ selectedFmeaId }: PFMEATopNavProps) {
         height: '32px',
         fontFamily: '"Segoe UI", "Malgun Gothic", Arial, sans-serif',
         paddingLeft: '0',
+        paddingRight: '0',  // absolute 요소 정렬을 위해 명시적으로 0
         marginLeft: '0',
         borderBottom: '1px solid rgba(255,255,255,0.2)',  // 하단 구분선
       }}
@@ -106,8 +111,35 @@ export default function PFMEATopNav({ selectedFmeaId }: PFMEATopNavProps) {
         </button>
       ))}
       
-      {/* 우측 영역 (나머지 공간 채우기) */}
+      {/* 우측 영역 */}
       <div style={{ flex: 1, height: '100%' }} />
+      
+      {/* 우측: 4단계 결과 - 절대 위치 고정 (270px) */}
+      <div style={{ 
+        position: 'absolute',
+        right: '0px',
+        top: '0px',
+        height: '32px', 
+        width: '270px',
+        display: 'flex', 
+        alignItems: 'stretch',
+        borderLeft: '1px solid #ffd600',
+        background: 'linear-gradient(to right, #1a237e, #283593)',
+        boxSizing: 'border-box',
+      }}>
+        <div style={{ width: '80px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid rgba(255,255,255,0.25)', boxSizing: 'border-box', flexShrink: 0 }}>
+          <span style={{ color: '#ffd600', fontSize: '11px', fontWeight: 700, lineHeight: '1', whiteSpace: 'nowrap' }}>4단계 결과:</span>
+        </div>
+        <div style={{ width: '60px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid rgba(255,255,255,0.25)', boxSizing: 'border-box', flexShrink: 0 }}>
+          <span style={{ color: '#ffcc80', fontSize: '11px', fontWeight: 600, lineHeight: '1', whiteSpace: 'nowrap' }}>FM:{fmCount}</span>
+        </div>
+        <div style={{ width: '65px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid rgba(255,255,255,0.25)', boxSizing: 'border-box', flexShrink: 0 }}>
+          <span style={{ color: '#90caf9', fontSize: '11px', fontWeight: 600, lineHeight: '1', whiteSpace: 'nowrap' }}>FE:{feCount}</span>
+        </div>
+        <div style={{ width: '65px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', flexShrink: 0 }}>
+          <span style={{ color: '#a5d6a7', fontSize: '11px', fontWeight: 600, lineHeight: '1', whiteSpace: 'nowrap' }}>FC:{fcCount}</span>
+        </div>
+      </div>
     </div>
   );
 }

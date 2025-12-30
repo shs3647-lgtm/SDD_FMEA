@@ -43,7 +43,7 @@ export default function L1Section({
             background: '#e3f2fd',
             verticalAlign: 'middle',
             textAlign: 'center',
-            fontSize: '10px',
+            fontSize: '12px',
             fontWeight: 600,
           }}
         >
@@ -61,7 +61,7 @@ export default function L1Section({
             background: '#e8f5e9',
             verticalAlign: 'middle',
             textAlign: 'center',
-            fontSize: '10px',
+            fontSize: '12px',
           }}
         >
           {row.l2No} {row.l2Name}
@@ -72,7 +72,7 @@ export default function L1Section({
       <td style={{ border: `1px solid ${COLORS.line}`, textAlign: 'center', fontSize: '9px', background: '#fff8e1' }}>
         {row.m4}
       </td>
-      <td style={{ border: `1px solid ${COLORS.line}`, padding: '4px', fontSize: '10px', background: '#fff3e0' }}>
+      <td style={{ border: `1px solid ${COLORS.line}`, padding: '4px', fontSize: '12px', background: '#fff3e0' }}>
         {row.l3Name}
       </td>
 
