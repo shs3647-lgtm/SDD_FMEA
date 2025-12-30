@@ -41,7 +41,7 @@ export default function TopMenuBar({
     <div 
       className="flex items-center gap-2" 
       style={{ 
-        background: 'linear-gradient(to right, #283593, #3949ab, #283593)',  // 2단계 - 중간 밝기
+        background: 'linear-gradient(to right, #1a237e, #283593, #1a237e)',  // 진한 네이비
         paddingLeft: '8px', 
         paddingRight: '12px',
         height: '32px',
@@ -112,12 +112,16 @@ export default function TopMenuBar({
         <div className="relative">
           <button 
             onClick={() => setShowImportMenu(!showImportMenu)}
-            className="px-3 py-1 text-white rounded hover:bg-white/25 transition-all" 
+            className="px-3 py-1 rounded transition-all" 
             style={{ 
-              background: 'rgba(255,255,255,0.15)',
+              background: 'transparent',
+              border: '1px solid transparent',
+              color: '#fff',
               fontSize: '12px',
-              fontWeight: 600,
+              fontWeight: 500,
             }}
+            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = '#ffd600'; }}
+            onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; }}
           >
             📥Import▾
           </button>
@@ -160,12 +164,16 @@ export default function TopMenuBar({
         
         <button 
           onClick={onExport} 
-          className="px-3 py-1 text-white rounded hover:bg-white/25 transition-all"
+          className="px-3 py-1 rounded transition-all"
           style={{ 
-            background: 'rgba(255,255,255,0.15)',
+            background: 'transparent',
+            border: '1px solid transparent',
+            color: '#fff',
             fontSize: '12px',
-            fontWeight: 600,
+            fontWeight: 500,
           }}
+          onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = '#ffd600'; }}
+          onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; }}
         >
           📤Export
         </button>
@@ -188,35 +196,51 @@ export default function TopMenuBar({
 
       <div className="w-px h-5 bg-white/30" />
 
-      {/* 특별특성/SOD/5AP/6AP */}
+      {/* 특별특성/SOD/5AP/6AP/LLD */}
       <div className="flex items-center gap-1.5">
         <button 
           onClick={onOpenSpecialChar} 
-          className="px-3 py-1 text-white rounded hover:brightness-110 transition-all" 
-          style={{ background: '#5c6bc0', fontSize: '12px', fontWeight: 600 }}
+          className="px-3 py-1 rounded transition-all" 
+          style={{ background: 'transparent', border: '1px solid transparent', color: '#fff', fontSize: '12px', fontWeight: 500 }}
+          onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = '#ffd600'; }}
+          onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; }}
         >
           ⭐특별특성
         </button>
         <button 
           onClick={onOpenSOD} 
-          className="px-3 py-1 text-white rounded hover:brightness-110 transition-all" 
-          style={{ background: '#7986cb', fontSize: '12px', fontWeight: 600 }}
+          className="px-3 py-1 rounded transition-all" 
+          style={{ background: 'transparent', border: '1px solid transparent', color: '#fff', fontSize: '12px', fontWeight: 500 }}
+          onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = '#ffd600'; }}
+          onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; }}
         >
           📊SOD
         </button>
         <button 
           onClick={onOpen5AP} 
-          className="px-3 py-1 text-white rounded hover:brightness-110 transition-all" 
-          style={{ background: '#5c6bc0', fontSize: '12px', fontWeight: 600 }}
+          className="px-3 py-1 rounded transition-all" 
+          style={{ background: 'transparent', border: '1px solid transparent', color: '#fff', fontSize: '12px', fontWeight: 500 }}
+          onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = '#ffd600'; }}
+          onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; }}
         >
           5AP
         </button>
         <button 
           onClick={onOpen6AP} 
-          className="px-3 py-1 text-white rounded hover:brightness-110 transition-all" 
-          style={{ background: '#7986cb', fontSize: '12px', fontWeight: 600 }}
+          className="px-3 py-1 rounded transition-all" 
+          style={{ background: 'transparent', border: '1px solid transparent', color: '#fff', fontSize: '12px', fontWeight: 500 }}
+          onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = '#ffd600'; }}
+          onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; }}
         >
           6AP
+        </button>
+        <button 
+          className="px-3 py-1 rounded transition-all" 
+          style={{ background: 'transparent', border: '1px solid transparent', color: '#fff', fontSize: '12px', fontWeight: 500 }}
+          onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = '#ffd600'; }}
+          onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; }}
+        >
+          📚LLD
         </button>
       </div>
     </div>

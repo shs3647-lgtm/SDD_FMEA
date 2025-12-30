@@ -204,7 +204,7 @@ export default function AllTabRenderer({
               {/* 구조분석 4열 */}
               <th style={{ width: '60px', background: '#e3f2fd', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>완제품</th>
               <th style={{ width: '80px', background: '#e3f2fd', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>NO+공정명</th>
-              <th style={{ width: '25px', background: '#e3f2fd', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>4M</th>
+              <th style={{ width: '60px', background: '#e3f2fd', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>4M</th>
               <th style={{ width: '70px', background: '#e3f2fd', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>작업요소</th>
               {/* 기능분석 8열 */}
               <th style={{ width: '35px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>구분</th>
@@ -212,7 +212,7 @@ export default function AllTabRenderer({
               <th style={{ width: '70px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>요구사항</th>
               <th style={{ width: '80px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>공정기능</th>
               <th style={{ width: '60px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>제품특성</th>
-              <th style={{ width: '25px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>4M</th>
+              <th style={{ width: '60px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>4M</th>
               <th style={{ width: '70px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>작업요소기능</th>
               <th style={{ width: '60px', background: '#e8f5e9', border: BORDER, padding: '2px', fontSize: FONT_SIZES.small }}>공정특성</th>
               {/* 고장분석 6열 */}

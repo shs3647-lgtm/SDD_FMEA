@@ -49,7 +49,7 @@ export interface StepGroup {
 export const STRUCTURE_COLUMNS: ColumnDef[] = [
   { id: 'l1Name', label: '완제품 공정명', width: '80px', step: 2 },  // L1 Structure
   { id: 'l2Name', label: 'NO+공정명', width: '90px', step: 2 },      // L2 Structure (공정번호+공정명)
-  { id: 'm4', label: '4M', width: '25px', step: 2, align: 'center' }, // 4M: MN(Man)/MC(Machine)/IM(Input Material)/EN(Environment)
+  { id: 'm4', label: '4M', width: '80px', step: 2, align: 'center' }, // 4M: MN(Man)/MC(Machine)/IM(Input Material)/EN(Environment)
   { id: 'l3Name', label: '작업요소', width: '80px', step: 2 },       // L3 Structure
 ];
 

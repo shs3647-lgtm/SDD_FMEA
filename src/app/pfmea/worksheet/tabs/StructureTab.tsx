@@ -27,9 +27,10 @@ interface StructureTabProps {
 // 4M 셀 - 읽기 전용 표시 (수정/삭제는 작업요소 모달에서)
 function M4Cell({ value }: { value: string }) {
   const m4CellStyle: React.CSSProperties = {
-    width: '20px', maxWidth: '20px', minWidth: '20px', border: `1px solid ${COLORS.line}`,
-    padding: '0', textAlign: 'center', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold,
-    background: '#fff8e1',
+    width: '80px', maxWidth: '80px', minWidth: '80px', border: `1px solid ${COLORS.line}`,
+    padding: '4px', textAlign: 'center', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.bold,
+    background: '#e1f5fe',  // 연한 하늘색
+    color: '#01579b',       // 진한 파랑
   };
 
   return (
@@ -130,7 +131,15 @@ function EditableL3Cell({
 }
 
 export function StructureColgroup() {
-  return <colgroup><col style={{ width: '30%' }} /><col style={{ width: '30%' }} /><col style={{ width: '20px' }} /><col /></colgroup>;
+  // 완제품 공정명 / 메인 공정명 / 4M / 작업요소
+  return (
+    <colgroup>
+      <col style={{ width: '30%' }} />
+      <col style={{ width: '30%' }} />
+      <col style={{ width: '80px', minWidth: '80px' }} />
+      <col />
+    </colgroup>
+  );
 }
 
 interface MissingCounts {
@@ -171,7 +180,7 @@ export function StructureHeader({ onProcessModalOpen, missingCounts }: { onProce
       <tr>
         <th style={{ background: '#90caf9', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: HEIGHTS.header, fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.header2 }}>완제품명+라인</th>
         <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: HEIGHTS.header, fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.header2 }}>공정NO+공정명</th>
-        <th style={{ width: '20px', maxWidth: '20px', minWidth: '20px', background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '0', height: HEIGHTS.header, fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell }}>4M</th>
+        <th style={{ width: '80px', maxWidth: '80px', minWidth: '80px', background: '#29b6f6', color: '#fff', border: `1px solid ${COLORS.line}`, padding: '0', height: HEIGHTS.header, fontWeight: FONT_WEIGHTS.bold, fontSize: FONT_SIZES.cell }}>4M</th>
         <th style={{ background: '#ffcc80', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: HEIGHTS.header, fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.header2 }}>작업요소</th>
       </tr>
     </>

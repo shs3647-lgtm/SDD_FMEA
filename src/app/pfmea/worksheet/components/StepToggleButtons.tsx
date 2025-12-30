@@ -15,11 +15,11 @@ interface StepToggleButtonsProps {
 
 export default function StepToggleButtons({ state, setState }: StepToggleButtonsProps) {
   const steps = [
-    { step: 2, label: '2ST', color: '#5c6bc0' },  // 네이비 계열
-    { step: 3, label: '3ST', color: '#7986cb' },  // 네이비 밝음
-    { step: 4, label: '4ST', color: '#5c6bc0' },  // 네이비 계열
-    { step: 5, label: '5ST', color: '#7986cb' },  // 네이비 밝음
-    { step: 6, label: '6ST', color: '#5c6bc0' },  // 네이비 계열
+    { step: 2, label: '2ST' },
+    { step: 3, label: '3ST' },
+    { step: 4, label: '4ST' },
+    { step: 5, label: '5ST' },
+    { step: 6, label: '6ST' },
   ];
 
   const toggleStep = (step: number) => {
@@ -45,34 +45,41 @@ export default function StepToggleButtons({ state, setState }: StepToggleButtons
   const visibleSteps = state.visibleSteps || [2, 3, 4, 5, 6];
   const isAllVisible = visibleSteps.length === 5;
 
+  const isAllTab = state.tab === 'all';
+
   return (
     <div className="flex gap-1.5 items-center">
+      {/* 2ST~6ST 항상 표시 - ALL 탭에서만 토글 동작 */}
       <div className="flex gap-1">
         {steps.map(s => {
-          const isActive = visibleSteps.includes(s.step);
+          const isActive = isAllTab && visibleSteps.includes(s.step);
           return (
             <button
               key={s.step}
-              onClick={() => toggleStep(s.step)}
+              onClick={() => {
+                if (!isAllTab) {
+                  // 분석 탭에서 클릭 시 ALL 탭으로 이동
+                  setState(prev => ({ ...prev, tab: 'all', levelView: 'all', visibleSteps: [2, 3, 4, 5, 6] }));
+                } else {
+                  toggleStep(s.step);
+                }
+              }}
               className="px-3 py-1 cursor-pointer transition-all"
               style={{
-                background: isActive ? s.color : 'rgba(255,255,255,0.15)',
-                border: 'none',
+                background: isActive ? '#3949ab' : '#5c6bc0',
+                border: isActive ? '1px solid #ffd600' : '1px solid rgba(255,255,255,0.3)',
                 borderRadius: '4px',
-                color: '#fff',
+                color: isActive ? '#ffd600' : '#fff',
                 fontSize: '12px',
-                fontWeight: isActive ? 600 : 400,
-                opacity: isActive ? 1 : 0.7,
+                fontWeight: 600,
               }}
               onMouseOver={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.opacity = '0.85';
-                }
+                e.currentTarget.style.background = '#7986cb';
+                if (!isActive) e.currentTarget.style.color = '#ffd600';
               }}
               onMouseOut={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.opacity = '0.7';
-                }
+                e.currentTarget.style.background = isActive ? '#3949ab' : '#5c6bc0';
+                e.currentTarget.style.color = isActive ? '#ffd600' : '#fff';
               }}
             >
               {s.label}
@@ -80,31 +87,29 @@ export default function StepToggleButtons({ state, setState }: StepToggleButtons
           );
         })}
       </div>
-
+      
       {/* 구분선 */}
       <div className="w-px h-5 bg-white/30 mx-1" />
 
-      {/* 전체보기 버튼 */}
+      {/* 전체보기 버튼 - 항상 표시 */}
       <button
         onClick={() => setState(prev => ({ ...prev, tab: 'all', levelView: 'all', visibleSteps: [2, 3, 4, 5, 6] }))}
         className="px-3 py-1 cursor-pointer transition-all"
         style={{
-          background: state.tab === 'all' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)',
-          border: 'none',
+          background: isAllTab ? '#3949ab' : '#5c6bc0',
+          border: isAllTab ? '1px solid #ffd600' : '1px solid rgba(255,255,255,0.3)',
           borderRadius: '4px',
-          color: '#fff',
+          color: isAllTab ? '#ffd600' : '#fff',
           fontSize: '12px',
-          fontWeight: state.tab === 'all' ? 600 : 400,
+          fontWeight: 600,
         }}
         onMouseOver={(e) => {
-          if (state.tab !== 'all') {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
-          }
+          e.currentTarget.style.background = '#7986cb';
+          if (!isAllTab) e.currentTarget.style.color = '#ffd600';
         }}
         onMouseOut={(e) => {
-          if (state.tab !== 'all') {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
-          }
+          e.currentTarget.style.background = isAllTab ? '#3949ab' : '#5c6bc0';
+          e.currentTarget.style.color = isAllTab ? '#ffd600' : '#fff';
         }}
       >
         ALL

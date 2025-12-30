@@ -8,24 +8,21 @@
 import React from 'react';
 
 export default function FunctionColgroup() {
+  // 구조분석(4열): 완제품명, 공정명, 4M, 작업요소
+  // 기능분석(7열): L1구분, 완제품기능, 요구사항, 공정기능, 제품특성, 작업요소기능, 공정특성
   return (
     <colgroup>
-      {/* 구조분석 영역 (4열) */}
-      <col style={{ width: '100px' }} /> {/* 완제품명 */}
-      <col style={{ width: '120px' }} /> {/* 공정명 */}
-      <col style={{ width: '40px' }} />  {/* 4M */}
-      <col style={{ width: '100px' }} /> {/* 작업요소 */}
-      
-      {/* 기능분석 영역 (10열) */}
-      <col style={{ width: '80px' }} />  {/* L1 구분 */}
-      <col style={{ width: '180px' }} /> {/* 완제품기능 */}
-      <col style={{ width: '150px' }} /> {/* 요구사항 */}
-      
-      <col style={{ width: '150px' }} /> {/* 공정기능 */}
-      <col style={{ width: '120px' }} /> {/* 제품특성 */}
-      
-      <col style={{ width: '150px' }} /> {/* 작업요소기능 */}
-      <col style={{ width: '120px' }} /> {/* 공정특성 */}
+      <col style={{ width: '100px' }} />
+      <col style={{ width: '120px' }} />
+      <col style={{ width: '80px' }} />
+      <col style={{ width: '100px' }} />
+      <col style={{ width: '80px' }} />
+      <col style={{ width: '180px' }} />
+      <col style={{ width: '150px' }} />
+      <col style={{ width: '150px' }} />
+      <col style={{ width: '120px' }} />
+      <col style={{ width: '150px' }} />
+      <col style={{ width: '120px' }} />
     </colgroup>
   );
 }

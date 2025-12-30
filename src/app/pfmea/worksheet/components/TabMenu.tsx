@@ -42,7 +42,7 @@ export default function TabMenu({ state, setState, onOpen5AP, onOpen6AP }: TabMe
     <div 
       className="flex-shrink-0" 
       style={{ 
-        background: 'linear-gradient(to right, #5c6bc0, #7986cb, #5c6bc0)',  // 더 밝은 네이비
+        background: 'linear-gradient(to right, #1a237e, #283593, #1a237e)',  // 진한 네이비
         paddingLeft: '8px', 
         paddingRight: '12px',
         height: '36px',
@@ -50,8 +50,8 @@ export default function TabMenu({ state, setState, onOpen5AP, onOpen6AP }: TabMe
         top: '64px',  // PFMEATopNav(32px) + TopMenuBar(32px) 아래
         zIndex: 80,  // 사이드바(9999)보다 낮게
         fontFamily: '"Segoe UI", "Malgun Gothic", Arial, sans-serif',
-        borderTop: '1px solid rgba(255,255,255,0.5)',  // 상단 구분선 (더 밝게)
-        borderBottom: '1px solid rgba(255,255,255,0.5)',  // 하단 구분선
+        borderTop: '1px solid rgba(255,255,255,0.3)',  // 상단 구분선
+        borderBottom: '1px solid rgba(255,255,255,0.3)',  // 하단 구분선
       }}
     >
       <div className="flex items-center justify-between" style={{ height: '100%' }}>
@@ -75,24 +75,26 @@ export default function TabMenu({ state, setState, onOpen5AP, onOpen6AP }: TabMe
                     padding: '5px 14px',
                     fontSize: '12px',
                     fontWeight: isActive ? 700 : 500,
-                    background: isActive ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.15)',
-                    border: isActive ? '1px solid rgba(255,255,255,0.5)' : '1px solid transparent',
+                    background: isActive ? '#3949ab' : 'transparent',
+                    border: isActive ? '1px solid #ffd600' : '1px solid transparent',
                     borderRadius: '4px',
-                    color: '#fff',
+                    color: isActive ? '#ffd600' : '#fff',  // 활성화: 노란색
                     cursor: isEnabled ? 'pointer' : 'not-allowed',
-                    opacity: isEnabled ? 1 : 0.5,
+                    opacity: isEnabled ? 1 : 0.6,
                     whiteSpace: 'nowrap',
                     transition: 'all 0.2s ease',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                    textShadow: isActive ? '0 0 8px rgba(255,214,0,0.5)' : 'none',
                   }}
                   onMouseOver={(e) => {
                     if (isEnabled && !isActive) {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+                      e.currentTarget.style.color = '#ffd600';
                     }
                   }}
                   onMouseOut={(e) => {
                     if (!isActive) {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = '#fff';
                     }
                   }}
                   title={!isEnabled ? '구조분석 확정 후 사용 가능' : ''}

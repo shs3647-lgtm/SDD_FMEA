@@ -269,6 +269,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         failureL1Confirmed: legacy.failureL1Confirmed || false,
         failureL2Confirmed: legacy.failureL2Confirmed || false,
         failureL3Confirmed: legacy.failureL3Confirmed || false,
+        visibleSteps: [2, 3, 4, 5, 6],  // 항상 전체 표시로 시작
       }));
       setDirty(false);
       return;
@@ -363,6 +364,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
             failureL1Confirmed: parsed.failureL1Confirmed || false,
             failureL2Confirmed: parsed.failureL2Confirmed || false,
             failureL3Confirmed: parsed.failureL3Confirmed || false,
+            visibleSteps: [2, 3, 4, 5, 6],  // 항상 전체 표시로 시작
           }));
           setDirty(false);
         }
