@@ -113,7 +113,7 @@ fmea-smart-system\
 - **다음 작업**: 평가 탭 제거 및 all 탭에 AP 통합
 
 ### 2025-12-30: 평가 탭 제거 완료
-- **커밋**: `refactor: remove evaluation tabs, simplify to analysis + all`
+- **커밋**: `refactor: remove evaluation tabs, simplify to analysis + all` (cca47bf)
 - **내용**:
   - 평가 탭 5개 제거 (eval-structure, eval-function, eval-failure, risk, opt)
   - 평가 컴포넌트 3개 파일 삭제 (423줄)
@@ -125,6 +125,20 @@ fmea-smart-system\
   - 분석 작업 → 전체보기 확인 (5AP/6AP 포함)
   - 빌드 성공, 타입 체크 통과
 - **테스트 URL**: http://localhost:3000/pfmea/worksheet
+
+### 2025-12-30: 전체보기 UX 개선
+- **커밋**: `feat: add full screen button and sticky menu in all tab` (dccac0f)
+- **내용**:
+  - 전체화면 버튼 추가 (6단계 버튼 뒤)
+    - 클릭 시 2-6단계 모두 표시
+    - 전체 표시 상태 시각적 표시
+  - 탭 메뉴 sticky 적용 (스크롤 시 고정)
+    - position: sticky, top: 0, z-index: 100
+    - 좌우 스크롤해도 메뉴 항상 상단 고정
+- **결과**:
+  - 전체보기 탭에서 편리한 단계 전환
+  - 스크롤 중에도 메뉴 접근 가능
+  - 빌드 성공
 
 ---
 
