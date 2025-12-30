@@ -80,6 +80,35 @@ export default function StepToggleButtons({ state, setState }: StepToggleButtons
           );
         })}
       </div>
+
+      {/* 구분선 */}
+      <div className="w-px h-5 bg-white/30 mx-1" />
+
+      {/* 전체보기 버튼 */}
+      <button
+        onClick={() => setState(prev => ({ ...prev, tab: 'all', levelView: 'all', visibleSteps: [2, 3, 4, 5, 6] }))}
+        className="px-3 py-1 cursor-pointer transition-all"
+        style={{
+          background: state.tab === 'all' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)',
+          border: 'none',
+          borderRadius: '4px',
+          color: '#fff',
+          fontSize: '12px',
+          fontWeight: state.tab === 'all' ? 600 : 400,
+        }}
+        onMouseOver={(e) => {
+          if (state.tab !== 'all') {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
+          }
+        }}
+        onMouseOut={(e) => {
+          if (state.tab !== 'all') {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+          }
+        }}
+      >
+        ALL
+      </button>
     </div>
   );
 }

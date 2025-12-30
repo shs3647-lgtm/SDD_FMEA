@@ -648,41 +648,6 @@ function FMEAWorksheetPageContent() {
               >
                 📊RPN
               </button>
-              <button
-                className="px-3 py-1 rounded transition-all"
-                style={{
-                  background: 'rgba(255,255,255,0.15)',
-                  border: 'none',
-                  color: '#fff',
-                  fontSize: '12px',
-                  fontWeight: 400,
-                  cursor: 'pointer',
-                }}
-                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
-                onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
-              >
-                📚LLD
-              </button>
-              <button
-                onClick={() => setState(prev => ({ ...prev, tab: 'all', levelView: 'all', visibleSteps: [2, 3, 4, 5, 6] }))}
-                className="px-3 py-1 rounded transition-all"
-                style={{
-                  background: state.tab === 'all' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)',
-                  border: 'none',
-                  color: '#fff',
-                  fontSize: '12px',
-                  fontWeight: state.tab === 'all' ? 600 : 400,
-                  cursor: 'pointer',
-                }}
-                onMouseOver={(e) => {
-                  if (state.tab !== 'all') e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
-                }}
-                onMouseOut={(e) => {
-                  if (state.tab !== 'all') e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
-                }}
-              >
-                전체보기
-              </button>
             </div>
 
             {/* 탭에 따라 1:1 대응 트리 표시 */}
