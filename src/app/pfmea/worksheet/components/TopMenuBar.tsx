@@ -188,7 +188,7 @@ export default function TopMenuBar({
 
       <div className="w-px h-5 bg-white/30" />
 
-      {/* 특별특성/SOD */}
+      {/* 특별특성/SOD/5AP/6AP */}
       <div className="flex items-center gap-1.5">
         <button 
           onClick={onOpenSpecialChar} 
@@ -204,50 +204,6 @@ export default function TopMenuBar({
         >
           📊SOD
         </button>
-      </div>
-
-      <div className="w-px h-5 bg-white/30" />
-
-      {/* 우측 플러그인 메뉴 */}
-      <div className="flex items-center gap-1.5">
-        <button
-          className="px-3 py-1 rounded transition-all"
-          style={{
-            background: 'rgba(255,255,255,0.3)',
-            border: 'none',
-            color: '#fff',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.4)';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.3)';
-          }}
-        >
-          🌳TREE
-        </button>
-        <button
-          className="px-3 py-1 rounded transition-all"
-          style={{
-            background: 'rgba(255,255,255,0.15)',
-            border: 'none',
-            color: '#fff',
-            fontSize: '12px',
-            fontWeight: 400,
-            cursor: 'pointer',
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
-          }}
-        >
-          📄PDF
-        </button>
         <button 
           onClick={onOpen5AP} 
           className="px-3 py-1 text-white rounded hover:brightness-110 transition-all" 
@@ -261,23 +217,6 @@ export default function TopMenuBar({
           style={{ background: '#ff9800', fontSize: '12px', fontWeight: 600 }}
         >
           🟠6AP
-        </button>
-        <button 
-          className="px-3 py-1 text-white rounded transition-all" 
-          style={{ 
-            background: 'rgba(255,255,255,0.15)', 
-            fontSize: '12px', 
-            fontWeight: 400,
-            cursor: 'pointer',
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
-          }}
-        >
-          📊RPN
         </button>
       </div>
     </div>

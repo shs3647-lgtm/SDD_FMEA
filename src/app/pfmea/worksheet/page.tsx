@@ -454,7 +454,12 @@ function FMEAWorksheetPageContent() {
           >
             {/* 탭 메뉴 - 고정 */}
             <div style={{ flexShrink: 0 }}>
-              <TabMenu state={state} setState={setState} />
+              <TabMenu 
+                state={state} 
+                setState={setState} 
+                onOpen5AP={() => setShowAPModal(true)}
+                onOpen6AP={() => setShow6APModal(true)}
+              />
             </div>
 
             {/* 테이블 제목 - 고정 (전체보기에서는 숨김) */}
@@ -613,6 +618,117 @@ function FMEAWorksheetPageContent() {
               background: '#f0f4f8',
             }}
           >
+            {/* 플러그인 메뉴바 (TabMenu와 같은 높이) */}
+            <div style={{
+              height: '32px',
+              background: 'linear-gradient(to right, #3949ab, #5c6bc0, #3949ab)',
+              borderTop: '1px solid rgba(255,255,255,0.4)',
+              borderBottom: '1px solid rgba(255,255,255,0.4)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              flexShrink: 0,
+            }}>
+              <button
+                className="px-3 py-1 rounded transition-all"
+                style={{
+                  background: 'rgba(255,255,255,0.3)',
+                  border: 'none',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.4)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.3)';
+                }}
+              >
+                🌳TREE
+              </button>
+              <button
+                className="px-3 py-1 rounded transition-all"
+                style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  border: 'none',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: 400,
+                  cursor: 'pointer',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+                }}
+              >
+                📄PDF
+              </button>
+              <button
+                onClick={() => setShowAPModal(true)}
+                className="px-3 py-1 rounded transition-all"
+                style={{
+                  background: '#f44336',
+                  border: 'none',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.filter = 'brightness(1.1)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.filter = 'brightness(1)';
+                }}
+              >
+                🔴5AP
+              </button>
+              <button
+                onClick={() => setShow6APModal(true)}
+                className="px-3 py-1 rounded transition-all"
+                style={{
+                  background: '#ff9800',
+                  border: 'none',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.filter = 'brightness(1.1)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.filter = 'brightness(1)';
+                }}
+              >
+                🟠6AP
+              </button>
+              <button
+                className="px-3 py-1 rounded transition-all"
+                style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  border: 'none',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: 400,
+                  cursor: 'pointer',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+                }}
+              >
+                📊RPN
+              </button>
+            </div>
+
             {/* 탭에 따라 1:1 대응 트리 표시 */}
             {state.tab === 'structure' && (
               <>

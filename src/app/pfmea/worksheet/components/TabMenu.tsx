@@ -12,9 +12,11 @@ import StepToggleButtons from './StepToggleButtons';
 interface TabMenuProps {
   state: WorksheetState;
   setState: React.Dispatch<React.SetStateAction<WorksheetState>>;
+  onOpen5AP?: () => void;
+  onOpen6AP?: () => void;
 }
 
-export default function TabMenu({ state, setState }: TabMenuProps) {
+export default function TabMenu({ state, setState, onOpen5AP, onOpen6AP }: TabMenuProps) {
   const structureConfirmed = (state as any).structureConfirmed || false;
   const failureLinks = (state as any).failureLinks || [];
   const hasFailureLinks = failureLinks.length > 0; // 고장연결 완료 여부
@@ -105,6 +107,7 @@ export default function TabMenu({ state, setState }: TabMenuProps) {
           <div className="w-px h-5 bg-white/30 mx-2" />
           <StepToggleButtons state={state} setState={setState} />
         </div>
+
       </div>
     </div>
   );
