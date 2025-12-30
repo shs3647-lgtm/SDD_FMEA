@@ -39,6 +39,13 @@ import {
 import SpecialCharMasterModal from '@/components/modals/SpecialCharMasterModal';
 import SODMasterModal from '@/components/modals/SODMasterModal';
 import APTableModal from '@/components/modals/APTableModal';
+// 유틸리티 함수 import
+import { 
+  groupFailureLinksWithFunctionData,
+  groupByProcessName,
+  calculateLastRowMerge,
+  type FMGroup
+} from './utils';
 
 /**
  * FMEA 워크시트 메인 페이지 컨텐츠
@@ -2069,102 +2076,8 @@ function EvalTabRenderer({ tab, rows, state, l1Spans, l1TypeSpans, l1FuncSpans, 
 
   // 전체보기(all) 탭: 고장연결 결과 기반 40열 테이블
   if (tab === 'all' && failureLinks.length > 0) {
-    // ========== 0. 기능분석 데이터 조회용 맵 구축 (eval-function과 동일) ==========
-    // 1L: 요구사항 맵 (id -> { type, funcName, reqName })
-    const requirementMap = new Map<string, { typeName: string; funcName: string; reqName: string }>();
-    (state.l1?.types || []).forEach((type: any) => {
-      (type.functions || []).forEach((func: any) => {
-        (func.requirements || []).forEach((req: any) => {
-          requirementMap.set(req.id, { typeName: type.name, funcName: func.name, reqName: req.name });
-        });
-      });
-    });
-    
-    // 2L: 제품특성 맵 (processName -> { funcName, productChar })
-    const productCharMap = new Map<string, { processName: string; funcName: string; productCharName: string }[]>();
-    (state.l2 || []).forEach((proc: any) => {
-      const key = proc.name || '';
-      if (!productCharMap.has(key)) productCharMap.set(key, []);
-      (proc.functions || []).forEach((func: any) => {
-        (func.productChars || []).forEach((pc: any) => {
-          productCharMap.get(key)!.push({ processName: proc.name, funcName: func.name, productCharName: pc.name });
-        });
-      });
-    });
-    
-    // 3L: 공정특성 맵 (workElemName -> { funcName, processChar })
-    const processCharMap = new Map<string, { processName: string; workElemName: string; m4: string; funcName: string; processCharName: string }[]>();
-    (state.l2 || []).forEach((proc: any) => {
-      (proc.l3 || []).forEach((we: any) => {
-        const key = we.name || '';
-        if (!processCharMap.has(key)) processCharMap.set(key, []);
-        (we.functions || []).forEach((func: any) => {
-          (func.processChars || []).forEach((pc: any) => {
-            processCharMap.get(key)!.push({ processName: proc.name, workElemName: we.name, m4: we.m4 || '', funcName: func.name, processCharName: pc.name });
-          });
-        });
-      });
-    });
-    
-    // ========== 1. FM별 그룹핑 + 기능분석 데이터 조회 ==========
-    const fmGroups = new Map<string, { 
-      fmId: string; fmText: string; fmProcess: string;
-      fes: { id: string; no: string; scope: string; text: string; severity: number; funcData: { typeName: string; funcName: string; reqName: string } | null }[];
-      fcs: { id: string; no: string; process: string; m4: string; workElem: string; text: string; funcData: { processName: string; workElemName: string; m4: string; funcName: string; processCharName: string } | null }[];
-      l2FuncData: { processName: string; funcName: string; productCharName: string } | null;
-    }>();
-    
-    failureLinks.forEach((link: any) => {
-      // FM 그룹 생성
-      if (!fmGroups.has(link.fmId)) {
-        // 2L 제품특성 조회: fmProcess와 매칭
-        const procKey = (link.fmProcess || '').replace(/^\d+\s*/, '').trim();
-        const l2Funcs = productCharMap.get(procKey) || productCharMap.get(link.fmProcess || '') || [];
-        
-        fmGroups.set(link.fmId, { 
-          fmId: link.fmId, 
-          fmText: link.fmText || '', 
-          fmProcess: link.fmProcess || '',
-          fes: [], 
-          fcs: [],
-          l2FuncData: l2Funcs.length > 0 ? l2Funcs[0] : null
-        });
-      }
-      const group = fmGroups.get(link.fmId)!;
-      
-      // FE 레코드 (feId가 있으면 FE) + 기능분석 데이터 조회
-      if (link.feId && link.feId !== '' && !group.fes.some(f => f.id === link.feId)) {
-        // 1L 요구사항 조회: feId로 직접 조회하거나, failureScopes에서 reqId 찾기
-        const failureScope = (state.l1?.failureScopes || []).find((fs: any) => fs.id === link.feId) as any;
-        const reqData = failureScope?.reqId ? requirementMap.get(failureScope.reqId) : null;
-        
-        group.fes.push({ 
-          id: link.feId, 
-          no: link.feNo || '', 
-          scope: link.feScope || '', 
-          text: link.feText || '',  // 고장영향
-          severity: link.severity || 0,
-          funcData: reqData || null
-        });
-      }
-      
-      // FC 레코드 (fcId가 있으면 FC) + 기능분석 데이터 조회
-      if (link.fcId && link.fcId !== '' && !group.fcs.some(f => f.id === link.fcId)) {
-        // 3L 공정특성 조회: workElem으로 매칭
-        const weKey = link.fcWorkElem || '';
-        const l3Funcs = processCharMap.get(weKey) || [];
-        
-        group.fcs.push({ 
-          id: link.fcId, 
-          no: link.fcNo || '', 
-          process: link.fcProcess || '',  // FC 공정명
-          m4: link.fcM4 || '',             // 4M
-          workElem: link.fcWorkElem || '', // 작업요소
-          text: link.fcText || '',          // 고장원인
-          funcData: l3Funcs.length > 0 ? l3Funcs[0] : null
-        });
-      }
-    });
+    // ========== 1. FM별 그룹핑 + 기능분석 데이터 조회 (유틸리티 함수 사용) ==========
+    const fmGroups = groupFailureLinksWithFunctionData(failureLinks, state);
     
     // 디버깅 로그
     console.log('=== 전체보기 데이터 검증 ===');
@@ -2173,8 +2086,8 @@ function EvalTabRenderer({ tab, rows, state, l1Spans, l1TypeSpans, l1FuncSpans, 
       console.log(`FM[${k}]: "${g.fmText}" (${g.fmProcess}) - FE:${g.fes.length}, FC:${g.fcs.length}`);
     });
     
-    // ========== 2. 공정명별 그룹핑 (셀합치기용) ==========
-    const processGroups = new Map<string, { fmList: typeof fmGroups extends Map<string, infer V> ? V[] : never; startIdx: number }>();
+    // ========== 2. 공정명별 그룹핑 (셀합치기용, 유틸리티 함수 사용) ==========
+    const processGroups = groupByProcessName(fmGroups);
     const allRows: {
       processName: string;
       fmText: string;
@@ -2191,15 +2104,6 @@ function EvalTabRenderer({ tab, rows, state, l1Spans, l1TypeSpans, l1FuncSpans, 
       l2FuncData: { processName: string; funcName: string; productCharName: string } | null;
     }[] = [];
     
-    // 먼저 공정별 FM 목록 생성
-    Array.from(fmGroups.values()).forEach(group => {
-      const procName = group.fmProcess;
-      if (!processGroups.has(procName)) {
-        processGroups.set(procName, { fmList: [], startIdx: -1 });
-      }
-      processGroups.get(procName)!.fmList.push(group);
-    });
-    
     // 행 생성
     let globalIdx = 0;
     processGroups.forEach((pg, procName) => {
@@ -2212,38 +2116,19 @@ function EvalTabRenderer({ tab, rows, state, l1Spans, l1TypeSpans, l1FuncSpans, 
         const maxRows = Math.max(feCount, fcCount, 1);
         
         for (let i = 0; i < maxRows; i++) {
-          // FE 처리: 각 항목 1행, 마지막 항목은 남은 행 모두 차지
-          let showFe = false;
-          let feRowSpan = 0;
-          let fe: { no: string; scope: string; text: string; severity: number; funcData: { typeName: string; funcName: string; reqName: string } | null } | null = null;
+          // 마지막 행 병합 계산 (유틸리티 함수 사용)
+          const mergeConfig = calculateLastRowMerge(feCount, fcCount, i, maxRows);
           
-          if (i < feCount) {
-            showFe = true;
-            // 마지막 FE면 남은 행을 모두 차지
-            feRowSpan = (i === feCount - 1) ? (maxRows - i) : 1;
+          // FE 항목 추출
+          let fe: { no: string; scope: string; text: string; severity: number; funcData: { typeName: string; funcName: string; reqName: string } | null } | null = null;
+          if (mergeConfig.showFe && i < feCount) {
             fe = group.fes[i];
-          } else if (feCount === 0 && i === 0) {
-            // FE가 아예 없을 때 첫 번째 행에만 빈 FE 표시
-            showFe = true;
-            feRowSpan = maxRows;
-            fe = null;
           }
           
-          // FC 처리: 각 항목 1행, 마지막 항목은 남은 행 모두 차지
-          let showFc = false;
-          let fcRowSpan = 0;
+          // FC 항목 추출
           let fc: { no: string; process: string; m4: string; workElem: string; text: string; funcData: { processName: string; workElemName: string; m4: string; funcName: string; processCharName: string } | null } | null = null;
-          
-          if (i < fcCount) {
-            showFc = true;
-            // 마지막 FC면 남은 행을 모두 차지
-            fcRowSpan = (i === fcCount - 1) ? (maxRows - i) : 1;
+          if (mergeConfig.showFc && i < fcCount) {
             fc = group.fcs[i];
-          } else if (fcCount === 0 && i === 0) {
-            // FC가 아예 없을 때 첫 번째 행에만 빈 FC 표시
-            showFc = true;
-            fcRowSpan = maxRows;
-            fc = null;
           }
           
           allRows.push({
@@ -2254,12 +2139,12 @@ function EvalTabRenderer({ tab, rows, state, l1Spans, l1TypeSpans, l1FuncSpans, 
             showProcess: fmIdx === 0 && i === 0,
             processRowSpan: 0, // 나중에 계산
             fe: fe,
-            feRowSpan: feRowSpan,
-            showFe: showFe,
+            feRowSpan: mergeConfig.feRowSpan,
+            showFe: mergeConfig.showFe,
             fc: fc,
-            fcRowSpan: fcRowSpan,
-            showFc: showFc,
-            l2FuncData: group.l2FuncData,
+            fcRowSpan: mergeConfig.fcRowSpan,
+            showFc: mergeConfig.showFc,
+            l2FuncData: group.l2FuncData || null,
           });
           
           processRowCount++;

@@ -136,15 +136,19 @@ export const TAB_REGISTRY: TabDefinition[] = [
 
 #### 체크리스트
 
-- [ ] `utils/` 디렉토리 생성
-- [ ] `failure-link-grouping.ts` 작성 및 테스트
-- [ ] `row-merge-logic.ts` 작성 및 테스트
-- [ ] `process-grouping.ts` 작성 및 테스트
-- [ ] `reverse-generation.ts` 작성 (확장 고려)
-- [ ] `page.tsx`에서 유틸리티 함수 사용으로 교체
-- [ ] `FailureLinkTab.tsx`에서 유틸리티 함수 사용으로 교체
-- [ ] 수동 테스트: 전체보기 화면 정상 동작 확인
-- [ ] 수동 테스트: 고장연결 화면 정상 동작 확인
+- [x] `utils/` 디렉토리 생성
+- [x] `utils/types.ts` 작성 (타입 정의)
+- [x] `failure-link-grouping.ts` 작성 및 테스트
+- [x] `row-merge-logic.ts` 작성 및 테스트
+- [x] `process-grouping.ts` 작성 및 테스트
+- [ ] `reverse-generation.ts` 작성 (확장 고려) - 다음 단계로 연기
+- [x] `page.tsx`의 `all` 탭에서 유틸리티 함수 사용으로 교체 (~145줄 감소)
+- [x] `FailureLinkTab.tsx`에서 유틸리티 함수 사용으로 교체 (~55줄 감소)
+- [x] 빌드 성공 확인
+- [x] 타입 체크 통과
+- [x] 테스트 URL 제공: `http://localhost:3000/pfmea/worksheet`
+- [ ] 수동 테스트: 전체보기 화면 정상 동작 확인 (사용자 확인 필요)
+- [ ] 수동 테스트: 고장연결 화면 정상 동작 확인 (사용자 확인 필요)
 - [ ] 커밋: "refactor: Step 1 - 공통 유틸리티 함수 추출"
 
 ---
@@ -383,7 +387,7 @@ export const TAB_REGISTRY: TabDefinition[] = [
 | Step | 상태 | 시작일 | 완료일 | 소요 시간 | 비고 |
 |------|------|--------|--------|-----------|------|
 | Step 0 | ✅ 완료 | 2025-12-30 | 2025-12-30 | - | 준비 단계 |
-| Step 1 | ⏳ 진행 예정 | - | - | - | 공통 유틸리티 함수 추출 |
+| Step 1 | ✅ 완료 | 2025-12-30 | 2025-12-30 | 2시간 | 공통 유틸리티 함수 추출 (~200줄 감소) |
 | Step 2 | ⏸️ 대기 | - | - | - | 평가 탭 컴포넌트 분리 (Part 1) |
 | Step 3 | ⏸️ 대기 | - | - | - | all 탭 리팩토링 |
 | Step 4 | ⏸️ 대기 | - | - | - | FailureLinkTab 분리 |

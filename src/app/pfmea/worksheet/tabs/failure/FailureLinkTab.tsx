@@ -11,6 +11,11 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { FailureTabProps } from './types';
 import { uid } from '../../constants';
+// 유틸리티 함수 import
+import { 
+  groupFailureLinksByFM,
+  calculateLastRowMerge
+} from '../../utils';
 
 // 색상 정의
 const COLORS = {
@@ -993,22 +998,33 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
 
           {/* 연결결과 뷰 - 마지막 항목 확장 병합 방식 */}
           {viewMode === 'result' && (() => {
-            // FM별 그룹핑 (feId/fcId로 중복 체크)
+            // FM별 그룹핑 (유틸리티 함수 사용)
+            const fmGroupsMap = groupFailureLinksByFM(savedLinks);
+            // 유틸리티 함수의 반환 타입을 FailureLinkTab에서 사용하는 타입으로 변환
             const fmGroups = new Map<string, { fmId: string; fmText: string; fmProcess: string; fmNo: string; fes: { id: string; scope: string; text: string; severity: number; feNo: string }[]; fcs: { id: string; processName: string; m4: string; workElem: string; text: string; fcNo: string }[] }>();
-            savedLinks.forEach(link => {
-              if (!fmGroups.has(link.fmId)) {
-                const fm = fmData.find(f => f.id === link.fmId);
-                fmGroups.set(link.fmId, { fmId: link.fmId, fmText: link.fmText, fmProcess: link.fmProcess, fmNo: fm?.fmNo || '', fes: [], fcs: [] });
-              }
-              const group = fmGroups.get(link.fmId)!;
-              // feId로 중복 체크 (같은 텍스트라도 다른 ID면 추가)
-              if (link.feId && !group.fes.some(f => f.id === link.feId)) {
-                group.fes.push({ id: link.feId, scope: link.feScope, text: link.feText, severity: link.severity, feNo: link.feNo });
-              }
-              // fcId로 중복 체크 (같은 텍스트라도 다른 ID면 추가)
-              if (link.fcId && !group.fcs.some(f => f.id === link.fcId)) {
-                group.fcs.push({ id: link.fcId, processName: link.fcProcess, m4: link.fcM4, workElem: link.fcWorkElem, text: link.fcText, fcNo: link.fcNo });
-              }
+            fmGroupsMap.forEach((group, fmId) => {
+              const fm = fmData.find(f => f.id === fmId);
+              fmGroups.set(fmId, {
+                fmId: group.fmId,
+                fmText: group.fmText,
+                fmProcess: group.fmProcess,
+                fmNo: fm?.fmNo || group.fmNo || '',
+                fes: group.fes.map(fe => ({
+                  id: fe.id,
+                  scope: fe.scope,
+                  text: fe.text,
+                  severity: fe.severity,
+                  feNo: fe.no
+                })),
+                fcs: group.fcs.map(fc => ({
+                  id: fc.id,
+                  processName: fc.process,
+                  m4: fc.m4,
+                  workElem: fc.workElem,
+                  text: fc.text,
+                  fcNo: fc.no
+                }))
+              });
             });
             const groups = Array.from(fmGroups.values());
 
@@ -1026,39 +1042,25 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
               const totalRows = Math.max(feCount, fcCount, 1);
               
               for (let rowIdx = 0; rowIdx < totalRows; rowIdx++) {
-                // FE 처리: 각 항목 1행, 마지막 항목은 남은 행 모두 차지
-                let showFe = false;
-                let feRowSpan = 0;
+                // 마지막 행 병합 계산 (유틸리티 함수 사용)
+                const mergeConfig = calculateLastRowMerge(feCount, fcCount, rowIdx, totalRows);
+                
+                // FE 항목 추출
                 let feItem: { id: string; scope: string; text: string; severity: number; feNo: string } | undefined = undefined;
-                
-                if (rowIdx < feCount) {
-                  showFe = true;
-                  // 마지막 FE면 남은 행을 모두 차지
-                  feRowSpan = (rowIdx === feCount - 1) ? (totalRows - rowIdx) : 1;
+                if (mergeConfig.showFe && rowIdx < feCount) {
                   feItem = group.fes[rowIdx];
-                } else if (feCount === 0 && rowIdx === 0) {
-                  // FE가 아예 없을 때 첫 번째 행에만 빈 FE 표시
-                  showFe = true;
-                  feRowSpan = totalRows;
-                  feItem = undefined;
                 }
                 
-                // FC 처리: 각 항목 1행, 마지막 항목은 남은 행 모두 차지
-                let showFc = false;
-                let fcRowSpan = 0;
+                // FC 항목 추출
                 let fcItem: { id: string; processName: string; m4: string; workElem: string; text: string; fcNo: string } | undefined = undefined;
-                
-                if (rowIdx < fcCount) {
-                  showFc = true;
-                  // 마지막 FC면 남은 행을 모두 차지
-                  fcRowSpan = (rowIdx === fcCount - 1) ? (totalRows - rowIdx) : 1;
+                if (mergeConfig.showFc && rowIdx < fcCount) {
                   fcItem = group.fcs[rowIdx];
-                } else if (fcCount === 0 && rowIdx === 0) {
-                  // FC가 아예 없을 때 첫 번째 행에만 빈 FC 표시
-                  showFc = true;
-                  fcRowSpan = totalRows;
-                  fcItem = undefined;
                 }
+                
+                const showFe = mergeConfig.showFe;
+                const feRowSpan = mergeConfig.feRowSpan;
+                const showFc = mergeConfig.showFc;
+                const fcRowSpan = mergeConfig.fcRowSpan;
                 
                 renderRows.push({
                   fmId: group.fmId,
