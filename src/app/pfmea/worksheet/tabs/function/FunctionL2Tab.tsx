@@ -24,9 +24,9 @@ function SpecialCharBadge({ value, onClick }: { value: string; onClick: () => vo
         style={{
           padding: '4px',
           cursor: 'pointer',
-          fontSize: '10px',
+          fontSize: FONT_SIZES.cell,
           color: '#9e9e9e',
-          fontWeight: 600,
+          fontWeight: FONT_WEIGHTS.semibold,
           background: '#f5f5f5',
           height: '100%',
           display: 'flex',
@@ -61,8 +61,8 @@ function SpecialCharBadge({ value, onClick }: { value: string; onClick: () => vo
           color: 'white',
           padding: '2px 6px',
           borderRadius: '3px',
-          fontSize: '10px',
-          fontWeight: 700,
+          fontSize: FONT_SIZES.cell,
+          fontWeight: FONT_WEIGHTS.semibold,
           display: 'inline-flex',
           alignItems: 'center',
           gap: '2px',
@@ -71,7 +71,7 @@ function SpecialCharBadge({ value, onClick }: { value: string; onClick: () => vo
         }}
         title={charData?.meaning || value}
       >
-        {icon && <span style={{ fontSize: '9px' }}>{icon}</span>}
+        {icon && <span style={{ fontSize: FONT_SIZES.small }}>{icon}</span>}
         {value}
       </span>
     </div>
@@ -338,34 +338,34 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
         <thead>
           {/* 1행: 단계 구분 */}
           <tr>
-            <th style={{ background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
+            <th style={{ background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: FONT_SIZES.header1, fontWeight: 800, textAlign: 'center' }}>
               2단계 구조분석
             </th>
-            <th colSpan={3} style={{ background: '#2e7d32', color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
+            <th colSpan={3} style={{ background: '#2e7d32', color: 'white', border: `1px solid ${COLORS.line}`, padding: '8px', fontSize: FONT_SIZES.header1, fontWeight: 800, textAlign: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
                 <span>3단계 : 2L 메인공정 기능분석</span>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   {isConfirmed ? (
-                    <span style={{ background: '#4caf50', color: 'white', padding: '3px 10px', borderRadius: '3px', fontSize: '11px', fontWeight: 700 }}>
+                    <span style={{ background: '#4caf50', color: 'white', padding: '3px 10px', borderRadius: '3px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold }}>
                       ✓ 확정됨
                     </span>
                   ) : (
                     <button
                       type="button"
                       onClick={handleConfirm}
-                      style={{ background: '#4caf50', color: 'white', border: 'none', padding: '3px 10px', borderRadius: '3px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                      style={{ background: '#4caf50', color: 'white', border: 'none', padding: '3px 10px', borderRadius: '3px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, cursor: 'pointer' }}
                     >
                       확정
                     </button>
                   )}
-                  <span style={{ background: missingCount > 0 ? '#f44336' : '#4caf50', color: 'white', padding: '3px 10px', borderRadius: '3px', fontSize: '11px', fontWeight: 700 }}>
+                  <span style={{ background: missingCount > 0 ? '#f44336' : '#4caf50', color: 'white', padding: '3px 10px', borderRadius: '3px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold }}>
                     누락 {missingCount}건
                   </span>
                   {isConfirmed && (
                     <button
                       type="button"
                       onClick={handleEdit}
-                      style={{ background: '#ff9800', color: 'white', border: 'none', padding: '3px 10px', borderRadius: '3px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                      style={{ background: '#ff9800', color: 'white', border: 'none', padding: '3px 10px', borderRadius: '3px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, cursor: 'pointer' }}
                     >
                       수정
                     </button>
@@ -377,13 +377,13 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
           
           {/* 2행: 항목 그룹 */}
           <tr>
-            <th style={{ background: '#42a5f5', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
+            <th style={{ background: '#42a5f5', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center' }}>
               2. 메인공정명
             </th>
-            <th colSpan={3} style={{ background: '#7c4dff', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
+            <th colSpan={3} style={{ background: '#7c4dff', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center' }}>
               2. 메인공정 기능/제품특성
               {missingCount > 0 && (
-                <span style={{ marginLeft: '8px', background: '#f44336', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '10px' }}>
+                <span style={{ marginLeft: '8px', background: '#f44336', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: FONT_SIZES.cell }}>
                   누락 {missingCount}건
                 </span>
               )}
@@ -392,26 +392,26 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
           
           {/* 3행: 세부 컬럼 */}
           <tr style={{ background: '#e3f2fd' }}>
-            <th style={{ background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
+            <th style={{ background: '#bbdefb', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold }}>
               공정NO+공정명
             </th>
-            <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
+            <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold }}>
               메인공정기능
               {missingCounts.functionCount > 0 && (
-                <span style={{ marginLeft: '4px', background: '#f44336', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: '9px' }}>
+                <span style={{ marginLeft: '4px', background: '#f44336', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: FONT_SIZES.small }}>
                   {missingCounts.functionCount}
                 </span>
               )}
             </th>
-            <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
+            <th style={{ background: '#a5d6a7', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold }}>
               제품특성
               {missingCounts.charCount > 0 && (
-                <span style={{ marginLeft: '4px', background: '#f44336', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: '9px' }}>
+                <span style={{ marginLeft: '4px', background: '#f44336', color: 'white', padding: '1px 5px', borderRadius: '8px', fontSize: FONT_SIZES.small }}>
                   {missingCounts.charCount}
                 </span>
               )}
             </th>
-            <th style={{ background: '#ffcdd2', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '10px', fontWeight: 700 }}>
+            <th style={{ background: '#ffcdd2', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold }}>
               특별특성
             </th>
           </tr>
@@ -420,7 +420,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
         <tbody>
           {state.l2.length === 0 ? (
             <tr>
-              <td style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700 }}>
+              <td style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: FONT_WEIGHTS.semibold }}>
                 (구조분석에서 공정 추가)
               </td>
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
@@ -429,7 +429,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
                 <SelectableCell value="" placeholder="제품특성 선택" bgColor="#c8e6c9" onClick={() => {}} />
               </td>
-              <td style={{ border: `1px solid ${COLORS.line}`, padding: '4px', textAlign: 'center', background: '#ffebee', color: '#999', fontSize: '10px' }}>
+              <td style={{ border: `1px solid ${COLORS.line}`, padding: '4px', textAlign: 'center', background: '#ffebee', color: '#999', fontSize: FONT_SIZES.cell }}>
                 -
               </td>
             </tr>
@@ -441,7 +441,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
             if (funcs.length === 0) {
               return (
                 <tr key={proc.id}>
-                  <td rowSpan={procRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700, verticalAlign: 'middle' }}>
+                  <td rowSpan={procRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' }}>
                     {proc.no}. {proc.name}
                   </td>
                   <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
@@ -450,7 +450,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                   <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
                     <SelectableCell value="" placeholder="제품특성 선택" bgColor="#c8e6c9" onClick={() => {}} />
                   </td>
-                  <td style={{ border: `1px solid ${COLORS.line}`, padding: '4px', textAlign: 'center', background: '#ffebee', color: '#999', fontSize: '10px' }}>
+                  <td style={{ border: `1px solid ${COLORS.line}`, padding: '4px', textAlign: 'center', background: '#ffebee', color: '#999', fontSize: FONT_SIZES.cell }}>
                     -
                   </td>
                 </tr>
@@ -467,7 +467,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                 return (
                   <tr key={f.id}>
                     {fIdx === 0 && (
-                      <td rowSpan={procRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700, verticalAlign: 'middle' }}>
+                      <td rowSpan={procRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' }}>
                         {proc.no}. {proc.name}
                       </td>
                     )}
@@ -483,7 +483,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                     <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
                       <SelectableCell value="" placeholder="제품특성 선택" bgColor="#fff" onClick={() => setModal({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, title: '제품특성 선택', itemCode: 'A4' })} />
                     </td>
-                    <td style={{ border: `1px solid ${COLORS.line}`, padding: '4px', textAlign: 'center', background: '#ffebee', color: '#999', fontSize: '10px' }}>
+                    <td style={{ border: `1px solid ${COLORS.line}`, padding: '4px', textAlign: 'center', background: '#ffebee', color: '#999', fontSize: FONT_SIZES.cell }}>
                       -
                     </td>
                   </tr>
@@ -494,7 +494,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
               return chars.map((c, cIdx) => (
                 <tr key={c.id}>
                   {fIdx === 0 && cIdx === 0 && (
-                    <td rowSpan={procRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700, verticalAlign: 'middle' }}>
+                    <td rowSpan={procRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' }}>
                       {proc.no}. {proc.name}
                     </td>
                   )}

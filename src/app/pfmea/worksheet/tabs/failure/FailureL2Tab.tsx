@@ -215,13 +215,13 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
           
           {/* 2행: 항목 그룹 */}
           <tr>
-            <th style={{ background: '#42a5f5', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
+            <th style={{ background: '#42a5f5', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center' }}>
               2. 메인 공정명
             </th>
-            <th colSpan={2} style={{ background: '#66bb6a', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
+            <th colSpan={2} style={{ background: '#66bb6a', color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center' }}>
               2. 메인공정기능 및 제품특성
             </th>
-            <th style={{ background: FAIL_COLORS.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
+            <th style={{ background: FAIL_COLORS.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center' }}>
               2. 메인공정 고장형태(FM)
               {missingCount > 0 && (
                 <span style={{ marginLeft: '8px', background: '#fff', color: '#c62828', padding: '2px 8px', borderRadius: '10px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>
@@ -256,7 +256,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
         <tbody>
           {processes.length === 0 ? (
             <tr>
-              <td style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700 }}>
+              <td style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: FONT_WEIGHTS.semibold }}>
                 (구조분석에서 공정 입력)
               </td>
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#c8e6c9' }}>
@@ -319,23 +319,23 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
               return (
                 <tr key={`${proc.id}-${rowIdx}`}>
                   {rowIdx === 0 && (
-                    <td rowSpan={totalRows} style={{ border: `1px solid ${COLORS.line}`, padding: '8px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700, verticalAlign: 'middle' }}>
+                    <td rowSpan={totalRows} style={{ border: `1px solid ${COLORS.line}`, padding: '8px', textAlign: 'center', background: '#e3f2fd', fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' }}>
                       {proc.no}. {proc.name}
                     </td>
                   )}
                   {/* 메인공정기능 */}
                   {funcInfo?.showFunc && (
-                    <td rowSpan={funcInfo.funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '8px', textAlign: 'left', background: '#c8e6c9', fontSize: '11px', verticalAlign: 'middle' }}>
+                    <td rowSpan={funcInfo.funcRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '8px', textAlign: 'left', background: '#c8e6c9', fontSize: FONT_SIZES.header1, verticalAlign: 'middle' }}>
                       {funcInfo.funcName || '(기능분석에서 입력)'}
                     </td>
                   )}
                   {!funcInfo && rowIdx === 0 && (
-                    <td rowSpan={totalRows} style={{ border: `1px solid ${COLORS.line}`, padding: '8px', textAlign: 'center', background: '#c8e6c9', fontSize: '11px', verticalAlign: 'middle' }}>
+                    <td rowSpan={totalRows} style={{ border: `1px solid ${COLORS.line}`, padding: '8px', textAlign: 'center', background: '#c8e6c9', fontSize: FONT_SIZES.header1, verticalAlign: 'middle' }}>
                       (기능분석에서 입력)
                     </td>
                   )}
                   {/* 제품특성 */}
-                  <td style={{ border: `1px solid ${COLORS.line}`, padding: '8px', textAlign: 'center', background: '#c8e6c9', fontSize: '11px', verticalAlign: 'middle' }}>
+                  <td style={{ border: `1px solid ${COLORS.line}`, padding: '8px', textAlign: 'center', background: '#c8e6c9', fontSize: FONT_SIZES.header1, verticalAlign: 'middle' }}>
                     {productChar?.charName || (rowIdx < allProductChars.length ? '' : '')}
                   </td>
                   {/* 고장형태 */}

@@ -289,7 +289,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
               style={{ 
                 background: '#1976d2', color: 'white', 
                 border: `1px solid ${COLORS.line}`, padding: '8px', 
-                fontSize: '12px', fontWeight: 800, textAlign: 'center'
+                fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center'
               }}
             >
               2단계 구조분석
@@ -299,7 +299,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
               style={{ 
                 background: '#1b5e20', color: 'white', 
                 border: `1px solid ${COLORS.line}`, padding: '8px', 
-                fontSize: '12px', fontWeight: 800, textAlign: 'center',
+                fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center',
                 position: 'relative'
               }}
             >
@@ -316,8 +316,8 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                       color: 'white',
                       border: 'none',
                       borderRadius: '4px',
-                      fontSize: '11px',
-                      fontWeight: 700,
+                      fontSize: FONT_SIZES.header1,
+                      fontWeight: FONT_WEIGHTS.semibold,
                       cursor: isConfirmed ? 'not-allowed' : 'pointer',
                       opacity: isConfirmed ? 0.7 : 1
                     }}
@@ -329,8 +329,8 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                     background: missingCount > 0 ? '#f44336' : '#4caf50',
                     color: 'white',
                     borderRadius: '4px',
-                    fontSize: '11px',
-                    fontWeight: 700
+                    fontSize: FONT_SIZES.header1,
+                    fontWeight: FONT_WEIGHTS.semibold
                   }}>
                     누락 {missingCount}건
                   </span>
@@ -344,8 +344,8 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                       color: 'white',
                       border: 'none',
                       borderRadius: '4px',
-                      fontSize: '11px',
-                      fontWeight: 700,
+                      fontSize: FONT_SIZES.header1,
+                      fontWeight: FONT_WEIGHTS.semibold,
                       cursor: !isConfirmed ? 'not-allowed' : 'pointer',
                       opacity: !isConfirmed ? 0.7 : 1
                     }}
@@ -363,7 +363,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
               style={{ 
                 background: '#42a5f5', color: 'white', 
                 border: `1px solid ${COLORS.line}`, padding: '6px', 
-                fontSize: '11px', fontWeight: 700, textAlign: 'center'
+                fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center'
               }}
             >
               1. 완제품 공정명
@@ -373,7 +373,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
               style={{ 
                 background: '#2e7d32', color: 'white', 
                 border: `1px solid ${COLORS.line}`, padding: '6px', 
-                fontSize: '11px', fontWeight: 700, textAlign: 'center'
+                fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center'
               }}
             >
               1. 완제품 공정기능/요구사항
@@ -415,7 +415,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
         <tbody>
           {state.l1.types.length === 0 ? (
             <tr>
-              <td style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700 }}>
+              <td style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: FONT_WEIGHTS.semibold }}>
                 {state.l1.name || '(구조분석에서 입력)'}
               </td>
               <td style={{ border: `1px solid ${COLORS.line}`, padding: '0' }}>
@@ -435,7 +435,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
             return t.functions.length === 0 ? (
               <tr key={t.id}>
                 {/* 완제품 공정명 - 각 구분과 1:1 매칭 */}
-                <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700, verticalAlign: 'middle' }}>
+                <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' }}>
                   {state.l1.name || '(구조분석에서 입력)'}
                 </td>
                 <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '0', background: getTypeColor(t.name).light, verticalAlign: 'middle' }}>
@@ -455,7 +455,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                 <tr key={f.id}>
                   {/* 완제품 공정명 - 각 구분의 첫 행에서만 표시 (1:1 매칭) */}
                   {fIdx === 0 && (
-                    <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700, verticalAlign: 'middle' }}>
+                    <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' }}>
                       {state.l1.name || '(구조분석에서 입력)'}
                     </td>
                   )}
@@ -475,7 +475,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                 <tr key={r.id}>
                   {/* 완제품 공정명 - 각 구분의 첫 행에서만 표시 (1:1 매칭) */}
                   {fIdx === 0 && rIdx === 0 && (
-                    <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: 700, verticalAlign: 'middle' }}>
+                    <td rowSpan={typeRowSpan} style={{ border: `1px solid ${COLORS.line}`, padding: '10px', textAlign: 'center', background: '#e3f2fd', fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' }}>
                       {state.l1.name || '(구조분석에서 입력)'}
                     </td>
                   )}

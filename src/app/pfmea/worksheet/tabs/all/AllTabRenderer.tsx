@@ -155,13 +155,13 @@ export default function AllTabRenderer({
       <div style={{ width: '100%' }}>
         {/* 전체보기 헤더 */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#1565c0', color: '#fff', marginBottom: '4px' }}>
-          <div style={{ fontWeight: 900, fontSize: '12px' }}>
+          <div style={{ fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.header1 }}>
             📊 P-FMEA 전체보기 (FM:{totalFM} FE:{totalFE} FC:{totalFC}) - 총 {allRows.length}행
           </div>
           <button
             onClick={handleExportExcel}
             style={{
-              padding: '6px 14px', fontSize: FONT_SIZES.header1, fontWeight: 700,
+              padding: '6px 14px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold,
               background: '#4caf50', color: '#fff', border: 'none',
               borderRadius: '4px', cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: '6px'
@@ -175,11 +175,11 @@ export default function AllTabRenderer({
           <thead style={stickyTheadStyle}>
             {/* 1행: 단계 대분류 */}
             <tr>
-              <th colSpan={4} style={{ background: '#1565c0', color: '#fff', border: BORDER, padding: '4px', fontWeight: 900, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 구조분석(2단계)</th>
-              <th colSpan={8} style={{ background: '#1b5e20', color: '#fff', border: BORDER, padding: '4px', fontWeight: 900, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 기능분석(3단계)</th>
-              <th colSpan={6} style={{ background: '#c62828', color: '#fff', border: BORDER, padding: '4px', fontWeight: 900, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 고장분석(4단계)</th>
-              <th colSpan={8} style={{ background: '#6a1b9a', color: '#fff', border: BORDER, padding: '4px', fontWeight: 900, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 리스크분석(5단계)</th>
-              <th colSpan={14} style={{ background: '#e65100', color: '#fff', border: BORDER, padding: '4px', fontWeight: 900, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 최적화(6단계)</th>
+              <th colSpan={4} style={{ background: '#1565c0', color: '#fff', border: BORDER, padding: '4px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 구조분석(2단계)</th>
+              <th colSpan={8} style={{ background: '#1b5e20', color: '#fff', border: BORDER, padding: '4px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 기능분석(3단계)</th>
+              <th colSpan={6} style={{ background: '#c62828', color: '#fff', border: BORDER, padding: '4px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 고장분석(4단계)</th>
+              <th colSpan={8} style={{ background: '#6a1b9a', color: '#fff', border: BORDER, padding: '4px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 리스크분석(5단계)</th>
+              <th colSpan={14} style={{ background: '#e65100', color: '#fff', border: BORDER, padding: '4px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 최적화(6단계)</th>
             </tr>
             {/* 2행: 서브그룹 */}
             <tr>
@@ -257,7 +257,7 @@ export default function AllTabRenderer({
                 <tr key={`all-${idx}`} style={{ borderTop: row.showFm ? '2px solid #666' : undefined }}>
                   {/* ===== 구조분석 4열 ===== */}
                   {/* 1. 완제품 공정명: 전체 병합 */}
-                  {idx === 0 && <td rowSpan={allRows.length} style={{ ...cellStyle, background: '#e3f2fd', fontWeight: 700, textAlign: 'center' }}>{state.l1?.name || ''}</td>}
+                  {idx === 0 && <td rowSpan={allRows.length} style={{ ...cellStyle, background: '#e3f2fd', fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center' }}>{state.l1?.name || ''}</td>}
                   {/* 2. 메인공정명: 공정별 병합 */}
                   {row.showProcess && row.processRowSpan > 0 && <td rowSpan={row.processRowSpan} style={{ ...cellStyle, background: '#e3f2fd' }}>{row.processName}</td>}
                   {/* 3. 4M: FC별 - 마지막 행 병합 */}
@@ -289,9 +289,9 @@ export default function AllTabRenderer({
                   {/* 2. 고장영향: FE text - 마지막 행 병합 */}
                   {row.showFe && <td rowSpan={row.feRowSpan} style={{ ...cellStyle, background: '#fffde7' }}>{row.fe?.text || ''}</td>}
                   {/* 3. 심각도: FE severity - 마지막 행 병합 */}
-                  {row.showFe && <td rowSpan={row.feRowSpan} style={{ ...cellStyle, background: '#fffde7', textAlign: 'center', fontWeight: 700, color: (row.fe?.severity || 0) >= 8 ? '#c62828' : '#333' }}>{row.fe?.severity || ''}</td>}
+                  {row.showFe && <td rowSpan={row.feRowSpan} style={{ ...cellStyle, background: '#fffde7', textAlign: 'center', fontWeight: FONT_WEIGHTS.semibold, color: (row.fe?.severity || 0) >= 8 ? '#c62828' : '#333' }}>{row.fe?.severity || ''}</td>}
                   {/* 4. 고장형태: FM text - FM 병합 */}
-                  {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#fff8e1', textAlign: 'center', fontWeight: 700 }}>{row.fmText}</td>}
+                  {row.showFm && <td rowSpan={row.fmRowSpan} style={{ ...cellStyle, background: '#fff8e1', textAlign: 'center', fontWeight: FONT_WEIGHTS.semibold }}>{row.fmText}</td>}
                   {/* 5. 작업요소: FC workElem - 마지막 행 병합 */}
                   {row.showFc && <td rowSpan={row.fcRowSpan} style={{ ...cellStyle, background: '#fffde7' }}>{row.fc?.workElem || ''}</td>}
                   {/* 6. 고장원인: FC text - 마지막 행 병합 */}
@@ -349,11 +349,11 @@ export default function AllTabRenderer({
       <thead style={stickyTheadStyle}>
         {/* 1행: 단계 대분류 */}
         <tr>
-          {visibleSteps.includes(2) && <th colSpan={4} style={{ background: COLORS.structure.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 구조 분석(2단계)</th>}
-          {visibleSteps.includes(3) && <th colSpan={8} style={{ background: COLORS.function.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 기능 분석(3단계)</th>}
-          {visibleSteps.includes(4) && <th colSpan={6} style={{ background: COLORS.failure.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 고장 분석(4단계)</th>}
-          {visibleSteps.includes(5) && <th colSpan={8} style={{ background: COLORS.risk.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 리스크 분석(5단계)</th>}
-          {visibleSteps.includes(6) && <th colSpan={14} style={{ background: COLORS.opt.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: 900, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 최적화(6단계)</th>}
+          {visibleSteps.includes(2) && <th colSpan={4} style={{ background: COLORS.structure.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 구조 분석(2단계)</th>}
+          {visibleSteps.includes(3) && <th colSpan={8} style={{ background: COLORS.function.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 기능 분석(3단계)</th>}
+          {visibleSteps.includes(4) && <th colSpan={6} style={{ background: COLORS.failure.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 고장 분석(4단계)</th>}
+          {visibleSteps.includes(5) && <th colSpan={8} style={{ background: COLORS.risk.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 리스크 분석(5단계)</th>}
+          {visibleSteps.includes(6) && <th colSpan={14} style={{ background: COLORS.opt.main, color: '#fff', border: BORDER, padding: '4px', height: '24px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.cell, textAlign: 'center' }}>P-FMEA 최적화(6단계)</th>}
         </tr>
         {/* 2행: 서브그룹 */}
         <tr>
@@ -374,7 +374,7 @@ export default function AllTabRenderer({
       </thead>
       <tbody>
         {rows.length === 0 ? (
-          <tr><td colSpan={totalCols} style={{ textAlign: 'center', padding: '40px', color: '#999', fontSize: '12px' }}>데이터가 없습니다.</td></tr>
+          <tr><td colSpan={totalCols} style={{ textAlign: 'center', padding: '40px', color: '#999', fontSize: FONT_SIZES.header1 }}>데이터가 없습니다.</td></tr>
         ) : rows.map((row, idx) => {
           const cellStyle = { border: BORDER, padding: '2px 3px', fontSize: FONT_SIZES.small, background: '#fff' };
           return (

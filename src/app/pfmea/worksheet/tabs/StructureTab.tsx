@@ -34,7 +34,7 @@ function M4Cell({ value }: { value: string }) {
 
   return (
     <td style={m4CellStyle}>
-      {value || <span style={{ color: '#c62828', fontWeight: 600 }}>-</span>}
+      {value || <span style={{ color: '#c62828', fontWeight: FONT_WEIGHTS.semibold }}>-</span>}
     </td>
   );
 }
@@ -124,7 +124,7 @@ function EditableL3Cell({
       onDoubleClick={handleDoubleClick}
       title={isPlaceholder ? '클릭: 작업요소 추가' : '클릭: 모달 | 더블클릭: 텍스트 수정'}
     >
-      {isPlaceholder ? <span style={{ color: '#c62828', fontWeight: 700 }}>🔍 클릭</span> : <span style={{ fontWeight: 400 }}>{value}</span>}
+      {isPlaceholder ? <span style={{ color: '#c62828', fontWeight: FONT_WEIGHTS.semibold }}>🔍 클릭</span> : <span style={{ fontWeight: 400 }}>{value}</span>}
     </td>
   );
 }
@@ -146,7 +146,7 @@ export function StructureHeader({ onProcessModalOpen, missingCounts }: { onProce
         <th style={{ width: '30%', background: '#1976d2', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: HEIGHTS.header, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center', fontSize: FONT_SIZES.header1 }}>
           1. 완제품 공정명
           {missingCounts && missingCounts.l1Count > 0 && (
-            <span style={{ marginLeft: '6px', background: '#fff', color: '#c62828', padding: '1px 6px', borderRadius: '8px', fontSize: '9px', fontWeight: 700 }}>
+            <span style={{ marginLeft: '6px', background: '#fff', color: '#c62828', padding: '1px 6px', borderRadius: '8px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>
               {missingCounts.l1Count}
             </span>
           )}
@@ -154,7 +154,7 @@ export function StructureHeader({ onProcessModalOpen, missingCounts }: { onProce
         <th onClick={onProcessModalOpen} className="cursor-pointer hover:bg-green-600" style={{ width: '30%', background: '#388e3c', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: HEIGHTS.header, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center', fontSize: FONT_SIZES.header1 }}>
           2. 메인 공정명 🔍
           {missingCounts && missingCounts.l2Count > 0 && (
-            <span style={{ marginLeft: '6px', background: '#fff', color: '#c62828', padding: '1px 6px', borderRadius: '8px', fontSize: '9px', fontWeight: 700 }}>
+            <span style={{ marginLeft: '6px', background: '#fff', color: '#c62828', padding: '1px 6px', borderRadius: '8px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>
               {missingCounts.l2Count}
             </span>
           )}
@@ -162,7 +162,7 @@ export function StructureHeader({ onProcessModalOpen, missingCounts }: { onProce
         <th colSpan={2} style={{ background: '#f57c00', color: 'white', border: `1px solid ${COLORS.line}`, padding: '1px 4px', height: HEIGHTS.header, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center', fontSize: FONT_SIZES.header1 }}>
           3. 작업 요소명
           {missingCounts && missingCounts.l3Count > 0 && (
-            <span style={{ marginLeft: '6px', background: '#fff', color: '#c62828', padding: '1px 6px', borderRadius: '8px', fontSize: '9px', fontWeight: 700 }}>
+            <span style={{ marginLeft: '6px', background: '#fff', color: '#c62828', padding: '1px 6px', borderRadius: '8px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>
               {missingCounts.l3Count}
             </span>
           )}
@@ -214,7 +214,7 @@ export function StructureRow({
           }}
           onClick={() => { handleSelect('L2', row.l2Id); setIsProcessModalOpen(true); }}
         >
-          {row.l2Name.includes('클릭') ? <span style={{ color: '#c62828', fontWeight: 700 }}>🔍 클릭하여 공정 선택</span> : <span style={{ fontWeight: 600 }}>{row.l2No} {row.l2Name} 🔍</span>}
+          {row.l2Name.includes('클릭') ? <span style={{ color: '#c62828', fontWeight: FONT_WEIGHTS.semibold }}>🔍 클릭하여 공정 선택</span> : <span style={{ fontWeight: FONT_WEIGHTS.semibold }}>{row.l2No} {row.l2Name} 🔍</span>}
         </td>
       )}
       <M4Cell value={row.m4} />
@@ -278,7 +278,7 @@ export default function StructureTab(props: StructureTabProps) {
       </thead>
       <tbody>
         {rows.map((row, idx) => (
-          <tr key={row.l3Id} style={{ height: '25px' }}>
+          <tr key={row.l3Id} style={{ height: HEIGHTS.header }}>
             <StructureRow {...props} row={row} idx={idx} />
           </tr>
         ))}

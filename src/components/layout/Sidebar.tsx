@@ -216,7 +216,7 @@ export function Sidebar() {
               }
             }}
             className={cn(
-              'flex items-center gap-2 px-2 py-1.5 mx-0.5 rounded',
+              'flex items-center gap-2 px-2 py-2 mx-0.5 rounded',
               'transition-all duration-200',
               active && 'bg-white/10 shadow-lg',
               !active && 'hover:bg-white/5'
@@ -227,13 +227,14 @@ export function Sidebar() {
               <Icon className="w-5 h-5" />
             </div>
             
-            {/* 레이블 - 컴팩트 */}
+            {/* 레이블 - 표준화 12px */}
             <span
               className={cn(
-                'whitespace-nowrap text-xs font-medium text-white/90',
+                'whitespace-nowrap text-xs font-semibold text-white/90',
                 'transition-all duration-200',
                 isHovered ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'
               )}
+              style={{ fontSize: '12px' }}
             >
               {item.label}
             </span>
@@ -254,7 +255,7 @@ export function Sidebar() {
             )}
           </Link>
 
-          {/* 서브메뉴 - 컴팩트 */}
+          {/* 서브메뉴 - 표준화 11px */}
           {hasSubItems && isExpanded && (
             <div className="ml-7 mt-0.5 space-y-0">
               {item.subItems?.map((subItem) => (
@@ -262,12 +263,13 @@ export function Sidebar() {
                   key={subItem.href}
                   href={subItem.href}
                   className={cn(
-                    'block px-2 py-1 text-[10px] rounded',
+                    'block px-2 py-1.5 rounded',
                     'transition-colors duration-200',
                     isActive(subItem.href) 
-                      ? 'text-cyan-300 bg-cyan-500/20' 
+                      ? 'text-cyan-300 bg-cyan-500/20 font-semibold' 
                       : 'text-white/60 hover:text-white hover:bg-white/5'
                   )}
+                  style={{ fontSize: '11px' }}
                 >
                   {subItem.label}
                 </Link>

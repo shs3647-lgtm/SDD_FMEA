@@ -379,7 +379,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
       {/* 안내 메시지 */}
       {requirementsFromFunction.length === 0 && (
         <div style={{ padding: '20px', background: '#fff3e0', borderBottom: `1px solid ${COLORS.line}`, textAlign: 'center' }}>
-          <span style={{ fontSize: '12px', color: '#e65100', fontWeight: 600 }}>
+          <span style={{ fontSize: FONT_SIZES.header1, color: '#e65100', fontWeight: FONT_WEIGHTS.semibold }}>
             ⚠️ 기능분석(L1)에서 요구사항을 먼저 입력해주세요. 입력된 요구사항이 여기에 자동으로 표시됩니다.
           </span>
         </div>
@@ -391,24 +391,24 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
         {/* 3행 헤더 구조 */}
         <thead>
           <tr>
-            <th style={{ background: STEP_COLORS.structure.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '4px 6px', fontSize: '11px', fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
+            <th style={{ background: STEP_COLORS.structure.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '4px 6px', fontSize: FONT_SIZES.header1, fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
               구조분석(2단계)
             </th>
-            <th colSpan={3} style={{ background: STEP_COLORS.function.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '4px 6px', fontSize: '11px', fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
+            <th colSpan={3} style={{ background: STEP_COLORS.function.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '4px 6px', fontSize: FONT_SIZES.header1, fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
               기능분석(3단계)
             </th>
-            <th colSpan={2} style={{ background: STEP_COLORS.failure.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '4px 6px', fontSize: '11px', fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
+            <th colSpan={2} style={{ background: STEP_COLORS.failure.header1, color: 'white', border: `1px solid ${COLORS.line}`, padding: '4px 6px', fontSize: FONT_SIZES.header1, fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'nowrap' }}>
                 <span>고장분석(4단계)</span>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   {isConfirmed ? (
-                    <span style={{ background: '#4caf50', color: 'white', padding: '3px 10px', borderRadius: '3px', fontSize: '11px', fontWeight: 700 }}>✓ 확정됨</span>
+                    <span style={{ background: '#4caf50', color: 'white', padding: '3px 10px', borderRadius: '3px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold }}>✓ 확정됨</span>
                   ) : (
-                    <button type="button" onClick={handleConfirm} style={{ background: '#4caf50', color: 'white', border: 'none', padding: '3px 10px', borderRadius: '3px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>확정</button>
+                    <button type="button" onClick={handleConfirm} style={{ background: '#4caf50', color: 'white', border: 'none', padding: '3px 10px', borderRadius: '3px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, cursor: 'pointer' }}>확정</button>
                   )}
-                  <span style={{ background: missingCount > 0 ? '#f44336' : '#4caf50', color: 'white', padding: '3px 10px', borderRadius: '3px', fontSize: '11px', fontWeight: 700 }}>누락 {missingCount}건</span>
+                  <span style={{ background: missingCount > 0 ? '#f44336' : '#4caf50', color: 'white', padding: '3px 10px', borderRadius: '3px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold }}>누락 {missingCount}건</span>
                   {isConfirmed && (
-                    <button type="button" onClick={handleEdit} style={{ background: '#ff9800', color: 'white', border: 'none', padding: '3px 10px', borderRadius: '3px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>수정</button>
+                    <button type="button" onClick={handleEdit} style={{ background: '#ff9800', color: 'white', border: 'none', padding: '3px 10px', borderRadius: '3px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, cursor: 'pointer' }}>수정</button>
                   )}
                 </div>
               </div>
@@ -416,13 +416,13 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
           </tr>
           
           <tr>
-            <th style={{ background: STEP_COLORS.structure.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
+            <th style={{ background: STEP_COLORS.structure.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center', whiteSpace: 'nowrap' }}>
               1. 완제품 공정명
             </th>
-            <th colSpan={3} style={{ background: STEP_COLORS.function.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
+            <th colSpan={3} style={{ background: STEP_COLORS.function.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center', whiteSpace: 'nowrap' }}>
               1. 완제품 공정기능/요구사항
             </th>
-            <th colSpan={2} style={{ background: STEP_COLORS.failure.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
+            <th colSpan={2} style={{ background: STEP_COLORS.failure.header2, color: 'white', border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center', whiteSpace: 'nowrap' }}>
               1. 고장영향(FE) / 심각도(S)
               {missingCount > 0 && (
                 <span style={{ marginLeft: '8px', background: '#fff', color: '#c62828', padding: '2px 8px', borderRadius: '10px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>
@@ -433,27 +433,27 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
           </tr>
           
           <tr>
-            <th style={{ background: STEP_COLORS.structure.header3, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
+            <th style={{ background: STEP_COLORS.structure.header3, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center', whiteSpace: 'nowrap' }}>
               완제품 공정명
             </th>
-            <th style={{ background: STEP_COLORS.function.header3, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
+            <th style={{ background: STEP_COLORS.function.header3, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center', whiteSpace: 'nowrap' }}>
               구분
             </th>
-            <th style={{ background: STEP_COLORS.function.header3, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
+            <th style={{ background: STEP_COLORS.function.header3, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center', whiteSpace: 'nowrap' }}>
               완제품기능
             </th>
-            <th style={{ background: STEP_COLORS.function.header3, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
+            <th style={{ background: STEP_COLORS.function.header3, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center', whiteSpace: 'nowrap' }}>
               요구사항
             </th>
-            <th style={{ background: STEP_COLORS.failure.header3, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
+            <th style={{ background: STEP_COLORS.failure.header3, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center', whiteSpace: 'nowrap' }}>
               고장영향(FE)
               {missingCounts.effectCount > 0 && (
-                <span style={{ marginLeft: '4px', background: '#fff', color: '#c62828', padding: '1px 5px', borderRadius: '8px', fontSize: FONT_SIZES.small, fontWeight: 700 }}>
+                <span style={{ marginLeft: '4px', background: '#fff', color: '#c62828', padding: '1px 5px', borderRadius: '8px', fontSize: FONT_SIZES.small, fontWeight: FONT_WEIGHTS.semibold }}>
                   {missingCounts.effectCount}
                 </span>
               )}
             </th>
-            <th style={{ background: STEP_COLORS.failure.header3, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: '11px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
+            <th style={{ background: STEP_COLORS.failure.header3, border: `1px solid ${COLORS.line}`, padding: '6px', fontSize: FONT_SIZES.header1, fontWeight: FONT_WEIGHTS.semibold, textAlign: 'center', whiteSpace: 'nowrap' }}>
               S
             </th>
           </tr>
@@ -462,7 +462,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
         <tbody>
           {renderRows.length === 0 ? (
             <tr>
-              <td colSpan={6} style={{ border: `1px solid ${COLORS.line}`, padding: '30px', textAlign: 'center', color: '#999', fontSize: '12px' }}>
+              <td colSpan={6} style={{ border: `1px solid ${COLORS.line}`, padding: '30px', textAlign: 'center', color: '#999', fontSize: FONT_SIZES.header1 }}>
                 기능분석(L1)에서 요구사항을 입력하면 여기에 자동으로 표시됩니다.
               </td>
             </tr>
@@ -478,7 +478,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                       padding: '2px 4px', 
                       textAlign: 'center', 
                       background: STEP_COLORS.structure.cell, 
-                      fontWeight: 700, 
+                      fontWeight: FONT_WEIGHTS.semibold, 
                       verticalAlign: 'middle',
                       fontSize: FONT_SIZES.cell
                     }}
@@ -496,7 +496,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                       padding: '2px 4px', 
                       textAlign: 'center', 
                       background: row.typeName === 'Your Plant' ? '#ffe0b2' : row.typeName === 'Ship to Plant' ? '#ffcc80' : row.typeName === 'User' ? '#e1bee7' : STEP_COLORS.function.cell, 
-                      fontWeight: 600, 
+                      fontWeight: FONT_WEIGHTS.semibold, 
                       verticalAlign: 'middle',
                       fontSize: FONT_SIZES.cell,
                       color: row.typeName === 'Your Plant' ? '#1565c0' : row.typeName === 'Ship to Plant' ? '#e65100' : row.typeName === 'User' ? '#7b1fa2' : '#333'
@@ -582,14 +582,14 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                 >
                   {row.effectId ? (
                     <span style={{ 
-                      fontWeight: 700, 
-                      fontSize: '13px',
+                      fontWeight: FONT_WEIGHTS.semibold, 
+                      fontSize: FONT_SIZES.pageHeader,
                       color: row.severity && row.severity >= 8 ? '#c62828' : row.severity && row.severity >= 5 ? '#f57f17' : '#333'
                     }}>
                       {row.severity || '🔍'}
                     </span>
                   ) : (
-                    <span style={{ color: '#c62828', fontSize: FONT_SIZES.cell, fontWeight: 600 }}>-</span>
+                    <span style={{ color: '#c62828', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold }}>-</span>
                   )}
                 </td>
               </tr>
