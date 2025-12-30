@@ -17,6 +17,25 @@ git checkout v1.7.0-고장연결-완성-251230
 
 ---
 
+## 📋 개발 규칙
+
+### 파일 크기 관리 (엄격 적용)
+
+1. ⚠️ **700행 초과 시 무조건 분리** - 예외 없음
+2. ⚠️ **새 기능은 별도 파일로** - 기존 파일에 추가 금지
+3. ✅ **커밋 전 체크 필수** - 700행 초과 파일 확인
+
+> 📖 상세 규칙: [docs/CODING_RULES.md](./docs/CODING_RULES.md) 참조
+
+### 주요 문서
+
+- [코딩 규칙 (CODING_RULES.md)](./docs/CODING_RULES.md) - 필수 개발 규칙
+- [리팩토링 마스터 플랜 (REFACTORING_MASTER_PLAN.md)](./docs/REFACTORING_MASTER_PLAN.md) - 코드 최적화 계획
+- [원자성 DB 아키텍처 (ATOMIC_DB_ARCHITECTURE.md)](./docs/ATOMIC_DB_ARCHITECTURE.md) - DB 설계 원칙
+- [백업 가이드 (BACKUP_GUIDE.md)](./docs/BACKUP_GUIDE.md) - 백업 정책
+
+---
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
