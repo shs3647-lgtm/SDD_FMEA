@@ -1,8 +1,10 @@
-# 리팩토링 마스터 플랜
+# 리팩토링 마스터 플랜 v2.0
 
 > 작성일: 2025-12-30  
+> 최종 업데이트: 2025-12-30  
 > 목표: 코드 모듈화, 공용화, 표준화를 통한 유지보수성 향상  
-> 기준: 파일당 700±100줄 (600~800줄)
+> 기준: 파일당 700±100줄 (600~800줄)  
+> **중요**: 향후 기능 확장(역전개, TOP RPN, REVERSE FMEA, FMEA4판 등) 고려
 
 ## 📊 현재 상태
 
@@ -13,24 +15,91 @@
 | `schema.ts` | 997줄 | ~800줄 | 20% |
 
 **총 목표 감소:** ~1,750줄  
-**신규 파일 예상:** ~15개
+**신규 파일 예상:** ~20개 (확장 기능 포함)
 
 ## 🎯 전체 목표
 
 1. **모듈화**: 대형 파일을 논리적 단위로 분리
 2. **공용화**: 중복 코드를 공통 유틸리티로 추출
 3. **표준화**: 일관된 구조와 인터페이스 적용
-4. **유지보수성 향상**: 코드 가독성 및 테스트 용이성 개선
+4. **확장성**: 향후 기능 추가를 고려한 플러그인 구조
+5. **유지보수성 향상**: 코드 가독성 및 테스트 용이성 개선
 
----
+## 🔮 향후 확장 기능 (확정/예정)
 
-## 📋 단계별 계획
+### 확정된 기능
+- ✅ **역전개 (Reverse FMEA)**: 고장분석 → 기능분석 역변환
+- ✅ **고장연결**: 현재 구현 완료
+
+### 예정된 기능
+- 📋 **TOP RPN**: RPN 상위 항목 대시보드
+- 📋 **REVERSE FMEA**: 추가 역전개 기능
+- 📋 **FMEA4판**: 새로운 표준 버전 지원
+- 📋 **기타 메뉴**: 지속적 추가 예상
+
+## 🏗️ 확장 가능한 아키텍처 설계
+
+### 메뉴 구조 확장성
+
+```
+src/app/pfmea/worksheet/
+├── tabs/
+│   ├── analysis/              # 분석 탭 그룹 (기존)
+│   │   ├── structure/
+│   │   ├── function/
+│   │   └── failure/
+│   ├── evaluation/            # 평가 탭 그룹 (기존)
+│   │   ├── eval-structure/
+│   │   ├── eval-function/
+│   │   ├── eval-failure/
+│   │   ├── risk/
+│   │   └── optimization/
+│   ├── extended/              # 확장 탭 그룹 (신규)
+│   │   ├── reverse/           # 역전개 관련
+│   │   │   ├── ReverseFMEATab.tsx
+│   │   │   └── ReverseGenerationTab.tsx
+│   │   ├── dashboard/         # 대시보드 관련
+│   │   │   ├── TopRPNTab.tsx
+│   │   │   └── AnalysisDashboardTab.tsx
+│   │   └── version/           # 버전별 (FMEA4판 등)
+│   │       └── FMEA4Tab.tsx
+│   └── shared/                # 공용 컴포넌트
+└── ...
+```
+
+### 탭 등록 시스템 (플러그인 방식)
+
+```typescript
+// tabs/registry.ts
+export interface TabDefinition {
+  id: string;
+  label: string;
+  category: 'analysis' | 'evaluation' | 'extended';
+  component: React.ComponentType<any>;
+  enabled?: (state: WorksheetState) => boolean;
+  order?: number;
+}
+
+export const TAB_REGISTRY: TabDefinition[] = [
+  // 분석 탭
+  { id: 'structure', category: 'analysis', component: StructureTab, ... },
+  { id: 'function-l1', category: 'analysis', component: FunctionL1Tab, ... },
+  // 평가 탭
+  { id: 'eval-structure', category: 'evaluation', component: EvalStructureTab, ... },
+  // 확장 탭
+  { id: 'reverse-fmea', category: 'extended', component: ReverseFMEATab, ... },
+  { id: 'top-rpn', category: 'extended', component: TopRPNTab, ... },
+];
+```
+
+## 📋 단계별 계획 (확장성 고려)
 
 ### ✅ Step 0: 준비 단계 (완료)
 
 - [x] 코드 최적화 검토 보고서 작성
 - [x] 리팩토링 마스터 플랜 작성
 - [x] 현재 코드베이스 분석
+- [x] 향후 확장 기능 분석 및 아키텍처 설계
 
 ---
 
@@ -57,7 +126,11 @@
    - `groupByProcessName()`: 공정명별 그룹핑 (셀합치기용)
    - 타입 정의: `ProcessGroup`
 
-4. **기존 코드 점진적 교체**
+4. **`utils/reverse-generation.ts` 생성** (확장 고려)
+   - `reverseGenerateFunctionFromFailure()`: 고장분석 → 기능분석 역변환
+   - 향후 역전개 탭에서 재사용
+
+5. **기존 코드 점진적 교체**
    - `page.tsx`의 `EvalTabRenderer` 내부 로직 교체
    - `FailureLinkTab.tsx`의 그룹핑 로직 교체
 
@@ -67,11 +140,12 @@
 - [ ] `failure-link-grouping.ts` 작성 및 테스트
 - [ ] `row-merge-logic.ts` 작성 및 테스트
 - [ ] `process-grouping.ts` 작성 및 테스트
+- [ ] `reverse-generation.ts` 작성 (확장 고려)
 - [ ] `page.tsx`에서 유틸리티 함수 사용으로 교체
 - [ ] `FailureLinkTab.tsx`에서 유틸리티 함수 사용으로 교체
 - [ ] 수동 테스트: 전체보기 화면 정상 동작 확인
 - [ ] 수동 테스트: 고장연결 화면 정상 동작 확인
-- [ ] 커밋: "refactor: 공통 유틸리티 함수 추출"
+- [ ] 커밋: "refactor: Step 1 - 공통 유틸리티 함수 추출"
 
 ---
 
@@ -85,7 +159,7 @@
 
 #### 작업 내용
 
-1. **`tabs/eval/` 디렉토리 생성**
+1. **`tabs/evaluation/` 디렉토리 생성**
 
 2. **`EvalStructureTab.tsx` 생성**
    - `eval-structure` 탭 렌더링 로직 분리
@@ -102,7 +176,7 @@
    - Props: `failureLinks`, `state`, `rows`
    - 고장분석 데이터 표시 로직 포함
 
-5. **`tabs/eval/index.ts` 생성**
+5. **`tabs/evaluation/index.ts` 생성**
    - 컴포넌트 export
 
 6. **`page.tsx` 수정**
@@ -111,16 +185,16 @@
 
 #### 체크리스트
 
-- [ ] `tabs/eval/` 디렉토리 생성
+- [ ] `tabs/evaluation/` 디렉토리 생성
 - [ ] `EvalStructureTab.tsx` 작성
 - [ ] `EvalFunctionTab.tsx` 작성
 - [ ] `EvalFailureTab.tsx` 작성
-- [ ] `tabs/eval/index.ts` 작성
+- [ ] `tabs/evaluation/index.ts` 작성
 - [ ] `page.tsx`에서 컴포넌트 분리 적용
 - [ ] 수동 테스트: eval-structure 탭 정상 동작
 - [ ] 수동 테스트: eval-function 탭 정상 동작
 - [ ] 수동 테스트: eval-failure 탭 정상 동작
-- [ ] 커밋: "refactor: 평가 탭 컴포넌트 분리 (Part 1)"
+- [ ] 커밋: "refactor: Step 2 - 평가 탭 컴포넌트 분리 (Part 1)"
 
 ---
 
@@ -158,7 +232,7 @@
 - [ ] 수동 테스트: 셀합치기 정상 동작
 - [ ] 수동 테스트: 마지막 행 병합 정상 동작
 - [ ] 수동 테스트: Excel 내보내기 정상 동작
-- [ ] 커밋: "refactor: all 탭 리팩토링 완료"
+- [ ] 커밋: "refactor: Step 3 - all 탭 리팩토링 완료"
 
 ---
 
@@ -195,17 +269,17 @@
 - [ ] 수동 테스트: 분석결과 테이블 정상 동작
 - [ ] 수동 테스트: 연결/해제 기능 정상 동작
 - [ ] 수동 테스트: 연결확정 기능 정상 동작
-- [ ] 커밋: "refactor: FailureLinkTab 컴포넌트 분리"
+- [ ] 커밋: "refactor: Step 4 - FailureLinkTab 컴포넌트 분리"
 
 ---
 
-### 🟢 Step 5: `TabMenu` 컴포넌트 분리
+### 🟢 Step 5: `TabMenu` 컴포넌트 분리 및 탭 등록 시스템 구축
 
-**목표**: `TabMenu` 컴포넌트를 독립 파일로 분리
+**목표**: `TabMenu` 컴포넌트 분리 및 확장 가능한 탭 등록 시스템 구축
 
-**예상 소요 시간**: 1-2시간  
+**예상 소요 시간**: 3-4시간  
 **위험도**: 🟢 낮음  
-**예상 효과**: `page.tsx` 200줄 감소
+**예상 효과**: `page.tsx` 200줄 감소 + 확장성 확보
 
 #### 작업 내용
 
@@ -213,21 +287,67 @@
    - `TabMenu` 컴포넌트 이동
    - Props 타입 정의
 
-2. **`page.tsx` 정리**
+2. **`tabs/registry.ts` 생성** (확장성 고려)
+   - 탭 정의 인터페이스: `TabDefinition`
+   - 탭 등록 시스템: `TAB_REGISTRY`
+   - 탭 활성화 조건 함수 지원
+
+3. **`page.tsx` 정리**
    - `TabMenu` 컴포넌트 제거
-   - import 및 사용
+   - 탭 등록 시스템 사용
+
+4. **향후 확장 준비**
+   - 역전개 탭, TOP RPN 탭 등 추가 시 `registry.ts`에만 등록
+   - `page.tsx` 수정 불필요
 
 #### 체크리스트
 
 - [ ] `components/TabMenu.tsx` 생성
-- [ ] `page.tsx`에서 `TabMenu` 제거
+- [ ] `tabs/registry.ts` 생성 (탭 등록 시스템)
+- [ ] 기존 탭들을 `TAB_REGISTRY`에 등록
+- [ ] `page.tsx`에서 `TabMenu` 제거 및 registry 사용
 - [ ] 수동 테스트: 탭 메뉴 정상 동작
 - [ ] 수동 테스트: 탭 전환 정상 동작
-- [ ] 커밋: "refactor: TabMenu 컴포넌트 분리"
+- [ ] 수동 테스트: 탭 활성화 조건 정상 동작
+- [ ] 커밋: "refactor: Step 5 - TabMenu 분리 및 탭 등록 시스템 구축"
 
 ---
 
-### 🟢 Step 6: 타입 정의 표준화
+### 🟢 Step 6: 역전개 탭 분리 및 확장 구조 준비
+
+**목표**: 역전개 관련 로직을 별도 탭으로 분리하고 확장 구조 준비
+
+**예상 소요 시간**: 2-3시간  
+**위험도**: 🟢 낮음  
+**예상 효과**: 확장성 확보 + 코드 정리
+
+#### 작업 내용
+
+1. **`tabs/extended/reverse/` 디렉토리 생성**
+
+2. **`ReverseFMEATab.tsx` 생성** (향후 확장용)
+   - 역전개 메인 탭
+   - 현재는 플레이스홀더 또는 기존 역전개 로직 이동
+
+3. **`ReverseGenerationTab.tsx` 생성** (필요 시)
+   - 역전개 생성 로직
+   - `utils/reverse-generation.ts` 활용
+
+4. **탭 등록 시스템에 추가**
+   - `tabs/registry.ts`에 역전개 탭 등록
+
+#### 체크리스트
+
+- [ ] `tabs/extended/reverse/` 디렉토리 생성
+- [ ] `ReverseFMEATab.tsx` 작성
+- [ ] 기존 역전개 로직 이동 (있는 경우)
+- [ ] `tabs/registry.ts`에 등록
+- [ ] 수동 테스트: 역전개 탭 정상 동작
+- [ ] 커밋: "refactor: Step 6 - 역전개 탭 분리"
+
+---
+
+### 🟢 Step 7: 타입 정의 표준화
 
 **목표**: 타입 정의를 표준화하고 `any` 타입 제거
 
@@ -240,6 +360,7 @@
 1. **`tabs/shared/types.ts` 확장**
    - `FMGroup`, `ProcessGroup`, `RowMergeConfig` 등 추가
    - 공통 타입 정의 통합
+   - 확장 탭용 타입 정의 추가
 
 2. **타입 적용**
    - 유틸리티 함수에 타입 적용
@@ -253,7 +374,7 @@
 - [ ] 컴포넌트 Props 타입 정의
 - [ ] `any` 타입 점진적 제거
 - [ ] TypeScript 컴파일 오류 해결
-- [ ] 커밋: "refactor: 타입 정의 표준화"
+- [ ] 커밋: "refactor: Step 7 - 타입 정의 표준화"
 
 ---
 
@@ -266,10 +387,51 @@
 | Step 2 | ⏸️ 대기 | - | - | - | 평가 탭 컴포넌트 분리 (Part 1) |
 | Step 3 | ⏸️ 대기 | - | - | - | all 탭 리팩토링 |
 | Step 4 | ⏸️ 대기 | - | - | - | FailureLinkTab 분리 |
-| Step 5 | ⏸️ 대기 | - | - | - | TabMenu 분리 |
-| Step 6 | ⏸️ 대기 | - | - | - | 타입 정의 표준화 |
+| Step 5 | ⏸️ 대기 | - | - | - | TabMenu 분리 및 탭 등록 시스템 |
+| Step 6 | ⏸️ 대기 | - | - | - | 역전개 탭 분리 |
+| Step 7 | ⏸️ 대기 | - | - | - | 타입 정의 표준화 |
 
 **범례**: ✅ 완료 | ⏳ 진행중 | ⏸️ 대기 | 🔴 차단
+
+---
+
+## 🔮 향후 확장 가이드
+
+### 새 탭 추가 방법 (Step 5 이후)
+
+1. **새 탭 컴포넌트 작성**
+   ```typescript
+   // tabs/extended/dashboard/TopRPNTab.tsx
+   export default function TopRPNTab({ state, ...props }) {
+     // 탭 로직
+   }
+   ```
+
+2. **탭 등록 시스템에 추가**
+   ```typescript
+   // tabs/registry.ts
+   import TopRPNTab from './extended/dashboard/TopRPNTab';
+   
+   export const TAB_REGISTRY: TabDefinition[] = [
+     // ... 기존 탭들
+     {
+       id: 'top-rpn',
+       label: 'TOP RPN',
+       category: 'extended',
+       component: TopRPNTab,
+       enabled: (state) => state.failureLinks?.length > 0,
+       order: 100,
+     },
+   ];
+   ```
+
+3. **끝!** `page.tsx` 수정 불필요
+
+### 새 유틸리티 함수 추가
+
+1. **`utils/` 디렉토리에 새 파일 생성**
+2. **타입 정의는 `tabs/shared/types.ts`에 추가**
+3. **컴포넌트에서 import 및 사용**
 
 ---
 
@@ -292,6 +454,10 @@
 4. **타입 안정성**
    - 위험: 타입 정의 변경으로 인한 런타임 에러
    - 완화: 점진적 타입 적용, TypeScript 컴파일 검증
+
+5. **확장성 저하** (신규)
+   - 위험: 새 기능 추가 시 기존 구조 깨짐
+   - 완화: 탭 등록 시스템으로 확장성 확보
 
 ### 롤백 계획
 
@@ -316,6 +482,7 @@
 - [ ] 평가 탭들 정상 동작
 - [ ] Excel 내보내기 정상 동작
 - [ ] 데이터 저장/로드 정상 동작
+- [ ] 탭 전환 정상 동작 (확장 기능 포함)
 
 #### 시각적 검증
 - [ ] 셀합치기 정상 표시
@@ -329,7 +496,7 @@
 
 ### 커밋 메시지 형식
 ```
-refactor: [Step 번호] [간단한 설명]
+refactor: Step [번호] - [간단한 설명]
 
 - 상세 변경 내용 1
 - 상세 변경 내용 2
@@ -342,6 +509,7 @@ refactor: Step 1 - 공통 유틸리티 함수 추출
 - failure-link-grouping.ts 생성 및 적용
 - row-merge-logic.ts 생성 및 적용
 - process-grouping.ts 생성 및 적용
+- reverse-generation.ts 생성 (확장 고려)
 - page.tsx, FailureLinkTab.tsx에서 중복 코드 제거
 ```
 
@@ -354,6 +522,7 @@ refactor: Step 1 - 공통 유틸리티 함수 추출
 ## 📚 참고 문서
 
 - [코드 최적화 검토 보고서](./CODE_OPTIMIZATION_REVIEW.md)
+- [모듈화 교훈](./MODULARIZATION_LESSONS_LEARNED.md)
 - [원자성 DB 아키텍처](./ATOMIC_DB_ARCHITECTURE.md)
 - [코드 인덱스](../CODE_INDEX.md) (있는 경우)
 
@@ -365,6 +534,7 @@ refactor: Step 1 - 공통 유틸리티 함수 추출
 - [ ] `page.tsx` 2,747줄 → 700줄 이하 (74% 감소)
 - [ ] `FailureLinkTab.tsx` 1,102줄 → 400줄 이하 (64% 감소)
 - [ ] 모든 파일 800줄 이하
+- [ ] 새 탭 추가 시 `page.tsx` 수정 불필요 (탭 등록 시스템)
 
 ### 정성적 목표
 - [ ] 중복 코드 제거 완료
@@ -372,9 +542,9 @@ refactor: Step 1 - 공통 유틸리티 함수 추출
 - [ ] 타입 안정성 향상
 - [ ] 테스트 용이성 향상
 - [ ] 코드 가독성 향상
+- [ ] **확장성 확보**: 새 기능 추가 시 기존 구조 깨지지 않음
 
 ---
 
 **마지막 업데이트**: 2025-12-30  
 **다음 단계**: Step 1 시작
-
