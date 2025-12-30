@@ -627,18 +627,20 @@ function FMEAWorksheetPageContent() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '6px',
+              gap: '4px',
               flexShrink: 0,
+              padding: '0 6px',
             }}>
               <button
-                className="px-3 py-1 rounded transition-all"
+                className="rounded transition-all"
                 style={{
                   background: 'rgba(255,255,255,0.3)',
                   border: 'none',
                   color: '#fff',
-                  fontSize: '12px',
+                  fontSize: '11px',
                   fontWeight: 600,
                   cursor: 'pointer',
+                  padding: '3px 8px',
                 }}
                 onMouseOver={(e) => {
                   e.currentTarget.style.background = 'rgba(255,255,255,0.4)';
@@ -647,17 +649,18 @@ function FMEAWorksheetPageContent() {
                   e.currentTarget.style.background = 'rgba(255,255,255,0.3)';
                 }}
               >
-                🌳TREE
+                TREE
               </button>
               <button
-                className="px-3 py-1 rounded transition-all"
+                className="rounded transition-all"
                 style={{
                   background: 'rgba(255,255,255,0.15)',
                   border: 'none',
                   color: '#fff',
-                  fontSize: '12px',
+                  fontSize: '11px',
                   fontWeight: 400,
                   cursor: 'pointer',
+                  padding: '3px 8px',
                 }}
                 onMouseOver={(e) => {
                   e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
@@ -666,18 +669,19 @@ function FMEAWorksheetPageContent() {
                   e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
                 }}
               >
-                📄PDF
+                PDF
               </button>
               <button
                 onClick={() => setShowAPModal(true)}
-                className="px-3 py-1 rounded transition-all"
+                className="rounded transition-all"
                 style={{
                   background: '#f44336',
                   border: 'none',
                   color: '#fff',
-                  fontSize: '12px',
+                  fontSize: '11px',
                   fontWeight: 600,
                   cursor: 'pointer',
+                  padding: '3px 8px',
                 }}
                 onMouseOver={(e) => {
                   e.currentTarget.style.filter = 'brightness(1.1)';
@@ -686,18 +690,19 @@ function FMEAWorksheetPageContent() {
                   e.currentTarget.style.filter = 'brightness(1)';
                 }}
               >
-                🔴5AP
+                5AP
               </button>
               <button
                 onClick={() => setShow6APModal(true)}
-                className="px-3 py-1 rounded transition-all"
+                className="rounded transition-all"
                 style={{
                   background: '#ff9800',
                   border: 'none',
                   color: '#fff',
-                  fontSize: '12px',
+                  fontSize: '11px',
                   fontWeight: 600,
                   cursor: 'pointer',
+                  padding: '3px 8px',
                 }}
                 onMouseOver={(e) => {
                   e.currentTarget.style.filter = 'brightness(1.1)';
@@ -706,17 +711,18 @@ function FMEAWorksheetPageContent() {
                   e.currentTarget.style.filter = 'brightness(1)';
                 }}
               >
-                🟠6AP
+                6AP
               </button>
               <button
-                className="px-3 py-1 rounded transition-all"
+                className="rounded transition-all"
                 style={{
                   background: 'rgba(255,255,255,0.15)',
                   border: 'none',
                   color: '#fff',
-                  fontSize: '12px',
+                  fontSize: '11px',
                   fontWeight: 400,
                   cursor: 'pointer',
+                  padding: '3px 8px',
                 }}
                 onMouseOver={(e) => {
                   e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
@@ -725,7 +731,7 @@ function FMEAWorksheetPageContent() {
                   e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
                 }}
               >
-                📊RPN
+                RPN
               </button>
             </div>
 
