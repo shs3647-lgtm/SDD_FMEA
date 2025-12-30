@@ -15,11 +15,11 @@ interface StepToggleButtonsProps {
 
 export default function StepToggleButtons({ state, setState }: StepToggleButtonsProps) {
   const steps = [
-    { step: 2, label: '2단계', color: '#1565c0' },
-    { step: 3, label: '3단계', color: '#1b5e20' },
-    { step: 4, label: '4단계', color: '#c62828' },
-    { step: 5, label: '5단계', color: '#00695c' },
-    { step: 6, label: '6단계', color: '#ff6f00' },
+    { step: 2, label: '2ST', color: '#42a5f5' },  // 구조분석 색상
+    { step: 3, label: '3ST', color: '#66bb6a' },  // 기능분석 색상
+    { step: 4, label: '4ST', color: '#ffa726' },  // 고장분석 색상
+    { step: 5, label: '5ST', color: '#f44336' },  // 리스크 색상
+    { step: 6, label: '6ST', color: '#ff9800' },  // 최적화 색상
   ];
 
   const toggleStep = (step: number) => {
@@ -46,21 +46,33 @@ export default function StepToggleButtons({ state, setState }: StepToggleButtons
   const isAllVisible = visibleSteps.length === 5;
 
   return (
-    <div className="flex gap-1 items-center">
-      <div className="flex gap-px">
+    <div className="flex gap-1.5 items-center">
+      <div className="flex gap-1">
         {steps.map(s => {
           const isActive = visibleSteps.includes(s.step);
           return (
             <button
               key={s.step}
               onClick={() => toggleStep(s.step)}
-              className="px-1.5 py-0.5 text-xs font-bold cursor-pointer"
+              className="px-3 py-1 cursor-pointer transition-all"
               style={{
-                background: isActive ? s.color : '#f0f0f0',
-                border: `1px solid ${isActive ? s.color : '#d0d0d0'}`,
-                borderRadius: '3px',
-                color: isActive ? '#fff' : '#999',
-                opacity: isActive ? 1 : 0.6,
+                background: isActive ? s.color : 'rgba(255,255,255,0.15)',
+                border: 'none',
+                borderRadius: '4px',
+                color: '#fff',
+                fontSize: '12px',
+                fontWeight: isActive ? 600 : 400,
+                opacity: isActive ? 1 : 0.7,
+              }}
+              onMouseOver={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.opacity = '0.85';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.opacity = '0.7';
+                }
               }}
             >
               {s.label}
@@ -68,22 +80,6 @@ export default function StepToggleButtons({ state, setState }: StepToggleButtons
           );
         })}
       </div>
-      
-      {/* 전체화면 버튼 */}
-      <div className="w-px h-4 bg-gray-400" style={{ margin: '0 2px' }} />
-      <button
-        onClick={showAllSteps}
-        className="px-2 py-0.5 text-xs font-bold cursor-pointer"
-        style={{
-          background: isAllVisible ? '#1976d2' : '#f0f0f0',
-          border: `1px solid ${isAllVisible ? '#1976d2' : '#d0d0d0'}`,
-          borderRadius: '3px',
-          color: isAllVisible ? '#fff' : '#666',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        📊 전체화면
-      </button>
     </div>
   );
 }
