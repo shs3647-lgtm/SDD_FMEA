@@ -237,12 +237,12 @@ export const HEIGHTS = {
 // 분석 탭 (Analysis) - 개별 단계별 분석
 export const ANALYSIS_TABS = [
   { id: 'structure', label: '구조분석', step: 2 },
-  { id: 'function-l1', label: '1L 완제품 기능', step: 3 },
-  { id: 'function-l2', label: '2L 메인공정 기능', step: 3 },
-  { id: 'function-l3', label: '3L 작업요소 기능', step: 3 },
-  { id: 'failure-l1', label: '1L 고장영향', step: 4 },
-  { id: 'failure-l2', label: '2L 고장형태', step: 4 },
-  { id: 'failure-l3', label: '3L 고장원인', step: 4 },
+  { id: 'function-l1', label: '1L기능', step: 3 },
+  { id: 'function-l2', label: '2L기능', step: 3 },
+  { id: 'function-l3', label: '3L기능', step: 3 },
+  { id: 'failure-l1', label: '1L영향', step: 4 },
+  { id: 'failure-l2', label: '2L형태', step: 4 },
+  { id: 'failure-l3', label: '3L원인', step: 4 },
   { id: 'failure-link', label: '고장연결', step: 4 },
 ] as const;
 

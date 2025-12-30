@@ -37,15 +37,28 @@ export default function TabMenu({ state, setState }: TabMenuProps) {
   ];
   
   return (
-    <div className="flex-shrink-0 bg-white py-0.5" style={{ borderBottom: `2px solid ${COLORS.structure.main}`, paddingLeft: 0, paddingRight: '8px', position: 'sticky', top: 0, zIndex: 100 }}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1">
+    <div 
+      className="flex-shrink-0" 
+      style={{ 
+        background: 'linear-gradient(to right, #3949ab, #5c6bc0, #3949ab)',  // 3단계 - 가장 밝음
+        paddingLeft: '8px', 
+        paddingRight: '12px',
+        height: '32px',
+        position: 'sticky', 
+        top: '64px',  // PFMEATopNav(32px) + TopMenuBar(32px) 아래
+        zIndex: 45,
+        fontFamily: '"Segoe UI", "Malgun Gothic", Arial, sans-serif',
+        borderTop: '1px solid rgba(255,255,255,0.4)',  // 상단 구분선 (더 밝게)
+        borderBottom: '1px solid rgba(255,255,255,0.4)',  // 하단 구분선
+      }}
+    >
+      <div className="flex items-center justify-between" style={{ height: '100%' }}>
+        <div className="flex items-center gap-2">
           {/* 분석 탭 */}
-          <div className="flex gap-px">
+          <div className="flex gap-1">
             {analysisTabs.map(tab => {
               const isActive = state.tab === tab.id;
               const isEnabled = isTabEnabled(tab.id);
-              const activeColor = tab.id === 'structure' ? '#1a237e' : COLORS.structure.main;
               return (
                 <button
                   key={tab.id}
@@ -56,49 +69,68 @@ export default function TabMenu({ state, setState }: TabMenuProps) {
                     }
                     setState(prev => ({ ...prev, tab: tab.id }));
                   }}
-                  className="font-bold"
                   style={{
-                    padding: '3px 6px',
-                    fontSize: '10px',
-                    background: isActive ? activeColor : isEnabled ? '#e8f0f8' : '#f0f0f0',
-                    borderTop: `1px solid ${isActive ? activeColor : '#c0d0e0'}`,
-                    borderRight: `1px solid ${isActive ? activeColor : '#c0d0e0'}`,
-                    borderLeft: `1px solid ${isActive ? activeColor : '#c0d0e0'}`,
-                    borderBottom: 'none',
-                    borderRadius: '2px 2px 0 0',
-                    color: isActive ? '#fff' : isEnabled ? COLORS.text : '#aaa',
+                    padding: '4px 12px',
+                    fontSize: '12px',  // 10px → 12px
+                    fontWeight: isActive ? 600 : 400,  // 표준화
+                    background: isActive ? 'rgba(255,255,255,0.2)' : 'transparent',
+                    border: 'none',
+                    borderRadius: '4px',
+                    color: isActive ? '#fff' : isEnabled ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.4)',
                     cursor: isEnabled ? 'pointer' : 'not-allowed',
-                    opacity: isEnabled ? 1 : 0.6,
+                    opacity: isEnabled ? 1 : 0.5,
                     whiteSpace: 'nowrap',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseOver={(e) => {
+                    if (isEnabled && !isActive) {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.background = 'transparent';
+                    }
                   }}
                   title={!isEnabled ? '구조분석 확정 후 사용 가능' : ''}
                 >
                   {tab.label}
-                  {!isEnabled && <span style={{ marginLeft: '2px', fontSize: '7px' }}>🔒</span>}
+                  {!isEnabled && <span style={{ marginLeft: '4px', fontSize: '9px' }}>🔒</span>}
                 </button>
               );
             })}
           </div>
 
           {/* 단계별 토글 버튼 - 모든 탭에서 표시 */}
-          <div className="w-px h-4 bg-gray-300 mx-1" />
+          <div className="w-px h-5 bg-white/30 mx-2" />
           <StepToggleButtons state={state} setState={setState} />
         </div>
 
-        <div className="flex items-center gap-1" style={{ marginLeft: '4px' }}>
-          <div className="w-px h-4 bg-gray-300" />
+        <div className="flex items-center gap-2">
+          <div className="w-px h-5 bg-white/30" />
           <button
             onClick={() => setState(prev => ({ ...prev, tab: 'all', levelView: 'all', visibleSteps: [2, 3, 4, 5, 6] }))}
             style={{
-              background: state.tab === 'all' ? COLORS.structure.main : '#fff',
-              border: `1px solid ${COLORS.structure.main}`,
-              borderRadius: '3px',
-              color: state.tab === 'all' ? '#fff' : COLORS.structure.main,
-              padding: '3px 6px',
-              fontSize: '10px',
-              fontWeight: 700,
+              background: state.tab === 'all' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
+              border: state.tab === 'all' ? '1px solid rgba(255,255,255,0.5)' : '1px solid rgba(255,255,255,0.2)',
+              borderRadius: '4px',
+              color: '#fff',
+              padding: '4px 12px',
+              fontSize: '12px',  // 10px → 12px
+              fontWeight: state.tab === 'all' ? 600 : 400,  // 표준화
               cursor: 'pointer',
               whiteSpace: 'nowrap',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseOver={(e) => {
+              if (state.tab !== 'all') {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (state.tab !== 'all') {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+              }
             }}
           >
             전체보기

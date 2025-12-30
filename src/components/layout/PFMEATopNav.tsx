@@ -43,12 +43,12 @@ export default function PFMEATopNav({ selectedFmeaId }: PFMEATopNavProps) {
         zIndex: 999,  // 사이드바보다 낮게
         display: 'flex', 
         alignItems: 'center',
-        background: 'linear-gradient(to right, #1a237e, #283593, #1a237e)',  // 사이드바 색상과 동일
-        height: '32px',  // 사이드바와 통일 (28px → 32px)
-        fontFamily: '"Segoe UI", "Malgun Gothic", Arial, sans-serif',  // 워크시트와 통일
+        background: 'linear-gradient(to right, #1a237e, #283593, #1a237e)',  // 1단계 - 가장 어두움
+        height: '32px',
+        fontFamily: '"Segoe UI", "Malgun Gothic", Arial, sans-serif',
         paddingLeft: '0',
         marginLeft: '0',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',  // 그림자 추가
+        borderBottom: '1px solid rgba(255,255,255,0.2)',  // 하단 구분선
       }}
     >
       {/* 바로가기 레이블 */}

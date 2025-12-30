@@ -38,15 +38,41 @@ export default function TopMenuBar({
   const [showImportMenu, setShowImportMenu] = React.useState(false);
 
   return (
-    <div className="flex items-center py-1 gap-2 flex-wrap" style={{ background: COLORS.structure.main, paddingLeft: '4px', paddingRight: '8px' }}>
+    <div 
+      className="flex items-center gap-2" 
+      style={{ 
+        background: 'linear-gradient(to right, #283593, #3949ab, #283593)',  // 2단계 - 중간 밝기
+        paddingLeft: '8px', 
+        paddingRight: '12px',
+        height: '32px',
+        fontFamily: '"Segoe UI", "Malgun Gothic", Arial, sans-serif',
+        borderTop: '1px solid rgba(255,255,255,0.3)',  // 상단 구분선
+        borderBottom: '1px solid rgba(255,255,255,0.3)',  // 하단 구분선
+        position: 'sticky',
+        top: '32px',  // PFMEATopNav 아래
+        zIndex: 50,
+      }}
+    >
       {/* FMEA명 */}
-      <div className="flex items-center gap-1">
-        <span className="text-white text-xs font-bold cursor-pointer hover:underline" onClick={onNavigateToList}>📋 FMEA명:</span>
+      <div className="flex items-center gap-1.5">
+        <span 
+          className="text-white cursor-pointer hover:underline" 
+          onClick={onNavigateToList}
+          style={{ fontSize: '12px', fontWeight: 600 }}
+        >
+          📋 FMEA명:
+        </span>
         <select
           value={selectedFmeaId || '__NEW__'}
           onChange={(e) => onFmeaChange(e.target.value)}
-          className="px-1 py-0.5 text-xs font-semibold rounded border-0"
-          style={{ background: 'rgba(255,255,255,0.25)', color: '#fff', minWidth: '140px' }}
+          className="px-2 py-1 rounded border-0"
+          style={{ 
+            background: 'rgba(255,255,255,0.2)', 
+            color: '#fff', 
+            minWidth: '160px',
+            fontSize: '12px',
+            fontWeight: 400,
+          }}
         >
           <option value="__NEW__" style={{ color: '#333', fontWeight: 'bold' }}>📄 빈화면 (새로 작성)</option>
           {fmeaList.map((fmea: any) => (
@@ -55,15 +81,30 @@ export default function TopMenuBar({
             </option>
           ))}
         </select>
-        <button onClick={onNavigateToList} className="px-1 py-0.5 text-xs text-white rounded hover:bg-white/20">📋</button>
+        <button 
+          onClick={onNavigateToList} 
+          className="px-2 py-1 text-white rounded hover:bg-white/20"
+          style={{ fontSize: '12px' }}
+        >
+          📋
+        </button>
       </div>
 
-      <div className="w-px h-5 bg-white/40" />
+      <div className="w-px h-5 bg-white/30" />
 
       {/* 저장/Import/Export */}
-      <div className="flex items-center gap-1 relative">
-        <button onClick={onSave} disabled={isSaving} className="px-1.5 py-0.5 text-xs font-bold rounded"
-          style={{ background: isSaving ? '#ff9800' : dirty ? '#4caf50' : 'rgba(255,255,255,0.18)', color: '#fff' }}>
+      <div className="flex items-center gap-1.5 relative">
+        <button 
+          onClick={onSave} 
+          disabled={isSaving} 
+          className="px-3 py-1 rounded transition-all"
+          style={{ 
+            background: isSaving ? '#ff9800' : dirty ? '#4caf50' : 'rgba(255,255,255,0.15)', 
+            color: '#fff',
+            fontSize: '12px',
+            fontWeight: 600,
+          }}
+        >
           {isSaving ? '⏳저장중' : dirty ? '💾저장' : '✅저장됨'}
         </button>
         
@@ -71,8 +112,12 @@ export default function TopMenuBar({
         <div className="relative">
           <button 
             onClick={() => setShowImportMenu(!showImportMenu)}
-            className="px-1.5 py-0.5 text-xs font-bold text-white rounded hover:bg-white/30" 
-            style={{ background: 'rgba(255,255,255,0.18)' }}
+            className="px-3 py-1 text-white rounded hover:bg-white/25 transition-all" 
+            style={{ 
+              background: 'rgba(255,255,255,0.15)',
+              fontSize: '12px',
+              fontWeight: 600,
+            }}
           >
             📥Import▾
           </button>
@@ -113,15 +158,27 @@ export default function TopMenuBar({
           className="hidden"
         />
         
-        <button onClick={onExport} className="px-1.5 py-0.5 text-xs font-bold text-white rounded hover:bg-white/30" style={{ background: 'rgba(255,255,255,0.18)' }}>📤Export</button>
+        <button 
+          onClick={onExport} 
+          className="px-3 py-1 text-white rounded hover:bg-white/25 transition-all"
+          style={{ 
+            background: 'rgba(255,255,255,0.15)',
+            fontSize: '12px',
+            fontWeight: 600,
+          }}
+        >
+          📤Export
+        </button>
         
         {/* Import 결과 메시지 */}
         {importMessage && (
           <span 
-            className="text-xs font-bold px-2 py-0.5 rounded"
+            className="px-3 py-1 rounded"
             style={{ 
               background: importMessage.type === 'success' ? '#4caf50' : '#f44336',
-              color: '#fff'
+              color: '#fff',
+              fontSize: '12px',
+              fontWeight: 600,
             }}
           >
             {importMessage.text}
@@ -129,16 +186,50 @@ export default function TopMenuBar({
         )}
       </div>
 
-      <div className="w-px h-5 bg-white/40" />
+      <div className="w-px h-5 bg-white/30" />
 
       {/* 특별특성/SOD/AP/RPN/LLD */}
-      <div className="flex items-center gap-1">
-        <button onClick={onOpenSpecialChar} className="px-1.5 py-0.5 text-xs font-bold text-white rounded hover:bg-white/30" style={{ background: 'rgba(255,255,255,0.18)' }}>⭐특별특성</button>
-        <button onClick={onOpenSOD} className="px-1.5 py-0.5 text-xs font-bold text-white rounded hover:bg-white/30" style={{ background: 'rgba(76,175,80,0.6)' }}>📊SOD</button>
-        <button onClick={onOpen5AP} className="px-1.5 py-0.5 text-xs font-bold text-white rounded hover:bg-white/30" style={{ background: 'rgba(255,100,100,0.5)' }}>🔴5AP</button>
-        <button onClick={onOpen6AP} className="px-1.5 py-0.5 text-xs font-bold text-white rounded hover:bg-white/30" style={{ background: 'rgba(255,165,0,0.5)' }}>🟠6AP</button>
-        <button className="px-1.5 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>📊RPN</button>
-        <button className="px-1.5 py-0.5 text-xs font-bold text-white rounded" style={{ background: 'rgba(255,255,255,0.18)' }}>📚LLD</button>
+      <div className="flex items-center gap-1.5">
+        <button 
+          onClick={onOpenSpecialChar} 
+          className="px-3 py-1 text-white rounded hover:brightness-110 transition-all" 
+          style={{ background: '#ffc107', fontSize: '12px', fontWeight: 600 }}
+        >
+          ⭐특별특성
+        </button>
+        <button 
+          onClick={onOpenSOD} 
+          className="px-3 py-1 text-white rounded hover:brightness-110 transition-all" 
+          style={{ background: '#4caf50', fontSize: '12px', fontWeight: 600 }}
+        >
+          📊SOD
+        </button>
+        <button 
+          onClick={onOpen5AP} 
+          className="px-3 py-1 text-white rounded hover:brightness-110 transition-all" 
+          style={{ background: '#f44336', fontSize: '12px', fontWeight: 600 }}
+        >
+          🔴5AP
+        </button>
+        <button 
+          onClick={onOpen6AP} 
+          className="px-3 py-1 text-white rounded hover:brightness-110 transition-all" 
+          style={{ background: '#ff9800', fontSize: '12px', fontWeight: 600 }}
+        >
+          🟠6AP
+        </button>
+        <button 
+          className="px-3 py-1 text-white rounded" 
+          style={{ background: 'rgba(255,255,255,0.15)', fontSize: '12px', fontWeight: 600 }}
+        >
+          📊RPN
+        </button>
+        <button 
+          className="px-3 py-1 text-white rounded" 
+          style={{ background: 'rgba(255,255,255,0.15)', fontSize: '12px', fontWeight: 600 }}
+        >
+          📚LLD
+        </button>
       </div>
     </div>
   );
