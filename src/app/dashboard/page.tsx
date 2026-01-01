@@ -1,10 +1,6 @@
 /**
  * @file page.tsx
- * @description FMEA Dashboard - 참조 이미지와 동일한 레이아웃
- * 
- * 2x3 그리드:
- * Row 1: RPN 분포, 개선조치 현황, Top 10 RPN 파레토
- * Row 2: Severity 개선전후, Occurrence 개선전후, Detection 개선전후
+ * @description FMEA Dashboard - 사이드바/메뉴 포함 레이아웃
  */
 
 'use client';
@@ -31,11 +27,23 @@ export default function DashboardPage() {
 
   const chartsRef = useRef<Chart[]>([]);
 
+  // 개선조치 데이터
+  const improvementData = useMemo(() => {
+    const { completed, inProgress, planned, delayed } = stats.improvementStatus;
+    const total = completed + inProgress + planned + delayed || 1;
+    return [
+      { label: '완료', value: completed, pct: Math.round((completed / total) * 100), color: '#22c55e' },
+      { label: '진행중', value: inProgress, pct: Math.round((inProgress / total) * 100), color: '#3b82f6' },
+      { label: '계획', value: planned, pct: Math.round((planned / total) * 100), color: '#facc15' },
+      { label: '지연', value: delayed, pct: Math.round((delayed / total) * 100), color: '#ef4444' },
+    ];
+  }, [stats.improvementStatus]);
+
   useEffect(() => {
     chartsRef.current.forEach(c => c.destroy());
     chartsRef.current = [];
 
-    // 1. RPN 분포 (막대 차트)
+    // 1. RPN 분포
     if (rpnDistRef.current) {
       const ctx = rpnDistRef.current.getContext('2d');
       if (ctx) {
@@ -62,34 +70,37 @@ export default function DashboardPage() {
       }
     }
 
-    // 2. 개선조치 현황 (도넛 차트)
+    // 2. 개선조치 현황 (막대 그래프 + 숫자/%)
     if (improvementRef.current) {
       const ctx = improvementRef.current.getContext('2d');
       if (ctx) {
         chartsRef.current.push(new Chart(ctx, {
-          type: 'doughnut',
+          type: 'bar',
           data: {
-            labels: ['완료', '진행중', '계획', '지연'],
+            labels: improvementData.map(d => d.label),
             datasets: [{
-              data: [40, 30, 20, 10],
-              backgroundColor: ['#22c55e', '#3b82f6', '#facc15', '#ef4444'],
-              borderWidth: 0,
+              data: improvementData.map(d => d.value),
+              backgroundColor: improvementData.map(d => d.color),
+              borderRadius: 4,
             }]
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            cutout: '60%',
             plugins: {
-              legend: {
-                position: 'top',
-                labels: { 
-                  usePointStyle: true, 
-                  pointStyle: 'rect',
-                  padding: 12,
-                  font: { size: 11 }
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const d = improvementData[ctx.dataIndex];
+                    return `${d.value}건 (${d.pct}%)`;
+                  }
                 }
               }
+            },
+            scales: {
+              y: { beginAtZero: true, ticks: { stepSize: 10 } },
+              x: { ticks: { font: { size: 11 } } }
             }
           }
         }));
@@ -111,177 +122,101 @@ export default function DashboardPage() {
           data: {
             labels,
             datasets: [
-              {
-                label: 'RPN',
-                data: rpnData,
-                backgroundColor: '#3b82f6',
-                borderRadius: 2,
-                yAxisID: 'y',
-                order: 2,
-              },
-              {
-                label: '누적율 (%)',
-                data: cumPct,
-                type: 'line',
-                borderColor: '#ef4444',
-                backgroundColor: '#ef4444',
-                borderWidth: 2,
-                pointRadius: 4,
-                pointBackgroundColor: '#ef4444',
-                tension: 0.3,
-                yAxisID: 'y1',
-                order: 1,
-              }
+              { label: 'RPN', data: rpnData, backgroundColor: '#3b82f6', borderRadius: 2, yAxisID: 'y', order: 2 },
+              { label: '누적율 (%)', data: cumPct, type: 'line', borderColor: '#ef4444', backgroundColor: '#ef4444', borderWidth: 2, pointRadius: 3, tension: 0.3, yAxisID: 'y1', order: 1 }
             ]
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: 'top',
-                align: 'end',
-                labels: { usePointStyle: true, pointStyle: 'rect', font: { size: 10 }, padding: 8 }
-              }
+            plugins: { legend: { position: 'top', align: 'end', labels: { font: { size: 9 }, padding: 6 } } },
+            scales: {
+              x: { ticks: { font: { size: 8 }, maxRotation: 45 } },
+              y: { position: 'left', beginAtZero: true, max: 250, title: { display: true, text: 'RPN', font: { size: 9 } } },
+              y1: { position: 'right', min: 0, max: 100, grid: { drawOnChartArea: false }, title: { display: true, text: '누적률(%)', font: { size: 9 } } }
+            }
+          }
+        }));
+      }
+    }
+
+    // 4-6. S/O/D 개선 전후
+    const sodConfigs = [
+      { ref: severityRef, data: [stats.sodComparison.before.s, stats.sodComparison.after.s], colors: ['#f97316', '#22c55e'] },
+      { ref: occurrenceRef, data: [stats.sodComparison.before.o, stats.sodComparison.after.o], colors: ['#facc15', '#22c55e'] },
+      { ref: detectionRef, data: [stats.sodComparison.before.d, stats.sodComparison.after.d], colors: ['#a855f7', '#22c55e'] },
+    ];
+
+    sodConfigs.forEach(({ ref, data, colors }) => {
+      if (ref.current) {
+        const ctx = ref.current.getContext('2d');
+        if (ctx) {
+          chartsRef.current.push(new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: ['개선 전', '개선 후'],
+              datasets: [{ data, backgroundColor: colors, borderRadius: 4, barThickness: 50 }]
             },
-            scales: {
-              x: { ticks: { font: { size: 9 }, maxRotation: 45, minRotation: 45 } },
-              y: { position: 'left', beginAtZero: true, max: 250, title: { display: true, text: 'RPN', font: { size: 10 } } },
-              y1: { position: 'right', min: 0, max: 100, grid: { drawOnChartArea: false }, title: { display: true, text: '누적률 (%)', font: { size: 10 } } }
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                y: { beginAtZero: true, max: 10, ticks: { stepSize: 2 } },
+                x: { ticks: { font: { size: 11, weight: 'bold' } } }
+              }
             }
-          }
-        }));
+          }));
+        }
       }
-    }
-
-    // 4. Severity 개선 전후
-    if (severityRef.current) {
-      const ctx = severityRef.current.getContext('2d');
-      if (ctx) {
-        chartsRef.current.push(new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: ['개선 전', '개선 후'],
-            datasets: [{
-              data: [stats.sodComparison.before.s, stats.sodComparison.after.s],
-              backgroundColor: ['#f97316', '#22c55e'],
-              borderRadius: 4,
-              barThickness: 60,
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-              y: { beginAtZero: true, max: 10, ticks: { stepSize: 2 } },
-              x: { ticks: { font: { size: 12, weight: 'bold' } } }
-            }
-          }
-        }));
-      }
-    }
-
-    // 5. Occurrence 개선 전후
-    if (occurrenceRef.current) {
-      const ctx = occurrenceRef.current.getContext('2d');
-      if (ctx) {
-        chartsRef.current.push(new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: ['개선 전', '개선 후'],
-            datasets: [{
-              data: [stats.sodComparison.before.o, stats.sodComparison.after.o],
-              backgroundColor: ['#facc15', '#22c55e'],
-              borderRadius: 4,
-              barThickness: 60,
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-              y: { beginAtZero: true, max: 10, ticks: { stepSize: 2 } },
-              x: { ticks: { font: { size: 12, weight: 'bold' } } }
-            }
-          }
-        }));
-      }
-    }
-
-    // 6. Detection 개선 전후
-    if (detectionRef.current) {
-      const ctx = detectionRef.current.getContext('2d');
-      if (ctx) {
-        chartsRef.current.push(new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: ['개선 전', '개선 후'],
-            datasets: [{
-              data: [stats.sodComparison.before.d, stats.sodComparison.after.d],
-              backgroundColor: ['#a855f7', '#22c55e'],
-              borderRadius: 4,
-              barThickness: 60,
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-              y: { beginAtZero: true, max: 10, ticks: { stepSize: 2 } },
-              x: { ticks: { font: { size: 12, weight: 'bold' } } }
-            }
-          }
-        }));
-      }
-    }
+    });
 
     return () => { chartsRef.current.forEach(c => c.destroy()); };
-  }, [stats]);
+  }, [stats, improvementData]);
 
-  // 차트 카드 스타일
-  const cardStyle = "bg-white rounded-lg shadow-md border border-slate-200 p-4 flex flex-col";
-  const titleStyle = "text-sm font-bold text-slate-700 text-center mb-2";
+  const cardStyle = "bg-white rounded-lg shadow border border-slate-200 p-3 flex flex-col";
+  const titleStyle = "text-xs font-bold text-slate-700 text-center mb-1";
 
   return (
     <div className="min-h-screen bg-[#4a6fa5]">
-      {/* 상단 버튼 바 */}
-      <div className="flex items-center gap-3 px-6 py-3">
-        <button className="px-4 py-2 bg-[#3b5998] hover:bg-[#2d4373] text-white text-sm font-medium rounded shadow">
-          🔄 새로고침
-        </button>
-        <button className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 text-sm font-medium rounded shadow">
-          📊 리포트 출력
-        </button>
+      {/* 상단 메뉴 바 */}
+      <div className="bg-[#4a6fa5] px-4 py-2 flex items-center gap-2 border-b border-[#3d5a8a]">
+        <button className="px-3 py-1.5 bg-[#3b5998] text-white text-xs font-medium rounded">🔄 새로고침</button>
+        <button className="px-3 py-1.5 bg-white text-slate-700 text-xs font-medium rounded">📊 리포트 출력</button>
         <div className="flex-1" />
-        <button className="px-4 py-2 bg-[#3b5998] hover:bg-[#2d4373] text-white text-sm font-medium rounded shadow">
-          기간 설정
-        </button>
+        <button className="px-3 py-1.5 bg-[#3b5998] text-white text-xs font-medium rounded">기간 설정</button>
       </div>
 
-      {/* 차트 그리드 (2x3) */}
-      <div className="px-6 pb-6">
-        <div className="grid grid-cols-3 grid-rows-2 gap-4" style={{ height: 'calc(100vh - 80px)' }}>
+      {/* 차트 그리드 */}
+      <div className="p-3">
+        <div className="grid grid-cols-3 grid-rows-2 gap-3" style={{ height: 'calc(100vh - 60px)' }}>
           {/* Row 1 */}
           <div className={cardStyle}>
             <div className={titleStyle}>RPN 분포</div>
-            <div className="flex-1 relative">
+            <div className="flex-1 relative min-h-0">
               <canvas ref={rpnDistRef} />
             </div>
           </div>
 
           <div className={cardStyle}>
             <div className={titleStyle}>개선조치 현황</div>
-            <div className="flex-1 relative">
+            <div className="flex-1 relative min-h-0">
               <canvas ref={improvementRef} />
+            </div>
+            {/* 하단 수치 표시 */}
+            <div className="flex justify-around text-[10px] mt-1 pt-1 border-t border-slate-100">
+              {improvementData.map((d, i) => (
+                <div key={i} className="text-center">
+                  <div className="font-bold" style={{ color: d.color }}>{d.value}건</div>
+                  <div className="text-slate-500">{d.pct}%</div>
+                </div>
+              ))}
             </div>
           </div>
 
           <div className={cardStyle}>
             <div className={titleStyle}>📊 Top 10 RPN 파레토</div>
-            <div className="flex-1 relative">
+            <div className="flex-1 relative min-h-0">
               <canvas ref={paretoRef} />
             </div>
           </div>
@@ -289,21 +224,21 @@ export default function DashboardPage() {
           {/* Row 2 */}
           <div className={cardStyle}>
             <div className={titleStyle}>Severity (개선 전후)</div>
-            <div className="flex-1 relative">
+            <div className="flex-1 relative min-h-0">
               <canvas ref={severityRef} />
             </div>
           </div>
 
           <div className={cardStyle}>
             <div className={titleStyle}>Occurrence (개선 전후)</div>
-            <div className="flex-1 relative">
+            <div className="flex-1 relative min-h-0">
               <canvas ref={occurrenceRef} />
             </div>
           </div>
 
           <div className={cardStyle}>
             <div className={titleStyle}>Detection (개선 전후)</div>
-            <div className="flex-1 relative">
+            <div className="flex-1 relative min-h-0">
               <canvas ref={detectionRef} />
             </div>
           </div>
