@@ -178,18 +178,9 @@ export default function DashboardPage() {
   const titleStyle = "text-xs font-bold text-slate-700 text-center mb-1";
 
   return (
-    <div className="min-h-screen bg-[#4a6fa5]">
-      {/* 상단 메뉴 바 */}
-      <div className="bg-[#4a6fa5] px-4 py-2 flex items-center gap-2 border-b border-[#3d5a8a]">
-        <button className="px-3 py-1.5 bg-[#3b5998] text-white text-xs font-medium rounded">🔄 새로고침</button>
-        <button className="px-3 py-1.5 bg-white text-slate-700 text-xs font-medium rounded">📊 리포트 출력</button>
-        <div className="flex-1" />
-        <button className="px-3 py-1.5 bg-[#3b5998] text-white text-xs font-medium rounded">기간 설정</button>
-      </div>
-
+    <div className="min-h-full bg-[#4a6fa5] p-3">
       {/* 차트 그리드 */}
-      <div className="p-3">
-        <div className="grid grid-cols-3 grid-rows-2 gap-3" style={{ height: 'calc(100vh - 60px)' }}>
+      <div className="grid grid-cols-3 grid-rows-2 gap-3" style={{ height: 'calc(100vh - 72px)' }}>
           {/* Row 1 */}
           <div className={cardStyle}>
             <div className={titleStyle}>RPN 분포</div>
@@ -242,7 +233,6 @@ export default function DashboardPage() {
               <canvas ref={detectionRef} />
             </div>
           </div>
-        </div>
       </div>
     </div>
   );
