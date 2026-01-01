@@ -194,13 +194,13 @@ export default function TopMenuBar({
           <span className="text-yellow-400 text-xs font-bold whitespace-nowrap">5단계:</span>
         </div>
         <div className="w-[66px] h-8 flex items-center justify-center border-r border-white/30 shrink-0">
-          <span className="text-red-400 text-xs font-bold whitespace-nowrap">H:0</span>
+          <span className="text-red-400 text-xs font-bold whitespace-nowrap">H:{ap5Stats.h}</span>
         </div>
         <div className="w-[66px] h-8 flex items-center justify-center border-r border-white/30 shrink-0">
-          <span className="text-yellow-400 text-xs font-bold whitespace-nowrap">M:0</span>
+          <span className="text-yellow-400 text-xs font-bold whitespace-nowrap">M:{ap5Stats.m}</span>
         </div>
         <div className="w-[68px] h-8 flex items-center justify-center shrink-0">
-          <span className="text-green-400 text-xs font-bold whitespace-nowrap">L:0</span>
+          <span className="text-green-400 text-xs font-bold whitespace-nowrap">L:{ap5Stats.l}</span>
         </div>
       </div>
     </div>
