@@ -62,6 +62,7 @@ import {
   DocTabFull 
 } from './components/TabFullComponents';
 import { getPanelById } from './panels';
+import { Fmea4Tab, convertToFmea4 } from './tabs/fmea4';
 
 /**
  * FMEA 워크시트 메인 페이지 컨텐츠
@@ -599,6 +600,13 @@ function FMEAWorksheetPageContent() {
                   l2Spans={l2Spans}
                   onAPClick={() => setShowAPModal(true)}
                   visibleSteps={state.visibleSteps || [2, 3, 4, 5, 6]}
+                />
+              ) : state.tab === 'fmea4' ? (
+                /* FMEA 4판 (RPN 방식) */
+                <Fmea4Tab 
+                  state={state} 
+                  setState={setState} 
+                  setDirty={setDirty} 
                 />
               ) : (
                 <table className="w-full border-collapse table-fixed">

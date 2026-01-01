@@ -92,6 +92,37 @@ export default function TabMenu({ state, setState, onOpen5AP, onOpen6AP }: TabMe
             })}
           </div>
 
+        {/* 4판 양식 버튼 */}
+        <div className="w-px h-5 bg-white/30 mx-2" />
+        <button
+          onClick={() => setState(prev => ({ ...prev, tab: 'fmea4' }))}
+          style={{
+            padding: '5px 14px',
+            fontSize: '12px',
+            fontWeight: state.tab === 'fmea4' ? 700 : 500,
+            background: state.tab === 'fmea4' ? '#7c3aed' : 'transparent',
+            border: state.tab === 'fmea4' ? '1px solid #ffd600' : '1px solid rgba(255,255,255,0.3)',
+            borderRadius: '4px',
+            color: state.tab === 'fmea4' ? '#ffd600' : '#fff',
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseOver={(e) => {
+            if (state.tab !== 'fmea4') {
+              e.currentTarget.style.background = 'rgba(124,58,237,0.5)';
+            }
+          }}
+          onMouseOut={(e) => {
+            if (state.tab !== 'fmea4') {
+              e.currentTarget.style.background = 'transparent';
+            }
+          }}
+          title="FMEA 4판 (RPN 방식)"
+        >
+          📋 4판
+        </button>
+
         {/* 단계별 토글 버튼 */}
         <div className="w-px h-5 bg-white/30 mx-2" />
         <StepToggleButtons state={state} setState={setState} />
