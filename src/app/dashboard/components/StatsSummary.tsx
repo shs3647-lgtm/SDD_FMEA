@@ -19,21 +19,23 @@ interface StatCardProps {
 function StatCard({ label, value, icon, trend, color, bgGradient }: StatCardProps) {
   return (
     <div 
-      className="relative overflow-hidden rounded-xl p-4 text-white shadow-lg transition-transform hover:scale-[1.02]"
+      className="relative overflow-hidden rounded-lg px-4 py-2 text-white shadow-md transition-transform hover:scale-[1.01]"
       style={{ background: bgGradient }}
     >
       {/* 배경 패턴 */}
-      <div className="absolute -right-4 -top-4 text-6xl opacity-20">
+      <div className="absolute -right-2 -top-2 text-4xl opacity-20">
         {icon}
       </div>
       
-      <div className="relative z-10">
-        <p className="text-sm font-medium opacity-90">{label}</p>
-        <p className="text-3xl font-black mt-1 tracking-tight">{value}</p>
+      <div className="relative z-10 flex items-center gap-3">
+        <div>
+          <p className="text-xs font-medium opacity-80">{label}</p>
+          <p className="text-2xl font-black tracking-tight">{value}</p>
+        </div>
         {trend && (
-          <p className={`text-xs mt-1 flex items-center gap-1 ${trend.isUp ? 'text-green-200' : 'text-red-200'}`}>
+          <p className={`text-[10px] flex items-center gap-0.5 ${trend.isUp ? 'text-green-200' : 'text-red-200'}`}>
             <span>{trend.isUp ? '▲' : '▼'}</span>
-            <span>{Math.abs(trend.value)}% {trend.isUp ? '증가' : '감소'}</span>
+            <span>{Math.abs(trend.value)}%</span>
           </p>
         )}
       </div>
@@ -50,7 +52,7 @@ interface StatsSummaryProps {
 
 export function StatsSummary({ totalItems, highRiskCount, avgRPN, improvementRate }: StatsSummaryProps) {
   return (
-    <div className="grid grid-cols-4 gap-4 mb-6">
+    <div className="grid grid-cols-4 gap-3 mb-3">
       <StatCard
         label="전체 항목"
         value={totalItems}

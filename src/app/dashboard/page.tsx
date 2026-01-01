@@ -18,6 +18,7 @@ import { Chart, registerables } from 'chart.js';
 import { useDashboardStats, getDemoStats } from './hooks/useDashboardStats';
 import { ChartCard } from './components/ChartCard';
 import { StatsSummary } from './components/StatsSummary';
+import { SODCompareChart } from './components/SODCompareChart';
 import { CHART_COLORS } from './types';
 
 // Chart.js 등록
@@ -34,9 +35,6 @@ export default function DashboardPage() {
   const apChartRef = useRef<HTMLCanvasElement>(null);
   const improvementChartRef = useRef<HTMLCanvasElement>(null);
   const paretoChartRef = useRef<HTMLCanvasElement>(null);
-  const severityChartRef = useRef<HTMLCanvasElement>(null);
-  const occurrenceChartRef = useRef<HTMLCanvasElement>(null);
-  const detectionChartRef = useRef<HTMLCanvasElement>(null);
 
   // 차트 인스턴스
   const chartsRef = useRef<Chart[]>([]);
@@ -243,132 +241,6 @@ export default function DashboardPage() {
       }
     }
 
-    // 4. Severity 개선 전후
-    if (severityChartRef.current) {
-      const ctx = severityChartRef.current.getContext('2d');
-      if (ctx) {
-        const chart = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: ['개선 전', '개선 후'],
-            datasets: [{
-              label: 'Severity',
-              data: [stats.sodComparison.before.s, stats.sodComparison.after.s],
-              backgroundColor: [CHART_COLORS.before, CHART_COLORS.after],
-              borderRadius: 6,
-              barThickness: 40,
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            indexAxis: 'x',
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                callbacks: {
-                  label: (ctx) => `평균 Severity: ${ctx.raw}`
-                }
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                max: 10,
-                ticks: { stepSize: 2, font: { size: 10 } },
-                grid: { color: '#f1f5f9' }
-              },
-              x: {
-                ticks: { font: { size: 11, weight: 'bold' } },
-                grid: { display: false }
-              }
-            }
-          }
-        });
-        chartsRef.current.push(chart);
-      }
-    }
-
-    // 5. Occurrence 개선 전후
-    if (occurrenceChartRef.current) {
-      const ctx = occurrenceChartRef.current.getContext('2d');
-      if (ctx) {
-        const chart = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: ['개선 전', '개선 후'],
-            datasets: [{
-              label: 'Occurrence',
-              data: [stats.sodComparison.before.o, stats.sodComparison.after.o],
-              backgroundColor: [CHART_COLORS.before, CHART_COLORS.after],
-              borderRadius: 6,
-              barThickness: 40,
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false },
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                max: 10,
-                ticks: { stepSize: 2, font: { size: 10 } },
-                grid: { color: '#f1f5f9' }
-              },
-              x: {
-                ticks: { font: { size: 11, weight: 'bold' } },
-                grid: { display: false }
-              }
-            }
-          }
-        });
-        chartsRef.current.push(chart);
-      }
-    }
-
-    // 6. Detection 개선 전후
-    if (detectionChartRef.current) {
-      const ctx = detectionChartRef.current.getContext('2d');
-      if (ctx) {
-        const chart = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: ['개선 전', '개선 후'],
-            datasets: [{
-              label: 'Detection',
-              data: [stats.sodComparison.before.d, stats.sodComparison.after.d],
-              backgroundColor: [CHART_COLORS.before, CHART_COLORS.after],
-              borderRadius: 6,
-              barThickness: 40,
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false },
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                max: 10,
-                ticks: { stepSize: 2, font: { size: 10 } },
-                grid: { color: '#f1f5f9' }
-              },
-              x: {
-                ticks: { font: { size: 11, weight: 'bold' } },
-                grid: { display: false }
-              }
-            }
-          }
-        });
-        chartsRef.current.push(chart);
-      }
-    }
-
     return () => {
       chartsRef.current.forEach(chart => chart.destroy());
     };
@@ -376,41 +248,33 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* 헤더 */}
-      <header className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-900 to-cyan-900 text-white px-8 py-6">
-        {/* 배경 패턴 */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-1/4 w-72 h-72 bg-cyan-500 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-500 rounded-full blur-3xl" />
-        </div>
-        
+      {/* 헤더 - 컴팩트 */}
+      <header className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-900 to-cyan-900 text-white px-6 py-3">
         <div className="relative z-10 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-black tracking-tight flex items-center gap-3">
-              <span className="text-3xl">📊</span>
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-black tracking-tight flex items-center gap-2">
+              <span className="text-2xl">📊</span>
               FMEA Dashboard
-              <span className="ml-3 text-xs font-medium bg-cyan-500/30 text-cyan-200 px-2 py-1 rounded-full">
+              <span className="ml-2 text-[10px] font-medium bg-cyan-500/30 text-cyan-200 px-2 py-0.5 rounded-full">
                 LIVE
               </span>
             </h1>
-            <p className="text-slate-400 text-sm mt-1">
-              Action Priority & Risk Analysis Overview
-            </p>
+            <span className="text-slate-400 text-xs">| Action Priority & Risk Analysis</span>
           </div>
           
-          <div className="flex items-center gap-3">
-            <button className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-all backdrop-blur-sm border border-white/10">
+          <div className="flex items-center gap-2">
+            <button className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded text-xs font-medium transition-all">
               🔄 새로고침
             </button>
-            <button className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 rounded-lg text-sm font-semibold transition-all shadow-lg shadow-cyan-500/30">
-              📤 리포트 출력
+            <button className="px-3 py-1.5 bg-cyan-500 hover:bg-cyan-600 rounded text-xs font-semibold transition-all">
+              📤 리포트
             </button>
           </div>
         </div>
       </header>
 
       {/* 메인 콘텐츠 */}
-      <main className="p-6">
+      <main className="p-4">
         {/* 통계 요약 카드 */}
         <StatsSummary
           totalItems={stats.totalItems}
@@ -419,40 +283,36 @@ export default function DashboardPage() {
           improvementRate={stats.improvementRate}
         />
 
-        {/* 차트 그리드 (2x3) */}
-        <div className="grid grid-cols-3 grid-rows-2 gap-4" style={{ height: 'calc(100vh - 340px)' }}>
-          {/* Row 1 */}
-          <ChartCard title="AP 분포 (Action Priority)" icon="🎯" accentColor="#ef4444">
-            <canvas ref={apChartRef} />
-          </ChartCard>
+        {/* 차트 그리드 (2행) */}
+        <div className="flex flex-col gap-3" style={{ height: 'calc(100vh - 240px)' }}>
+          {/* Row 1: 3개 차트 (AP, 개선조치, Pareto) */}
+          <div className="flex-1 grid grid-cols-3 gap-3">
+            <ChartCard title="AP 분포 (Action Priority)" icon="🎯" accentColor="#ef4444">
+              <canvas ref={apChartRef} />
+            </ChartCard>
 
-          <ChartCard title="개선조치 현황" icon="📋" accentColor="#10b981">
-            <canvas ref={improvementChartRef} />
-          </ChartCard>
+            <ChartCard title="개선조치 현황" icon="📋" accentColor="#10b981">
+              <canvas ref={improvementChartRef} />
+            </ChartCard>
 
-          <ChartCard title="Top 10 RPN 파레토" icon="📊" accentColor="#6366f1">
-            <canvas ref={paretoChartRef} />
-          </ChartCard>
+            <ChartCard title="Top 10 RPN 파레토" icon="📊" accentColor="#6366f1">
+              <canvas ref={paretoChartRef} />
+            </ChartCard>
+          </div>
 
-          {/* Row 2 */}
-          <ChartCard title="Severity (심각도) 개선" icon="🔴" accentColor="#dc2626">
-            <canvas ref={severityChartRef} />
-          </ChartCard>
-
-          <ChartCard title="Occurrence (발생도) 개선" icon="🟠" accentColor="#f97316">
-            <canvas ref={occurrenceChartRef} />
-          </ChartCard>
-
-          <ChartCard title="Detection (검출도) 개선" icon="🟣" accentColor="#8b5cf6">
-            <canvas ref={detectionChartRef} />
-          </ChartCard>
+          {/* Row 2: S/O/D 버터플라이 차트 (전체 폭) */}
+          <div className="h-[180px]">
+            <ChartCard title="S/O/D 개선 전후 비교" icon="📈" accentColor="#0ea5e9" className="h-full">
+              <SODCompareChart data={stats.sodComparison} />
+            </ChartCard>
+          </div>
         </div>
       </main>
 
-      {/* 상태바 */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-sm text-slate-400 text-xs px-6 py-2 flex justify-between border-t border-slate-700">
-        <span>✅ 대시보드 로드 완료</span>
-        <span>마지막 업데이트: {new Date().toLocaleString('ko-KR')}</span>
+      {/* 상태바 - 미니멀 */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-slate-900/90 text-slate-500 text-[10px] px-4 py-1 flex justify-between">
+        <span>✅ Ready</span>
+        <span>{new Date().toLocaleString('ko-KR')}</span>
       </footer>
     </div>
   );
