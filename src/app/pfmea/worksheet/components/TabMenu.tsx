@@ -123,6 +123,36 @@ export default function TabMenu({ state, setState, onOpen5AP, onOpen6AP }: TabMe
           📋 4판
         </button>
 
+        {/* Control Plan 버튼 */}
+        <button
+          onClick={() => setState(prev => ({ ...prev, tab: 'cp' }))}
+          style={{
+            padding: '5px 14px',
+            fontSize: '12px',
+            fontWeight: state.tab === 'cp' ? 700 : 500,
+            background: state.tab === 'cp' ? '#0d9488' : 'transparent',
+            border: state.tab === 'cp' ? '1px solid #ffd600' : '1px solid rgba(255,255,255,0.3)',
+            borderRadius: '4px',
+            color: state.tab === 'cp' ? '#ffd600' : '#fff',
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseOver={(e) => {
+            if (state.tab !== 'cp') {
+              e.currentTarget.style.background = 'rgba(13,148,136,0.5)';
+            }
+          }}
+          onMouseOut={(e) => {
+            if (state.tab !== 'cp') {
+              e.currentTarget.style.background = 'transparent';
+            }
+          }}
+          title="Control Plan (관리계획서) - PFMEA 연동"
+        >
+          📝 CP
+        </button>
+
         {/* 단계별 토글 버튼 */}
         <div className="w-px h-5 bg-white/30 mx-2" />
         <StepToggleButtons state={state} setState={setState} />

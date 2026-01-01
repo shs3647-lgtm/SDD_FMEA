@@ -63,6 +63,7 @@ import {
 } from './components/TabFullComponents';
 import { getPanelById } from './panels';
 import { Fmea4Tab, convertToFmea4 } from './tabs/fmea4';
+import { CPTab } from './tabs/cp';
 
 /**
  * FMEA 워크시트 메인 페이지 컨텐츠
