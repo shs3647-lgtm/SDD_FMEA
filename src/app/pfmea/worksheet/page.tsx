@@ -556,7 +556,7 @@ function FMEAWorksheetPageContent() {
 
           {/* ===== 우측: 트리뷰 패널 영역 (280px) ===== */}
           {((state.tab !== 'all' && state.tab !== 'failure-link') || activePanelId === '5ap' || activePanelId === '6ap' || activePanelId === 'rpn-chart') && (
-          <div className="w-[280px] shrink-0 flex flex-col bg-[#f0f4f8] overflow-hidden">
+          <div className="w-[280px] shrink-0 flex flex-col bg-[#f0f4f8] overflow-hidden h-full">
             {/* 패널 콘텐츠 (레이지 로딩) - 메뉴는 상단 바로가기 영역에 있음 */}
             <Suspense fallback={
               <div style={{ 
