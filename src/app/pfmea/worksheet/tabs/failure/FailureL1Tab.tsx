@@ -269,10 +269,20 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
       // ✅ effectId가 없으면 빈 셀 클릭 → 새 항목 추가
       // 해당 요구사항의 기존 고장영향 보존하면서 새 항목 추가
       if (selectedValues.length > 0) {
+        // ✅ 중복 체크: 같은 reqId + 같은 effect가 이미 있으면 추가하지 않음
+        const existingEffects = newState.l1.failureScopes
+          .filter((s: any) => s.reqId === modal.reqId)
+          .map((s: any) => s.effect);
+        const existingSet = new Set(existingEffects);
+        const newValue = selectedValues[0];
+        if (existingSet.has(newValue)) {
+          console.log('[FailureL1Tab] 중복 고장영향 무시:', newValue);
+          return prev; // 중복이면 변경 없음
+        }
         newState.l1.failureScopes.push({
           id: uid(),
           reqId: modal.reqId,
-          effect: selectedValues[0],
+          effect: newValue,
           severity: undefined
         });
       }

@@ -245,8 +245,14 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
               )
             };
           } else if (selectedValues.length > 0) {
-            // ✅ 확정 상태에서도 새로 추가 가능 (확정됨 유지)
-            const newFunc = { id: uid(), name: selectedValues[0], requirements: [] };
+            // ✅ 중복 체크: 같은 이름의 기능이 이미 있으면 추가하지 않음
+            const existingNames = new Set(currentFuncs.map(f => f.name));
+            const newValue = selectedValues[0];
+            if (existingNames.has(newValue)) {
+              console.log('[FunctionL1Tab] 중복 기능 무시:', newValue);
+              return t;
+            }
+            const newFunc = { id: uid(), name: newValue, requirements: [] };
             return {
               ...t,
               functions: [...currentFuncs, newFunc]
@@ -289,8 +295,14 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                 )
               };
             } else if (selectedValues.length > 0) {
-              // ✅ 확정 상태에서도 새로 추가 가능 (확정됨 유지)
-              const newReq = { id: uid(), name: selectedValues[0] };
+              // ✅ 중복 체크: 같은 이름의 요구사항이 이미 있으면 추가하지 않음
+              const existingNames = new Set(currentReqs.map(r => r.name));
+              const newValue = selectedValues[0];
+              if (existingNames.has(newValue)) {
+                console.log('[FunctionL1Tab] 중복 요구사항 무시:', newValue);
+                return f; // 중복이면 추가하지 않음
+              }
+              const newReq = { id: uid(), name: newValue };
               return {
                 ...f,
                 requirements: [...currentReqs, newReq]

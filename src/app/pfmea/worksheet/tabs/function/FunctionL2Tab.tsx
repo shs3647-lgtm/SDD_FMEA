@@ -253,9 +253,15 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
             };
           }
           
-          // ✅ 확정 상태에서도 새로 추가 가능 (확정됨 유지)
+          // ✅ 중복 체크: 같은 이름의 기능이 이미 있으면 추가하지 않음
           if (selectedValues.length > 0) {
-            const newFunc = { id: uid(), name: selectedValues[0], productChars: [] };
+            const existingNames = new Set(currentFuncs.map((f: any) => f.name));
+            const newValue = selectedValues[0];
+            if (existingNames.has(newValue)) {
+              console.log('[FunctionL2Tab] 중복 기능 무시:', newValue);
+              return proc;
+            }
+            const newFunc = { id: uid(), name: newValue, productChars: [] };
             return {
               ...proc,
               functions: [...currentFuncs, newFunc]
@@ -299,9 +305,15 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                 };
               }
               
-              // 새 항목 추가
+              // ✅ 중복 체크: 같은 이름의 제품특성이 이미 있으면 추가하지 않음
               if (selectedValues.length > 0) {
-                const newChar = { id: uid(), name: selectedValues[0], specialChar: '' };
+                const existingNames = new Set(currentChars.map((c: any) => c.name));
+                const newValue = selectedValues[0];
+                if (existingNames.has(newValue)) {
+                  console.log('[FunctionL2Tab] 중복 제품특성 무시:', newValue);
+                  return f;
+                }
+                const newChar = { id: uid(), name: newValue, specialChar: '' };
                 return { ...f, productChars: [...currentChars, newChar] };
               }
               

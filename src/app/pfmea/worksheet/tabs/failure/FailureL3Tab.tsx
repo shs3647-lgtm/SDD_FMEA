@@ -168,9 +168,15 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
                 };
               }
               
-              // 새 항목 추가
+              // ✅ 중복 체크: 같은 이름의 고장원인이 이미 있으면 추가하지 않음
               if (selectedValues.length > 0) {
-                const newCause = { id: uid(), name: selectedValues[0], occurrence: undefined };
+                const existingNames = new Set(currentCauses.map((c: any) => c.name));
+                const newValue = selectedValues[0];
+                if (existingNames.has(newValue)) {
+                  console.log('[FailureL3Tab] 중복 고장원인 무시:', newValue);
+                  return we;
+                }
+                const newCause = { id: uid(), name: newValue, occurrence: undefined };
                 console.log('[FailureL3Tab] 새 고장원인 추가:', newCause.name);
                 return { ...we, failureCauses: [...currentCauses, newCause] };
               }
