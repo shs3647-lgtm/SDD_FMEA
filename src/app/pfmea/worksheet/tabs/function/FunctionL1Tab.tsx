@@ -410,9 +410,9 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
   return (
     <div className="p-0 overflow-auto h-full">
       <table className="w-full border-collapse table-fixed">
-        {/* 컬럼 너비: 완제품공정명 150px, 구분 90px, 완제품기능 auto, 요구사항 200px */}
+        {/* 컬럼 너비: 완제품공정명 140px, 구분 100px(Ship to Plant), 완제품기능 auto(넓게), 요구사항 150px */}
         <colgroup>
-          <col className="w-[150px]" /><col className="w-[90px]" /><col /><col className="w-[200px]" />
+          <col className="w-[140px]" /><col className="w-[100px]" /><col /><col className="w-[150px]" />
         </colgroup>
         
         {/* 3행 헤더 구조 - 하단 2px 검은색 구분선 */}
