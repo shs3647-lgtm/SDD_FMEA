@@ -26,7 +26,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
   const [modal, setModal] = useState<{ type: string; id: string; title: string; itemCode: string; parentFunction?: string; parentCategory?: string } | null>(null);
   
   // 확정 상태는 state에서 관리 (localStorage에 저장됨)
-  const isConfirmed = (state as any).l1Confirmed || false;
+  const isConfirmed = state.l1Confirmed || false;
 
   // 플레이스홀더 패턴 체크 함수
   const isMissing = (name: string | undefined) => {
@@ -107,7 +107,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
     const reqCount = state.l1.types.flatMap(t => t.functions.flatMap(f => f.requirements || [])).length;
     console.log('[FunctionL1Tab] 확정 시 기능:', funcCount, '개, 요구사항:', reqCount, '개');
     
-    setState((prev: any) => {
+    setState(prev => {
       const newState = { ...prev, l1Confirmed: true };
       console.log('[FunctionL1Tab] 확정 상태 업데이트:', newState.l1Confirmed);
       return newState;
@@ -125,7 +125,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
 
   // 수정 핸들러 (고장분석 패턴 적용)
   const handleEdit = useCallback(() => {
-    setState((prev: any) => ({ ...prev, l1Confirmed: false }));
+    setState(prev => ({ ...prev, l1Confirmed: false }));
     setDirty(true);
     requestAnimationFrame(() => saveToLocalStorage?.());
   }, [setState, setDirty, saveToLocalStorage]);
@@ -183,7 +183,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
     
-    const isConfirmed = (state as any).l1Confirmed || false;
+    const isConfirmed = state.l1Confirmed || false;
     
     setState(prev => {
       const newState = { ...prev };

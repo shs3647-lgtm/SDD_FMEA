@@ -246,7 +246,7 @@ function FMEAWorksheetPageContent() {
       return;
     }
     
-    const isConfirmed = (state as any).structureConfirmed || false;
+    const isConfirmed = state.structureConfirmed || false;
     console.log('[작업요소 저장] 시작', { targetL2Id, selectedCount: selectedElements.length, isConfirmed });
     
     // 중복 제거 (이름 기준)
