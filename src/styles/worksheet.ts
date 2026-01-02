@@ -107,10 +107,10 @@ export const cellP0 = 'border border-[#ccc] p-0';
 
 // ============ 버튼/배지 (CRUD 상태 기반) ============
 // 🟢 확정 버튼 (Create/Update 완료 시 눌러야 함) - 초록색 + 펄스 효과로 "지금 해야 할 일" 강조
-export const btnConfirm = 'bg-green-500 text-white border-2 border-green-300 px-3 py-1 rounded text-xs font-bold cursor-pointer hover:bg-green-600 animate-pulse shadow-lg';
+export const btnConfirm = 'bg-green-500 text-white border-2 border-green-300 px-3 py-1 rounded text-xs font-bold cursor-pointer hover:bg-green-600 animate-pulse shadow-lg whitespace-nowrap';
 
 // 🟠 수정 버튼 (확정됨 상태에서 Update 시작) - 주황색
-export const btnEdit = 'bg-orange-500 text-white border-none px-2.5 py-0.5 rounded text-xs font-semibold cursor-pointer hover:bg-orange-600';
+export const btnEdit = 'bg-orange-500 text-white border-none px-2.5 py-0.5 rounded text-xs font-semibold cursor-pointer hover:bg-orange-600 whitespace-nowrap';
 
 // ⚪ 비활성 버튼
 export const btnDisabled = 'bg-gray-400 text-white border-none px-2.5 py-0.5 rounded text-xs font-semibold cursor-not-allowed opacity-70';

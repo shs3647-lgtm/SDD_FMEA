@@ -512,8 +512,8 @@ export default function TreePanel({ state }: TreePanelProps) {
           })}
         </div>
         {/* 푸터: COUNT 표시 */}
-        <div className={`${tw.footer} ${tw.footerNavy}`}>
-          공정특성({processCharCount}) 고장원인({failureCauseCount})
+        <div className={tw.footerNavy}>
+          <span className="font-bold">공정특성({processCharCount}) 고장원인({failureCauseCount})</span>
         </div>
       </div>
     );
