@@ -314,7 +314,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
                   procId: proc.id, procNo: proc.no, procName: proc.name,
                   procRowSpan: 0, showProc: false,
                   funcId: f.id, funcName: f.name, funcRowSpan: 0, showFunc: false,
-                  charId: pc.id, charName: pc.name, charRowSpan: 1, showChar: true,
+                  charId: pc.id, charName: pc.name, specialChar: pc.specialChar || '', charRowSpan: 1, showChar: true,
                   modeId: '', modeName: ''
                 });
               } else {
@@ -324,7 +324,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
                     procId: proc.id, procNo: proc.no, procName: proc.name,
                     procRowSpan: 0, showProc: false,
                     funcId: f.id, funcName: f.name, funcRowSpan: 0, showFunc: false,
-                    charId: pc.id, charName: pc.name,
+                    charId: pc.id, charName: pc.name, specialChar: pc.specialChar || '',
                     charRowSpan: mIdx === 0 ? linkedModes.length : 0,
                     showChar: mIdx === 0,
                     modeId: m.id, modeName: m.name
@@ -367,6 +367,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
           <col className="w-[150px]" />
           <col className="w-[200px]" />
           <col className="w-[150px]" />
+          <col className="w-[50px]" />
           <col className="w-[250px]" />
         </colgroup>
         
@@ -377,7 +378,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
             <th className="bg-[#1976d2] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center">
               구조분석(2단계)
             </th>
-            <th colSpan={2} className="bg-[#388e3c] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center">
+            <th colSpan={3} className="bg-[#388e3c] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center">
               기능분석(3단계)
             </th>
             <th className="bg-[#e65100] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center">
@@ -402,7 +403,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
             <th className="bg-[#42a5f5] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
               2. 메인 공정명
             </th>
-            <th colSpan={2} className="bg-[#66bb6a] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
+            <th colSpan={3} className="bg-[#66bb6a] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
               2. 메인공정기능 및 제품특성
             </th>
             <th className="bg-[#f57c00] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
@@ -425,6 +426,9 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
             <th className="bg-[#c8e6c9] border border-[#ccc] p-1.5 text-xs font-semibold text-center">
               제품특성
             </th>
+            <th className="bg-[#c8e6c9] border border-[#ccc] p-1 text-[11px] font-semibold text-center">
+              특별특성
+            </th>
             <th className="bg-[#ffe0b2] border border-[#ccc] p-1.5 text-xs font-semibold text-center">
               고장형태(FM)
             </th>
@@ -442,6 +446,9 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
               </td>
               <td className="border border-[#ccc] p-2.5 text-center bg-[#c8e6c9]">
                 (기능분석에서 제품특성 입력)
+              </td>
+              <td className="border border-[#ccc] p-1 text-center bg-[#c8e6c9] text-xs">
+                -
               </td>
               <td className={cellP0}>
                 <SelectableCell value="" placeholder="고장형태 선택" bgColor={FAIL_COLORS.cell} onClick={() => {}} />
@@ -470,6 +477,19 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
                 {row.showChar && (
                   <td rowSpan={row.charRowSpan} className={`border border-[#ccc] p-2 text-center ${functionZebra} text-xs align-middle`}>
                     {row.charName || ''}
+                  </td>
+                )}
+                {/* 특별특성 - rowSpan (기능분석에서 입력한 값 표시) */}
+                {row.showChar && (
+                  <td rowSpan={row.charRowSpan} className={`border border-[#ccc] p-1 text-center ${functionZebra} text-xs align-middle`}>
+                    {row.specialChar ? (
+                      <span className={`px-1.5 py-0.5 rounded text-white text-[10px] font-bold ${
+                        row.specialChar === 'CC' ? 'bg-red-600' : 
+                        row.specialChar === 'SC' ? 'bg-orange-500' : 'bg-blue-600'
+                      }`}>
+                        {row.specialChar}
+                      </span>
+                    ) : '-'}
                   </td>
                 )}
                 {/* 고장형태 - 각 행마다 */}

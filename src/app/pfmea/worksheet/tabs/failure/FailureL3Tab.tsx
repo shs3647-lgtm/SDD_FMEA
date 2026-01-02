@@ -505,8 +505,15 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
                   </td>
                 )}
                 {row.showChar && row.charRowSpan > 0 && (
-                  <td rowSpan={row.charRowSpan} className={`border border-[#ccc] p-1.5 text-center ${functionZebra} align-middle text-xs`}>
-                    {row.processChar?.specialChar || '-'}
+                  <td rowSpan={row.charRowSpan} className={`border border-[#ccc] p-1 text-center ${functionZebra} align-middle text-xs`}>
+                    {row.processChar?.specialChar ? (
+                      <span className={`px-1.5 py-0.5 rounded text-white text-[10px] font-bold ${
+                        row.processChar.specialChar === 'CC' ? 'bg-red-600' : 
+                        row.processChar.specialChar === 'SC' ? 'bg-orange-500' : 'bg-blue-600'
+                      }`}>
+                        {row.processChar.specialChar}
+                      </span>
+                    ) : '-'}
                   </td>
                 )}
                 
