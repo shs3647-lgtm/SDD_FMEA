@@ -47,6 +47,15 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
 
   const isConfirmed = state.failureL2Confirmed || false;
 
+  // ✅ 셀 클릭 시 확정됨 상태면 자동으로 수정 모드로 전환
+  const handleCellClick = useCallback((modalConfig: any) => {
+    if (isConfirmed) {
+      setState(prev => ({ ...prev, failureL2Confirmed: false }));
+      setDirty(true);
+    }
+    setModal(modalConfig);
+  }, [isConfirmed, setState, setDirty]);
+
   const isMissing = (name: string | undefined) => {
     if (!name) return true;
     const trimmed = name.trim();
@@ -474,7 +483,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
                         alert('⚠️ 상위 항목(제품특성)이 없습니다.\n\n고장형태를 추가하려면 먼저 기능분석에서 제품특성을 입력해주세요.\n\n[기능분석 2L(메인공정) → 제품특성 입력]');
                         return;
                       }
-                      setModal({ 
+                      handleCellClick({ 
                         type: 'l2FailureMode', 
                         processId: row.procId, 
                         productCharId: row.charId,

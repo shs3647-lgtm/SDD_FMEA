@@ -42,13 +42,13 @@ function M4Cell({ value, zebraBg }: { value: string; zebraBg: string }) {
 
 // ✅ 메인공정 셀 - 클릭(모달) / 더블클릭(인라인 수정) 지원
 function EditableL2Cell({ 
-  l2Id, l2No, l2Name, state, setState, setDirty, handleSelect, setIsProcessModalOpen, saveToLocalStorage, zebraBg, rowSpan 
+  l2Id, l2No, l2Name, state, setState, setDirty, handleSelect, setIsProcessModalOpen, saveToLocalStorage, zebraBg, rowSpan, isConfirmed 
 }: { 
   l2Id: string; l2No: string; l2Name: string; state: WorksheetState; 
   setState: React.Dispatch<React.SetStateAction<WorksheetState>>; 
   setDirty: (dirty: boolean) => void; handleSelect: (type: 'L1' | 'L2' | 'L3', id: string | null) => void;
   setIsProcessModalOpen: (open: boolean) => void;
-  saveToLocalStorage?: () => void; zebraBg: string; rowSpan: number;
+  saveToLocalStorage?: () => void; zebraBg: string; rowSpan: number; isConfirmed?: boolean;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(l2Name);
@@ -75,6 +75,11 @@ function EditableL2Cell({
     }
     
     clickTimerRef.current = setTimeout(() => {
+      // ✅ 확정됨 상태에서 클릭하면 자동으로 수정 모드로 전환
+      if (isConfirmed) {
+        setState((prev: any) => ({ ...prev, structureConfirmed: false }));
+        setDirty(true);
+      }
       handleSelect('L2', l2Id);
       setIsProcessModalOpen(true);
       clickTimerRef.current = null;
@@ -119,12 +124,12 @@ function EditableL2Cell({
 }
 
 function EditableL3Cell({ 
-  value, l3Id, l2Id, state, setState, setDirty, handleSelect, setTargetL2Id, setIsWorkElementModalOpen, saveToLocalStorage, zebraBg 
+  value, l3Id, l2Id, state, setState, setDirty, handleSelect, setTargetL2Id, setIsWorkElementModalOpen, saveToLocalStorage, zebraBg, isConfirmed 
 }: { 
   value: string; l3Id: string; l2Id: string; state: WorksheetState; setState: React.Dispatch<React.SetStateAction<WorksheetState>>; 
   setDirty: (dirty: boolean) => void; handleSelect: (type: 'L1' | 'L2' | 'L3', id: string | null) => void;
   setTargetL2Id: (id: string | null) => void; setIsWorkElementModalOpen: (open: boolean) => void;
-  saveToLocalStorage?: () => void; zebraBg: string;
+  saveToLocalStorage?: () => void; zebraBg: string; isConfirmed?: boolean;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
@@ -148,6 +153,11 @@ function EditableL3Cell({
 
   // 모달 열기
   const openModal = () => {
+    // ✅ 확정됨 상태에서 클릭하면 자동으로 수정 모드로 전환
+    if (isConfirmed) {
+      setState((prev: any) => ({ ...prev, structureConfirmed: false }));
+      setDirty(true);
+    }
     handleSelect('L3', l3Id);
     setTargetL2Id(l2Id);
     setIsWorkElementModalOpen(true);
@@ -320,8 +330,8 @@ export function StructureHeader({ onProcessModalOpen, missingCounts, isConfirmed
 }
 
 export function StructureRow({
-  row, idx, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown, handleSelect, setIsProcessModalOpen, setIsWorkElementModalOpen, setTargetL2Id, saveToLocalStorage, zebraBg,
-}: StructureTabProps & { row: FlatRow; idx: number; zebraBg: string }) {
+  row, idx, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown, handleSelect, setIsProcessModalOpen, setIsWorkElementModalOpen, setTargetL2Id, saveToLocalStorage, zebraBg, isConfirmed,
+}: StructureTabProps & { row: FlatRow; idx: number; zebraBg: string; isConfirmed?: boolean }) {
   // 완제품 공정명과 메인 공정명이 1:1로 병합되도록 l2Spans 사용
   const spanCount = l2Spans[idx] || 1; // ✅ 기본값 1로 설정
   const showMergedCells = spanCount > 0 || idx === 0; // ✅ 첫 번째 행은 항상 표시
@@ -357,10 +367,11 @@ export function StructureRow({
           saveToLocalStorage={saveToLocalStorage}
           zebraBg={zebraBg}
           rowSpan={spanCount}
+          isConfirmed={isConfirmed}
         />
       )}
       <M4Cell value={row.m4} zebraBg={zebraBg} />
-      <EditableL3Cell value={row.l3Name} l3Id={row.l3Id} l2Id={row.l2Id} state={state} setState={setState} setDirty={setDirty} handleSelect={handleSelect} setTargetL2Id={setTargetL2Id} setIsWorkElementModalOpen={setIsWorkElementModalOpen} saveToLocalStorage={saveToLocalStorage} zebraBg={zebraBg} />
+      <EditableL3Cell value={row.l3Name} l3Id={row.l3Id} l2Id={row.l2Id} state={state} setState={setState} setDirty={setDirty} handleSelect={handleSelect} setTargetL2Id={setTargetL2Id} setIsWorkElementModalOpen={setIsWorkElementModalOpen} saveToLocalStorage={saveToLocalStorage} zebraBg={zebraBg} isConfirmed={isConfirmed} />
     </>
   );
 }
@@ -547,7 +558,7 @@ export default function StructureTab(props: StructureTabProps) {
             const zebraBg = idx % 2 === 1 ? '#bbdefb' : '#e3f2fd';
             return (
               <tr key={row.l3Id} className={`h-6 ${zebraBg}`}>
-                <StructureRow {...props} row={row} idx={idx} zebraBg={zebraBg} />
+                <StructureRow {...props} row={row} idx={idx} zebraBg={zebraBg} isConfirmed={isConfirmed} />
               </tr>
             );
           })

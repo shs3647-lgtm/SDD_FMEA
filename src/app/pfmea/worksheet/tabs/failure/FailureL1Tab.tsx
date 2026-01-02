@@ -69,6 +69,15 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
   // 확정 상태
   const isConfirmed = state.failureL1Confirmed || false;
 
+  // ✅ 셀 클릭 시 확정됨 상태면 자동으로 수정 모드로 전환
+  const handleCellClick = useCallback((modalConfig: any) => {
+    if (isConfirmed) {
+      setState(prev => ({ ...prev, failureL1Confirmed: false }));
+      setDirty(true);
+    }
+    setModal(modalConfig);
+  }, [isConfirmed, setState, setDirty]);
+
   // 누락 건수 계산 (state.l1.failureScopes 사용)
   // 항목별 누락 건수 분리 계산 - 심각도는 선택사항이므로 누락건에서 제외
   const missingCounts = useMemo(() => {
@@ -632,7 +641,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                     value={row.effect} 
                     placeholder="고장영향 선택" 
                     bgColor={zebraBg} 
-                    onClick={() => setModal({ 
+                    onClick={() => handleCellClick({ 
                       type: 'effect', 
                       effectId: row.effectId || undefined,
                       reqId: row.reqId,

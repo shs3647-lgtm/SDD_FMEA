@@ -35,6 +35,15 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
   // 확정 상태
   const isConfirmed = state.failureL3Confirmed || false;
 
+  // ✅ 셀 클릭 시 확정됨 상태면 자동으로 수정 모드로 전환
+  const handleCellClick = useCallback((modalConfig: any) => {
+    if (isConfirmed) {
+      setState(prev => ({ ...prev, failureL3Confirmed: false }));
+      setDirty(true);
+    }
+    setModal(modalConfig);
+  }, [isConfirmed, setState, setDirty]);
+
   // 플레이스홀더 패턴 체크 함수
   const isMissing = (name: string | undefined) => {
     if (!name) return true;
@@ -442,7 +451,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
                           alert('⚠️ 상위 항목(공정특성)이 없습니다.\n\n고장원인을 추가하려면 먼저 기능분석에서 공정특성을 입력해주세요.\n\n[기능분석 3L(작업요소) → 공정특성 입력]');
                           return;
                         }
-                        setModal({ type: 'l3FailureCause', processId: row.proc.id, weId: row.we.id, causeId: row.cause?.id || undefined, title: `${row.we.name} 고장원인`, itemCode: 'FC1' });
+                        handleCellClick({ type: 'l3FailureCause', processId: row.proc.id, weId: row.we.id, causeId: row.cause?.id || undefined, title: `${row.we.name} 고장원인`, itemCode: 'FC1' });
                       }} 
                     />
                   ) : (

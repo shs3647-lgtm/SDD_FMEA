@@ -37,6 +37,15 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
   // 확정 상태 (state.l2Confirmed 사용)
   const isConfirmed = state.l2Confirmed || false;
 
+  // ✅ 셀 클릭 시 확정됨 상태면 자동으로 수정 모드로 전환
+  const handleCellClick = useCallback((modalConfig: any) => {
+    if (isConfirmed) {
+      setState(prev => ({ ...prev, l2Confirmed: false }));
+      setDirty(true);
+    }
+    setModal(modalConfig);
+  }, [isConfirmed, setState, setDirty]);
+
   // 플레이스홀더 패턴 체크 함수
   const isMissing = (name: string | undefined) => {
     if (!name) return true;
@@ -547,7 +556,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                       {proc.no}. {proc.name}
                     </td>
                     <td className={cellP0}>
-                      <SelectableCell value="" placeholder="공정기능 선택" bgColor={'#e8f5e9'} onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
+                      <SelectableCell value="" placeholder="공정기능 선택" bgColor={'#e8f5e9'} onClick={() => handleCellClick({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
                     </td>
                     <td className={cellP0}>
                       <SelectableCell value="" placeholder="제품특성 선택" bgColor={'#e8f5e9'} onClick={() => {}} />
@@ -578,12 +587,12 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                           value={f.name} 
                           placeholder="공정기능" 
                           bgColor={'#e8f5e9'} 
-                          onClick={() => setModal({ type: 'l2Function', procId: proc.id, funcId: f.id, title: '메인공정 기능 선택', itemCode: 'A3' })} 
+                          onClick={() => handleCellClick({ type: 'l2Function', procId: proc.id, funcId: f.id, title: '메인공정 기능 선택', itemCode: 'A3' })} 
                           onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, f.id, newValue)}
                         />
                       </td>
                       <td className={cellP0}>
-                        <SelectableCell value="" placeholder="제품특성 선택" bgColor={'#c8e6c9'} onClick={() => setModal({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, title: '제품특성 선택', itemCode: 'A4' })} />
+                        <SelectableCell value="" placeholder="제품특성 선택" bgColor={'#c8e6c9'} onClick={() => handleCellClick({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, title: '제품특성 선택', itemCode: 'A4' })} />
                       </td>
                       <td className="border border-[#ccc] p-1 text-center bg-[#fff3e0] text-[#999] text-xs">
                         -
@@ -606,7 +615,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                           value={f.name} 
                           placeholder="공정기능" 
                           bgColor={'#e8f5e9'} 
-                          onClick={() => setModal({ type: 'l2Function', procId: proc.id, funcId: f.id, title: '메인공정 기능 선택', itemCode: 'A3' })} 
+                          onClick={() => handleCellClick({ type: 'l2Function', procId: proc.id, funcId: f.id, title: '메인공정 기능 선택', itemCode: 'A3' })} 
                           onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, f.id, newValue)}
                         />
                       </td>
@@ -616,7 +625,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                         value={c.name} 
                         placeholder="제품특성" 
                         bgColor={'#c8e6c9'} 
-                        onClick={() => setModal({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, charId: c.id, title: '제품특성 선택', itemCode: 'A4' })} 
+                        onClick={() => handleCellClick({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, charId: c.id, title: '제품특성 선택', itemCode: 'A4' })} 
                         onDoubleClickEdit={(newValue) => handleInlineEditProductChar(proc.id, f.id, c.id, newValue)}
                       />
                     </td>

@@ -1,4 +1,4 @@
-http://localhost:3000/pfmea/worksheet?v=1.0.29-20260103-modal-position
+http://localhost:3000/pfmea/worksheet?v=1.0.30-20260103-auto-edit-mode
 
 === VERSION INFO ===
 Version: 1.0.26

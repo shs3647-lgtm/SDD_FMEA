@@ -44,6 +44,15 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
   // 확정 상태 (state.l3Confirmed 사용)
   const isConfirmed = state.l3Confirmed || false;
 
+  // ✅ 셀 클릭 시 확정됨 상태면 자동으로 수정 모드로 전환
+  const handleCellClick = useCallback((modalConfig: any) => {
+    if (isConfirmed) {
+      setState(prev => ({ ...prev, l3Confirmed: false }));
+      setDirty(true);
+    }
+    setModal(modalConfig);
+  }, [isConfirmed, setState, setDirty]);
+
   // 누락 건수 계산 (플레이스홀더 패턴 모두 체크)
   const isMissing = (name: string | undefined) => {
     if (!name) return true;
@@ -579,7 +588,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                         {we.name}
                       </td>
                       <td className={cellP0}>
-                        <SelectableCell value="" placeholder="작업요소기능 선택" bgColor={'#e8f5e9'} onClick={() => setModal({ type: 'l3Function', procId: proc.id, l3Id: we.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} />
+                        <SelectableCell value="" placeholder="작업요소기능 선택" bgColor={'#e8f5e9'} onClick={() => handleCellClick({ type: 'l3Function', procId: proc.id, l3Id: we.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} />
                       </td>
                       <td className="border border-[#ccc] border-r-[3px] border-r-orange-500 p-0">
                         <SelectableCell value="" placeholder="공정특성 선택" bgColor={'#e8f5e9'} onClick={() => {}} />
@@ -623,12 +632,12 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                             value={f.name} 
                             placeholder="작업요소기능" 
                             bgColor={'#e8f5e9'} 
-                            onClick={() => setModal({ type: 'l3Function', procId: proc.id, l3Id: we.id, funcId: f.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} 
+                            onClick={() => handleCellClick({ type: 'l3Function', procId: proc.id, l3Id: we.id, funcId: f.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} 
                             onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, we.id, f.id, newValue)}
                           />
                         </td>
                         <td className="border border-[#ccc] border-r-[3px] border-r-orange-500 p-0">
-                          <SelectableCell value="" placeholder="공정특성 선택" bgColor={'#c8e6c9'} onClick={() => setModal({ type: 'l3ProcessChar', procId: proc.id, l3Id: we.id, funcId: f.id, title: '공정특성 선택', itemCode: 'B3', workElementName: we.name })} />
+                          <SelectableCell value="" placeholder="공정특성 선택" bgColor={'#c8e6c9'} onClick={() => handleCellClick({ type: 'l3ProcessChar', procId: proc.id, l3Id: we.id, funcId: f.id, title: '공정특성 선택', itemCode: 'B3', workElementName: we.name })} />
                         </td>
                         <td className="border border-[#ccc] border-l-0 p-1 text-center bg-[#fff3e0]">
                           <SpecialCharBadge value="" onClick={() => {}} />
@@ -665,7 +674,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                               value={f.name} 
                               placeholder="작업요소기능" 
                               bgColor={'#e8f5e9'} 
-                              onClick={() => setModal({ type: 'l3Function', procId: proc.id, l3Id: we.id, funcId: f.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} 
+                              onClick={() => handleCellClick({ type: 'l3Function', procId: proc.id, l3Id: we.id, funcId: f.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} 
                               onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, we.id, f.id, newValue)}
                             />
                           </td>
@@ -675,7 +684,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                             value={c.name} 
                             placeholder="공정특성" 
                             bgColor={'#c8e6c9'} 
-                            onClick={() => setModal({ type: 'l3ProcessChar', procId: proc.id, l3Id: we.id, funcId: f.id, charId: c.id, title: '공정특성 선택', itemCode: 'B3', workElementName: we.name })} 
+                            onClick={() => handleCellClick({ type: 'l3ProcessChar', procId: proc.id, l3Id: we.id, funcId: f.id, charId: c.id, title: '공정특성 선택', itemCode: 'B3', workElementName: we.name })} 
                             onDoubleClickEdit={(newValue) => handleInlineEditProcessChar(proc.id, we.id, f.id, c.id, newValue)}
                           />
                         </td>
