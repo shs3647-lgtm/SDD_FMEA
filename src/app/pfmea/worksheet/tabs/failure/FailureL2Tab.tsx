@@ -423,10 +423,10 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
             <th className="bg-[#c8e6c9] border border-[#ccc] p-1.5 text-xs font-semibold text-center">
               메인공정기능
             </th>
-            <th className="bg-[#c8e6c9] border border-[#ccc] p-1.5 text-xs font-semibold text-center">
+            <th className="bg-[#c8e6c9] border border-[#ccc] border-r-[2px] border-r-orange-500 p-1.5 text-xs font-semibold text-center">
               제품특성
             </th>
-            <th className="bg-[#c8e6c9] border border-[#ccc] p-1 text-[11px] font-semibold text-center">
+            <th className="bg-orange-500 text-white border border-[#ccc] border-l-0 p-1 text-[11px] font-semibold text-center">
               특별특성
             </th>
             <th className="bg-[#ffe0b2] border border-[#ccc] p-1.5 text-xs font-semibold text-center">
@@ -444,10 +444,10 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
               <td className="border border-[#ccc] p-2.5 text-center bg-[#c8e6c9]">
                 (기능분석에서 공정기능 입력)
               </td>
-              <td className="border border-[#ccc] p-2.5 text-center bg-[#c8e6c9]">
+              <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-2.5 text-center bg-[#c8e6c9]">
                 (기능분석에서 제품특성 입력)
               </td>
-              <td className="border border-[#ccc] p-1 text-center bg-[#c8e6c9] text-xs">
+              <td className="border border-[#ccc] border-l-0 p-1 text-center bg-orange-100 text-xs">
                 -
               </td>
               <td className={cellP0}>
@@ -475,7 +475,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
                 )}
                 {/* 제품특성 - rowSpan */}
                 {row.showChar && (
-                  <td rowSpan={row.charRowSpan} className={`border border-[#ccc] p-2 text-center ${functionZebra} text-xs align-middle`}>
+                  <td rowSpan={row.charRowSpan} className={`border border-[#ccc] border-r-[2px] border-r-orange-500 p-2 text-center ${functionZebra} text-xs align-middle`}>
                     {row.charName || ''}
                   </td>
                 )}

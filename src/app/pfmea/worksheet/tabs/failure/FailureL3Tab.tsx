@@ -440,10 +440,10 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
             <th className="bg-[#bbdefb] border border-[#ccc] p-1.5 text-xs font-semibold text-center">
               작업요소
             </th>
-            <th className="bg-[#c8e6c9] border border-[#ccc] p-1.5 text-xs font-semibold text-center">
+            <th className="bg-[#c8e6c9] border border-[#ccc] border-r-[2px] border-r-orange-500 p-1.5 text-xs font-semibold text-center">
               공정특성
             </th>
-            <th className="bg-[#c8e6c9] border border-[#ccc] p-1 text-[11px] font-semibold text-center">
+            <th className="bg-orange-500 text-white border border-[#ccc] border-l-0 p-1 text-[11px] font-semibold text-center">
               특별특성
             </th>
             <th className="bg-[#ffe0b2] border border-[#ccc] p-1.5 text-xs font-semibold text-center">
@@ -500,7 +500,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
                 
                 {/* ✅ 공정특성 셀: showChar && charRowSpan > 0 (각 공정특성별로 분리) */}
                 {row.showChar && row.charRowSpan > 0 && (
-                  <td rowSpan={row.charRowSpan} className={`border border-[#ccc] p-1.5 text-center ${functionZebra} align-middle text-xs`}>
+                  <td rowSpan={row.charRowSpan} className={`border border-[#ccc] border-r-[2px] border-r-orange-500 p-1.5 text-center ${functionZebra} align-middle text-xs`}>
                     {row.processChar?.name || '(기능분석에서 입력)'}
                   </td>
                 )}
