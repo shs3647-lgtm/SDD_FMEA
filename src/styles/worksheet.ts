@@ -116,13 +116,13 @@ export const btnEdit = 'bg-orange-500 text-white border-none px-2.5 py-0.5 round
 export const btnDisabled = 'bg-gray-400 text-white border-none px-2.5 py-0.5 rounded text-xs font-semibold cursor-not-allowed opacity-70';
 
 // ✅ 확정됨 배지 (Read 상태 - 완료) - 차분한 초록색 (강조 없음)
-export const badgeConfirmed = 'bg-green-700 text-white px-2.5 py-0.5 rounded text-xs font-semibold';
+export const badgeConfirmed = 'bg-green-700 text-white px-2.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap';
 
 // ✅ 누락 0건 배지 (완료 상태) - 차분한 초록색
-export const badgeOk = 'bg-green-700 text-white px-2.5 py-0.5 rounded text-xs font-semibold';
+export const badgeOk = 'bg-green-700 text-white px-2.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap';
 
 // 🔴 누락 N건 배지 (입력 필요 - 경고) - 빨간색 + 펄스 효과
-export const badgeMissing = 'bg-red-500 text-white px-2.5 py-0.5 rounded text-xs font-bold animate-pulse';
+export const badgeMissing = 'bg-red-500 text-white px-2.5 py-0.5 rounded text-xs font-bold animate-pulse whitespace-nowrap';
 
 // 🟠 개수 배지
 export const badgeCount = 'ml-1 bg-orange-500 text-white px-1.5 py-0.5 rounded-lg text-[11px]';

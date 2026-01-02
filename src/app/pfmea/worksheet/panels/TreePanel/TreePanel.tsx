@@ -422,6 +422,18 @@ export default function TreePanel({ state }: TreePanelProps) {
   if (tab === 'failure-l3') {
     const isL3Confirmed = state.failureL3Confirmed || false;
     
+    // COUNT 계산: 공정특성 수, 고장원인 수
+    let processCharCount = 0;
+    let failureCauseCount = 0;
+    state.l2.forEach((proc: any) => {
+      (proc.l3 || []).forEach((we: any) => {
+        (we.functions || []).forEach((f: any) => {
+          processCharCount += (f.processChars || []).filter((c: any) => c.name).length;
+        });
+      });
+      failureCauseCount += (proc.failureCauses || []).filter((c: any) => c.name).length;
+    });
+    
     return (
       <div className={tw.container}>
         <div className={`${tw.header} ${tw.headerNavy}`}>
@@ -437,39 +449,71 @@ export default function TreePanel({ state }: TreePanelProps) {
           )}
           
           {/* ✅ 확정된 경우에만 데이터 표시 */}
-          {isL3Confirmed && state.l2.filter((p: any) => p.name && !p.name.includes('클릭')).map((proc: any) => (
-            <div key={proc.id} className="mb-2">
-              <div 
-                className={`${tw.textXs} font-bold py-0.5 px-1.5 rounded-sm`}
-                style={{ backgroundColor: TREE_FAILURE.procBg, color: TREE_FAILURE.procText, borderLeft: `3px solid ${TREE_FAILURE.border}` }}
-              >
-                🔧 {proc.no}. {proc.name}
-              </div>
-              {(proc.l3 || []).filter((w: any) => w.name && !w.name.includes('클릭')).map((we: any) => {
-                const confirmedCauses = we.failureCauses || [];
-                return (
-                  <div key={we.id} className="ml-3 mb-1">
-                    <div 
-                      className={`${tw.textXxs} font-semibold py-0.5 px-1 rounded-sm`}
-                      style={{ backgroundColor: TREE_FAILURE.itemBg, color: TREE_FAILURE.itemText }}
-                    >
-                      [{we.m4}] {we.name}
-                    </div>
-                    {confirmedCauses.map((c: any) => (
-                      <div key={c.id} className={`ml-4 ${tw.textXxs} flex gap-2`} style={{ color: TREE_FAILURE.itemText }}>
-                        <span>└ {c.name}</span>
-                        {c.occurrence && (
-                          <span className={`${tw.severityBadge} ${c.occurrence >= 7 ? 'bg-orange-200 text-orange-800' : 'bg-orange-100 text-orange-700'}`}>
-                            O:{c.occurrence}
-                          </span>
-                        )}
+          {isL3Confirmed && state.l2.filter((p: any) => p.name && !p.name.includes('클릭')).map((proc: any) => {
+            // 해당 공정의 모든 고장원인 (공정 레벨에 저장됨)
+            const allCauses = proc.failureCauses || [];
+            
+            return (
+              <div key={proc.id} className="mb-2">
+                <div 
+                  className={`${tw.textXs} font-bold py-0.5 px-1.5 rounded-sm`}
+                  style={{ backgroundColor: TREE_FAILURE.procBg, color: TREE_FAILURE.procText, borderLeft: `3px solid ${TREE_FAILURE.border}` }}
+                >
+                  🔧 {proc.no}. {proc.name}
+                </div>
+                {(proc.l3 || []).filter((w: any) => w.name && !w.name.includes('클릭')).map((we: any) => {
+                  // 작업요소의 공정특성 수집
+                  const processChars: any[] = [];
+                  (we.functions || []).forEach((f: any) => {
+                    (f.processChars || []).forEach((pc: any) => {
+                      if (pc.name) processChars.push(pc);
+                    });
+                  });
+                  
+                  return (
+                    <div key={we.id} className="ml-3 mb-1">
+                      <div 
+                        className={`${tw.textXxs} font-semibold py-0.5 px-1 rounded-sm`}
+                        style={{ backgroundColor: TREE_FAILURE.itemBg, color: TREE_FAILURE.itemText }}
+                      >
+                        [{we.m4}] {we.name}
                       </div>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+                      {/* 공정특성별로 고장원인 표시 */}
+                      {processChars.map((pc: any) => {
+                        const linkedCauses = allCauses.filter((c: any) => c.processCharId === pc.id);
+                        return (
+                          <div key={pc.id} className="ml-2">
+                            <div className={`${tw.textXxs} font-medium`} style={{ color: '#1565c0' }}>
+                              └ {pc.name}
+                              {pc.specialChar && (
+                                <span className="ml-1 px-1 py-0.5 rounded text-[9px] font-bold text-white bg-blue-600">
+                                  {pc.specialChar}
+                                </span>
+                              )}
+                            </div>
+                            {linkedCauses.map((c: any) => (
+                              <div key={c.id} className={`ml-4 ${tw.textXxs} flex gap-2`} style={{ color: TREE_FAILURE.itemText }}>
+                                <span>└ {c.name}</span>
+                                {c.occurrence && (
+                                  <span className={`${tw.severityBadge} ${c.occurrence >= 7 ? 'bg-orange-200 text-orange-800' : 'bg-orange-100 text-orange-700'}`}>
+                                    O:{c.occurrence}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+        {/* 푸터: COUNT 표시 */}
+        <div className={`${tw.footer} ${tw.footerNavy}`}>
+          공정특성({processCharCount}) 고장원인({failureCauseCount})
         </div>
       </div>
     );
