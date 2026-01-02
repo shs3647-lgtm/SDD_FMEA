@@ -208,9 +208,30 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
         }
       } 
       else if (type === 'l1Function') {
+        const funcId = (modal as any).funcId;
         newState.l1.types = newState.l1.types.map(t => {
           if (t.id !== id) return t;
           const currentFuncs = t.functions;
+          
+          // ✅ funcId가 있으면 해당 기능만 수정
+          if (funcId) {
+            if (selectedValues.length === 0) {
+              // 선택 해제 시 해당 기능 삭제
+              return {
+                ...t,
+                functions: currentFuncs.filter(f => f.id !== funcId)
+              };
+            }
+            return {
+              ...t,
+              functions: currentFuncs.map(f => 
+                f.id === funcId 
+                  ? { ...f, name: selectedValues[0] || f.name }
+                  : f
+              )
+            };
+          }
+          
           const emptyFunc = currentFuncs.find(f => !f.name || f.name === '' || f.name.includes('클릭하여'));
           
           if (emptyFunc && selectedValues.length > 0) {
@@ -475,7 +496,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                       </td>
                     )}
                     <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle">
-                      <SelectableCell value={f.name} placeholder="기능" bgColor={COLORS.function.light} textColor="#000000" onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} onDoubleClickEdit={(newValue) => handleInlineEditFunction(t.id, f.id, newValue)} />
+                      <SelectableCell value={f.name} placeholder="기능" bgColor={COLORS.function.light} textColor="#000000" onClick={() => setModal({ type: 'l1Function', id: t.id, funcId: f.id, title: '완제품 기능 선택', itemCode: 'C2' })} onDoubleClickEdit={(newValue) => handleInlineEditFunction(t.id, f.id, newValue)} />
                     </td>
                     <td className="border border-[#ccc] p-0">
                       <SelectableCell value="" placeholder="요구사항 선택" bgColor={COLORS.function.zebra} textColor={COLORS.function.text} onClick={() => setModal({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} />
@@ -496,7 +517,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                     )}
                     {rIdx === 0 && (
                       <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle">
-                        <SelectableCell value={f.name} placeholder="기능" bgColor={COLORS.function.light} textColor="#000000" onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} onDoubleClickEdit={(newValue) => handleInlineEditFunction(t.id, f.id, newValue)} />
+                        <SelectableCell value={f.name} placeholder="기능" bgColor={COLORS.function.light} textColor="#000000" onClick={() => setModal({ type: 'l1Function', id: t.id, funcId: f.id, title: '완제품 기능 선택', itemCode: 'C2' })} onDoubleClickEdit={(newValue) => handleInlineEditFunction(t.id, f.id, newValue)} />
                       </td>
                     )}
                     <td className="border border-[#ccc] p-0">

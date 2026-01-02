@@ -540,7 +540,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                           value={f.name} 
                           placeholder="공정기능" 
                           bgColor={'#e8f5e9'} 
-                          onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} 
+                          onClick={() => setModal({ type: 'l2Function', procId: proc.id, funcId: f.id, title: '메인공정 기능 선택', itemCode: 'A3' })} 
                           onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, f.id, newValue)}
                         />
                       </td>
@@ -568,7 +568,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                           value={f.name} 
                           placeholder="공정기능" 
                           bgColor={'#e8f5e9'} 
-                          onClick={() => setModal({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} 
+                          onClick={() => setModal({ type: 'l2Function', procId: proc.id, funcId: f.id, title: '메인공정 기능 선택', itemCode: 'A3' })} 
                           onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, f.id, newValue)}
                         />
                       </td>
