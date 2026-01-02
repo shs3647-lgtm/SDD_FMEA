@@ -449,8 +449,9 @@ export default function TreePanel({ state }: TreePanelProps) {
                         )}
                       </div>
                     ))}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           ))}
         </div>
