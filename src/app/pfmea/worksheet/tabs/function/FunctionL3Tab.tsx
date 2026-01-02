@@ -525,7 +525,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
             <th className="bg-[#c8e6c9] border border-[#ccc] border-r-[2px] border-r-orange-500 p-1.5 text-xs font-semibold">
               공정특성<span className={`font-bold ${processCharCount > 0 ? 'text-green-700' : 'text-red-500'}`}>({processCharCount})</span>
             </th>
-            <th className="bg-orange-500 text-white border border-[#ccc] border-l-0 p-1.5 text-xs font-semibold text-center">
+            <th className="bg-orange-500 text-white border border-[#ccc] border-l-0 p-1.5 text-xs font-semibold text-center whitespace-nowrap">
               특별특성
             </th>
           </tr>
