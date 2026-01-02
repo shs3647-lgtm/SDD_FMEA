@@ -543,7 +543,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                 </span>
               )}
             </th>
-            <th className={`${X.h3} text-center whitespace-nowrap`} style={{ width: '40px', minWidth: '40px', maxWidth: '40px' }}>
+            <th className={`${X.h3} text-center whitespace-nowrap`} style={{ width: '30px', minWidth: '30px', maxWidth: '30px' }}>
               S
             </th>
           </tr>
@@ -664,9 +664,9 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                     border: `1px solid #ccc`, 
                     padding: '4px', 
                     textAlign: 'center', 
-                    width: '40px',
-                    minWidth: '40px',
-                    maxWidth: '40px',
+                    width: '30px',
+                    minWidth: '30px',
+                    maxWidth: '30px',
                     background: row.severity && row.severity >= 8 ? '#ffe0b2' : row.severity && row.severity >= 5 ? '#fff9c4' : zebraBg,
                     cursor: row.effectId ? 'pointer' : 'default'
                   }}
