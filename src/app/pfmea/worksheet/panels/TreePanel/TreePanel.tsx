@@ -199,8 +199,9 @@ export default function TreePanel({ state }: TreePanelProps) {
                     ⚙️ {f.name}
                   </div>
                   {(f.productChars || []).map((c: any) => (
-                    <div key={c.id} className={`ml-4 ${tw.textXxs} py-0.5 px-1`} style={{ color: TREE_FUNCTION.itemText }}>
+                    <div key={c.id} className={`ml-4 ${tw.textXxs} py-0.5 px-1 flex items-center gap-1`} style={{ color: TREE_FUNCTION.itemText }}>
                       📐 {c.name}
+                      {c.specialChar && <span className="bg-orange-500 text-white px-1 rounded text-[7px] font-bold">({c.specialChar})</span>}
                     </div>
                   ))}
                 </div>
@@ -248,8 +249,9 @@ export default function TreePanel({ state }: TreePanelProps) {
                     <div key={f.id} className="ml-3">
                       <div className={`${tw.textXxs} py-0.5 px-1`} style={{ color: TREE_FUNCTION.itemText }}>⚙️ {f.name}</div>
                       {(f.processChars || []).map((c: any) => (
-                        <div key={c.id} className={`ml-3 text-[8px] py-0.5 px-1`} style={{ color: TREE_FUNCTION.itemText }}>
+                        <div key={c.id} className={`ml-3 text-[8px] py-0.5 px-1 flex items-center gap-1`} style={{ color: TREE_FUNCTION.itemText }}>
                           📏 {c.name}
+                          {c.specialChar && <span className="bg-orange-500 text-white px-1 rounded text-[7px] font-bold">({c.specialChar})</span>}
                         </div>
                       ))}
                     </div>
@@ -385,7 +387,10 @@ export default function TreePanel({ state }: TreePanelProps) {
                       <div className={`${tw.textXxs} font-semibold`} style={{ color: TREE_FUNCTION.itemText }}>📋 {f.name}</div>
                       {productChars.length > 0 ? productChars.map((pc: any) => (
                         <div key={pc.id} className="ml-3 mb-0.5">
-                          <div className={`${tw.textXxs}`} style={{ color: TREE_FAILURE.itemText }}>🏷️ {pc.name}</div>
+                          <div className={`${tw.textXxs} flex items-center gap-1`} style={{ color: TREE_FAILURE.itemText }}>
+                            🏷️ {pc.name}
+                            {pc.specialChar && <span className="bg-orange-500 text-white px-1 rounded text-[7px] font-bold">({pc.specialChar})</span>}
+                          </div>
                           {confirmedModes.filter((m: any) => !pc.name || m.productCharId === pc.id || !m.productCharId).slice(0, 3).map((m: any) => (
                             <div key={m.id} className={`ml-3 ${tw.textXxs} flex gap-1.5`} style={{ color: TREE_FAILURE.itemText }}>
                               <span>└ ⚠️ {m.name}</span>
