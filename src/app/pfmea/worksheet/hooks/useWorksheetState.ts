@@ -470,12 +470,27 @@ export function useWorksheetState(): UseWorksheetStateReturn {
               const hasFunctions = (p.functions || []).length > 0;
               return hasName || hasL3 || hasFunctions;
             })
-            .map((p: any) => ({
-              ...p,
-              functions: p.functions || [],
-              productChars: p.productChars || [],
-              failureModes: p.failureModes || [], 
-              l3: (p.l3 || [])
+            .map((p: any) => {
+              // ✅ productCharId 자동 복구 마이그레이션
+              const allProductChars = (p.functions || []).flatMap((f: any) => f.productChars || []);
+              const migratedFailureModes = (p.failureModes || []).map((fm: any) => {
+                // productCharId가 있으면 그대로 사용
+                if (fm.productCharId) return fm;
+                // productCharId가 없으면 첫 번째 productChar에 자동 연결
+                const firstPC = allProductChars[0];
+                if (firstPC) {
+                  console.log('[마이그레이션] FM productCharId 자동 복구:', fm.name, '→', firstPC.id);
+                  return { ...fm, productCharId: firstPC.id };
+                }
+                return fm;
+              });
+              
+              return {
+                ...p,
+                functions: p.functions || [],
+                productChars: p.productChars || [],
+                failureModes: migratedFailureModes, 
+                l3: (p.l3 || [])
                 .filter((we: any) => {
                   const hasName = !isEmptyValue(we.name);
                   const hasM4 = !isEmptyValue(we.m4);
