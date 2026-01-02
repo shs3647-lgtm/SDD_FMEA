@@ -450,27 +450,59 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         if (typeof window !== 'undefined') {
           const urlParams = new URLSearchParams(window.location.search);
           if (urlParams.get('reset-fm') === 'true') {
-          console.log('[초기화] 고장형태 데이터 초기화 시작...');
-          const beforeCount = parsed.l2?.reduce((sum: number, p: any) => sum + (p.failureModes?.length || 0), 0) || 0;
-          console.log('[초기화 전] 고장형태 개수:', beforeCount);
-          
-          if (parsed.l2) {
-            parsed.l2.forEach((p: any) => {
-              p.failureModes = [];
+            console.log('[초기화] 고장형태 데이터 초기화 시작...');
+            const beforeCount = parsed.l2?.reduce((sum: number, p: any) => sum + (p.failureModes?.length || 0), 0) || 0;
+            console.log('[초기화 전] 고장형태 개수:', beforeCount);
+            
+            // 1. 레거시 데이터 초기화
+            if (parsed.l2) {
+              parsed.l2.forEach((p: any) => {
+                p.failureModes = [];
+              });
+              parsed.failureL2Confirmed = false;
+            }
+            
+            // 2. 모든 localStorage 키에서 초기화
+            const allKeys = Object.keys(localStorage);
+            allKeys.forEach(key => {
+              if (key.includes(selectedFmeaId) && (key.includes('worksheet') || key.includes('db'))) {
+                try {
+                  const data = localStorage.getItem(key);
+                  if (data) {
+                    const dataObj = JSON.parse(data);
+                    // 레거시 형식
+                    if (dataObj.l2) {
+                      dataObj.l2.forEach((p: any) => {
+                        p.failureModes = [];
+                      });
+                      dataObj.failureL2Confirmed = false;
+                    }
+                    // 원자성 DB 형식
+                    if (dataObj.failureModes) {
+                      dataObj.failureModes = [];
+                    }
+                    if (dataObj.confirmed) {
+                      dataObj.confirmed.l2Failure = false;
+                    }
+                    localStorage.setItem(key, JSON.stringify(dataObj));
+                    console.log('[초기화] 키 처리 완료:', key);
+                  }
+                } catch (e) {
+                  console.warn('[초기화] 키 처리 실패:', key, e);
+                }
+              }
             });
-            parsed.failureL2Confirmed = false;
-          }
-          
-          // 초기화된 데이터 저장
-          localStorage.setItem(`pfmea_worksheet_${selectedFmeaId}`, JSON.stringify(parsed));
-          console.log('[초기화 완료] 고장형태 데이터가 삭제되었습니다.');
-          
-          // URL에서 파라미터 제거 후 새로고침
-          urlParams.delete('reset-fm');
-          const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
-          window.history.replaceState({}, '', newUrl);
-          setTimeout(() => location.reload(), 500);
-          return;
+            
+            // 3. 초기화된 데이터 저장
+            localStorage.setItem(`pfmea_worksheet_${selectedFmeaId}`, JSON.stringify(parsed));
+            console.log('[초기화 완료] 고장형태 데이터가 삭제되었습니다.');
+            
+            // 4. URL에서 파라미터 제거 후 새로고침
+            urlParams.delete('reset-fm');
+            const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+            window.history.replaceState({}, '', newUrl);
+            setTimeout(() => location.reload(), 500);
+            return;
           }
         }
         
