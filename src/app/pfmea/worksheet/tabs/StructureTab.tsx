@@ -280,6 +280,21 @@ export default function StructureTab(props: StructureTabProps) {
     structureDataRef.current = dataKey;
   }, [state.l1, state.l2, saveToLocalStorage]);
 
+  // ✅ 확정 상태 변경 시 자동 저장 (고장분석 패턴 적용)
+  const confirmedRef = useRef<boolean>(isConfirmed);
+  useEffect(() => {
+    if (confirmedRef.current !== isConfirmed) {
+      console.log('[StructureTab] 확정 상태 변경 감지:', isConfirmed);
+      // 약간의 딜레이 후 저장 (state 업데이트 완료 보장)
+      const timer = setTimeout(() => {
+        saveToLocalStorage?.();
+        console.log('[StructureTab] 확정 상태 저장 완료');
+      }, 50);
+      confirmedRef.current = isConfirmed;
+      return () => clearTimeout(timer);
+    }
+  }, [isConfirmed, saveToLocalStorage]);
+
   // 누락 건수 계산 (rows 배열 기반 - 화면에 표시되는 것과 일치)
   const missingCounts = useMemo(() => {
     const isMissing = (name: string | undefined | null) => {
