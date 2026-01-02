@@ -154,9 +154,10 @@ interface StructureHeaderProps {
   isConfirmed?: boolean;
   onConfirm?: () => void;
   onEdit?: () => void;
+  workElementCount?: number; // ✅ 작업요소명 개수
 }
 
-export function StructureHeader({ onProcessModalOpen, missingCounts, isConfirmed, onConfirm, onEdit }: StructureHeaderProps) {
+export function StructureHeader({ onProcessModalOpen, missingCounts, isConfirmed, onConfirm, onEdit, workElementCount = 0 }: StructureHeaderProps) {
   // 확정된 경우 돋보기 숨김
   const showSearchIcon = !isConfirmed && missingCounts && missingCounts.l2Count > 0;
   
@@ -171,7 +172,7 @@ export function StructureHeader({ onProcessModalOpen, missingCounts, isConfirmed
             <span>2단계 : 구조분석</span>
             <div className="flex gap-1.5">
               {isConfirmed ? (
-                <span className={badgeConfirmed}>✓ 확정됨</span>
+                <span className={badgeConfirmed}>✓ 확정됨({workElementCount})</span>
               ) : (
                 <button 
                   type="button" 
@@ -355,6 +356,11 @@ export default function StructureTab(props: StructureTabProps) {
     return { l1Count, l2Count, l3Count: l3Count + m4Count, total: l1Count + l2Count + l3Count + m4Count };
   }, [state.l1.name, rows]);
 
+  // ✅ 작업요소명 개수 계산
+  const workElementCount = useMemo(() => {
+    return state.l2.reduce((sum, p) => sum + (p.l3 || []).length, 0);
+  }, [state.l2]);
+
   // ✅ 확정 핸들러 (고장분석 패턴 적용)
   const handleConfirm = useCallback(() => {
     console.log('[StructureTab] ========== 확정 버튼 클릭 ==========');
@@ -416,6 +422,7 @@ export default function StructureTab(props: StructureTabProps) {
           isConfirmed={isConfirmed}
           onConfirm={handleConfirm}
           onEdit={handleEdit}
+          workElementCount={workElementCount}
         />
       </thead>
       <tbody>
