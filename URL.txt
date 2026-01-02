@@ -1,24 +1,31 @@
-http://localhost:3000/pfmea/worksheet?v=1.0.1-20260102-all-tabs-unified
+http://localhost:3000/pfmea/worksheet?v=1.0.2-20260102-fm-confirmed-fix
 
 === VERSION INFO ===
-Version: 1.0.1
-Last Updated: 2026-01-02 21:31:01 KST
-Changes: 구조분석 + 기능분석 + 고장분석 전체 코드 통일
+Version: 1.0.2
+Last Updated: 2026-01-02 21:38:45 KST
+Changes: 고장분석 확정 상태에 따른 데이터 표시 근본 수정
 Status: CODE-FREEZE
-Cache Busting: all-tabs-unified
+Cache Busting: fm-confirmed-fix
 
 === COMMIT INFO ===
-Commit: c76fb2b
-Tag: code-freeze-20260102-all-tabs-unified
-Backup: C:\05_REFACTORING_FORK\backup\fmea-20260102-213101
+Commit: 2254853
+Tag: code-freeze-20260102-fm-confirmed-fix
+Backup: C:\05_REFACTORING_FORK\backup\fmea-20260102-213845
 
-=== 표준화/모듈화/공용화 완료 항목 ===
-✅ StructureTab: isConfirmed + handleConfirm + handleEdit + 자동저장
-✅ FunctionL1/L2/L3Tab: 고장분석 패턴 수평전개
-✅ FailureL1/L2/L3Tab: setTimeout → requestAnimationFrame 통일
-✅ 모든 탭: useEffect + useRef 자동 저장 패턴
-✅ 모든 탭: handleConfirm/handleEdit/handleSave 로직 100% 통일
-✅ 모든 탭: 콘솔 로그 포맷 통일 (디버깅용)
+=== 근본 수정 내용 ===
+✅ FailureLinkTab: FE/FM/FC 데이터 추출 시 확정 상태 체크
+   - isL1Confirmed: 1L 고장영향 확정 시에만 FE 데이터 표시
+   - isL2Confirmed: 2L 고장형태 확정 시에만 FM 데이터 표시
+   - isL3Confirmed: 3L 고장원인 확정 시에만 FC 데이터 표시
+   
+✅ FailureLinkTab: 미확정 시 경고 화면 표시
+   - 모든 분석(1L/2L/3L)이 확정되어야 고장연결 진행 가능
+   - 미확정 항목 목록 표시
+
+✅ TreePanel: 확정 상태 체크 추가
+   - 2L 고장형태 트리: failureL2Confirmed 체크
+   - 3L 고장원인 트리: failureL3Confirmed 체크
+   - 미확정 시 안내 메시지 표시
 
 === 롤백 명령어 ===
-git checkout code-freeze-20260102-all-tabs-unified
+git checkout code-freeze-20260102-fm-confirmed-fix
