@@ -225,8 +225,8 @@ export function StructureRow({
   row, idx, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown, handleSelect, setIsProcessModalOpen, setIsWorkElementModalOpen, setTargetL2Id, saveToLocalStorage, zebraBg,
 }: StructureTabProps & { row: FlatRow; idx: number; zebraBg: string }) {
   // 완제품 공정명과 메인 공정명이 1:1로 병합되도록 l2Spans 사용
-  const spanCount = l2Spans[idx];
-  const showMergedCells = spanCount > 0;
+  const spanCount = l2Spans[idx] || 1; // ✅ 기본값 1로 설정
+  const showMergedCells = spanCount > 0 || idx === 0; // ✅ 첫 번째 행은 항상 표시
   
   return (
     <>
@@ -389,14 +389,37 @@ export default function StructureTab(props: StructureTabProps) {
         />
       </thead>
       <tbody>
-        {rows.map((row, idx) => {
-          const zebraBg = idx % 2 === 1 ? '#bbdefb' : '#e3f2fd';
-          return (
-            <tr key={row.l3Id} className={`h-6 ${zebraBg}`}>
-              <StructureRow {...props} row={row} idx={idx} zebraBg={zebraBg} />
-            </tr>
-          );
-        })}
+        {rows.length === 0 ? (
+          // ✅ rows가 비어있을 때도 완제품 공정명 입력 가능
+          <tr className="h-6 bg-white">
+            <td colSpan={4} className="text-center text-xs border border-[#ccc] p-1 align-middle">
+              <div className="flex items-center justify-center gap-2">
+                <input
+                  type="text" 
+                  value={state.l1.name || ''}
+                  onChange={(e) => { 
+                    setState(prev => ({ ...prev, l1: { ...prev.l1, name: e.target.value } })); 
+                    setDirty(true); 
+                  }}
+                  onBlur={handleInputBlur} 
+                  onKeyDown={handleInputKeyDown} 
+                  placeholder="완제품명+라인 입력"
+                  className="w-full max-w-md text-center border border-gray-300 outline-none text-xs font-semibold min-h-6 bg-white rounded px-2 py-1"
+                />
+                <span className="text-gray-500 text-xs">공정을 추가하려면 "2. 메인 공정명"을 클릭하세요</span>
+              </div>
+            </td>
+          </tr>
+        ) : (
+          rows.map((row, idx) => {
+            const zebraBg = idx % 2 === 1 ? '#bbdefb' : '#e3f2fd';
+            return (
+              <tr key={row.l3Id} className={`h-6 ${zebraBg}`}>
+                <StructureRow {...props} row={row} idx={idx} zebraBg={zebraBg} />
+              </tr>
+            );
+          })
+        )}
       </tbody>
     </>
   );
