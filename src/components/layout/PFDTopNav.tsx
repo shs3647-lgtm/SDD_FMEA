@@ -2,33 +2,34 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 
-interface APQPTopNavProps {
-  selectedProjectId?: string | null;
+interface PFDTopNavProps {
+  linkedFmeaId?: string | null;
   rowCount?: number;
-  stageCount?: number;
-  activityCount?: number;
+  mainCount?: number;    // 주요공정 수
+  inspectCount?: number; // 검사공정 수
 }
 
 /**
- * APQP 상단 바로가기 메뉴바
- * - PFMEA/CP/PFD TopNav와 동일한 구조
+ * PFD 상단 바로가기 메뉴바
+ * - PFMEA/CP TopNav와 동일한 구조
+ * - 스크롤해도 항상 보이도록 고정
  */
-export default function APQPTopNav({ selectedProjectId, rowCount = 0, stageCount = 5, activityCount = 0 }: APQPTopNavProps) {
+export default function PFDTopNav({ linkedFmeaId, rowCount = 0, mainCount = 0, inspectCount = 0 }: PFDTopNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   
   const menuItems = [
-    { label: 'APQP 등록', path: '/apqp/register', icon: '📝' },
-    { label: 'APQP 리스트', path: '/apqp/list', icon: '📋' },
-    { label: 'APQP 작성화면', path: '/apqp/worksheet', icon: '✏️' },
-    { label: 'APQP 개정관리', path: '/apqp/revision', icon: '📜' },
-    { label: 'CFT 등록', path: '/apqp/cft', icon: '👥' },
-    { label: '접속 로그', path: '/apqp/log', icon: '📊' },
+    { label: 'PFD 등록', path: '/pfd/register', icon: '📝' },
+    { label: 'PFD 리스트', path: '/pfd/list', icon: '📋' },
+    { label: 'PFD 작성화면', path: '/pfd/worksheet', icon: '✏️' },
+    { label: 'PFD 개정관리', path: '/pfd/revision', icon: '📜' },
+    { label: 'CFT 등록', path: '/pfd/cft', icon: '👥' },
+    { label: '접속 로그', path: '/pfd/log', icon: '📊' },
   ];
 
   const isActive = (path: string) => {
-    if (path === '/apqp/worksheet') {
-      return pathname === '/apqp/worksheet';
+    if (path === '/pfd/worksheet') {
+      return pathname === '/pfd/worksheet';
     }
     return pathname?.startsWith(path);
   };
@@ -40,7 +41,7 @@ export default function APQPTopNav({ selectedProjectId, rowCount = 0, stageCount
   return (
     <div 
       className="fixed top-0 left-[50px] right-0 z-[100] flex items-center h-8 pl-0 pr-0 ml-0 border-b border-white/20"
-      style={{ background: 'linear-gradient(to right, #2563eb, #3b82f6, #2563eb)' }}
+      style={{ background: 'linear-gradient(to right, #7c3aed, #8b5cf6, #7c3aed)' }}
     >
       {/* 바로가기 레이블 */}
       <div className="px-3 pl-2 text-white/80 text-[11px] font-semibold border-r border-white/20 h-full flex items-center min-w-[60px]">
@@ -64,24 +65,25 @@ export default function APQPTopNav({ selectedProjectId, rowCount = 0, stageCount
       {/* 우측 영역 */}
       <div className="flex-1 h-full" />
       
-      {/* 우측: APQP 현황 - 280px */}
+      {/* 우측: PFD 현황 - 280px */}
       <div 
         className="absolute right-0 top-0 h-8 w-[280px] flex items-stretch border-l-[2px] border-white"
-        style={{ background: 'linear-gradient(to right, #2563eb, #3b82f6)' }}
+        style={{ background: 'linear-gradient(to right, #7c3aed, #8b5cf6)' }}
       >
         <div className="w-[80px] h-8 flex items-center justify-center border-r border-white/30 shrink-0">
-          <span className="text-yellow-400 text-xs font-bold whitespace-nowrap">APQP현황:</span>
+          <span className="text-yellow-400 text-xs font-bold whitespace-nowrap">PFD현황:</span>
         </div>
         <div className="w-[66px] h-8 flex items-center justify-center border-r border-white/30 shrink-0">
-          <span className="text-orange-300 text-xs font-semibold whitespace-nowrap">Stage:{stageCount}</span>
+          <span className="text-orange-300 text-xs font-semibold whitespace-nowrap">공정:{rowCount}</span>
         </div>
         <div className="w-[66px] h-8 flex items-center justify-center border-r border-white/30 shrink-0">
-          <span className="text-green-300 text-xs font-semibold whitespace-nowrap">활동:{activityCount}</span>
+          <span className="text-blue-300 text-xs font-semibold whitespace-nowrap">주요:{mainCount}</span>
         </div>
         <div className="w-[68px] h-8 flex items-center justify-center shrink-0">
-          <span className="text-cyan-300 text-xs font-semibold whitespace-nowrap">PJ:{rowCount}</span>
+          <span className="text-green-300 text-xs font-semibold whitespace-nowrap">검사:{inspectCount}</span>
         </div>
       </div>
     </div>
   );
 }
+

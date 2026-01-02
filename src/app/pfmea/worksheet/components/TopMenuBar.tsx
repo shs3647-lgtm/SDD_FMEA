@@ -8,6 +8,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { WorksheetState } from '../constants';
 
 interface TopMenuBarProps {
@@ -51,6 +52,7 @@ export default function TopMenuBar({
   fmeaList, selectedFmeaId, dirty, isSaving, importMessage, fileInputRef, state,
   onFmeaChange, onSave, onNavigateToList, onExport, onImportFile, onDownloadTemplate, onOpenSpecialChar, onOpenSOD, onOpen5AP, onOpen6AP, onOpenRPN
 }: TopMenuBarProps) {
+  const router = useRouter();
   const [showImportMenu, setShowImportMenu] = React.useState(false);
   
   // 5단계 AP 통계 계산
@@ -174,14 +176,40 @@ export default function TopMenuBar({
 
       <div className="w-px h-5 bg-white/30" />
 
-      {/* 특별특성/SOD/5AP/6AP/RPN/LLD */}
-      <div className="flex items-center gap-1.5 mr-[290px]">
+      {/* 특별특성/SOD/5AP/6AP/RPN */}
+      <div className="flex items-center gap-1.5">
         <button onClick={onOpenSpecialChar} className={menuBtn}>⭐특별특성</button>
         <button onClick={onOpenSOD} className={menuBtn}>📊SOD</button>
         <button onClick={onOpen5AP} className={menuBtn}>5AP</button>
         <button onClick={onOpen6AP} className={menuBtn}>6AP</button>
         <button onClick={onOpenRPN} className={`${menuBtn} bg-purple-600/50`}>📊RPN</button>
-        <button className={menuBtn}>📚LLD</button>
+      </div>
+
+      <div className="w-px h-5 bg-white/30" />
+
+      {/* 4판/CP/LLD - 외부 연동 버튼 */}
+      <div className="flex items-center gap-1.5 mr-[290px]">
+        <button 
+          onClick={() => {}} 
+          className="px-3 py-1 rounded border border-white/30 bg-purple-700/50 text-white text-xs font-medium hover:bg-purple-600 transition-all"
+          title="FMEA 4판 (RPN 방식)"
+        >
+          📋 4판
+        </button>
+        <button 
+          onClick={() => router.push('/control-plan')} 
+          className="px-3 py-1 rounded border border-white/30 bg-teal-700/50 text-white text-xs font-medium hover:bg-teal-600 transition-all"
+          title="Control Plan 워크시트로 이동"
+        >
+          📝 CP
+        </button>
+        <button 
+          onClick={() => {}} 
+          className="px-3 py-1 rounded border border-white/30 bg-indigo-700/50 text-white text-xs font-medium hover:bg-indigo-600 transition-all"
+          title="LLD (Lessons Learned Database)"
+        >
+          📚 LLD
+        </button>
       </div>
 
       {/* 우측: 5단계 AP - 280px (표준화: 80px 레이블 + 200px 값) */}
