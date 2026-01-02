@@ -399,6 +399,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
   }, [modal, setState, setDirty, saveToLocalStorage]);
 
   // 특별특성 선택 핸들러
+  // ✅ 특별특성 업데이트 - CRUD Update → 확정 해제 필요
   const handleSpecialCharSelect = useCallback((symbol: string) => {
     if (!specialCharModal) return;
     
@@ -428,7 +429,8 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
           })
         };
       });
-      
+      // ✅ CRUD Update: 확정 상태 해제
+      newState.l3Confirmed = false;
       return newState;
     });
     

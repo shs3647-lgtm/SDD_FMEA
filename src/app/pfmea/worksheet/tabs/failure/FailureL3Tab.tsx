@@ -240,6 +240,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
   }, [modal, setState, setDirty, saveToLocalStorage]);
 
   // 발생도 업데이트
+  // ✅ 발생도 업데이트 - CRUD Update → 확정 해제 필요
   const updateOccurrence = useCallback((processId: string, weId: string, causeId: string, occurrence: number | undefined) => {
     setState(prev => {
       const newState = JSON.parse(JSON.stringify(prev));
@@ -256,6 +257,8 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
           })
         };
       });
+      // ✅ CRUD Update: 확정 상태 해제
+      newState.failureL3Confirmed = false;
       return newState;
     });
     setDirty(true);

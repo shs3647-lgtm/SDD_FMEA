@@ -316,6 +316,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
   }, []);
 
   // 심각도 업데이트
+  // ✅ 심각도 업데이트 - CRUD Update → 확정 해제 필요
   const updateSeverity = useCallback((effectId: string, severity: number | undefined) => {
     setState(prev => {
       const newState = JSON.parse(JSON.stringify(prev));
@@ -323,6 +324,8 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
         if (s.id !== effectId) return s;
         return { ...s, severity };
       });
+      // ✅ CRUD Update: 확정 상태 해제
+      newState.failureL1Confirmed = false;
       return newState;
     });
     setDirty(true);
