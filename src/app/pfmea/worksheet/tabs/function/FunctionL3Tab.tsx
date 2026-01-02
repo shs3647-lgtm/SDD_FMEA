@@ -212,7 +212,12 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
       return;
     }
     
-    console.log('[FunctionL3Tab] 저장 시작', { type, procId, l3Id, funcId, selectedCount: selectedValues.length });
+    if (!selectedValues || selectedValues.length === 0) {
+      console.warn('[FunctionL3Tab] selectedValues가 비어있습니다!');
+      return;
+    }
+    
+    console.log('[FunctionL3Tab] 저장 시작', { type, procId, l3Id, funcId, selectedCount: selectedValues.length, selectedValues });
     
     setState(prev => {
       const isConfirmed = prev.l3Confirmed || false;
