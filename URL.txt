@@ -1,4 +1,4 @@
-http://localhost:3000/pfmea/worksheet?v=1.0.30-20260103-auto-edit-mode
+http://localhost:3000/pfmea/worksheet?v=1.0.31-20260103-status-colors
 
 === VERSION INFO ===
 Version: 1.0.26

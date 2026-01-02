@@ -105,13 +105,26 @@ export const cell = 'border border-[#ccc] p-1 text-xs align-middle';
 export const cellCenter = 'border border-[#ccc] p-1 text-xs align-middle text-center';
 export const cellP0 = 'border border-[#ccc] p-0';
 
-// ============ 버튼/배지 ============
-export const btnConfirm = 'bg-green-600 text-white border-none px-2.5 py-0.5 rounded text-xs font-semibold cursor-pointer hover:bg-green-700';
+// ============ 버튼/배지 (CRUD 상태 기반) ============
+// 🟢 확정 버튼 (Create/Update 완료 시 눌러야 함) - 초록색 + 펄스 효과로 "지금 해야 할 일" 강조
+export const btnConfirm = 'bg-green-500 text-white border-2 border-green-300 px-3 py-1 rounded text-xs font-bold cursor-pointer hover:bg-green-600 animate-pulse shadow-lg';
+
+// 🟠 수정 버튼 (확정됨 상태에서 Update 시작) - 주황색
 export const btnEdit = 'bg-orange-500 text-white border-none px-2.5 py-0.5 rounded text-xs font-semibold cursor-pointer hover:bg-orange-600';
+
+// ⚪ 비활성 버튼
 export const btnDisabled = 'bg-gray-400 text-white border-none px-2.5 py-0.5 rounded text-xs font-semibold cursor-not-allowed opacity-70';
-export const badgeOk = 'bg-green-600 text-white px-2.5 py-0.5 rounded text-xs font-semibold';
-export const badgeConfirmed = 'bg-green-600 text-white px-2.5 py-0.5 rounded text-xs font-semibold';
-export const badgeMissing = 'bg-orange-500 text-white px-2.5 py-0.5 rounded text-xs font-semibold';
+
+// ✅ 확정됨 배지 (Read 상태 - 완료) - 차분한 초록색 (강조 없음)
+export const badgeConfirmed = 'bg-green-700 text-white px-2.5 py-0.5 rounded text-xs font-semibold';
+
+// ✅ 누락 0건 배지 (완료 상태) - 차분한 초록색
+export const badgeOk = 'bg-green-700 text-white px-2.5 py-0.5 rounded text-xs font-semibold';
+
+// 🔴 누락 N건 배지 (입력 필요 - 경고) - 빨간색 + 펄스 효과
+export const badgeMissing = 'bg-red-500 text-white px-2.5 py-0.5 rounded text-xs font-bold animate-pulse';
+
+// 🟠 개수 배지
 export const badgeCount = 'ml-1 bg-orange-500 text-white px-1.5 py-0.5 rounded-lg text-[11px]';
 
 // ============ 하위 호환 (WS 객체) ============
