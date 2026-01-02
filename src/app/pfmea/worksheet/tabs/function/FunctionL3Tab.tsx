@@ -201,9 +201,11 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
 
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
-    const isConfirmed = state.l3Confirmed || false;
+    
+    console.log('[FunctionL3Tab] 저장 시작', { type: modal.type, procId: modal.procId, l3Id: modal.l3Id, funcId: modal.funcId, selectedCount: selectedValues.length });
     
     setState(prev => {
+      const isConfirmed = prev.l3Confirmed || false;
       const newState = JSON.parse(JSON.stringify(prev));
       const { type, procId, l3Id, funcId } = modal;
 
@@ -245,12 +247,14 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
               // ✅ 수정 모드: 빈 기능이 없어도 새로 추가 가능
               if (!isConfirmed && selectedValues.length > 0) {
                 const newFunc = { id: uid(), name: selectedValues[0], processChars: [] };
+                console.log('[FunctionL3Tab] 새 기능 추가:', selectedValues[0]);
                 return {
                   ...we,
                   functions: [...currentFuncs, newFunc]
                 };
               }
               
+              console.log('[FunctionL3Tab] 기능 추가 안됨', { isConfirmed, selectedCount: selectedValues.length, currentFuncsCount: currentFuncs.length });
               return we;
             })
           };
@@ -282,12 +286,18 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
         });
       }
       
+      console.log('[FunctionL3Tab] 상태 업데이트 완료');
       return newState;
     });
     
     setDirty(true);
     setModal(null);
-    saveToLocalStorage?.(); // 영구 저장
+    
+    // ✅ 즉시 저장 (requestAnimationFrame 사용)
+    requestAnimationFrame(() => {
+      saveToLocalStorage?.();
+      console.log('[FunctionL3Tab] 저장 완료');
+    });
   }, [modal, setState, setDirty, saveToLocalStorage]);
 
   const handleDelete = useCallback((deletedValues: string[]) => {
