@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { FunctionTabProps } from './types';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
 import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
@@ -85,22 +85,55 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
   // 총 누락 건수 (기존 호환성)
   const missingCount = missingCounts.total;
 
-  // 확정 핸들러
+  // ✅ L3 기능 데이터 변경 감지용 ref (고장분석 패턴 적용)
+  const l3FuncDataRef = useRef<string>('');
+  
+  // ✅ L3 기능 데이터 변경 시 자동 저장 (확실한 저장 보장)
+  useEffect(() => {
+    const allFuncs = state.l2.flatMap((p: any) => (p.l3 || []).flatMap((we: any) => we.functions || []));
+    const dataKey = JSON.stringify(allFuncs);
+    if (l3FuncDataRef.current && dataKey !== l3FuncDataRef.current) {
+      console.log('[FunctionL3Tab] l3.functions 변경 감지, 자동 저장');
+      saveToLocalStorage?.();
+    }
+    l3FuncDataRef.current = dataKey;
+  }, [state.l2, saveToLocalStorage]);
+
+  // 확정 핸들러 (고장분석 패턴 적용)
   const handleConfirm = useCallback(() => {
+    console.log('[FunctionL3Tab] 확정 버튼 클릭, missingCount:', missingCount);
     if (missingCount > 0) {
       alert(`누락된 항목이 ${missingCount}건 있습니다.\n먼저 입력을 완료해주세요.`);
       return;
     }
-    setState(prev => ({ ...prev, l3Confirmed: true }));
-    saveToLocalStorage?.();
-    alert('3L 작업요소 기능분석이 확정되었습니다.');
-  }, [missingCount, setState, saveToLocalStorage]);
+    
+    // ✅ 현재 기능 통계 로그
+    const funcCount = state.l2.flatMap((p: any) => (p.l3 || []).flatMap((we: any) => we.functions || [])).length;
+    const charCount = state.l2.flatMap((p: any) => (p.l3 || []).flatMap((we: any) => (we.functions || []).flatMap((f: any) => f.processChars || []))).length;
+    console.log('[FunctionL3Tab] 확정 시 기능:', funcCount, '개, 공정특성:', charCount, '개');
+    
+    setState(prev => {
+      const newState = { ...prev, l3Confirmed: true };
+      console.log('[FunctionL3Tab] 확정 상태 업데이트:', newState.l3Confirmed);
+      return newState;
+    });
+    setDirty(true);
+    
+    // ✅ 즉시 저장 (requestAnimationFrame 사용)
+    requestAnimationFrame(() => {
+      saveToLocalStorage?.();
+      console.log('[FunctionL3Tab] 확정 후 localStorage 저장 완료');
+    });
+    
+    alert('✅ 3L 작업요소 기능분석이 확정되었습니다.');
+  }, [missingCount, state.l2, setState, setDirty, saveToLocalStorage]);
 
-  // 수정 핸들러
+  // 수정 핸들러 (고장분석 패턴 적용)
   const handleEdit = useCallback(() => {
     setState(prev => ({ ...prev, l3Confirmed: false }));
-    saveToLocalStorage?.(); // 영구 저장
-  }, [setState, saveToLocalStorage]);
+    setDirty(true);
+    requestAnimationFrame(() => saveToLocalStorage?.());
+  }, [setState, setDirty, saveToLocalStorage]);
 
   // 작업요소 기능 인라인 편집 핸들러 (더블클릭)
   const handleInlineEditFunction = useCallback((procId: string, l3Id: string, funcId: string, newValue: string) => {
@@ -289,7 +322,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
     });
     
     setDirty(true);
-    if (saveToLocalStorage) setTimeout(() => saveToLocalStorage(), 100);
+    requestAnimationFrame(() => saveToLocalStorage?.());
   }, [modal, setState, setDirty, saveToLocalStorage]);
 
   // 특별특성 선택 핸들러
@@ -328,7 +361,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
     
     setDirty(true);
     setSpecialCharModal(null);
-    if (saveToLocalStorage) setTimeout(() => saveToLocalStorage(), 100);
+    requestAnimationFrame(() => saveToLocalStorage?.());
   }, [specialCharModal, setState, setDirty, saveToLocalStorage]);
 
   // 공정의 총 행 수 계산

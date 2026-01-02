@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { FunctionTabProps } from './types';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
@@ -74,25 +74,54 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
   // 총 누락 건수 (기존 호환성)
   const missingCount = missingCounts.total;
 
-  // 확정 핸들러
-  const handleConfirm = () => {
+  // ✅ L1 기능 데이터 변경 감지용 ref (고장분석 패턴 적용)
+  const l1DataRef = useRef<string>('');
+  
+  // ✅ L1 데이터 변경 시 자동 저장 (확실한 저장 보장)
+  useEffect(() => {
+    const dataKey = JSON.stringify(state.l1.types);
+    if (l1DataRef.current && dataKey !== l1DataRef.current) {
+      console.log('[FunctionL1Tab] l1.types 변경 감지, 자동 저장');
+      saveToLocalStorage?.();
+    }
+    l1DataRef.current = dataKey;
+  }, [state.l1.types, saveToLocalStorage]);
+
+  // 확정 핸들러 (고장분석 패턴 적용)
+  const handleConfirm = useCallback(() => {
+    console.log('[FunctionL1Tab] 확정 버튼 클릭, missingCount:', missingCount);
     if (missingCount > 0) {
       alert(`누락된 항목이 ${missingCount}건 있습니다.\n모든 항목을 입력 후 확정해 주세요.`);
       return;
     }
-    setState((prev: any) => ({ ...prev, l1Confirmed: true }));
+    
+    // ✅ 현재 기능 통계 로그
+    const funcCount = state.l1.types.flatMap(t => t.functions).length;
+    const reqCount = state.l1.types.flatMap(t => t.functions.flatMap(f => f.requirements || [])).length;
+    console.log('[FunctionL1Tab] 확정 시 기능:', funcCount, '개, 요구사항:', reqCount, '개');
+    
+    setState((prev: any) => {
+      const newState = { ...prev, l1Confirmed: true };
+      console.log('[FunctionL1Tab] 확정 상태 업데이트:', newState.l1Confirmed);
+      return newState;
+    });
     setDirty(true);
-    saveToLocalStorage?.(); // 영구 저장
-    alert('✅ 완제품 기능분석이 확정되었습니다.');
-  };
+    
+    // ✅ 즉시 저장 (requestAnimationFrame 사용)
+    requestAnimationFrame(() => {
+      saveToLocalStorage?.();
+      console.log('[FunctionL1Tab] 확정 후 localStorage 저장 완료');
+    });
+    
+    alert('✅ 1L 완제품 기능분석이 확정되었습니다.');
+  }, [missingCount, state.l1.types, setState, setDirty, saveToLocalStorage]);
 
-  // 수정 핸들러
-  const handleEdit = () => {
+  // 수정 핸들러 (고장분석 패턴 적용)
+  const handleEdit = useCallback(() => {
     setState((prev: any) => ({ ...prev, l1Confirmed: false }));
     setDirty(true);
-    saveToLocalStorage?.(); // 영구 저장
-    alert('🔓 수정 모드로 전환되었습니다.');
-  };
+    requestAnimationFrame(() => saveToLocalStorage?.());
+  }, [setState, setDirty, saveToLocalStorage]);
 
   // 인라인 편집 핸들러 - 요구사항 (더블클릭)
   const handleInlineEditRequirement = useCallback((typeId: string, funcId: string, reqId: string, newValue: string) => {
@@ -278,14 +307,9 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
     
     setDirty(true);
     
-    // 즉시 저장
-    if (saveToLocalStorage) {
-      console.log('[FunctionL1Tab] 100ms 후 저장 예약');
-      setTimeout(() => {
-        console.log('[FunctionL1Tab] 저장 실행');
-        saveToLocalStorage();
-      }, 100);
-    }
+    // ✅ 즉시 저장 (requestAnimationFrame 사용)
+    console.log('[FunctionL1Tab] 저장 실행');
+    requestAnimationFrame(() => saveToLocalStorage?.());
   }, [modal, setState, setDirty, saveToLocalStorage]);
 
   // 총 행 수 계산
