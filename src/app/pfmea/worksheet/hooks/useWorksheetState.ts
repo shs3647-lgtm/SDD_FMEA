@@ -505,7 +505,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
                   failureCauses: we.failureCauses || [] 
                 }))
               };
-            }));
+            });
           
           console.log('[데이터 정리] 원본 공정 수:', parsed.l2.length, '→ 정리 후:', migratedL2.length);
 
