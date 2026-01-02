@@ -293,7 +293,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
                 <span className="whitespace-nowrap">고장분석(4단계)</span>
                 <div className="flex gap-1">
                   {isConfirmed ? (
-                    <span className={badgeConfirmed}>✓ 확정됨</span>
+                    <span className={badgeConfirmed}>✓ 확정됨({state.l2.reduce((sum, p) => sum + (p.l3 || []).reduce((s2, w) => s2 + (w.failureCauses?.length || 0), 0), 0)})</span>
                   ) : (
                     <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
                   )}
