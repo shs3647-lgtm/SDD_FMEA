@@ -24,7 +24,15 @@ const headerStyle = (bg: string, color = '#fff'): React.CSSProperties => ({ ...c
 const dataCell = (bg: string): React.CSSProperties => ({ ...cellBase, background: bg });
 
 export default function FailureL3Tab({ state, setState, setDirty, saveToLocalStorage }: FailureTabProps) {
-  const [modal, setModal] = useState<{ type: string; processId: string; weId?: string; title: string; itemCode: string } | null>(null);
+  const [modal, setModal] = useState<{ 
+    type: string; 
+    processId: string; 
+    weId?: string; 
+    processCharId?: string;  // ✅ 공정특성 ID 추가 (CASCADE 연결)
+    processCharName?: string;
+    title: string; 
+    itemCode: string 
+  } | null>(null);
 
   // 공정 목록 (드롭다운용)
   const processList = useMemo(() => 
@@ -57,16 +65,29 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
     return false;
   };
 
-  // 항목별 누락 건수 분리 계산
+  // ✅ 항목별 누락 건수 분리 계산 - CASCADE 구조 (공정특성 기준)
   const missingCounts = useMemo(() => {
     let failureCauseCount = 0;   // 고장원인 누락
     
     state.l2.forEach(proc => {
+      const allCauses = proc.failureCauses || [];  // 공정 레벨 고장원인
+      
       (proc.l3 || []).forEach(we => {
-        const causes = we.failureCauses || [];
-        if (causes.length === 0 && we.name && !isMissing(we.name)) failureCauseCount++;
-        causes.forEach(c => {
-          if (isMissing(c.name)) failureCauseCount++;
+        if (!we.name || isMissing(we.name)) return;
+        
+        // 작업요소의 모든 공정특성 수집
+        (we.functions || []).forEach((f: any) => {
+          (f.processChars || []).forEach((pc: any) => {
+            // 이 공정특성에 연결된 고장원인들
+            const linkedCauses = allCauses.filter((c: any) => c.processCharId === pc.id);
+            if (linkedCauses.length === 0) {
+              failureCauseCount++;  // 공정특성에 고장원인 없음
+            } else {
+              linkedCauses.forEach(c => {
+                if (isMissing(c.name)) failureCauseCount++;
+              });
+            }
+          });
         });
       });
     });
@@ -128,18 +149,17 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
   }, [setState, setDirty, saveToLocalStorage]);
 
   /**
-   * [핵심] handleSave - 원자성 저장 (L2 패턴 적용)
-   * - 여러 개 선택 시 각각 별도 레코드로 저장
-   * - ✅ 저장 후 즉시 localStorage에 반영
+   * ✅ [핵심] handleSave - CASCADE 구조 (공정특성→고장원인 연결)
+   * - 공정 레벨에 failureCauses 저장 (FailureL2Tab 패턴)
+   * - 각 고장원인에 processCharId FK 저장
    */
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
     
-    const isConfirmed = state.failureL3Confirmed || false;
-    const { type, processId, weId } = modal;
+    const { type, processId, processCharId } = modal;
     const causeId = (modal as any).causeId;
     
-    console.log('[FailureL3Tab] 저장 시작', { processId, weId, causeId, selectedCount: selectedValues.length, isConfirmed });
+    console.log('[FailureL3Tab] 저장 시작', { processId, processCharId, causeId, selectedCount: selectedValues.length });
     
     setState(prev => {
       const newState = JSON.parse(JSON.stringify(prev));
@@ -147,54 +167,50 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
       if (type === 'l3FailureCause') {
         newState.l2 = newState.l2.map((proc: any) => {
           if (proc.id !== processId) return proc;
+          
+          const currentCauses = proc.failureCauses || [];
+          
+          // ✅ causeId가 있으면 해당 항목만 수정 (다중선택 개별 수정)
+          if (causeId) {
+            if (selectedValues.length === 0) {
+              return { ...proc, failureCauses: currentCauses.filter((c: any) => c.id !== causeId) };
+            }
+            return {
+              ...proc,
+              failureCauses: currentCauses.map((c: any) => 
+                c.id === causeId ? { ...c, name: selectedValues[0] || c.name } : c
+              )
+            };
+          }
+          
+          // ✅ causeId가 없으면 빈 셀 클릭 → 새 항목 추가 (processCharId별)
+          // 1. 다른 processCharId의 고장원인은 보존
+          const otherCauses = currentCauses.filter((c: any) => c.processCharId !== processCharId);
+          
+          // 2. 선택된 값들 각각 별도 레코드로 생성
+          const newCauses = selectedValues.map(val => {
+            const existing = currentCauses.find((c: any) => 
+              c.processCharId === processCharId && c.name === val
+            );
+            return existing || { 
+              id: uid(), 
+              name: val, 
+              occurrence: undefined,
+              processCharId: processCharId  // ✅ CASCADE 연결
+            };
+          });
+          
+          console.log('[FailureL3Tab] 보존:', otherCauses.length, '새로:', newCauses.length);
+          
           return {
             ...proc,
-            l3: (proc.l3 || []).map((we: any) => {
-              if (weId && we.id !== weId) return we;
-              const currentCauses = we.failureCauses || [];
-              
-              // ✅ causeId가 있으면 해당 항목만 수정 (다중선택 개별 수정)
-              if (causeId) {
-                if (selectedValues.length === 0) {
-                  return { ...we, failureCauses: currentCauses.filter((c: any) => c.id !== causeId) };
-                }
-                return {
-                  ...we,
-                  failureCauses: currentCauses.map((c: any) => 
-                    c.id === causeId ? { ...c, name: selectedValues[0] || c.name } : c
-                  )
-                };
-              }
-              
-              // ✅ causeId가 없으면 빈 셀 클릭 → 새 항목 추가
-              const emptyCause = currentCauses.find((c: any) => !c.name || c.name === '');
-              if (emptyCause && selectedValues.length > 0) {
-                return {
-                  ...we,
-                  failureCauses: currentCauses.map((c: any) => 
-                    c.id === emptyCause.id ? { ...c, name: selectedValues[0] } : c
-                  )
-                };
-              }
-              
-              // ✅ 중복 체크: 같은 이름의 고장원인이 이미 있으면 추가하지 않음
-              if (selectedValues.length > 0) {
-                const existingNames = new Set(currentCauses.map((c: any) => c.name));
-                const newValue = selectedValues[0];
-                if (existingNames.has(newValue)) {
-                  alert(`⚠️ 중복 항목: "${newValue}"는 이미 등록되어 있습니다.`);
-                  return we;
-                }
-                const newCause = { id: uid(), name: newValue, occurrence: undefined };
-                console.log('[FailureL3Tab] 새 고장원인 추가:', newCause.name);
-                return { ...we, failureCauses: [...currentCauses, newCause] };
-              }
-              
-              return we;
-            })
+            failureCauses: [...otherCauses, ...newCauses]
           };
         });
       }
+      
+      // ✅ CRUD Update: 확정 상태 해제
+      newState.failureL3Confirmed = false;
       
       console.log('[FailureL3Tab] 상태 업데이트 완료');
       return newState;
@@ -208,29 +224,32 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
       saveToLocalStorage?.();
       console.log('[FailureL3Tab] 저장 완료');
     });
-  }, [modal, state.failureL3Confirmed, setState, setDirty, saveToLocalStorage]);
+  }, [modal, setState, setDirty, saveToLocalStorage]);
 
   const handleDelete = useCallback((deletedValues: string[]) => {
     if (!modal) return;
     
-    const { type, processId, weId } = modal;
+    const { type, processId, processCharId } = modal;
     const deletedSet = new Set(deletedValues);
     
     setState(prev => {
       const newState = JSON.parse(JSON.stringify(prev));
       
       if (type === 'l3FailureCause') {
+        // ✅ 공정 레벨에서 삭제 (processCharId 기준)
         newState.l2 = newState.l2.map((proc: any) => {
           if (processId && proc.id !== processId) return proc;
           return {
             ...proc,
-            l3: (proc.l3 || []).map((we: any) => {
-              if (weId && we.id !== weId) return we;
-              return { ...we, failureCauses: (we.failureCauses || []).filter((c: any) => !deletedSet.has(c.name)) };
-            })
+            failureCauses: (proc.failureCauses || []).filter((c: any) => 
+              !(c.processCharId === processCharId && deletedSet.has(c.name))
+            )
           };
         });
       }
+      
+      // ✅ CRUD Delete: 확정 상태 해제
+      newState.failureL3Confirmed = false;
       
       return newState;
     });
@@ -239,22 +258,17 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
     requestAnimationFrame(() => saveToLocalStorage?.());
   }, [modal, setState, setDirty, saveToLocalStorage]);
 
-  // 발생도 업데이트
-  // ✅ 발생도 업데이트 - CRUD Update → 확정 해제 필요
-  const updateOccurrence = useCallback((processId: string, weId: string, causeId: string, occurrence: number | undefined) => {
+  // ✅ 발생도 업데이트 - 공정 레벨에서 수정 (CASCADE)
+  const updateOccurrence = useCallback((processId: string, causeId: string, occurrence: number | undefined) => {
     setState(prev => {
       const newState = JSON.parse(JSON.stringify(prev));
       newState.l2 = newState.l2.map((proc: any) => {
         if (proc.id !== processId) return proc;
         return {
           ...proc,
-          l3: (proc.l3 || []).map((we: any) => {
-            if (we.id !== weId) return we;
-            return {
-              ...we,
-              failureCauses: (we.failureCauses || []).map((c: any) => c.id === causeId ? { ...c, occurrence } : c)
-            };
-          })
+          failureCauses: (proc.failureCauses || []).map((c: any) => 
+            c.id === causeId ? { ...c, occurrence } : c
+          )
         };
       });
       // ✅ CRUD Update: 확정 상태 해제
@@ -265,43 +279,93 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
     if (saveToLocalStorage) saveToLocalStorage();
   }, [setState, setDirty, saveToLocalStorage]);
 
-  // 평탄화된 행 데이터
+  /**
+   * ✅ 평탄화된 행 데이터 - CASCADE 구조 (FailureL2Tab 패턴)
+   * 공정(proc) → 작업요소(we) → 기능(func) → 공정특성(char) → 고장원인(cause)
+   * 공정특성 기준으로 행 분리, 각 고장원인에 processCharId 연결
+   */
   const flatRows = useMemo(() => {
     const rows: any[] = [];
     const processes = state.l2.filter(p => p.name && !p.name.includes('클릭'));
     
     processes.forEach(proc => {
       const workElements = (proc.l3 || []).filter((we: any) => we.name && !we.name.includes('클릭'));
+      const allCauses = proc.failureCauses || [];  // 공정 레벨에 저장된 고장원인
       
       if (workElements.length === 0) {
-        rows.push({ proc, we: null, cause: null, procRowSpan: 1, weRowSpan: 1, isFirstProc: true, isFirstWe: true });
-      } else {
-        let procRowSpan = 0;
-        workElements.forEach((we: any) => {
-          procRowSpan += Math.max(1, (we.failureCauses || []).length);
+        rows.push({ proc, we: null, processChar: null, cause: null, procRowSpan: 1, weRowSpan: 1, charRowSpan: 1, showProc: true, showWe: true, showChar: true });
+        return;
+      }
+      
+      let procRowCount = 0;
+      const procFirstRowIdx = rows.length;
+      
+      workElements.forEach((we: any, weIdx: number) => {
+        // 작업요소의 모든 공정특성 수집
+        const allProcessChars: any[] = [];
+        (we.functions || []).forEach((f: any) => {
+          (f.processChars || []).forEach((c: any) => {
+            allProcessChars.push({ ...c, funcId: f.id, funcName: f.name });
+          });
         });
         
-        let isFirstProc = true;
-        workElements.forEach((we: any) => {
-          const causes = we.failureCauses || [];
-          const weRowSpan = Math.max(1, causes.length);
-          
-          if (causes.length === 0) {
-            rows.push({ proc, we, cause: null, procRowSpan: isFirstProc ? procRowSpan : 0, weRowSpan, isFirstProc, isFirstWe: true });
-            isFirstProc = false;
-          } else {
-            causes.forEach((cause: any, cIdx: number) => {
-              rows.push({ 
-                proc, we, cause, 
-                procRowSpan: isFirstProc && cIdx === 0 ? procRowSpan : 0, 
-                weRowSpan: cIdx === 0 ? weRowSpan : 0,
-                isFirstProc: isFirstProc && cIdx === 0,
-                isFirstWe: cIdx === 0
+        let weRowCount = 0;
+        const weFirstRowIdx = rows.length;
+        
+        if (allProcessChars.length === 0) {
+          // 공정특성 없음 - 빈 행 1개
+          rows.push({
+            proc, we, processChar: null, cause: null,
+            procRowSpan: 0, weRowSpan: 1, charRowSpan: 1,
+            showProc: false, showWe: true, showChar: true
+          });
+          weRowCount = 1;
+        } else {
+          // 각 공정특성별로 행 생성
+          allProcessChars.forEach((pc: any, pcIdx: number) => {
+            // 이 공정특성에 연결된 고장원인들
+            const linkedCauses = allCauses.filter((c: any) => c.processCharId === pc.id);
+            const charFirstRowIdx = rows.length;
+            
+            if (linkedCauses.length === 0) {
+              // 고장원인 없음 - 빈 행 1개
+              rows.push({
+                proc, we, processChar: pc, cause: null,
+                procRowSpan: 0, weRowSpan: 0, charRowSpan: 1,
+                showProc: false, showWe: false, showChar: true
               });
-            });
-            isFirstProc = false;
-          }
-        });
+            } else {
+              // 각 고장원인별로 행 생성
+              linkedCauses.forEach((cause: any, cIdx: number) => {
+                rows.push({
+                  proc, we, processChar: pc, cause,
+                  procRowSpan: 0, weRowSpan: 0,
+                  charRowSpan: cIdx === 0 ? linkedCauses.length : 0,
+                  showProc: false, showWe: false, showChar: cIdx === 0
+                });
+              });
+            }
+            
+            const charRowCount = Math.max(1, linkedCauses.length);
+            if (rows[charFirstRowIdx]) {
+              rows[charFirstRowIdx].charRowSpan = charRowCount;
+            }
+            weRowCount += charRowCount;
+          });
+        }
+        
+        // 작업요소 rowSpan 갱신
+        if (rows[weFirstRowIdx]) {
+          rows[weFirstRowIdx].weRowSpan = weRowCount;
+          rows[weFirstRowIdx].showWe = true;
+        }
+        procRowCount += weRowCount;
+      });
+      
+      // 공정 rowSpan 갱신
+      if (rows[procFirstRowIdx]) {
+        rows[procFirstRowIdx].procRowSpan = procRowCount;
+        rows[procFirstRowIdx].showProc = true;
       }
     });
     
@@ -334,7 +398,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
                 <span className="whitespace-nowrap">고장분석(4단계)</span>
                 <div className="flex gap-1">
                   {isConfirmed ? (
-                    <span className={badgeConfirmed}>✓ 확정됨({state.l2.reduce((sum, p) => sum + (p.l3 || []).reduce((s2, w) => s2 + (w.failureCauses?.length || 0), 0), 0)})</span>
+                    <span className={badgeConfirmed}>✓ 확정됨({state.l2.reduce((sum, p) => sum + (p.failureCauses?.length || 0), 0)})</span>
                   ) : (
                     <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
                   )}
@@ -413,48 +477,57 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
               </td>
             </tr>
           ) : flatRows.map((row, idx) => {
-            // 기능분석에서 입력한 공정특성 가져오기 (we.functions[].processChars[] 에서)
-            const processChars = (row.we?.functions || []).flatMap((f: any) => f.processChars || []);
-            const processChar = processChars[0];
+            // ✅ CASCADE 구조: processChar가 직접 flatRows에 포함됨
             const zebraBg = idx % 2 === 1 ? '#ffe0b2' : '#fff3e0';
             const structureZebra = idx % 2 === 1 ? '#bbdefb' : '#e3f2fd';
             const functionZebra = idx % 2 === 1 ? '#c8e6c9' : '#e8f5e9';
             
             return (
-              <tr key={`${row.proc.id}-${row.we?.id || 'empty'}-${row.cause?.id || idx}`} className={zebraBg}>
-                {row.procRowSpan > 0 && (
+              <tr key={`${row.proc.id}-${row.we?.id || 'empty'}-${row.processChar?.id || 'nochar'}-${row.cause?.id || idx}`}>
+                {/* 공정 셀: showProc && procRowSpan > 0 */}
+                {row.showProc && row.procRowSpan > 0 && (
                   <td rowSpan={row.procRowSpan} className={`border border-[#ccc] p-1.5 text-center ${structureZebra} font-semibold align-middle text-xs`}>
                     {row.proc.no}. {row.proc.name}
                   </td>
                 )}
-                {row.weRowSpan > 0 && (
+                
+                {/* 작업요소 셀: showWe && weRowSpan > 0 */}
+                {row.showWe && row.weRowSpan > 0 && (
                   <td rowSpan={row.weRowSpan} className={`border border-[#ccc] p-1.5 text-center ${structureZebra} align-middle text-xs`}>
                     {row.we?.name || '(작업요소 없음)'}
                   </td>
                 )}
-                {row.weRowSpan > 0 && (
-                  <td rowSpan={row.weRowSpan} className={`border border-[#ccc] p-1.5 text-center ${functionZebra} align-middle text-xs`}>
-                    {processChar?.name || '(기능분석에서 입력)'}
+                
+                {/* ✅ 공정특성 셀: showChar && charRowSpan > 0 (각 공정특성별로 분리) */}
+                {row.showChar && row.charRowSpan > 0 && (
+                  <td rowSpan={row.charRowSpan} className={`border border-[#ccc] p-1.5 text-center ${functionZebra} align-middle text-xs`}>
+                    {row.processChar?.name || '(기능분석에서 입력)'}
                   </td>
                 )}
-                {row.weRowSpan > 0 && (
-                  <td rowSpan={row.weRowSpan} className={`border border-[#ccc] p-1.5 text-center ${functionZebra} align-middle text-xs`}>
-                    {processChar?.specialChar || '-'}
+                {row.showChar && row.charRowSpan > 0 && (
+                  <td rowSpan={row.charRowSpan} className={`border border-[#ccc] p-1.5 text-center ${functionZebra} align-middle text-xs`}>
+                    {row.processChar?.specialChar || '-'}
                   </td>
                 )}
-                <td className={cellP0}>
-                  {row.we ? (
+                
+                {/* 고장원인 셀 */}
+                <td className={cellP0} style={{ backgroundColor: zebraBg }}>
+                  {row.we && row.processChar ? (
                     <SelectableCell 
                       value={row.cause?.name || ''} 
                       placeholder="고장원인 선택" 
                       bgColor={zebraBg} 
                       onClick={() => {
-                        // [원자성 규칙] 상위 항목(공정특성)이 없으면 하위(고장원인) 추가 불가
-                        if (!processChar?.name) {
-                          alert('⚠️ 상위 항목(공정특성)이 없습니다.\n\n고장원인을 추가하려면 먼저 기능분석에서 공정특성을 입력해주세요.\n\n[기능분석 3L(작업요소) → 공정특성 입력]');
-                          return;
-                        }
-                        handleCellClick({ type: 'l3FailureCause', processId: row.proc.id, weId: row.we.id, causeId: row.cause?.id || undefined, title: `${row.we.name} 고장원인`, itemCode: 'FC1' });
+                        handleCellClick({ 
+                          type: 'l3FailureCause', 
+                          processId: row.proc.id, 
+                          weId: row.we.id, 
+                          processCharId: row.processChar.id,  // ✅ CASCADE 연결
+                          processCharName: row.processChar.name,
+                          causeId: row.cause?.id || undefined, 
+                          title: `${row.processChar.name} → 고장원인`, 
+                          itemCode: 'FC1' 
+                        });
                       }} 
                     />
                   ) : (
@@ -475,21 +548,20 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
           onDelete={handleDelete}
           title={modal.title}
           itemCode={modal.itemCode}
-          singleSelect={false} // [원자성] 여러 개 선택 가능, 각각 별도 행으로 저장!
+          singleSelect={false}
           currentValues={(() => {
             if (modal.type === 'l3FailureCause') {
+              // ✅ 공정 레벨에서 해당 processCharId에 연결된 고장원인만 가져오기
               const proc = state.l2.find(p => p.id === modal.processId);
-              const we = (proc?.l3 || []).find((w: any) => w.id === modal.weId);
-              return (we?.failureCauses || []).map((c: any) => c.name);
+              const allCauses = proc?.failureCauses || [];
+              return allCauses
+                .filter((c: any) => c.processCharId === modal.processCharId)
+                .map((c: any) => c.name);
             }
             return [];
           })()}
           processName={processList.find(p => p.id === modal.processId)?.name}
-          workElementName={(() => {
-            const proc = state.l2.find(p => p.id === modal.processId);
-            const we = (proc?.l3 || []).find((w: any) => w.id === modal.weId);
-            return we?.name;
-          })()}
+          workElementName={modal.processCharName || ''}  // ✅ 공정특성명 표시
           processList={processList}
           onProcessChange={(newProcId) => setModal(modal ? { ...modal, processId: newProcId } : null)}
         />

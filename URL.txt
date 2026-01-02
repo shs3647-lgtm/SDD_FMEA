@@ -1,27 +1,25 @@
-http://localhost:3000/pfmea/worksheet?v=1.0.32-20260103-crud-unconfirm
+http://localhost:3000/pfmea/worksheet?v=1.0.33-20260103-cascade-structure
 
 === VERSION INFO ===
-Version: 1.0.26
-Last Updated: 2025-01-02
-Changes: 구조분석 메인공정/작업요소 인라인 수정 지원 추가
+Version: 1.0.33
+Last Updated: 2026-01-03
+Changes: 
+  - CASCADE 구조 구현 (구조→기능→고장)
+  - 공정특성→고장원인 연결 (processCharId FK)
+  - FailureL3Tab flatRows 리팩토링
+  - 공정 레벨에 failureCauses 저장
+  - 각 공정특성별로 별도 행 표시
+Status: CASCADE 관계형 DB 구조 완성
+Cache Busting: v=1.0.33-20260103-cascade-structure
 
-=== 구조분석 통일 완료 ===
-1) 메인공정(EditableL2Cell):
-   - 클릭 → 모달 열기 (전체 공정 선택)
-   - 더블클릭 → 인라인 텍스트 수정 (개별 공정명 수정)
+=== CASCADE 구조 ===
+L1 완제품 → L1 기능 → L1 고장영향(FE)
+L2 메인공정 → L2 기능+제품특성 → L2 고장형태(FM)
+L3 작업요소 → L3 기능+공정특성 → L3 고장원인(FC)
 
-2) 작업요소(EditableL3Cell) - 기존 지원:
-   - 클릭 → 모달 열기 (작업요소 선택)
-   - 더블클릭 → 인라인 텍스트 수정 (개별 작업요소명 수정)
+공정특성.id === 고장원인.processCharId (FK 연결)
 
-=== 모든 탭 통일 완료 ===
-| 탭 | 클릭 동작 | 더블클릭 동작 |
-|----|----------|-------------|
-| 기능분석 | 모달(항목 선택) | 인라인 수정 |
-| 고장분석 | 모달(항목 선택) | 인라인 수정 |
-| 구조분석 | 모달(항목 선택) | 인라인 수정 ✅ NEW |
-
-=== 선택 방식 3가지 패턴 ===
-1) 단일 선택: itemId 필요 (기능, 요구사항)
-2) 다중 선택: itemId 필요 (제품특성, 공정특성, 고장영향/형태/원인)
-3) 전체 선택: itemId 불필요 (전체 목록 대체)
+=== 이전 버전 ===
+v1.0.32: SOD/특별특성 수정 시 확정 해제
+v1.0.31: 상태 색상 표시 (확정 버튼 녹색, 누락 빨간색)
+v1.0.30: 입력창 클릭 시 자동 수정 모드 전환
