@@ -627,7 +627,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                               value={f.name} 
                               placeholder="작업요소기능" 
                               bgColor={'#e8f5e9'} 
-                              onClick={() => setModal({ type: 'l3Function', procId: proc.id, l3Id: we.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} 
+                              onClick={() => setModal({ type: 'l3Function', procId: proc.id, l3Id: we.id, funcId: f.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} 
                               onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, we.id, f.id, newValue)}
                             />
                           </td>

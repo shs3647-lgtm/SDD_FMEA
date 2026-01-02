@@ -256,11 +256,26 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
         });
       }
       else if (type === 'l1Requirement') {
+        const reqId = (modal as any).reqId;
         newState.l1.types = newState.l1.types.map(t => ({
           ...t,
           functions: t.functions.map(f => {
             if (f.id !== id) return f;
             const currentReqs = f.requirements || [];
+            
+            // ✅ reqId가 있으면 해당 요구사항만 수정
+            if (reqId) {
+              if (selectedValues.length === 0) {
+                return { ...f, requirements: currentReqs.filter(r => r.id !== reqId) };
+              }
+              return {
+                ...f,
+                requirements: currentReqs.map(r => 
+                  r.id === reqId ? { ...r, name: selectedValues[0] || r.name } : r
+                )
+              };
+            }
+            
             const emptyReq = currentReqs.find(r => !r.name || r.name === '' || r.name.includes('클릭하여'));
             
             if (emptyReq && selectedValues.length > 0) {
@@ -526,7 +541,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                         placeholder="요구사항" 
                         bgColor={COLORS.function.zebra} 
                         textColor={COLORS.function.text} 
-                        onClick={() => setModal({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} 
+                        onClick={() => setModal({ type: 'l1Requirement', id: f.id, reqId: r.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} 
                         onDoubleClickEdit={(newValue) => handleInlineEditRequirement(t.id, f.id, r.id, newValue)}
                       />
                     </td>
