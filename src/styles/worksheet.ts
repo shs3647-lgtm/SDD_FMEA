@@ -127,6 +127,16 @@ export const badgeMissing = 'bg-red-500 text-white px-2.5 py-0.5 rounded text-xs
 // 🟠 개수 배지
 export const badgeCount = 'ml-1 bg-orange-500 text-white px-1.5 py-0.5 rounded-lg text-[11px]';
 
+// ============ 구조분석 COUNT 배지 (S1/S2/S3) ============
+// 🔴 미입력 (0개) - 적색
+export const countZero = 'text-red-500 font-bold';
+// 🟢 입력완료 (1개 이상) - 녹색
+export const countFilled = 'text-green-600 font-bold';
+// 📊 COUNT 컨테이너
+export const countContainer = 'flex items-center gap-2 text-xs';
+// 📊 COUNT 항목 (라벨 + 숫자)
+export const countItem = 'flex items-center gap-0.5';
+
 // ============ 하위 호환 (WS 객체) ============
 export const WS = {
   h1Structure: S.h1, h2Structure: S.h2,

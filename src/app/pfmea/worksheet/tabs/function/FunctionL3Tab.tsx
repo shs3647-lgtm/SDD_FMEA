@@ -94,13 +94,10 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
   // 총 누락 건수 (기존 호환성)
   const missingCount = missingCounts.total;
 
-  // ✅ 공정특성 개수 계산
-  const processCharCount = React.useMemo(() => {
-    return state.l2.reduce((sum, proc) => 
-      sum + (proc.l3 || []).reduce((weSum, we) => 
-        weSum + (we.functions || []).reduce((funcSum, func) => 
-          funcSum + (func.processChars || []).length, 0), 0), 0);
-  }, [state.l2]);
+  // ✅ 3L COUNT 계산 (작업요소, 작업요소기능, 공정특성)
+  const workElementCount = useMemo(() => state.l2.reduce((sum, proc) => sum + (proc.l3 || []).filter((we: any) => we.name && !we.name.includes('클릭')).length, 0), [state.l2]);
+  const l3FunctionCount = useMemo(() => state.l2.reduce((sum, proc) => sum + (proc.l3 || []).reduce((weSum: number, we: any) => weSum + (we.functions || []).filter((f: any) => f.name && !f.name.includes('클릭')).length, 0), 0), [state.l2]);
+  const processCharCount = useMemo(() => state.l2.reduce((sum, proc) => sum + (proc.l3 || []).reduce((weSum: number, we: any) => weSum + (we.functions || []).reduce((funcSum: number, func: any) => funcSum + (func.processChars || []).filter((c: any) => c.name).length, 0), 0), 0), [state.l2]);
 
   // ✅ L3 기능 데이터 변경 감지용 ref (고장분석 패턴 적용)
   const l3FuncDataRef = useRef<string>('');
@@ -511,7 +508,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
             </th>
           </tr>
           
-          {/* 3행: 세부 컬럼 */}
+          {/* 3행: 세부 컬럼 - COUNT 표시 표준: 항목명(숫자) */}
           <tr className="bg-[#e8f5e9]">
             <th className="bg-[#e3f2fd] border border-[#ccc] p-1.5 text-xs font-semibold">
               소속 공정
@@ -520,23 +517,13 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
               4M
             </th>
             <th className="bg-[#e3f2fd] border border-[#ccc] p-1.5 text-xs font-semibold">
-              작업요소
+              작업요소<span className={`font-bold ${workElementCount > 0 ? 'text-green-700' : 'text-red-500'}`}>({workElementCount})</span>
             </th>
             <th className="bg-[#c8e6c9] border border-[#ccc] p-1.5 text-xs font-semibold">
-              작업요소기능
-              {missingCounts.functionCount > 0 && (
-                <span className="ml-1 bg-orange-500 text-white px-1.5 py-0.5 rounded-lg text-[11px]">
-                  {missingCounts.functionCount}
-                </span>
-              )}
+              작업요소기능<span className={`font-bold ${l3FunctionCount > 0 ? 'text-green-700' : 'text-red-500'}`}>({l3FunctionCount})</span>
             </th>
             <th className="bg-[#c8e6c9] border border-[#ccc] border-r-[3px] border-r-orange-500 p-1.5 text-xs font-semibold">
-              공정특성
-              {missingCounts.charCount > 0 && (
-                <span className="ml-1 bg-orange-500 text-white px-1.5 py-0.5 rounded-lg text-[11px]">
-                  {missingCounts.charCount}
-                </span>
-              )}
+              공정특성<span className={`font-bold ${processCharCount > 0 ? 'text-green-700' : 'text-red-500'}`}>({processCharCount})</span>
             </th>
             <th className="bg-orange-500 text-white border border-[#ccc] border-l-0 p-1.5 text-xs font-semibold text-center">
               특별특성

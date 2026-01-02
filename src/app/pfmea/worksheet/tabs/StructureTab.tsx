@@ -243,9 +243,13 @@ interface StructureHeaderProps {
   onConfirm?: () => void;
   onEdit?: () => void;
   workElementCount?: number; // ✅ 작업요소명 개수
+  // ✅ 구조분석 COUNT (S1/S2/S3)
+  l1Name?: string;  // 완제품명
+  s2Count?: number; // 메인공정 개수
+  s3Count?: number; // 작업요소 개수
 }
 
-export function StructureHeader({ onProcessModalOpen, missingCounts, isConfirmed, onConfirm, onEdit, workElementCount = 0 }: StructureHeaderProps) {
+export function StructureHeader({ onProcessModalOpen, missingCounts, isConfirmed, onConfirm, onEdit, workElementCount = 0, l1Name = '', s2Count = 0, s3Count = 0 }: StructureHeaderProps) {
   // 확정된 경우 돋보기 숨김
   const showSearchIcon = !isConfirmed && missingCounts && missingCounts.l2Count > 0;
   
@@ -318,12 +322,18 @@ export function StructureHeader({ onProcessModalOpen, missingCounts, isConfirmed
           )}
         </th>
       </tr>
-      {/* 3행: 서브 헤더 (기능분석과 동일한 구조) */}
+      {/* 3행: 서브 헤더 - COUNT 표시 표준: 항목명(숫자) */}
       <tr>
-        <th className="bg-[#e3f2fd] border border-[#ccc] p-1 text-xs font-semibold text-center border-b-[3px] border-b-[#1976d2]">완제품명+라인</th>
-        <th className="bg-[#c8e6c9] border border-[#ccc] p-1 text-xs font-semibold text-center border-b-[3px] border-b-[#388e3c]">공정NO+공정명</th>
+        <th className="bg-[#e3f2fd] border border-[#ccc] p-1 text-xs font-semibold text-center border-b-[3px] border-b-[#1976d2]">
+          {l1Name || '완제품 제조라인'}<span className="text-green-700 font-bold">(1)</span>
+        </th>
+        <th className="bg-[#c8e6c9] border border-[#ccc] p-1 text-xs font-semibold text-center border-b-[3px] border-b-[#388e3c]">
+          공정NO+공정명<span className={`font-bold ${s2Count > 0 ? 'text-green-700' : 'text-red-500'}`}>({s2Count})</span>
+        </th>
         <th className="w-20 max-w-[80px] min-w-[80px] bg-[#29b6f6] text-white border border-[#ccc] border-b-[3px] border-b-[#0288d1] p-1 text-xs font-bold text-center">4M</th>
-        <th className="bg-[#ffe0b2] border border-[#ccc] p-1 text-xs font-semibold text-center border-b-[3px] border-b-[#f57c00]">작업요소</th>
+        <th className="bg-[#ffe0b2] border border-[#ccc] p-1 text-xs font-semibold text-center border-b-[3px] border-b-[#f57c00]">
+          작업요소<span className={`font-bold ${s3Count > 0 ? 'text-green-700' : 'text-red-500'}`}>({s3Count})</span>
+        </th>
       </tr>
     </>
   );
@@ -459,6 +469,26 @@ export default function StructureTab(props: StructureTabProps) {
     return state.l2.reduce((sum, p) => sum + (p.l3 || []).length, 0);
   }, [state.l2]);
 
+  // ✅ S COUNT 계산 (구조분석)
+  // S1 = 완제품공정명 (항상 1, 고정)
+  // S2 = 메인공정 개수 (입력 완료된 것만)
+  // S3 = 작업요소 개수 (입력 완료된 것만)
+  const sCounts = useMemo(() => {
+    const isFilled = (name: string | undefined | null) => {
+      if (!name) return false;
+      const trimmed = String(name).trim();
+      if (trimmed === '' || trimmed === '-') return false;
+      if (name.includes('클릭') || name.includes('선택') || name.includes('입력')) return false;
+      return true;
+    };
+    
+    const s2Count = state.l2.filter(p => isFilled(p.name)).length;
+    const s3Count = state.l2.reduce((sum, p) => 
+      sum + (p.l3 || []).filter((we: any) => isFilled(we.name)).length, 0);
+    
+    return { s2Count, s3Count };
+  }, [state.l2]);
+
   // ✅ 확정 핸들러 (고장분석 패턴 적용)
   const handleConfirm = useCallback(() => {
     console.log('[StructureTab] ========== 확정 버튼 클릭 ==========');
@@ -529,6 +559,9 @@ export default function StructureTab(props: StructureTabProps) {
           onConfirm={handleConfirm}
           onEdit={handleEdit}
           workElementCount={workElementCount}
+          l1Name={state.l1.name || ''}
+          s2Count={sCounts.s2Count}
+          s3Count={sCounts.s3Count}
         />
       </thead>
       <tbody>

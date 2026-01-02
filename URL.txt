@@ -1,25 +1,27 @@
-http://localhost:3000/pfmea/worksheet?v=1.0.33-20260103-cascade-structure
+http://localhost:3000/pfmea/worksheet?v=1.0.34-20260103-count-standard
 
 === VERSION INFO ===
-Version: 1.0.33
+Version: 1.0.34
 Last Updated: 2026-01-03
 Changes: 
-  - CASCADE 구조 구현 (구조→기능→고장)
-  - 공정특성→고장원인 연결 (processCharId FK)
-  - FailureL3Tab flatRows 리팩토링
-  - 공정 레벨에 failureCauses 저장
-  - 각 공정특성별로 별도 행 표시
-Status: CASCADE 관계형 DB 구조 완성
-Cache Busting: v=1.0.33-20260103-cascade-structure
+  - COUNT 표시 표준화: 항목명(숫자) 형태 통일
+  - 구조분석 3행: 완제품 제조라인(1) 공정NO+공정명(N) 작업요소(N)
+  - 기능분석 3행: 해당 레벨 항목별 COUNT 표시
+  - 트리뷰 헤더/푸터: 완제품(1) 메인공정(N) 작업요소(N)
+  - 미입력=적색, 입력완료=녹색
+Status: COUNT 표시 표준화 완료
+Cache Busting: v=1.0.34-20260103-count-standard
 
-=== CASCADE 구조 ===
-L1 완제품 → L1 기능 → L1 고장영향(FE)
-L2 메인공정 → L2 기능+제품특성 → L2 고장형태(FM)
-L3 작업요소 → L3 기능+공정특성 → L3 고장원인(FC)
-
-공정특성.id === 고장원인.processCharId (FK 연결)
+=== COUNT 표시 표준 ===
+테이블 3행: 항목명(숫자)
+  - 완제품 제조라인(1), 공정NO+공정명(3), 작업요소(8)
+  - 완제품기능(5), 요구사항(12)
+  - 메인공정기능(4), 제품특성(6)
+  
+트리뷰: 항목명(숫자)
+  - 완제품(1) 메인공정(3) 작업요소(8)
+  - 완제품(1) 기능(5) 요구사항(12)
 
 === 이전 버전 ===
+v1.0.33: CASCADE 구조 구현
 v1.0.32: SOD/특별특성 수정 시 확정 해제
-v1.0.31: 상태 색상 표시 (확정 버튼 녹색, 누락 빨간색)
-v1.0.30: 입력창 클릭 시 자동 수정 모드 전환

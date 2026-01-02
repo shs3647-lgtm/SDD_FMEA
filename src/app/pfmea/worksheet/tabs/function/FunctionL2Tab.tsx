@@ -84,12 +84,10 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
   // 총 누락 건수 (기존 호환성)
   const missingCount = missingCounts.total;
 
-  // ✅ 제품특성 개수 계산
-  const productCharCount = React.useMemo(() => {
-    return state.l2.reduce((sum, proc) => 
-      sum + (proc.functions || []).reduce((funcSum, func) => 
-        funcSum + (func.productChars || []).length, 0), 0);
-  }, [state.l2]);
+  // ✅ 2L COUNT 계산 (메인공정, 메인공정기능, 제품특성)
+  const processCount = useMemo(() => state.l2.filter(p => p.name && !p.name.includes('클릭')).length, [state.l2]);
+  const l2FunctionCount = useMemo(() => state.l2.reduce((sum, proc) => sum + (proc.functions || []).filter((f: any) => f.name && !f.name.includes('클릭')).length, 0), [state.l2]);
+  const productCharCount = useMemo(() => state.l2.reduce((sum, proc) => sum + (proc.functions || []).reduce((funcSum, func) => funcSum + (func.productChars || []).filter((c: any) => c.name).length, 0), 0), [state.l2]);
 
   // ✅ L2 기능 데이터 변경 감지용 ref (고장분석 패턴 적용)
   const l2FuncDataRef = useRef<string>('');
@@ -502,26 +500,16 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
             </th>
           </tr>
           
-          {/* 3행: 세부 컬럼 */}
+          {/* 3행: 세부 컬럼 - 2L COUNT 표시 (한 줄) */}
           <tr className="bg-[#e8f5e9]">
             <th className="bg-[#e3f2fd] border border-[#ccc] p-1.5 text-xs font-semibold">
-              공정NO+공정명
+              공정NO+공정명<span className={`font-bold ${processCount > 0 ? 'text-green-700' : 'text-red-500'}`}>({processCount})</span>
             </th>
             <th className="bg-[#c8e6c9] border border-[#ccc] p-1.5 text-xs font-semibold">
-              메인공정기능
-              {missingCounts.functionCount > 0 && (
-                <span className="ml-1 bg-orange-500 text-white px-1.5 py-0.5 rounded-lg text-[11px]">
-                  {missingCounts.functionCount}
-                </span>
-              )}
+              메인공정기능<span className={`font-bold ${l2FunctionCount > 0 ? 'text-green-700' : 'text-red-500'}`}>({l2FunctionCount})</span>
             </th>
             <th className="bg-[#c8e6c9] border border-[#ccc] p-1.5 text-xs font-semibold">
-              제품특성
-              {missingCounts.charCount > 0 && (
-                <span className="ml-1 bg-orange-500 text-white px-1.5 py-0.5 rounded-lg text-[11px]">
-                  {missingCounts.charCount}
-                </span>
-              )}
+              제품특성<span className={`font-bold ${productCharCount > 0 ? 'text-green-700' : 'text-red-500'}`}>({productCharCount})</span>
             </th>
             <th className="bg-[#fff3e0] border border-[#ccc] p-1.5 text-xs font-semibold">
               특별특성

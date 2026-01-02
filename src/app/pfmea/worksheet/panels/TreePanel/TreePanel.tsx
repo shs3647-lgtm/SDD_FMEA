@@ -72,9 +72,16 @@ export default function TreePanel({ state }: TreePanelProps) {
 
   // ========== 구조 트리 (structure) ==========
   if (tab === 'structure') {
+    // ✅ S COUNT 계산
+    const s2Count = state.l2.filter((p: any) => p.name && !p.name.includes('클릭')).length;
+    const s3Count = state.l2.reduce((sum: number, p: any) => 
+      sum + (p.l3 || []).filter((w: any) => w.name && !w.name.includes('추가') && !w.name.includes('클릭')).length, 0);
+    
     return (
       <div className={tw.container}>
-        <div className={`${tw.header} ${tw.headerBlue}`}>🌳 구조 트리</div>
+        <div className={`${tw.header} ${tw.headerBlue}`}>
+          🌳 구조트리 <span className="text-[10px] font-normal">완제품(1) 메인공정({s2Count}) 작업요소({s3Count})</span>
+        </div>
         <div className="shrink-0 bg-blue-50 py-1.5 px-2.5 border-b border-blue-200">
           <div className="flex items-center gap-1.5">
             <span className="text-sm">📦</span>
@@ -87,10 +94,10 @@ export default function TreePanel({ state }: TreePanelProps) {
               <div className={`${tw.treeItem} bg-green-100`}>
                 <span>📁</span>
                 <span className={`${tw.text11} ${tw.fontSemibold}`}>{proc.no}-{proc.name}</span>
-                <span className={tw.countBadge}>{proc.l3.filter((w: any) => !w.name.includes('추가')).length}</span>
+                <span className={tw.countBadge}>{(proc.l3 || []).filter((w: any) => !w.name.includes('추가')).length}</span>
               </div>
               <div className="ml-4">
-                {proc.l3.filter((w: any) => !w.name.includes('추가') && !w.name.includes('클릭')).map((w: any) => (
+                {(proc.l3 || []).filter((w: any) => !w.name.includes('추가') && !w.name.includes('클릭')).map((w: any) => (
                   <div key={w.id} className={`flex items-center gap-1 py-0.5 px-1 ${tw.textXs}`}>
                     <span className={`${tw.m4Badge} ${M4_BG[w.m4] || 'bg-gray-200'}`}>{w.m4}</span>
                     <span>{w.name}</span>
@@ -101,8 +108,7 @@ export default function TreePanel({ state }: TreePanelProps) {
           ))}
         </div>
         <div className={tw.footer}>
-          공정: {state.l2.filter((p: any) => !p.name.includes('클릭')).length}개 | 
-          작업요소: {state.l2.reduce((sum: number, p: any) => sum + p.l3.filter((w: any) => !w.name.includes('추가')).length, 0)}개
+          <span className="font-bold">완제품(1) 메인공정({s2Count}) 작업요소({s3Count})</span>
         </div>
       </div>
     );
@@ -110,9 +116,11 @@ export default function TreePanel({ state }: TreePanelProps) {
 
   // ========== 1L 기능트리 (완제품 기능분석) ==========
   if (tab === 'function-l1') {
+    const funcCount = state.l1.types.reduce((s: number, t: any) => s + (t.functions || []).length, 0);
+    const reqCount = state.l1.types.reduce((s: number, t: any) => s + (t.functions || []).reduce((a: number, f: any) => a + (f.requirements || []).length, 0), 0);
     return (
       <div className={tw.container}>
-        <div className={`${tw.header} ${tw.headerGreen1}`}>🎯 1L 기능트리 (완제품)</div>
+        <div className={`${tw.header} ${tw.headerGreen1}`}>🎯 1L 기능트리 <span className="text-[10px] font-normal">완제품(1) 기능({funcCount}) 요구사항({reqCount})</span></div>
         <div className={`${tw.content} ${tw.contentGreen}`}>
           <div className="flex items-center gap-1.5 p-1.5 bg-green-200 rounded mb-2">
             <span className="text-sm">📦</span>
@@ -155,9 +163,7 @@ export default function TreePanel({ state }: TreePanelProps) {
           })}
         </div>
         <div className={tw.footer}>
-          구분: {state.l1.types.length}개 | 
-          기능: {state.l1.types.reduce((s: number, t: any) => s + t.functions.length, 0)}개 | 
-          요구사항: {state.l1.types.reduce((s: number, t: any) => s + t.functions.reduce((a: number, f: any) => a + f.requirements.length, 0), 0)}개
+          <span className="font-bold">완제품(1) 기능({funcCount}) 요구사항({reqCount})</span>
         </div>
       </div>
     );
@@ -165,9 +171,12 @@ export default function TreePanel({ state }: TreePanelProps) {
 
   // ========== 2L 기능트리 (메인공정 기능분석) ==========
   if (tab === 'function-l2') {
+    const procCount = state.l2.filter((p: any) => p.name && !p.name.includes('클릭')).length;
+    const funcCount = state.l2.reduce((s: number, p: any) => s + (p.functions || []).length, 0);
+    const charCount = state.l2.reduce((s: number, p: any) => s + (p.functions || []).reduce((a: number, f: any) => a + (f.productChars || []).length, 0), 0);
     return (
       <div className={tw.container}>
-        <div className={`${tw.header} ${tw.headerGreen2}`}>🔧 2L 기능트리 (메인공정)</div>
+        <div className={`${tw.header} ${tw.headerGreen2}`}>🔧 2L 기능트리 <span className="text-[10px] font-normal">공정({procCount}) 기능({funcCount}) 제품특성({charCount})</span></div>
         <div className={`${tw.content} ${tw.contentGreen}`}>
           {state.l2.length === 0 ? (
             <div className={tw.empty}>구조분석에서 공정을 추가하세요</div>
@@ -200,9 +209,7 @@ export default function TreePanel({ state }: TreePanelProps) {
           ))}
         </div>
         <div className={tw.footer}>
-          공정: {state.l2.length}개 | 
-          기능: {state.l2.reduce((s: number, p: any) => s + (p.functions || []).length, 0)}개 | 
-          제품특성: {state.l2.reduce((s: number, p: any) => s + (p.functions || []).reduce((a: number, f: any) => a + (f.productChars || []).length, 0), 0)}개
+          <span className="font-bold">공정({procCount}) 기능({funcCount}) 제품특성({charCount})</span>
         </div>
       </div>
     );
@@ -210,9 +217,12 @@ export default function TreePanel({ state }: TreePanelProps) {
 
   // ========== 3L 기능트리 (작업요소 기능분석) ==========
   if (tab === 'function-l3') {
+    const weCount = state.l2.reduce((s: number, p: any) => s + (p.l3 || []).filter((w: any) => w.name && !w.name.includes('클릭')).length, 0);
+    const funcCount = state.l2.reduce((s: number, p: any) => s + (p.l3 || []).reduce((a: number, w: any) => a + (w.functions || []).length, 0), 0);
+    const charCount = state.l2.reduce((s: number, p: any) => s + (p.l3 || []).reduce((a: number, w: any) => a + (w.functions || []).reduce((b: number, f: any) => b + (f.processChars || []).length, 0), 0), 0);
     return (
       <div className={tw.container}>
-        <div className={`${tw.header} ${tw.headerGreen3}`}>🛠️ 3L 기능트리 (작업요소)</div>
+        <div className={`${tw.header} ${tw.headerGreen3}`}>🛠️ 3L 기능트리 <span className="text-[10px] font-normal">작업요소({weCount}) 기능({funcCount}) 공정특성({charCount})</span></div>
         <div className={`${tw.content} ${tw.contentGreen}`}>
           {state.l2.every((p: any) => (p.l3 || []).length === 0) ? (
             <div className={tw.empty}>구조분석에서 작업요소를 추가하세요</div>
@@ -250,8 +260,7 @@ export default function TreePanel({ state }: TreePanelProps) {
           ))}
         </div>
         <div className={tw.footer}>
-          작업요소: {state.l2.reduce((s: number, p: any) => s + (p.l3 || []).length, 0)}개 | 
-          기능: {state.l2.reduce((s: number, p: any) => s + (p.l3 || []).reduce((a: number, w: any) => a + (w.functions || []).length, 0), 0)}개
+          <span className="font-bold">작업요소({weCount}) 기능({funcCount}) 공정특성({charCount})</span>
         </div>
       </div>
     );
@@ -259,9 +268,11 @@ export default function TreePanel({ state }: TreePanelProps) {
 
   // ========== 1L 고장영향 트리 (FE) ==========
   if (tab === 'failure-l1') {
+    const reqCount = (state.l1.types || []).reduce((s: number, t: any) => s + (t.functions || []).reduce((a: number, f: any) => a + (f.requirements || []).length, 0), 0);
+    const feCount = (state.l1.failureScopes || []).filter((s: any) => s.effect).length;
     return (
       <div className={tw.container}>
-        <div className={`${tw.header} ${tw.headerNavy} whitespace-nowrap`}>⚠️ 1L 고장영향 트리 (FE)</div>
+        <div className={`${tw.header} ${tw.headerNavy} whitespace-nowrap`}>⚠️ 1L 고장영향 <span className="text-[10px] font-normal">요구사항({reqCount}) 고장영향({feCount})</span></div>
         <div className={`${tw.content} ${tw.contentNavy}`}>
           <div className="font-bold text-xs mb-2 text-[#1a237e] p-1 px-2 bg-indigo-100 rounded border-l-[3px] border-[#1a237e]">
             📦 {state.l1.name || '(완제품 공정명)'}
@@ -329,9 +340,7 @@ export default function TreePanel({ state }: TreePanelProps) {
           )}
         </div>
         <div className={tw.footerNavy}>
-          구분: {(state.l1.types || []).length}개 | 
-          요구사항: {(state.l1.types || []).reduce((s: number, t: any) => s + (t.functions || []).reduce((a: number, f: any) => a + (f.requirements || []).length, 0), 0)}개 | 
-          고장영향: {(state.l1.failureScopes || []).filter((s: any) => s.effect).length}개
+          <span className="font-bold">요구사항({reqCount}) 고장영향({feCount})</span>
         </div>
       </div>
     );
@@ -340,12 +349,14 @@ export default function TreePanel({ state }: TreePanelProps) {
   // ========== 2L 고장형태 트리 (FM) - 확정된 것만 표시 ==========
   if (tab === 'failure-l2') {
     const isL2Confirmed = state.failureL2Confirmed || false;
+    const charCount = state.l2.reduce((s: number, p: any) => s + (p.functions || []).reduce((a: number, f: any) => a + (f.productChars || []).length, 0), 0);
+    const fmCount = state.l2.reduce((s: number, p: any) => s + (p.failureModes || []).length, 0);
     
     return (
       <div className={tw.container}>
         <div className={`${tw.header} ${tw.headerNavy}`}>
-          🔥 2L 고장형태 트리 (FM) 
-          {!isL2Confirmed && <span className="ml-2 text-yellow-300 text-[9px]">(미확정)</span>}
+          🔥 2L 고장형태 <span className="text-[10px] font-normal">제품특성({charCount}) 고장형태({fmCount})</span>
+          {!isL2Confirmed && <span className="ml-1 text-yellow-300 text-[9px]">(미확정)</span>}
         </div>
         <div className={`${tw.content} ${tw.contentNavy}`}>
           {/* ✅ 확정되지 않으면 안내 메시지 표시 */}
