@@ -201,13 +201,13 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
 
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
+    const isConfirmed = state.l3Confirmed || false;
     
     setState(prev => {
       const newState = JSON.parse(JSON.stringify(prev));
       const { type, procId, l3Id, funcId } = modal;
 
       if (type === 'l3Function') {
-        // [규칙] 새 행은 수동 추가만 허용 - 자동 생성 금지
         newState.l2 = newState.l2.map((proc: any) => {
           if (proc.id !== procId) return proc;
           return {
@@ -242,7 +242,15 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                 };
               }
               
-              // 빈 기능이 없으면 기존 유지 (새 행 생성 안 함)
+              // ✅ 수정 모드: 빈 기능이 없어도 새로 추가 가능
+              if (!isConfirmed && selectedValues.length > 0) {
+                const newFunc = { id: uid(), name: selectedValues[0], processChars: [] };
+                return {
+                  ...we,
+                  functions: [...currentFuncs, newFunc]
+                };
+              }
+              
               return we;
             })
           };

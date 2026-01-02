@@ -179,6 +179,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
     const { type, procId, funcId } = modal;
+    const isConfirmed = state.l2Confirmed || false;
     
     // 하위 데이터가 있는 기능 삭제 시 경고
     if (type === 'l2Function') {
@@ -212,7 +213,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
       const newState = JSON.parse(JSON.stringify(prev));
 
       if (type === 'l2Function') {
-        // 메인공정 기능 저장 (선택된 것만 유지, 나머지 삭제)
+        // 메인공정 기능 저장
         newState.l2 = newState.l2.map((proc: any) => {
           if (proc.id !== procId) return proc;
           const currentFuncs = proc.functions || [];
@@ -236,12 +237,11 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
             };
           }
           
-          // [규칙] 새 행은 수동 추가만 허용 - 자동 생성 금지
           // 빈 기능 셀 클릭 시: 첫 번째 선택값만 첫 번째 빈 기능에 적용
           const emptyFunc = currentFuncs.find((f: any) => !f.name || f.name === '');
           
           if (emptyFunc && selectedValues.length > 0) {
-            // 빈 기능이 있으면 첫 번째 선택값만 할당 (새 행 생성 안 함)
+            // 빈 기능이 있으면 첫 번째 선택값만 할당
             return {
               ...proc,
               functions: currentFuncs.map((f: any) => 
@@ -252,8 +252,15 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
             };
           }
           
-          // 빈 기능이 없으면 기존 기능 유지 (새 행 생성 안 함)
-          // 사용자가 "+" 버튼으로 수동 추가해야 함
+          // ✅ 수정 모드: 빈 기능이 없어도 새로 추가 가능
+          if (!isConfirmed && selectedValues.length > 0) {
+            const newFunc = { id: uid(), name: selectedValues[0], productChars: [] };
+            return {
+              ...proc,
+              functions: [...currentFuncs, newFunc]
+            };
+          }
+          
           return proc;
         });
       } else if (type === 'l2ProductChar') {

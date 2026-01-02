@@ -183,34 +183,37 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
     
+    const isConfirmed = (state as any).l1Confirmed || false;
+    
     setState(prev => {
       const newState = { ...prev };
       const { type, id } = modal;
 
-      // [규칙] 새 행은 수동 추가만 허용 - 자동 생성 금지
       if (type === 'l1Type') {
         const currentTypes = newState.l1.types;
-        // 빈 타입이 있으면 첫 번째 선택값만 할당
         const emptyType = currentTypes.find(t => !t.name || t.name === '' || t.name.includes('클릭하여'));
         
         if (emptyType && selectedValues.length > 0) {
+          // 빈 타입이 있으면 첫 번째 선택값만 할당
           newState.l1.types = currentTypes.map(t => 
             t.id === emptyType.id 
               ? { ...t, name: selectedValues[0] }
               : t
           );
+        } else if (!isConfirmed && selectedValues.length > 0) {
+          // ✅ 수정 모드: 빈 타입이 없어도 새로 추가 가능
+          const newType = { id: uid(), name: selectedValues[0], functions: [] };
+          newState.l1.types = [...currentTypes, newType];
         }
-        // 빈 타입이 없으면 기존 유지 (새 행 생성 안 함)
       } 
       else if (type === 'l1Function') {
         newState.l1.types = newState.l1.types.map(t => {
           if (t.id !== id) return t;
           const currentFuncs = t.functions;
-          
-          // 빈 기능이 있으면 첫 번째 선택값만 할당
           const emptyFunc = currentFuncs.find(f => !f.name || f.name === '' || f.name.includes('클릭하여'));
           
           if (emptyFunc && selectedValues.length > 0) {
+            // 빈 기능이 있으면 첫 번째 선택값만 할당
             return {
               ...t,
               functions: currentFuncs.map(f => 
@@ -219,8 +222,14 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                   : f
               )
             };
+          } else if (!isConfirmed && selectedValues.length > 0) {
+            // ✅ 수정 모드: 빈 기능이 없어도 새로 추가 가능
+            const newFunc = { id: uid(), name: selectedValues[0], requirements: [] };
+            return {
+              ...t,
+              functions: [...currentFuncs, newFunc]
+            };
           }
-          // 빈 기능이 없으면 기존 유지 (새 행 생성 안 함)
           return t;
         });
       }
@@ -230,11 +239,10 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
           functions: t.functions.map(f => {
             if (f.id !== id) return f;
             const currentReqs = f.requirements || [];
-            
-            // 빈 요구사항이 있으면 첫 번째 선택값만 할당
             const emptyReq = currentReqs.find(r => !r.name || r.name === '' || r.name.includes('클릭하여'));
             
             if (emptyReq && selectedValues.length > 0) {
+              // 빈 요구사항이 있으면 첫 번째 선택값만 할당
               return {
                 ...f,
                 requirements: currentReqs.map(r => 
@@ -243,8 +251,14 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                     : r
                 )
               };
+            } else if (!isConfirmed && selectedValues.length > 0) {
+              // ✅ 수정 모드: 빈 요구사항이 없어도 새로 추가 가능
+              const newReq = { id: uid(), name: selectedValues[0] };
+              return {
+                ...f,
+                requirements: [...currentReqs, newReq]
+              };
             }
-            // 빈 요구사항이 없으면 기존 유지 (새 행 생성 안 함)
             return f;
           })
         }));
@@ -256,7 +270,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
     setDirty(true);
     setModal(null);
     saveToLocalStorage?.(); // 영구 저장
-  }, [modal, setState, setDirty, saveToLocalStorage]);
+  }, [modal, state, setState, setDirty, saveToLocalStorage]);
 
   // 워크시트 데이터 삭제 핸들러
   const handleDelete = useCallback((deletedValues: string[]) => {
