@@ -40,6 +40,84 @@ function M4Cell({ value, zebraBg }: { value: string; zebraBg: string }) {
   );
 }
 
+// ✅ 메인공정 셀 - 클릭(모달) / 더블클릭(인라인 수정) 지원
+function EditableL2Cell({ 
+  l2Id, l2No, l2Name, state, setState, setDirty, handleSelect, setIsProcessModalOpen, saveToLocalStorage, zebraBg, rowSpan 
+}: { 
+  l2Id: string; l2No: string; l2Name: string; state: WorksheetState; 
+  setState: React.Dispatch<React.SetStateAction<WorksheetState>>; 
+  setDirty: (dirty: boolean) => void; handleSelect: (type: 'L1' | 'L2' | 'L3', id: string | null) => void;
+  setIsProcessModalOpen: (open: boolean) => void;
+  saveToLocalStorage?: () => void; zebraBg: string; rowSpan: number;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(l2Name);
+  const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isPlaceholder = l2Name.includes('클릭');
+
+  const handleSave = () => {
+    if (editValue.trim() && editValue !== l2Name) {
+      setState(prev => ({
+        ...prev,
+        l2: prev.l2.map(p => p.id === l2Id ? { ...p, name: editValue.trim() } : p)
+      }));
+      setDirty(true);
+      saveToLocalStorage?.();
+    }
+    setIsEditing(false);
+  };
+
+  // 클릭 → 모달 열기
+  const handleClick = () => {
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
+    
+    clickTimerRef.current = setTimeout(() => {
+      handleSelect('L2', l2Id);
+      setIsProcessModalOpen(true);
+      clickTimerRef.current = null;
+    }, 200);
+  };
+
+  // 더블클릭 → 인라인 수정 (기존 공정만)
+  const handleDoubleClick = () => {
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
+    if (!isPlaceholder) {
+      setEditValue(l2Name); 
+      setIsEditing(true);
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <td rowSpan={rowSpan} className="border border-[#ccc] p-0.5 bg-green-50">
+        <input
+          type="text" value={editValue} onChange={(e) => setEditValue(e.target.value)}
+          onBlur={handleSave} onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false); }}
+          autoFocus className="w-full px-1 border-none outline-2 outline-green-500 bg-white rounded-sm text-xs text-center"
+        />
+      </td>
+    );
+  }
+
+  return (
+    <td 
+      rowSpan={rowSpan}
+      className={`text-center cursor-pointer hover:bg-green-200 text-xs border border-[#ccc] p-1 align-middle break-words ${isPlaceholder ? 'bg-white' : zebraBg}`}
+      onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
+      title={isPlaceholder ? '클릭: 공정 선택' : '클릭: 모달 | 더블클릭: 텍스트 수정'}
+    >
+      {isPlaceholder ? <span className="text-[#e65100] font-semibold">🔍 클릭하여 공정 선택</span> : <span className="font-semibold">{l2No} {l2Name}</span>}
+    </td>
+  );
+}
+
 function EditableL3Cell({ 
   value, l3Id, l2Id, state, setState, setDirty, handleSelect, setTargetL2Id, setIsWorkElementModalOpen, saveToLocalStorage, zebraBg 
 }: { 
@@ -265,15 +343,21 @@ export function StructureRow({
         </td>
       )}
       
-      {/* 메인 공정명: l2Spans 기준 병합 */}
+      {/* 메인 공정명: l2Spans 기준 병합 + 인라인 수정 지원 */}
       {showMergedCells && (
-        <td 
-          rowSpan={spanCount} 
-          className={`text-center cursor-pointer hover:bg-green-200 text-xs border border-[#ccc] p-1 align-middle break-words ${row.l2Name.includes('클릭') ? 'bg-white' : zebraBg}`}
-          onClick={() => { handleSelect('L2', row.l2Id); setIsProcessModalOpen(true); }}
-        >
-          {row.l2Name.includes('클릭') ? <span className="text-[#e65100] font-semibold">🔍 클릭하여 공정 선택</span> : <span className="font-semibold">{row.l2No} {row.l2Name}</span>}
-        </td>
+        <EditableL2Cell
+          l2Id={row.l2Id}
+          l2No={row.l2No}
+          l2Name={row.l2Name}
+          state={state}
+          setState={setState}
+          setDirty={setDirty}
+          handleSelect={handleSelect}
+          setIsProcessModalOpen={setIsProcessModalOpen}
+          saveToLocalStorage={saveToLocalStorage}
+          zebraBg={zebraBg}
+          rowSpan={spanCount}
+        />
       )}
       <M4Cell value={row.m4} zebraBg={zebraBg} />
       <EditableL3Cell value={row.l3Name} l3Id={row.l3Id} l2Id={row.l2Id} state={state} setState={setState} setDirty={setDirty} handleSelect={handleSelect} setTargetL2Id={setTargetL2Id} setIsWorkElementModalOpen={setIsWorkElementModalOpen} saveToLocalStorage={saveToLocalStorage} zebraBg={zebraBg} />
