@@ -306,21 +306,21 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
             </th>
           </tr>
           
-          {/* 2행: 항목 그룹 */}
+          {/* 2행: 항목 그룹 (표준화) */}
           <tr>
-            <th className="bg-[#42a5f5] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
+            <th className="bg-[#1976d2] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
               2. 메인 공정명
             </th>
-            <th className="bg-[#42a5f5] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
+            <th className="bg-[#f57c00] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
               3. 작업 요소명
             </th>
-            <th colSpan={2} className="bg-[#66bb6a] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
+            <th colSpan={2} className="bg-[#388e3c] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
               3. 작업요소의 기능 및 공정특성
             </th>
-            <th className="bg-[#f57c00] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
+            <th className="bg-[#e65100] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
               3. 고장원인(FC)
               {missingCount > 0 && (
-                <span className="ml-2 bg-white text-orange-500 px-2 py-0.5 rounded-full text-xs font-semibold">
+                <span className="ml-2 bg-orange-500 text-white px-2 py-0.5 rounded-full text-xs">
                   누락 {missingCount}건
                 </span>
               )}

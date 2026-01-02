@@ -450,13 +450,13 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
         {/* 3행 헤더 구조 - 하단 2px 검은색 구분선 */}
         <thead className="border-b-2 border-black">
           <tr>
-            <th className="bg-[#1565c0] text-white border border-[#ccc] px-1.5 py-1 text-xs font-extrabold text-center whitespace-nowrap">
+            <th className="bg-[#1976d2] text-white border border-[#ccc] px-1.5 py-1 text-xs font-extrabold text-center whitespace-nowrap">
               구조분석(2단계)
             </th>
-            <th colSpan={3} className="bg-[#2e7d32] text-white border border-[#ccc] px-1.5 py-1 text-xs font-extrabold text-center whitespace-nowrap">
+            <th colSpan={3} className="bg-[#388e3c] text-white border border-[#ccc] px-1.5 py-1 text-xs font-extrabold text-center whitespace-nowrap">
               기능분석(3단계)
             </th>
-            <th colSpan={2} className="bg-[#1a237e] text-white border border-[#ccc] px-1.5 py-1 text-xs font-extrabold text-center whitespace-nowrap">
+            <th colSpan={2} className="bg-[#e65100] text-white border border-[#ccc] px-1.5 py-1 text-xs font-extrabold text-center whitespace-nowrap">
               <div className="flex items-center justify-center gap-2 flex-nowrap">
                 <span>고장분석(4단계)</span>
                 <div className="flex gap-1.5">

@@ -355,14 +355,15 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
         
         {/* 헤더 - 하단 2px 검은색 구분선 */}
         <thead className="border-b-2 border-black">
+          {/* 1행: 단계 구분 + 확정/수정 버튼 (표준화) */}
           <tr>
-            <th className="bg-[#1976d2] text-white border border-[#ccc] px-1.5 py-1 text-xs font-extrabold text-center">
+            <th className="bg-[#1976d2] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center">
               구조분석(2단계)
             </th>
-            <th colSpan={2} className="bg-[#388e3c] text-white border border-[#ccc] px-1.5 py-1 text-xs font-extrabold text-center">
+            <th colSpan={2} className="bg-[#388e3c] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center">
               기능분석(3단계)
             </th>
-            <th className="bg-[#e65100] text-white border border-[#ccc] px-1.5 py-1 text-xs font-extrabold text-center">
+            <th className="bg-[#e65100] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center">
               <div className="flex items-center justify-center gap-1.5">
                 <span>고장분석(4단계)</span>
                 <div className="flex gap-1">
