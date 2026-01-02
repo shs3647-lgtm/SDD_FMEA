@@ -122,6 +122,8 @@ export interface WorksheetState {
   failureL1Confirmed?: boolean;
   failureL2Confirmed?: boolean;
   failureL3Confirmed?: boolean;
+  // 고장연결 확정 상태
+  failureLinkConfirmed?: boolean;
   // 고장연결 결과
   failureLinks?: any[];
   // 리스크 분석 데이터 (SOD 점수 + 예방/검출관리 저장)

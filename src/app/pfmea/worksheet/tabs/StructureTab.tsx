@@ -7,7 +7,7 @@
 
 import React, { useState, useRef } from 'react';
 import { WorksheetState, COLORS, FlatRow, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../constants';
-import { S, F, X, cell, cellCenter, border } from '@/styles/worksheet';
+import { S, F, X, L1, L2, L3, cell, cellCenter, border } from '@/styles/worksheet';
 
 interface StructureTabProps {
   state: WorksheetState;
@@ -148,11 +148,14 @@ interface MissingCounts {
   l3Count: number;  // 작업요소 누락
 }
 
-export function StructureHeader({ onProcessModalOpen, missingCounts }: { onProcessModalOpen: () => void; missingCounts?: MissingCounts }) {
+export function StructureHeader({ onProcessModalOpen, missingCounts, isConfirmed }: { onProcessModalOpen: () => void; missingCounts?: MissingCounts; isConfirmed?: boolean }) {
+  // 확정된 경우 돋보기 숨김
+  const showSearchIcon = !isConfirmed && missingCounts && missingCounts.l2Count > 0;
+  
   return (
     <>
       <tr>
-        <th className={`w-[30%] ${S.h2}`}>
+        <th className={`w-[30%] ${L1.h2}`}>
           1. 완제품 공정명
           {missingCounts && missingCounts.l1Count > 0 && (
             <span className="ml-1.5 bg-white text-orange-500 px-1.5 py-0.5 rounded-lg text-[11px] font-semibold">
@@ -160,16 +163,16 @@ export function StructureHeader({ onProcessModalOpen, missingCounts }: { onProce
             </span>
           )}
         </th>
-        <th onClick={onProcessModalOpen} className={`w-[30%] cursor-pointer hover:bg-green-600 ${F.h2}`}>
-          2. 메인 공정명 🔍
+        <th onClick={onProcessModalOpen} className={`w-[30%] cursor-pointer hover:bg-green-600 ${L2.h2}`}>
+          2. 메인 공정명 {showSearchIcon && '🔍'}
           {missingCounts && missingCounts.l2Count > 0 && (
             <span className="ml-1.5 bg-white text-orange-500 px-1.5 py-0.5 rounded-lg text-[11px] font-semibold">
               {missingCounts.l2Count}
             </span>
           )}
         </th>
-        <th colSpan={2} className={X.h2}>
-          3. 작업 요소명
+        <th colSpan={2} className={L3.h2}>
+          3. 작업 요소명 {!isConfirmed && missingCounts && missingCounts.l3Count > 0 && '🔍'}
           {missingCounts && missingCounts.l3Count > 0 && (
             <span className="ml-1.5 bg-white text-orange-500 px-1.5 py-0.5 rounded-lg text-[11px] font-semibold">
               {missingCounts.l3Count}
@@ -178,10 +181,10 @@ export function StructureHeader({ onProcessModalOpen, missingCounts }: { onProce
         </th>
       </tr>
       <tr>
-        <th className={`${S.h3} border-b-[3px] border-b-white`}>완제품명+라인</th>
-        <th className={`${F.h3} border-b-[3px] border-b-white`}>공정NO+공정명</th>
+        <th className={`${L1.h3} border-b-[3px] border-b-white`}>완제품명+라인</th>
+        <th className={`${L2.h3} border-b-[3px] border-b-white`}>공정NO+공정명</th>
         <th className="w-20 max-w-[80px] min-w-[80px] bg-[#29b6f6] text-white border border-[#ccc] border-b-[3px] border-b-white p-0 h-6 font-bold text-xs">4M</th>
-        <th className={`${X.h3} border-b-[3px] border-b-white`}>작업요소</th>
+        <th className={`${L3.h3} border-b-[3px] border-b-white`}>작업요소</th>
       </tr>
     </>
   );
@@ -218,7 +221,7 @@ export function StructureRow({
           className={`text-center cursor-pointer hover:bg-green-200 text-xs border border-[#ccc] p-1 align-middle break-words ${row.l2Name.includes('클릭') ? 'bg-white' : zebraBg}`}
           onClick={() => { handleSelect('L2', row.l2Id); setIsProcessModalOpen(true); }}
         >
-          {row.l2Name.includes('클릭') ? <span className="text-[#e65100] font-semibold">🔍 클릭하여 공정 선택</span> : <span className="font-semibold">{row.l2No} {row.l2Name} 🔍</span>}
+          {row.l2Name.includes('클릭') ? <span className="text-[#e65100] font-semibold">🔍 클릭하여 공정 선택</span> : <span className="font-semibold">{row.l2No} {row.l2Name}</span>}
         </td>
       )}
       <M4Cell value={row.m4} zebraBg={zebraBg} />
@@ -279,7 +282,7 @@ export default function StructureTab(props: StructureTabProps) {
       <StructureColgroup />
       {/* 헤더 - 하단 2px 검은색 구분선 */}
       <thead className="sticky top-0 z-20 bg-white border-b-2 border-black">
-        <StructureHeader onProcessModalOpen={() => setIsProcessModalOpen(true)} missingCounts={missingCounts} />
+        <StructureHeader onProcessModalOpen={() => setIsProcessModalOpen(true)} missingCounts={missingCounts} isConfirmed={isConfirmed} />
       </thead>
       <tbody>
         {rows.map((row, idx) => {

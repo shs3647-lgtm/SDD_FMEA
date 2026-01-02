@@ -90,6 +90,15 @@ const createSubItems = (basePath: string) => [
   { label: '개정관리', href: `${basePath}/revision` },
 ];
 
+// PFMEA 전용 하위 메뉴 (New FMEA + FMEA4판 추가)
+const pfmeaSubItems = [
+  { label: '등록', href: '/pfmea/register' },
+  { label: '리스트', href: '/pfmea/list' },
+  { label: 'New FMEA', href: '/pfmea/worksheet' },
+  { label: 'FMEA4판', href: '/pfmea/fmea4' },
+  { label: '개정관리', href: '/pfmea/revision' },
+];
+
 // 메뉴 아이템 정의
 const menuItems = [
   {
@@ -117,7 +126,7 @@ const menuItems = [
     label: 'PFMEA',
     Icon: ColorIcons.List,
     href: '/pfmea',
-    subItems: createSubItems('/pfmea'),
+    subItems: pfmeaSubItems,
   },
   {
     id: 'cp',

@@ -63,6 +63,86 @@ export default function Fmea4Tab({ state, setState, setDirty }: Fmea4TabProps) {
     return (state as any).fmea4Rows || [];
   }, [(state as any).fmea4Rows]);
 
+  // 셀 병합 정보 계산 (NO, 공정명, 공정기능, 고장형태)
+  const mergeInfo = useMemo(() => {
+    const info: { [rowIdx: number]: { 
+      processNo: number; 
+      processName: number; 
+      processFunction: number;
+      failureMode: number;
+      showProcess: boolean;
+      showFM: boolean;
+    } } = {};
+    
+    let i = 0;
+    while (i < fmea4Rows.length) {
+      const currentRow = fmea4Rows[i];
+      const processKey = `${currentRow.processNo}|${currentRow.processName}`;
+      
+      // 같은 공정(NO+공정명)을 가진 연속 행 수 계산
+      let processSpan = 1;
+      let j = i + 1;
+      while (j < fmea4Rows.length) {
+        const nextRow = fmea4Rows[j];
+        const nextKey = `${nextRow.processNo}|${nextRow.processName}`;
+        if (nextKey === processKey) {
+          processSpan++;
+          j++;
+        } else {
+          break;
+        }
+      }
+      
+      // 같은 공정 내에서 고장형태 병합 계산
+      let k = i;
+      while (k < i + processSpan) {
+        const fmRow = fmea4Rows[k];
+        const fmKey = `${processKey}|${fmRow.failureMode}`;
+        
+        let fmSpan = 1;
+        let m = k + 1;
+        while (m < i + processSpan) {
+          const nextFmRow = fmea4Rows[m];
+          const nextFmKey = `${processKey}|${nextFmRow.failureMode}`;
+          if (nextFmKey === fmKey) {
+            fmSpan++;
+            m++;
+          } else {
+            break;
+          }
+        }
+        
+        // 첫 행에 병합 정보 저장
+        info[k] = {
+          processNo: k === i ? processSpan : 0,
+          processName: k === i ? processSpan : 0,
+          processFunction: k === i ? processSpan : 0,
+          failureMode: fmSpan,
+          showProcess: k === i,
+          showFM: true
+        };
+        
+        // 병합되는 나머지 행
+        for (let n = k + 1; n < k + fmSpan; n++) {
+          info[n] = {
+            processNo: 0,
+            processName: 0,
+            processFunction: 0,
+            failureMode: 0,
+            showProcess: false,
+            showFM: false
+          };
+        }
+        
+        k += fmSpan;
+      }
+      
+      i += processSpan;
+    }
+    
+    return info;
+  }, [fmea4Rows]);
+
   // 행 추가
   const addRow = useCallback(() => {
     const lastRow = fmea4Rows[fmea4Rows.length - 1];
@@ -211,51 +291,60 @@ export default function Fmea4Tab({ state, setState, setDirty }: Fmea4TabProps) {
           ) : (
             fmea4Rows.map((row, idx) => {
               const zebraBg = idx % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+              const merge = mergeInfo[idx] || { processNo: 1, processName: 1, processFunction: 1, failureMode: 1, showProcess: true, showFM: true };
               
               return (
                 <tr key={row.id} className={zebraBg}>
-                  {/* NO */}
-                  <td className={styles.cellCenter}>
-                    <input
-                      type="text"
-                      value={row.processNo}
-                      onChange={(e) => updateCell(row.id, 'processNo', e.target.value)}
-                      className={styles.inputNumber}
-                    />
-                  </td>
+                  {/* NO - 병합 */}
+                  {merge.processNo > 0 && (
+                    <td className={`${styles.cellCenter} bg-blue-50`} rowSpan={merge.processNo}>
+                      <input
+                        type="text"
+                        value={row.processNo}
+                        onChange={(e) => updateCell(row.id, 'processNo', e.target.value)}
+                        className={`${styles.inputNumber} font-bold`}
+                      />
+                    </td>
+                  )}
                   
-                  {/* 공정명 */}
-                  <td className={styles.cell}>
-                    <input
-                      type="text"
-                      value={row.processName}
-                      onChange={(e) => updateCell(row.id, 'processName', e.target.value)}
-                      className={styles.input}
-                      placeholder="공정명"
-                    />
-                  </td>
+                  {/* 공정명 - 병합 */}
+                  {merge.processName > 0 && (
+                    <td className={`${styles.cell} bg-blue-50`} rowSpan={merge.processName}>
+                      <input
+                        type="text"
+                        value={row.processName}
+                        onChange={(e) => updateCell(row.id, 'processName', e.target.value)}
+                        className={`${styles.input} font-semibold`}
+                        placeholder="공정명"
+                      />
+                    </td>
+                  )}
                   
-                  {/* 공정 기능 */}
-                  <td className={styles.cell}>
-                    <input
-                      type="text"
-                      value={row.processFunction}
-                      onChange={(e) => updateCell(row.id, 'processFunction', e.target.value)}
-                      className={styles.input}
-                      placeholder="공정 기능"
-                    />
-                  </td>
+                  {/* 공정 기능 - 병합 */}
+                  {merge.processFunction > 0 && (
+                    <td className={`${styles.cell} bg-blue-50`} rowSpan={merge.processFunction}>
+                      <input
+                        type="text"
+                        value={row.processFunction}
+                        onChange={(e) => updateCell(row.id, 'processFunction', e.target.value)}
+                        className={styles.input}
+                        placeholder="공정 기능"
+                      />
+                    </td>
+                  )}
                   
-                  {/* 고장형태 (FM) */}
-                  <td className={styles.cell}>
-                    <input
-                      type="text"
-                      value={row.failureMode}
-                      onChange={(e) => updateCell(row.id, 'failureMode', e.target.value)}
-                      className={styles.input}
-                      placeholder="FM"
-                    />
-                  </td>
+                  {/* 고장형태 (FM) - 병합 */}
+                  {merge.failureMode > 0 && (
+                    <td className={`${styles.cell} bg-orange-50`} rowSpan={merge.failureMode}>
+                      <input
+                        type="text"
+                        value={row.failureMode}
+                        onChange={(e) => updateCell(row.id, 'failureMode', e.target.value)}
+                        className={`${styles.input} font-medium`}
+                        placeholder="FM"
+                      />
+                    </td>
+                  )}
                   
                   {/* 특별특성1 */}
                   <td className={styles.cellCenter}>

@@ -5,12 +5,12 @@
 
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { FailureTabProps } from './types';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
-import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeMissing, badgeCount } from '@/styles/worksheet';
+import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
 
 // 색상 정의
 const FAIL_COLORS = {
@@ -67,24 +67,68 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
   // 총 누락 건수 (기존 호환성)
   const missingCount = missingCounts.total;
 
-  // 확정 핸들러
+  // ✅ failureCauses 변경 감지용 ref
+  const failureCausesRef = useRef<string>('');
+  
+  // ✅ failureCauses 변경 시 자동 저장 (확실한 저장 보장)
+  useEffect(() => {
+    const allCauses = state.l2.flatMap((p: any) => (p.l3 || []).flatMap((we: any) => we.failureCauses || []));
+    const causesKey = JSON.stringify(allCauses);
+    
+    if (failureCausesRef.current && causesKey !== failureCausesRef.current) {
+      console.log('[FailureL3Tab] failureCauses 변경 감지, 자동 저장');
+      saveToLocalStorage?.();
+    }
+    failureCausesRef.current = causesKey;
+  }, [state.l2, saveToLocalStorage]);
+
+  // 확정 핸들러 (L2 패턴 적용)
   const handleConfirm = useCallback(() => {
+    console.log('[FailureL3Tab] 확정 버튼 클릭, missingCount:', missingCount);
     if (missingCount > 0) {
       alert(`누락된 항목이 ${missingCount}건 있습니다.\n먼저 입력을 완료해주세요.`);
       return;
     }
-    setState(prev => ({ ...prev, failureL3Confirmed: true }));
-    saveToLocalStorage?.();
+    
+    // ✅ 현재 고장원인 통계 로그
+    const allCauses = state.l2.flatMap((p: any) => (p.l3 || []).flatMap((we: any) => we.failureCauses || []));
+    console.log('[FailureL3Tab] 확정 시 고장원인:', allCauses.length, '개');
+    
+    setState(prev => {
+      const newState = { ...prev, failureL3Confirmed: true };
+      console.log('[FailureL3Tab] 확정 상태 업데이트:', newState.failureL3Confirmed);
+      return newState;
+    });
+    setDirty(true);
+    
+    // ✅ 즉시 저장 (requestAnimationFrame 사용)
+    requestAnimationFrame(() => {
+      saveToLocalStorage?.();
+      console.log('[FailureL3Tab] 확정 후 localStorage 저장 완료');
+    });
+    
     alert('3L 고장원인(FC) 분석이 확정되었습니다.');
-  }, [missingCount, setState, saveToLocalStorage]);
+  }, [missingCount, state.l2, setState, setDirty, saveToLocalStorage]);
 
   // 수정 핸들러
   const handleEdit = useCallback(() => {
     setState(prev => ({ ...prev, failureL3Confirmed: false }));
-  }, [setState]);
+    setDirty(true);
+    requestAnimationFrame(() => saveToLocalStorage?.());
+  }, [setState, setDirty, saveToLocalStorage]);
 
+  /**
+   * [핵심] handleSave - 원자성 저장 (L2 패턴 적용)
+   * - 여러 개 선택 시 각각 별도 레코드로 저장
+   * - ✅ 저장 후 즉시 localStorage에 반영
+   */
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
+    
+    console.log('[FailureL3Tab] 저장 시작');
+    console.log('  - processId:', modal.processId);
+    console.log('  - weId:', modal.weId);
+    console.log('  - selectedValues:', selectedValues);
     
     setState(prev => {
       const newState = JSON.parse(JSON.stringify(prev));
@@ -99,28 +143,33 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
             l3: (proc.l3 || []).map((we: any) => {
               if (weId && we.id !== weId) return we;
               const currentCauses = we.failureCauses || [];
+              const newCauses = selectedValues.map(val => {
+                const existing = currentCauses.find((c: any) => c.name === val);
+                return existing || { id: uid(), name: val, occurrence: undefined };
+              });
+              console.log('  - 최종 failureCauses:', newCauses.length, '개');
               return {
                 ...we,
-                failureCauses: selectedValues.map(val => {
-                  const existing = currentCauses.find((c: any) => c.name === val);
-                  return existing || { id: uid(), name: val, occurrence: undefined };
-                })
+                failureCauses: newCauses
               };
             })
           };
         });
       }
       
+      console.log('[FailureL3Tab] 상태 업데이트 완료');
       return newState;
     });
     
     setDirty(true);
     setModal(null);
     
-    // 저장 후 localStorage에 반영
-    if (saveToLocalStorage) {
-      setTimeout(() => saveToLocalStorage(), 100);
-    }
+    // ✅ 즉시 저장 (requestAnimationFrame 사용)
+    console.log('[FailureL3Tab] 즉시 저장 시작');
+    requestAnimationFrame(() => {
+      saveToLocalStorage?.();
+      console.log('[FailureL3Tab] 저장 완료');
+    });
   }, [modal, setState, setDirty, saveToLocalStorage]);
 
   const handleDelete = useCallback((deletedValues: string[]) => {
@@ -149,7 +198,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
     });
     
     setDirty(true);
-    if (saveToLocalStorage) setTimeout(() => saveToLocalStorage(), 100);
+    requestAnimationFrame(() => saveToLocalStorage?.());
   }, [modal, setState, setDirty, saveToLocalStorage]);
 
   // 발생도 업데이트
@@ -244,13 +293,13 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
                 <span className="whitespace-nowrap">고장분석(4단계)</span>
                 <div className="flex gap-1">
                   {isConfirmed ? (
-                    <span style={{ background: '#4caf50', color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: FONT_SIZES.header2, fontWeight: FONT_WEIGHTS.semibold }}>✓ 확정됨</span>
+                    <span className={badgeConfirmed}>✓ 확정됨</span>
                   ) : (
-                    <button type="button" onClick={handleConfirm} className="bg-green-600 text-white border-none px-2 py-0.5 rounded text-xs font-semibold cursor-pointer">확정</button>
+                    <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
                   )}
-                  <span className={`${missingCount > 0 ? "bg-orange-500" : "bg-green-600"} text-white px-2 py-0.5 rounded text-xs font-semibold`}>누락 {missingCount}건</span>
+                  <span className={missingCount > 0 ? badgeMissing : badgeOk}>누락 {missingCount}건</span>
                   {isConfirmed && (
-                    <button type="button" onClick={handleEdit} className="bg-orange-500 text-white border-none px-2 py-0.5 rounded text-xs font-semibold cursor-pointer">수정</button>
+                    <button type="button" onClick={handleEdit} className={btnEdit}>수정</button>
                   )}
                 </div>
               </div>

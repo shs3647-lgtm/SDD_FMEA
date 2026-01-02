@@ -7,13 +7,14 @@
 
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { FailureTabProps } from './types';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 import SODSelectModal from '@/components/modals/SODSelectModal';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
-import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeMissing, badgeCount } from '@/styles/worksheet';
+import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
+import { L1_TYPE_COLORS, getL1TypeColor } from '@/styles/level-colors';
 
 // 색상 정의
 const STEP_COLORS = {
@@ -93,21 +94,55 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
   // 총 누락 건수 (고장영향만 카운트)
   const missingCount = missingCounts.total;
 
-  // 확정 핸들러
+  // ✅ failureScopes 변경 감지용 ref
+  const failureScopesRef = useRef<string>('');
+  
+  // ✅ failureScopes 변경 시 자동 저장 (확실한 저장 보장)
+  useEffect(() => {
+    const allScopes = (state.l1 as any)?.failureScopes || [];
+    const scopesKey = JSON.stringify(allScopes);
+    
+    if (failureScopesRef.current && scopesKey !== failureScopesRef.current) {
+      console.log('[FailureL1Tab] failureScopes 변경 감지, 자동 저장');
+      saveToLocalStorage?.();
+    }
+    failureScopesRef.current = scopesKey;
+  }, [state.l1, saveToLocalStorage]);
+
+  // 확정 핸들러 (L2 패턴 적용)
   const handleConfirm = useCallback(() => {
+    console.log('[FailureL1Tab] 확정 버튼 클릭, missingCount:', missingCount);
     if (missingCount > 0) {
       alert(`누락된 항목이 ${missingCount}건 있습니다.\n먼저 입력을 완료해주세요.`);
       return;
     }
-    setState(prev => ({ ...prev, failureL1Confirmed: true }));
-    saveToLocalStorage?.();
-    alert('1L 고장영향 분석이 확정되었습니다.');
-  }, [missingCount, setState, saveToLocalStorage]);
+    
+    // ✅ 현재 고장영향 통계 로그
+    const allScopes = (state.l1 as any)?.failureScopes || [];
+    console.log('[FailureL1Tab] 확정 시 고장영향:', allScopes.length, '개');
+    
+    setState(prev => {
+      const newState = { ...prev, failureL1Confirmed: true };
+      console.log('[FailureL1Tab] 확정 상태 업데이트:', newState.failureL1Confirmed);
+      return newState;
+    });
+    setDirty(true);
+    
+    // ✅ 즉시 저장 (requestAnimationFrame 사용)
+    requestAnimationFrame(() => {
+      saveToLocalStorage?.();
+      console.log('[FailureL1Tab] 확정 후 localStorage 저장 완료');
+    });
+    
+    alert('1L 고장영향(FE) 분석이 확정되었습니다.');
+  }, [missingCount, state.l1, setState, setDirty, saveToLocalStorage]);
 
   // 수정 핸들러
   const handleEdit = useCallback(() => {
     setState(prev => ({ ...prev, failureL1Confirmed: false }));
-  }, [setState]);
+    setDirty(true);
+    requestAnimationFrame(() => saveToLocalStorage?.());
+  }, [setState, setDirty, saveToLocalStorage]);
 
   // 기능분석 L1에서 요구사항 목록 가져오기 (구분 포함)
   // 요구사항이 없는 구분/기능도 표시
@@ -200,9 +235,17 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
   const totalRows = flatRows.reduce((acc, row) => acc + row.totalRowSpan, 0) || 1;
 
 
-  // 고장영향 선택 저장 (각 값을 개별 행으로 추가)
+  /**
+   * [핵심] handleSave - 원자성 저장 (L2 패턴 적용)
+   * - 여러 개 선택 시 각각 별도 레코드로 저장
+   * - ✅ 저장 후 즉시 localStorage에 반영
+   */
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal || !modal.reqId) return;
+    
+    console.log('[FailureL1Tab] 저장 시작');
+    console.log('  - reqId:', modal.reqId);
+    console.log('  - selectedValues:', selectedValues);
     
     setState(prev => {
       const newState = JSON.parse(JSON.stringify(prev));
@@ -223,12 +266,20 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
         });
       });
       
+      console.log('  - 최종 failureScopes:', newState.l1.failureScopes.length, '개');
+      console.log('[FailureL1Tab] 상태 업데이트 완료');
       return newState;
     });
     
     setDirty(true);
     setModal(null);
-    if (saveToLocalStorage) setTimeout(() => saveToLocalStorage(), 100);
+    
+    // ✅ 즉시 저장 (requestAnimationFrame 사용)
+    console.log('[FailureL1Tab] 즉시 저장 시작');
+    requestAnimationFrame(() => {
+      saveToLocalStorage?.();
+      console.log('[FailureL1Tab] 저장 완료');
+    });
   }, [modal, setState, setDirty, saveToLocalStorage]);
 
   // 삭제 핸들러
@@ -258,7 +309,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
       return newState;
     });
     setDirty(true);
-    if (saveToLocalStorage) setTimeout(() => saveToLocalStorage(), 100);
+    requestAnimationFrame(() => saveToLocalStorage?.());
   }, [setState, setDirty, saveToLocalStorage]);
 
   // 현재 모달의 currentValues (해당 요구사항의 모든 고장영향)
@@ -410,11 +461,11 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                 <span>고장분석(4단계)</span>
                 <div className="flex gap-1.5">
                   {isConfirmed ? (
-                    <span className="bg-green-600 text-white px-2.5 py-1 rounded text-xs font-semibold">✓ 확정됨</span>
+                    <span className={badgeConfirmed}>✓ 확정됨</span>
                   ) : (
                     <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
                   )}
-                  <span className={`${missingCount > 0 ? 'bg-orange-500' : 'bg-green-600'} text-white px-2.5 py-0.5 rounded text-xs font-semibold`}>누락 {missingCount}건</span>
+                  <span className={missingCount > 0 ? badgeMissing : badgeOk}>누락 {missingCount}건</span>
                   {isConfirmed && (
                     <button type="button" onClick={handleEdit} className={btnEdit}>수정</button>
                   )}
@@ -507,11 +558,11 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                       border: `1px solid #ccc`, 
                       padding: '2px 4px', 
                       textAlign: 'center', 
-                      background: functionZebra, 
+                      background: getL1TypeColor(row.typeName).light, 
                       fontWeight: FONT_WEIGHTS.semibold, 
                       verticalAlign: 'middle',
                       fontSize: FONT_SIZES.cell,
-                      color: row.typeName === 'Your Plant' ? COLORS.structure.text : row.typeName === 'Ship to Plant' ? COLORS.failure.text : row.typeName === 'User' ? '#7b1fa2' : COLORS.text
+                      color: getL1TypeColor(row.typeName).text
                     }}
                   >
                     {row.typeName}

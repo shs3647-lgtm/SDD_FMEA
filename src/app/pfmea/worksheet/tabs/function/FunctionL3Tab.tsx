@@ -8,7 +8,7 @@
 import React, { useState, useCallback } from 'react';
 import { FunctionTabProps } from './types';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
-import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeMissing, badgeCount } from '@/styles/worksheet';
+import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 import SpecialCharSelectModal, { SPECIAL_CHAR_DATA } from '@/components/modals/SpecialCharSelectModal';
@@ -19,29 +19,8 @@ const cellBase: React.CSSProperties = { border: BORDER, padding: '4px 6px', font
 const headerStyle = (bg: string, color = '#fff'): React.CSSProperties => ({ ...cellBase, background: bg, color, fontWeight: FONT_WEIGHTS.bold, textAlign: 'center' });
 const dataCell = (bg: string): React.CSSProperties => ({ ...cellBase, background: bg });
 
-// 특별특성 배지 컴포넌트
-function SpecialCharBadge({ value, onClick }: { value: string; onClick: () => void }) {
-  const charData = SPECIAL_CHAR_DATA.find(d => d.symbol === value);
-  
-  if (!value) {
-    return (
-      <button onClick={onClick} className="w-full py-1 px-2 bg-gray-100 border border-dashed border-gray-400 rounded text-xs text-gray-400 font-semibold cursor-pointer">
-        - 미지정
-      </button>
-    );
-  }
-
-  return (
-    <button
-      onClick={onClick}
-      className="py-1 px-1.5 text-white border-none rounded text-xs font-semibold cursor-pointer whitespace-nowrap"
-      style={{ background: charData?.color || '#e0e0e0' }}
-      title={charData?.meaning || value}
-    >
-      {value}
-    </button>
-  );
-}
+// 특별특성 배지 - 공통 컴포넌트 사용
+import SpecialCharBadge from '@/components/common/SpecialCharBadge';
 
 export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalStorage }: FunctionTabProps) {
   const [modal, setModal] = useState<{ 
@@ -396,29 +375,13 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                 <span>3단계 : 3L 작업요소 기능분석</span>
                 <div className="flex gap-1.5">
                   {isConfirmed ? (
-                    <span className="bg-green-600 text-white px-2.5 py-0.5 rounded text-xs font-semibold">
-                      ✓ 확정됨
-                    </span>
+                    <span className={badgeConfirmed}>✓ 확정됨</span>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={handleConfirm}
-                      className="bg-green-600 text-white border-none px-2.5 py-0.5 rounded text-xs font-semibold cursor-pointer"
-                    >
-                      확정
-                    </button>
+                    <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
                   )}
-                  <span className={`${missingCount > 0 ? 'bg-orange-500' : 'bg-green-600'} text-white px-2.5 py-0.5 rounded text-xs font-semibold`}>
-                    누락 {missingCount}건
-                  </span>
+                  <span className={missingCount > 0 ? badgeMissing : badgeOk}>누락 {missingCount}건</span>
                   {isConfirmed && (
-                    <button
-                      type="button"
-                      onClick={handleEdit}
-                      className="bg-orange-500 text-white border-none px-2.5 py-0.5 rounded text-xs font-semibold cursor-pointer"
-                    >
-                      수정
-                    </button>
+                    <button type="button" onClick={handleEdit} className={btnEdit}>수정</button>
                   )}
                 </div>
               </div>

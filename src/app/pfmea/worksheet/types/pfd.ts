@@ -151,3 +151,4 @@ export const SPECIAL_CHAR_OPTIONS = [
   { value: 'IC', label: 'IC (Important)', color: '#ca8a04' },
 ];
 
+

@@ -12,12 +12,12 @@
 
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { FailureTabProps } from './types';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS } from '../../constants';
-import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeMissing, badgeCount } from '@/styles/worksheet';
+import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
 
 const FAIL_COLORS = {
   header1: '#1a237e', header2: '#3949ab', header3: '#5c6bc0', cell: '#f5f6fc', cellAlt: '#e8eaf6',
@@ -83,30 +83,65 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
   const missingCount = missingCounts.total;
 
   const handleConfirm = useCallback(() => {
+    console.log('[FailureL2Tab] 확정 버튼 클릭, missingCount:', missingCount);
     if (missingCount > 0) {
       alert(`누락된 항목이 ${missingCount}건 있습니다.\n먼저 입력을 완료해주세요.`);
       return;
     }
-    setState(prev => ({ ...prev, failureL2Confirmed: true }));
-    saveToLocalStorage?.();
+    
+    // ✅ 현재 고장형태 통계 로그
+    const allModes = state.l2.flatMap((p: any) => p.failureModes || []);
+    console.log('[FailureL2Tab] 확정 시 고장형태:', allModes.length, '개');
+    
+    setState(prev => {
+      const newState = { ...prev, failureL2Confirmed: true };
+      console.log('[FailureL2Tab] 확정 상태 업데이트:', newState.failureL2Confirmed);
+      return newState;
+    });
+    setDirty(true);
+    
+    // ✅ 즉시 저장 (requestAnimationFrame 사용)
+    requestAnimationFrame(() => {
+      saveToLocalStorage?.();
+      console.log('[FailureL2Tab] 확정 후 localStorage 저장 완료');
+    });
+    
     alert('2L 고장형태(FM) 분석이 확정되었습니다.');
-  }, [missingCount, setState, saveToLocalStorage]);
+  }, [missingCount, state.l2, setState, setDirty, saveToLocalStorage]);
 
   const handleEdit = useCallback(() => {
     setState(prev => ({ ...prev, failureL2Confirmed: false }));
-  }, [setState]);
+    setDirty(true);
+    requestAnimationFrame(() => saveToLocalStorage?.());
+  }, [setState, setDirty, saveToLocalStorage]);
+
+  // ✅ failureModes 변경 감지용 ref
+  const failureModesRef = useRef<string>('');
+  
+  // ✅ failureModes 변경 시 자동 저장 (확실한 저장 보장)
+  useEffect(() => {
+    const allModes = state.l2.flatMap((p: any) => p.failureModes || []);
+    const modesKey = JSON.stringify(allModes);
+    
+    if (failureModesRef.current && modesKey !== failureModesRef.current) {
+      console.log('[FailureL2Tab] failureModes 변경 감지, 자동 저장');
+      saveToLocalStorage?.();
+    }
+    failureModesRef.current = modesKey;
+  }, [state.l2, saveToLocalStorage]);
 
   /**
    * [핵심] handleSave - 원자성 저장
    * - 여러 개 선택 시 각각 별도 레코드로 저장
    * - 모든 레코드에 productCharId FK 저장
+   * - ✅ 저장 후 즉시 localStorage에 반영
    */
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
     
     const { processId, productCharId } = modal;
     
-    console.log('[FailureL2Tab] 저장');
+    console.log('[FailureL2Tab] 저장 시작');
     console.log('  - processId:', processId);
     console.log('  - productCharId:', productCharId);
     console.log('  - selectedValues:', selectedValues);
@@ -136,6 +171,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
         });
         
         console.log('  - 보존:', otherModes.length, '새로:', newModes.length);
+        console.log('  - 최종 failureModes:', [...otherModes, ...newModes].length, '개');
         
         return {
           ...proc,
@@ -143,14 +179,22 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
         };
       });
       
+      // ✅ 확정 상태에서 고장형태가 추가되면 dirty 플래그 설정
+      console.log('[FailureL2Tab] 상태 업데이트 완료');
       return newState;
     });
     
     setDirty(true);
     setModal(null);
     
+    // ✅ 즉시 저장 (setTimeout 없이)
+    console.log('[FailureL2Tab] 즉시 저장 시작');
     if (saveToLocalStorage) {
-      setTimeout(() => saveToLocalStorage(), 100);
+      // requestAnimationFrame으로 상태 업데이트 후 저장 보장
+      requestAnimationFrame(() => {
+        saveToLocalStorage();
+        console.log('[FailureL2Tab] 저장 완료');
+      });
     }
   }, [modal, setState, setDirty, saveToLocalStorage]);
 
@@ -179,7 +223,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
     });
     
     setDirty(true);
-    if (saveToLocalStorage) setTimeout(() => saveToLocalStorage(), 100);
+    requestAnimationFrame(() => saveToLocalStorage?.());
   }, [modal, setState, setDirty, saveToLocalStorage]);
 
   const processes = state.l2.filter(p => p.name && !p.name.includes('클릭'));
@@ -323,13 +367,13 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
                 <span>고장분석(4단계)</span>
                 <div className="flex gap-1">
                   {isConfirmed ? (
-                    <span className="bg-green-600 text-white px-2 py-0.5 rounded text-xs font-extrabold">확정</span>
+                    <span className={badgeConfirmed}>✓ 확정됨</span>
                   ) : (
-                    <button type="button" onClick={handleConfirm} className="bg-green-600 text-white border-none px-2 py-0.5 rounded text-xs font-extrabold cursor-pointer">확정</button>
+                    <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
                   )}
-                  <span className={`${missingCount > 0 ? "bg-orange-500" : "bg-green-600"} text-white px-2 py-0.5 rounded text-xs font-extrabold`}>누락 {missingCount}건</span>
+                  <span className={missingCount > 0 ? badgeMissing : badgeOk}>누락 {missingCount}건</span>
                   {isConfirmed && (
-                    <button type="button" onClick={handleEdit} className="bg-orange-500 text-white border-none px-2 py-0.5 rounded text-xs font-extrabold cursor-pointer">수정</button>
+                    <button type="button" onClick={handleEdit} className={btnEdit}>수정</button>
                   )}
                 </div>
               </div>

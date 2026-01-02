@@ -190,7 +190,7 @@ export default function FailureLinkTables({
                 <tr>
                   <th style={thStyle('#e8f5e9', '8%')}>No</th>
                   <th style={thStyle('#e8f5e9', '14%', { whiteSpace: 'nowrap' })}>공정명</th>
-                  <th style={thStyle('#e8f5e9', '8%')}>인터페이스</th>
+                  <th style={thStyle('#e8f5e9', '8%')}>4M</th>
                   <th style={thStyle('#e8f5e9', '18%')}>컴포넌트</th>
                   <th style={thStyle('#e8f5e9')}>고장원인(FC)</th>
                 </tr>

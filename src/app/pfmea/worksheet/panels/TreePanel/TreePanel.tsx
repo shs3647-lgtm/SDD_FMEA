@@ -9,6 +9,7 @@
 'use client';
 
 import React from 'react';
+import { L1_TYPE_COLORS, getL1TypeColor, TREE_FUNCTION, TREE_FAILURE, TREE_STRUCTURE } from '@/styles/level-colors';
 
 interface TreePanelProps {
   state: any;
@@ -119,25 +120,39 @@ export default function TreePanel({ state }: TreePanelProps) {
           </div>
           {state.l1.types.length === 0 ? (
             <div className={tw.empty}>구분/기능/요구사항을 정의하세요</div>
-          ) : state.l1.types.map((t: any) => (
-            <div key={t.id} className="ml-3 mb-2 border-l-2 border-blue-500 pl-2">
-              <div className={`${tw.text11} ${tw.fontBold} text-white py-1 px-2 bg-blue-600 rounded-sm mb-1`}>
-                📋 {t.name}
-              </div>
-              {t.functions.map((f: any) => (
-                <div key={f.id} className="ml-3 mb-1">
-                  <div className={`${tw.textXs} font-semibold text-black py-0.5 px-1.5 bg-orange-100 rounded-sm`}>
-                    ⚙️ {f.name}
-                  </div>
-                  {f.requirements.map((r: any) => (
-                    <div key={r.id} className={`ml-4 ${tw.textXxs} font-medium text-orange-700 py-0.5 px-1 bg-orange-50 rounded-sm mt-0.5`}>
-                      • {r.name}
-                    </div>
-                  ))}
+          ) : state.l1.types.map((t: any) => {
+            // 구분별 색상 적용 (Your Plant=보라, Ship to Plant=주황, User=녹색)
+            const typeColor = getL1TypeColor(t.name);
+            return (
+              <div key={t.id} className="ml-3 mb-2 pl-2" style={{ borderLeft: `2px solid ${typeColor.bg}` }}>
+                <div 
+                  className={`${tw.text11} ${tw.fontBold} text-white py-1 px-2 rounded-sm mb-1`}
+                  style={{ backgroundColor: typeColor.bg }}
+                >
+                  📋 {t.name}
                 </div>
-              ))}
-            </div>
-          ))}
+                {t.functions.map((f: any) => (
+                  <div key={f.id} className="ml-3 mb-1">
+                    <div 
+                      className={`${tw.textXs} font-semibold py-0.5 px-1.5 rounded-sm`}
+                      style={{ backgroundColor: typeColor.light, color: typeColor.text }}
+                    >
+                      ⚙️ {f.name}
+                    </div>
+                    {f.requirements.map((r: any) => (
+                      <div 
+                        key={r.id} 
+                        className={`ml-4 ${tw.textXxs} font-medium py-0.5 px-1 rounded-sm mt-0.5`}
+                        style={{ color: typeColor.text }}
+                      >
+                        • {r.name}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
         </div>
         <div className={tw.footer}>
           구분: {state.l1.types.length}개 | 
@@ -158,18 +173,24 @@ export default function TreePanel({ state }: TreePanelProps) {
             <div className={tw.empty}>구조분석에서 공정을 추가하세요</div>
           ) : state.l2.map((proc: any) => (
             <div key={proc.id} className={tw.treeBranchGreen}>
-              <div className={`${tw.text11} font-semibold text-green-900 py-1 px-2 bg-green-300 rounded-sm mb-1`}>
+              <div 
+                className={`${tw.text11} font-semibold py-1 px-2 rounded-sm mb-1`}
+                style={{ backgroundColor: TREE_FUNCTION.procBg, color: TREE_FUNCTION.procText, borderLeft: `3px solid ${TREE_FUNCTION.border}` }}
+              >
                 🏭 {proc.no}. {proc.name}
               </div>
               {(proc.functions || []).length === 0 ? (
                 <div className={tw.emptySmall}>기능 미정의</div>
               ) : (proc.functions || []).map((f: any) => (
                 <div key={f.id} className="ml-3 mb-1">
-                  <div className={`${tw.textXs} text-green-700 py-0.5 px-1.5 bg-green-100 rounded-sm`}>
+                  <div 
+                    className={`${tw.textXs} py-0.5 px-1.5 rounded-sm`}
+                    style={{ backgroundColor: TREE_FUNCTION.itemBg, color: TREE_FUNCTION.itemText }}
+                  >
                     ⚙️ {f.name}
                   </div>
                   {(f.productChars || []).map((c: any) => (
-                    <div key={c.id} className={`ml-4 ${tw.textXxs} text-gray-600 py-0.5 px-1`}>
+                    <div key={c.id} className={`ml-4 ${tw.textXxs} py-0.5 px-1`} style={{ color: TREE_FUNCTION.itemText }}>
                       📐 {c.name}
                     </div>
                   ))}
@@ -197,21 +218,27 @@ export default function TreePanel({ state }: TreePanelProps) {
             <div className={tw.empty}>구조분석에서 작업요소를 추가하세요</div>
           ) : state.l2.filter((p: any) => (p.l3 || []).length > 0).map((proc: any) => (
             <div key={proc.id} className={tw.treeBranchGreen}>
-              <div className={`${tw.text11} font-semibold text-green-900 py-1 px-2 bg-green-300 rounded-sm mb-1`}>
+              <div 
+                className={`${tw.text11} font-semibold py-1 px-2 rounded-sm mb-1`}
+                style={{ backgroundColor: TREE_FUNCTION.procBg, color: TREE_FUNCTION.procText, borderLeft: `3px solid ${TREE_FUNCTION.border}` }}
+              >
                 🏭 {proc.no}. {proc.name}
               </div>
               {(proc.l3 || []).map((we: any) => (
                 <div key={we.id} className="ml-3 mb-1.5">
-                  <div className={`${tw.textXs} font-semibold text-green-700 py-0.5 px-1.5 bg-green-100 rounded-sm mb-0.5`}>
+                  <div 
+                    className={`${tw.textXs} font-semibold py-0.5 px-1.5 rounded-sm mb-0.5`}
+                    style={{ backgroundColor: TREE_FUNCTION.itemBg, color: TREE_FUNCTION.itemText }}
+                  >
                     [{we.m4}] {we.name}
                   </div>
                   {(we.functions || []).length === 0 ? (
                     <div className={tw.emptySmall}>기능 미정의</div>
                   ) : (we.functions || []).map((f: any) => (
                     <div key={f.id} className="ml-3">
-                      <div className={`${tw.textXxs} text-green-700 py-0.5 px-1`}>⚙️ {f.name}</div>
+                      <div className={`${tw.textXxs} py-0.5 px-1`} style={{ color: TREE_FUNCTION.itemText }}>⚙️ {f.name}</div>
                       {(f.processChars || []).map((c: any) => (
-                        <div key={c.id} className={`ml-3 text-[8px] text-gray-600 py-0.5 px-1`}>
+                        <div key={c.id} className={`ml-3 text-[8px] py-0.5 px-1`} style={{ color: TREE_FUNCTION.itemText }}>
                           📏 {c.name}
                         </div>
                       ))}
@@ -240,47 +267,60 @@ export default function TreePanel({ state }: TreePanelProps) {
             📦 {state.l1.name || '(완제품 공정명)'}
           </div>
           
-          {(state.l1.types || []).map((type: any) => (
-            <div key={type.id} className="ml-2 mb-2">
-              <div className={`${tw.text11} font-bold text-[#1a237e] py-0.5 px-1.5 bg-indigo-100 rounded-sm mb-1 border-l-2 border-indigo-400`}>
-                🏷️ {type.name}
-              </div>
-              
-              {(type.functions || []).length === 0 ? (
-                <div className={tw.emptySmall}>(기능 미입력)</div>
-              ) : (type.functions || []).map((func: any) => (
-                <div key={func.id} className="ml-3 mb-1.5">
-                  <div className={`${tw.textXs} font-semibold text-green-700 py-0.5 px-1.5 bg-green-50 rounded-sm mb-0.5`}>
-                    ⚙️ {func.name}
-                  </div>
-                  {(func.requirements || []).length === 0 ? (
-                    <div className={tw.emptySmall}>(요구사항 미입력)</div>
-                  ) : (func.requirements || []).map((req: any) => {
-                    const effects = (state.l1.failureScopes || []).filter((s: any) => s.reqId === req.id);
-                    return (
-                      <div key={req.id} className="ml-3 mb-1">
-                        <div className={`${tw.textXs} font-semibold text-indigo-400 py-0.5 px-1 bg-indigo-50 rounded-sm`}>
-                          📋 {req.name}
-                        </div>
-                        {effects.length === 0 ? (
-                          <div className={tw.emptySmall}>(고장영향 미입력)</div>
-                        ) : effects.map((eff: any) => (
-                          <div key={eff.id} className={`ml-3 ${tw.textXxs} text-[#1a237e] flex gap-1.5 items-center`}>
-                            <span>⚡ {eff.effect || '(미입력)'}</span>
-                            {eff.severity && (
-                              <span className={`${tw.severityBadge} ${eff.severity >= 8 ? 'bg-orange-200 text-orange-800' : 'bg-indigo-100 text-indigo-700'}`}>
-                                S:{eff.severity}
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })}
+          {(state.l1.types || []).map((type: any) => {
+            // 구분별 색상 적용 (Your Plant=보라, Ship to Plant=주황, User=녹색)
+            const typeColor = getL1TypeColor(type.name);
+            return (
+              <div key={type.id} className="ml-2 mb-2">
+                <div 
+                  className={`${tw.text11} font-bold py-0.5 px-1.5 rounded-sm mb-1`}
+                  style={{ backgroundColor: typeColor.bg, color: '#fff', borderLeft: `2px solid ${typeColor.border}` }}
+                >
+                  🏷️ {type.name}
                 </div>
-              ))}
-            </div>
-          ))}
+                
+                {(type.functions || []).length === 0 ? (
+                  <div className={tw.emptySmall}>(기능 미입력)</div>
+                ) : (type.functions || []).map((func: any) => (
+                  <div key={func.id} className="ml-3 mb-1.5">
+                    <div 
+                      className={`${tw.textXs} font-semibold py-0.5 px-1.5 rounded-sm mb-0.5`}
+                      style={{ backgroundColor: typeColor.light, color: typeColor.text }}
+                    >
+                      ⚙️ {func.name}
+                    </div>
+                    {(func.requirements || []).length === 0 ? (
+                      <div className={tw.emptySmall}>(요구사항 미입력)</div>
+                    ) : (func.requirements || []).map((req: any) => {
+                      const effects = (state.l1.failureScopes || []).filter((s: any) => s.reqId === req.id);
+                      return (
+                        <div key={req.id} className="ml-3 mb-1">
+                          <div 
+                            className={`${tw.textXs} font-semibold py-0.5 px-1 rounded-sm`}
+                            style={{ color: typeColor.text }}
+                          >
+                            📋 {req.name}
+                          </div>
+                          {effects.length === 0 ? (
+                            <div className={tw.emptySmall}>(고장영향 미입력)</div>
+                          ) : effects.map((eff: any) => (
+                            <div key={eff.id} className={`ml-3 ${tw.textXxs} flex gap-1.5 items-center`} style={{ color: typeColor.text }}>
+                              <span>⚡ {eff.effect || '(미입력)'}</span>
+                              {eff.severity && (
+                                <span className={`${tw.severityBadge} ${eff.severity >= 8 ? 'bg-orange-200 text-orange-800' : 'bg-indigo-100 text-indigo-700'}`}>
+                                  S:{eff.severity}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
           
           {(state.l1.types || []).length === 0 && (
             <div className="text-center text-gray-500 text-[10px] p-5">
@@ -307,19 +347,22 @@ export default function TreePanel({ state }: TreePanelProps) {
             const functions = proc.functions || [];
             return (
               <div key={proc.id} className="mb-2.5">
-                <div className={`${tw.textXs} font-bold text-[#1a237e] py-0.5 px-1.5 bg-indigo-100 rounded-sm border-l-[3px] border-[#1a237e]`}>
+                <div 
+                  className={`${tw.textXs} font-bold py-0.5 px-1.5 rounded-sm`}
+                  style={{ backgroundColor: TREE_FAILURE.procBg, color: TREE_FAILURE.procText, borderLeft: `3px solid ${TREE_FAILURE.border}` }}
+                >
                   🔧 {proc.no}. {proc.name}
                 </div>
                 {functions.length > 0 ? functions.map((f: any) => {
                   const productChars = f.productChars || [];
                   return (
                     <div key={f.id} className="ml-3 mb-1">
-                      <div className={`${tw.textXxs} font-semibold text-green-700`}>📋 {f.name}</div>
+                      <div className={`${tw.textXxs} font-semibold`} style={{ color: TREE_FUNCTION.itemText }}>📋 {f.name}</div>
                       {productChars.length > 0 ? productChars.map((pc: any) => (
                         <div key={pc.id} className="ml-3 mb-0.5">
-                          <div className={`${tw.textXxs} text-indigo-400`}>🏷️ {pc.name}</div>
+                          <div className={`${tw.textXxs}`} style={{ color: TREE_FAILURE.itemText }}>🏷️ {pc.name}</div>
                           {(proc.failureModes || []).filter((m: any) => !pc.name || m.productCharId === pc.id || !m.productCharId).slice(0, 3).map((m: any) => (
-                            <div key={m.id} className={`ml-3 ${tw.textXxs} text-[#1a237e] flex gap-1.5`}>
+                            <div key={m.id} className={`ml-3 ${tw.textXxs} flex gap-1.5`} style={{ color: TREE_FAILURE.itemText }}>
                               <span>└ ⚠️ {m.name}</span>
                             </div>
                           ))}
@@ -333,7 +376,7 @@ export default function TreePanel({ state }: TreePanelProps) {
                   <div className={tw.emptySmall}>└ (메인공정기능 미입력)</div>
                 )}
                 {functions.length === 0 && (proc.failureModes || []).map((m: any) => (
-                  <div key={m.id} className={`ml-4 ${tw.textXxs} text-[#1a237e] flex gap-1.5`}>
+                  <div key={m.id} className={`ml-4 ${tw.textXxs} flex gap-1.5`} style={{ color: TREE_FAILURE.itemText }}>
                     <span>└ ⚠️ {m.name}</span>
                   </div>
                 ))}
@@ -353,19 +396,25 @@ export default function TreePanel({ state }: TreePanelProps) {
         <div className={`${tw.content} ${tw.contentNavy}`}>
           {state.l2.filter((p: any) => p.name && !p.name.includes('클릭')).map((proc: any) => (
             <div key={proc.id} className="mb-2">
-              <div className={`${tw.textXs} font-bold text-[#1a237e] py-0.5 px-1.5 bg-indigo-100 rounded-sm border-l-[3px] border-[#1a237e]`}>
+              <div 
+                className={`${tw.textXs} font-bold py-0.5 px-1.5 rounded-sm`}
+                style={{ backgroundColor: TREE_FAILURE.procBg, color: TREE_FAILURE.procText, borderLeft: `3px solid ${TREE_FAILURE.border}` }}
+              >
                 🔧 {proc.no}. {proc.name}
               </div>
               {(proc.l3 || []).filter((w: any) => w.name && !w.name.includes('클릭')).map((we: any) => (
                 <div key={we.id} className="ml-3 mb-1">
-                  <div className={`${tw.textXxs} font-semibold text-indigo-400`}>
+                  <div 
+                    className={`${tw.textXxs} font-semibold py-0.5 px-1 rounded-sm`}
+                    style={{ backgroundColor: TREE_FAILURE.itemBg, color: TREE_FAILURE.itemText }}
+                  >
                     [{we.m4}] {we.name}
                   </div>
                   {(we.failureCauses || []).map((c: any) => (
-                    <div key={c.id} className={`ml-4 ${tw.textXxs} text-gray-600 flex gap-2`}>
+                    <div key={c.id} className={`ml-4 ${tw.textXxs} flex gap-2`} style={{ color: TREE_FAILURE.itemText }}>
                       <span>└ {c.name}</span>
                       {c.occurrence && (
-                        <span className={`${tw.severityBadge} ${c.occurrence >= 7 ? 'bg-orange-200 text-orange-800' : 'bg-indigo-100 text-indigo-700'}`}>
+                        <span className={`${tw.severityBadge} ${c.occurrence >= 7 ? 'bg-orange-200 text-orange-800' : 'bg-orange-100 text-orange-700'}`}>
                           O:{c.occurrence}
                         </span>
                       )}

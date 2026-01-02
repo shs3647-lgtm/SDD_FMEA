@@ -9,3 +9,4 @@ export default function APQPCFTPage() {
   redirect('/apqp/register');
 }
 
+

@@ -8,7 +8,7 @@
 import React, { useState, useCallback } from 'react';
 import { FunctionTabProps } from './types';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
-import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeMissing, badgeCount } from '@/styles/worksheet';
+import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 import SpecialCharSelectModal, { SPECIAL_CHAR_DATA } from '@/components/modals/SpecialCharSelectModal';
@@ -19,46 +19,8 @@ const cellBase: React.CSSProperties = { border: BORDER, padding: '4px 6px', font
 const headerStyle = (bg: string, color = '#fff'): React.CSSProperties => ({ ...cellBase, background: bg, color, fontWeight: FONT_WEIGHTS.bold, textAlign: 'center' });
 const dataCell = (bg: string): React.CSSProperties => ({ ...cellBase, background: bg });
 
-// 특별특성 배지 컴포넌트
-function SpecialCharBadge({ value, onClick }: { value: string; onClick: () => void }) {
-  const charData = SPECIAL_CHAR_DATA.find(d => d.symbol === value);
-  
-  if (!value) {
-    return (
-      <div onClick={onClick} className="p-1 cursor-pointer text-xs text-gray-400 font-semibold bg-gray-100 h-full flex items-center justify-center whitespace-nowrap">
-        - 미지정
-      </div>
-    );
-  }
-  
-  const bgColor = charData?.color || '#9e9e9e';
-  
-  const icon = charData?.icon || '';
-  
-  return (
-    <div onClick={onClick} className="py-0.5 px-1 cursor-pointer flex items-center justify-center h-full">
-      <span 
-        style={{
-          background: bgColor,
-          color: 'white',
-          padding: '2px 6px',
-          borderRadius: '3px',
-          fontSize: FONT_SIZES.cell,
-          fontWeight: FONT_WEIGHTS.semibold,
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '2px',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
-          whiteSpace: 'nowrap',
-        }}
-        title={charData?.meaning || value}
-      >
-        {icon && <span className="text-[11px]">{icon}</span>}
-        {value}
-      </span>
-    </div>
-  );
-}
+// 특별특성 배지 - 공통 컴포넌트 사용
+import SpecialCharBadge from '@/components/common/SpecialCharBadge';
 
 export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalStorage }: FunctionTabProps) {
   const [modal, setModal] = useState<{ type: string; procId: string; funcId?: string; charId?: string; title: string; itemCode: string } | null>(null);
@@ -414,29 +376,13 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                 <span>3단계 : 2L 메인공정 기능분석</span>
                 <div className="flex gap-1.5">
                   {isConfirmed ? (
-                    <span className="bg-green-600 text-white px-2.5 py-0.5 rounded text-xs font-semibold">
-                      ✓ 확정됨
-                    </span>
+                    <span className={badgeConfirmed}>✓ 확정됨</span>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={handleConfirm}
-                      className="bg-green-600 text-white border-none px-2.5 py-0.5 rounded text-xs font-semibold cursor-pointer"
-                    >
-                      확정
-                    </button>
+                    <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
                   )}
-                  <span className={`${missingCount > 0 ? 'bg-orange-500' : 'bg-green-600'} text-white px-2.5 py-0.5 rounded text-xs font-semibold`}>
-                    누락 {missingCount}건
-                  </span>
+                  <span className={missingCount > 0 ? badgeMissing : badgeOk}>누락 {missingCount}건</span>
                   {isConfirmed && (
-                    <button
-                      type="button"
-                      onClick={handleEdit}
-                      className="bg-orange-500 text-white border-none px-2.5 py-0.5 rounded text-xs font-semibold cursor-pointer"
-                    >
-                      수정
-                    </button>
+                    <button type="button" onClick={handleEdit} className={btnEdit}>수정</button>
                   )}
                 </div>
               </div>

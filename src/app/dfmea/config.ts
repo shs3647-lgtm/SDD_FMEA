@@ -11,7 +11,7 @@ export const DFMEA_CONFIG: FMEAConfig = {
     l1: '다음 상위수준',
     l2: '초점 요소',
     l3: '다음 하위수준',
-    l3Attr: '인터페이스',
+    l3Attr: '4M',
   },
   colors: {
     bg: '#f5f7fa',

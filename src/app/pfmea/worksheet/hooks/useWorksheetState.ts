@@ -260,6 +260,32 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     }
   }, [(state.l1 as any)?.failureScopes, saveToLocalStorage]);
 
+  // ✅ 고장형태(failureModes) 변경 시 즉시 저장 (2L 고장분석 데이터 손실 방지)
+  const failureModesRef = useRef<string>('');
+  useEffect(() => {
+    const allModes = state.l2.flatMap((p: any) => p.failureModes || []);
+    const modesKey = JSON.stringify(allModes);
+    
+    if (failureModesRef.current && modesKey !== failureModesRef.current) {
+      console.log('[자동저장] failureModes 변경 감지:', allModes.length, '개');
+      saveToLocalStorage();
+    }
+    failureModesRef.current = modesKey;
+  }, [state.l2, saveToLocalStorage]);
+
+  // ✅ 고장원인(failureCauses) 변경 시 즉시 저장 (3L 고장분석 데이터 손실 방지)
+  const failureCausesRef = useRef<string>('');
+  useEffect(() => {
+    const allCauses = state.l2.flatMap((p: any) => (p.l3 || []).flatMap((we: any) => we.failureCauses || []));
+    const causesKey = JSON.stringify(allCauses);
+    
+    if (failureCausesRef.current && causesKey !== failureCausesRef.current) {
+      console.log('[자동저장] failureCauses 변경 감지:', allCauses.length, '개');
+      saveToLocalStorage();
+    }
+    failureCausesRef.current = causesKey;
+  }, [state.l2, saveToLocalStorage]);
+
   // ✅ riskData 변경 시 별도 키로 즉시 저장 (확실한 저장)
   const riskDataRef = useRef<any>({});
   useEffect(() => {

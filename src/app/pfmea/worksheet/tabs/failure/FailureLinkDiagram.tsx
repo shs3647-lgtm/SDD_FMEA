@@ -67,22 +67,22 @@ export default function FailureLinkDiagram({
         </div>
       ) : (
         <div style={diagramMainStyle}>
-          {/* 상단 라벨 */}
+          {/* 상단 라벨 - 타입별 색상 */}
           <div style={diagramLabelRowStyle}>
-            <div style={diagramLabelStyle}>FE(고장영향)</div>
+            <div style={diagramLabelStyle('FE')}>FE(고장영향)</div>
             <div></div>
-            <div style={diagramLabelStyle}>FM(고장형태)</div>
+            <div style={diagramLabelStyle('FM')}>FM(고장형태)</div>
             <div></div>
-            <div style={diagramLabelStyle}>FC(고장원인)</div>
+            <div style={diagramLabelStyle('FC')}>FC(고장원인)</div>
           </div>
           
           {/* 카드 영역 */}
           <div style={diagramGridStyle}>
-            {/* FE 열 */}
+            {/* FE 열 - 남색 */}
             <div ref={feColRef} style={diagramColumnStyle('flex-start')}>
               {Array.from(linkedFEs.values()).map(fe => (
-                <div key={fe.id} className="fe-card" style={diagramCardStyle('120px')}>
-                  <div style={cardHeaderStyle()}>
+                <div key={fe.id} className="fe-card" style={diagramCardStyle('120px', 'FE')}>
+                  <div style={cardHeaderStyle('FE')}>
                     {fe.feNo} | S:{fe.severity || '-'}
                   </div>
                   <div style={cardBodyStyle()}>{fe.text}</div>
@@ -94,10 +94,10 @@ export default function FailureLinkDiagram({
             {/* 왼쪽 간격 (화살표 영역) */}
             <div className="flex items-center justify-center"></div>
 
-            {/* FM 열 */}
+            {/* FM 열 - 주황색 */}
             <div style={diagramColumnStyle('center')}>
-              <div ref={fmNodeRef} style={diagramCardStyle('110px')}>
-                <div style={cardHeaderStyle({ borderBottom: '1px solid #ffe0b2' })}>{currentFM.fmNo}</div>
+              <div ref={fmNodeRef} style={diagramCardStyle('110px', 'FM')}>
+                <div style={cardHeaderStyle('FM')}>{currentFM.fmNo}</div>
                 <div style={cardBodyStyle({ fontWeight: 600 })}>{currentFM.text}</div>
               </div>
             </div>
@@ -105,11 +105,11 @@ export default function FailureLinkDiagram({
             {/* 오른쪽 간격 (화살표 영역) */}
             <div className="flex items-center justify-center"></div>
 
-            {/* FC 열 */}
+            {/* FC 열 - 녹색 */}
             <div ref={fcColRef} style={diagramColumnStyle('flex-end')}>
               {Array.from(linkedFCs.values()).map(fc => (
-                <div key={fc.id} className="fc-card" style={diagramCardStyle('110px')}>
-                  <div style={cardHeaderStyle()}>{fc.fcNo}</div>
+                <div key={fc.id} className="fc-card" style={diagramCardStyle('110px', 'FC')}>
+                  <div style={cardHeaderStyle('FC')}>{fc.fcNo}</div>
                   <div style={cardBodyStyle()}>{fc.text}</div>
                 </div>
               ))}

@@ -10,16 +10,11 @@ import { FunctionTabProps } from './types';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
-import { WS } from '@/styles/worksheet';
+import { WS, btnConfirm, btnEdit, badgeConfirmed, badgeOk, badgeMissing } from '@/styles/worksheet';
 
-// 구분(Type)별 색상 정의
-const TYPE_COLORS: Record<string, { bg: string; light: string; text: string }> = {
-  'Your Plant': { bg: '#1976d2', light: '#bbdefb', text: '#0d47a1' },
-  'Ship to Plant': { bg: '#f57c00', light: '#ffe0b2', text: '#e65100' },
-  'User': { bg: '#7b1fa2', light: '#e1bee7', text: '#4a148c' },
-};
-
-const getTypeColor = (typeName: string) => TYPE_COLORS[typeName] || { bg: '#388e3c', light: '#c8e6c9', text: '#1b5e20' };
+// 구분(Type)별 색상 정의 - 공통 색상 사용
+import { L1_TYPE_COLORS, getL1TypeColor } from '@/styles/level-colors';
+const getTypeColor = getL1TypeColor;
 
 // 스타일 함수
 const BORDER = '1px solid #b0bec5';
@@ -319,29 +314,19 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
             <th className="bg-[#1976d2] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center">
               2단계 구조분석
             </th>
-            <th colSpan={3} className="bg-[#1b5e20] text-white border border-[#ccc] p-2 text-xs font-semibold text-center relative">
+            <th colSpan={3} className="bg-[#1976d2] text-white border border-[#ccc] p-2 text-xs font-semibold text-center relative">
               <div className="flex items-center justify-center">
                 <span className="flex-1 text-center">3단계 : 1L 완제품 공정 기능분석</span>
                 <div className="flex gap-1 absolute right-2">
-                  <button
-                    type="button"
-                    onClick={handleConfirm}
-                    disabled={isConfirmed}
-                    className={isConfirmed ? WS.btnDisabled : WS.btnConfirm}
-                  >
-                    {isConfirmed ? '✓ 확정됨' : '확정'}
-                  </button>
-                  <span className={missingCount > 0 ? WS.badgeMissing : WS.badgeOk}>
-                    누락 {missingCount}건
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleEdit}
-                    disabled={!isConfirmed}
-                    className={!isConfirmed ? WS.btnDisabled : WS.btnEdit}
-                  >
-                    수정
-                  </button>
+                  {isConfirmed ? (
+                    <span className={badgeConfirmed}>✓ 확정됨</span>
+                  ) : (
+                    <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
+                  )}
+                  <span className={missingCount > 0 ? badgeMissing : badgeOk}>누락 {missingCount}건</span>
+                  {isConfirmed && (
+                    <button type="button" onClick={handleEdit} className={btnEdit}>수정</button>
+                  )}
                 </div>
               </div>
             </th>

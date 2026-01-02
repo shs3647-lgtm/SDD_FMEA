@@ -143,15 +143,25 @@ export const diagramLabelRowStyle: CSSProperties = {
   marginBottom: '8px',
 };
 
-/** 다이어그램 라벨 */
-export const diagramLabelStyle: CSSProperties = {
-  textAlign: 'center',
-  fontWeight: FONT_WEIGHTS.semibold,
-  fontSize: FONT_SIZES.header1,
-  color: COLORS.failure.text,
-  background: COLORS.failure.light,
-  padding: '3px 0',
-  borderRadius: '3px',
+/** FE/FM/FC 색상 정의 (워크시트와 통일) */
+export const CHAIN_COLORS = {
+  FE: { bg: '#1a237e', light: '#c5cae9', text: '#ffffff', border: '#1a237e' }, // 남색 (1L 고장영향)
+  FM: { bg: '#e65100', light: '#ffe0b2', text: '#ffffff', border: '#e65100' }, // 주황 (2L 고장형태)
+  FC: { bg: '#388e3c', light: '#c8e6c9', text: '#ffffff', border: '#388e3c' }, // 녹색 (3L 고장원인)
+};
+
+/** 다이어그램 라벨 (타입별 색상) */
+export const diagramLabelStyle = (type?: 'FE' | 'FM' | 'FC'): CSSProperties => {
+  const colors = type ? CHAIN_COLORS[type] : { bg: COLORS.failure.light, text: COLORS.failure.text };
+  return {
+    textAlign: 'center',
+    fontWeight: FONT_WEIGHTS.semibold,
+    fontSize: FONT_SIZES.header1,
+    color: type ? colors.text : colors.text,
+    background: type ? colors.bg : colors.bg,
+    padding: '3px 0',
+    borderRadius: '3px',
+  };
 };
 
 /** 다이어그램 카드 그리드 */
@@ -172,26 +182,32 @@ export const diagramColumnStyle = (align: 'flex-start' | 'center' | 'flex-end'):
   gap: '4px',
 });
 
-/** 다이어그램 카드 아이템 */
-export const diagramCardStyle = (width: string, options?: { border?: string }): CSSProperties => ({
-  background: '#fff',
-  border: options?.border || `2px solid ${COLORS.failure.dark}`,
-  borderRadius: '4px',
-  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-  width,
-  overflow: 'hidden',
-  fontSize: FONT_SIZES.small,
-});
+/** 다이어그램 카드 아이템 (타입별 색상) */
+export const diagramCardStyle = (width: string, type?: 'FE' | 'FM' | 'FC', options?: { border?: string }): CSSProperties => {
+  const colors = type ? CHAIN_COLORS[type] : { border: COLORS.failure.dark };
+  return {
+    background: '#fff',
+    border: options?.border || `2px solid ${colors.border}`,
+    borderRadius: '4px',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+    width,
+    overflow: 'hidden',
+    fontSize: FONT_SIZES.small,
+  };
+};
 
-/** 카드 헤더 */
-export const cardHeaderStyle = (options?: { borderBottom?: string }): CSSProperties => ({
-  padding: '3px 6px',
-  fontWeight: FONT_WEIGHTS.semibold,
-  background: COLORS.failure.light,
-  color: COLORS.failure.text,
-  textAlign: 'center',
-  ...(options?.borderBottom && { borderBottom: options.borderBottom }),
-});
+/** 카드 헤더 (타입별 색상) */
+export const cardHeaderStyle = (type?: 'FE' | 'FM' | 'FC', options?: { borderBottom?: string }): CSSProperties => {
+  const colors = type ? CHAIN_COLORS[type] : { bg: COLORS.failure.light, text: COLORS.failure.text };
+  return {
+    padding: '3px 6px',
+    fontWeight: FONT_WEIGHTS.semibold,
+    background: type ? colors.bg : colors.bg,
+    color: type ? colors.text : colors.text,
+    textAlign: 'center',
+    ...(options?.borderBottom && { borderBottom: options.borderBottom }),
+  };
+};
 
 /** 카드 본문 */
 export const cardBodyStyle = (options?: { fontWeight?: number }): CSSProperties => ({

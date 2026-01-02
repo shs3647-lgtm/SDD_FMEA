@@ -40,12 +40,12 @@ export function getStepNumber(tab: string): number {
 
 // 구조분석 탭
 export function StructureTabFull(props: any) {
-  const { rows, l1Spans, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown, handleSelect, setIsProcessModalOpen, setIsWorkElementModalOpen, setTargetL2Id } = props;
+  const { rows, l1Spans, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown, handleSelect, setIsProcessModalOpen, setIsWorkElementModalOpen, setTargetL2Id, isConfirmed, missingCounts } = props;
   return (
     <>
       <StructureColgroup />
       <thead style={stickyTheadStyle}>
-        <StructureHeader onProcessModalOpen={() => setIsProcessModalOpen(true)} />
+        <StructureHeader onProcessModalOpen={() => setIsProcessModalOpen(true)} isConfirmed={isConfirmed} missingCounts={missingCounts} />
       </thead>
       <tbody>
         {rows.length === 0 ? (

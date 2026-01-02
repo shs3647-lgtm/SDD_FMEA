@@ -6,7 +6,7 @@
 'use client';
 
 import React from 'react';
-import { COLORS, FONT_SIZES, FONT_WEIGHTS } from '@/app/dfmea/worksheet/constants';
+import { COLORS, FONT_SIZES, FONT_WEIGHTS } from '../../constants';
 import { panelStyle, panelHeaderStyle, thStyle, tdStyle, tdCenterStyle, flexContainerStyle, headerStyle, panelStyleWithFlex, scrollAreaStyle, tableFullStyle } from './FailureLinkStyles';
 
 interface FEItem { id: string; scope: string; feNo: string; text: string; severity?: number; }
@@ -65,7 +65,7 @@ export default function FailureLinkTables({
   return (
     <div className="bg-white flex flex-col min-w-0" style={flexContainerStyle('60', `2px solid #ccc`)}>
       <div className="flex justify-center items-center py-2 px-3 relative" style={headerStyle('#fff3e0', `1px solid #ccc`, FONT_SIZES.pageHeader)}>
-        <span className="font-semibold">D-FMEA 고장 분석(4단계) - 고장연결</span>
+        <span className="font-semibold">P-FMEA 고장 분석(4단계) - 고장연결</span>
         <div className="absolute right-3 flex items-center gap-1.5">
           <select 
             value={selectedProcess} 
@@ -190,7 +190,7 @@ export default function FailureLinkTables({
                 <tr>
                   <th style={thStyle('#e8f5e9', '8%')}>No</th>
                   <th style={thStyle('#e8f5e9', '14%', { whiteSpace: 'nowrap' })}>공정명</th>
-                  <th style={thStyle('#e8f5e9', '8%')}>인터페이스</th>
+                  <th style={thStyle('#e8f5e9', '8%')}>4M</th>
                   <th style={thStyle('#e8f5e9', '18%')}>컴포넌트</th>
                   <th style={thStyle('#e8f5e9')}>고장원인(FC)</th>
                 </tr>

@@ -16,6 +16,7 @@ import PFMEATopNav from '@/components/layout/PFMEATopNav';
 
 // 모듈화된 상수, hooks, 탭 컴포넌트
 import { COLORS, uid, getTabLabel, WorksheetState, WorkElement, Process } from './constants';
+import { btnConfirm, btnEdit, badgeConfirmed, badgeOk, badgeMissing } from '@/styles/worksheet';
 import { useWorksheetState } from './hooks';
 import { 
   StructureTab, StructureColgroup, StructureHeader, StructureRow,
@@ -524,26 +525,27 @@ function FMEAWorksheetPageContent() {
                       setDirty(true);
                     }}
                     disabled={(state as any).structureConfirmed}
-                    className={`text-white border-none py-0.5 px-2.5 rounded text-[11px] font-bold ${(state as any).structureConfirmed ? 'bg-gray-500 cursor-not-allowed' : 'bg-green-600 cursor-pointer'}`}
+                    className={(state as any).structureConfirmed ? badgeConfirmed : btnConfirm}
                   >
-                    확정
+                    {(state as any).structureConfirmed ? '✓ 확정됨' : '확정'}
                   </button>
-                  <span className={`text-white py-0.5 px-2.5 rounded text-[11px] font-bold ${calculateStructureMissing() > 0 ? 'bg-red-600' : 'bg-green-600'}`}>
+                  <span className={calculateStructureMissing() > 0 ? badgeMissing : badgeOk}>
                     누락 {calculateStructureMissing()}건
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (confirm('구조분석을 수정하시겠습니까?')) {
-                        setState(prev => ({ ...prev, structureConfirmed: false }));
-                        setDirty(true);
-                      }
-                    }}
-                    disabled={!(state as any).structureConfirmed}
-                    className={`text-white border-none py-0.5 px-2.5 rounded text-[11px] font-bold ${(state as any).structureConfirmed ? 'bg-orange-500 cursor-pointer' : 'bg-gray-500 cursor-not-allowed'}`}
-                  >
-                    수정
-                  </button>
+                  {(state as any).structureConfirmed && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm('구조분석을 수정하시겠습니까?')) {
+                          setState(prev => ({ ...prev, structureConfirmed: false }));
+                          setDirty(true);
+                        }
+                      }}
+                      className={btnEdit}
+                    >
+                      수정
+                    </button>
+                  )}
               </div>
             </div>
             )}

@@ -1,12 +1,16 @@
 /**
  * @file TabMenu.tsx
- * @description 워크시트 탭 메뉴 (구조분석, 기능분석, 고장분석 등)
+ * @description 워크시트 탭 메뉴 (반응형)
+ * - 구조분석, 기능분석, 고장분석 등
+ * - 화면 크기에 따라 자동 조정
+ * 
+ * @version 2.0.0 - 반응형 Tailwind CSS 적용
  */
 
 'use client';
 
 import React from 'react';
-import { WorksheetState, ANALYSIS_TABS, COLORS } from '../constants';
+import { WorksheetState, ANALYSIS_TABS } from '../constants';
 import StepToggleButtons from './StepToggleButtons';
 
 interface TabMenuProps {
@@ -16,103 +20,100 @@ interface TabMenuProps {
   onOpen6AP?: () => void;
 }
 
-export default function TabMenu({ state, setState, onOpen5AP, onOpen6AP }: TabMenuProps) {
+export default function TabMenu({ state, setState }: TabMenuProps) {
   const structureConfirmed = (state as any).structureConfirmed || false;
   const failureLinks = (state as any).failureLinks || [];
-  const hasFailureLinks = failureLinks.length > 0; // 고장연결 완료 여부
+  const failureLinkConfirmed = (state as any).failureLinkConfirmed || false;
+  const hasFailureLinks = failureLinks.length > 0;
   
   // 탭 활성화 조건
   const isTabEnabled = (tabId: string) => {
     if (tabId === 'structure') return true;
     if (tabId.startsWith('function-')) return structureConfirmed;
     if (tabId.startsWith('failure-')) return structureConfirmed;
-    // 평가 탭 (리스크분석, 최적화)은 고장연결 후 활성화
-    if (tabId === 'risk' || tabId === 'opt') return hasFailureLinks;
+    if (tabId === 'risk' || tabId === 'opt') return failureLinkConfirmed;
     return structureConfirmed;
   };
+  
+  // 탭 클릭 시 경고 메시지
+  const getTabWarning = (tabId: string): string | null => {
+    if (tabId === 'risk' || tabId === 'opt') {
+      if (!hasFailureLinks) return '⚠️ 고장연결이 없습니다.\n먼저 고장분석에서 고장연결을 완료해주세요.';
+      if (!failureLinkConfirmed) return '⚠️ 고장연결이 확정되지 않았습니다.\n고장연결 탭에서 "전체확정" 버튼을 눌러주세요.';
+    }
+    if (!structureConfirmed && tabId !== 'structure') {
+      return '⚠️ 구조분석을 먼저 확정해주세요.';
+    }
+    return null;
+  };
 
-  // 분석 탭 + 평가 탭 (구분선으로 구분)
   const analysisTabs = ANALYSIS_TABS;
-  const evaluationTabs = [
-    { id: 'risk', label: '리스크분석', step: 5 },
-    { id: 'opt', label: '최적화', step: 6 },
-  ];
   
   return (
-    <div className="flex-shrink-0 h-9 pl-2 pr-0 flex items-center justify-between">
-      {/* 좌측: 탭 버튼들 */}
-      <div className="flex items-center gap-2">
+    <div className="flex-shrink-0 h-8 sm:h-9 px-1 sm:px-2 flex items-center justify-between overflow-hidden">
+      {/* 좌측: 탭 버튼들 - 스크롤 가능 */}
+      <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-hide flex-1">
         {/* 분석 탭 */}
-        <div className="flex gap-1">
-            {analysisTabs.map(tab => {
-              const isActive = state.tab === tab.id;
-              const isEnabled = isTabEnabled(tab.id);
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    if (!isEnabled) {
-                      alert('⚠️ 구조분석을 먼저 확정해주세요.');
-                      return;
-                    }
-                    setState(prev => ({ ...prev, tab: tab.id }));
-                  }}
-                  style={{
-                    padding: '5px 14px',
-                    fontSize: '12px',
-                    fontWeight: isActive ? 700 : 500,
-                    background: isActive ? '#3949ab' : 'transparent',
-                    border: isActive ? '1px solid #ffd600' : '1px solid transparent',
-                    borderRadius: '4px',
-                    color: isActive ? '#ffd600' : '#fff',  // 활성화: 노란색
-                    cursor: isEnabled ? 'pointer' : 'not-allowed',
-                    opacity: isEnabled ? 1 : 0.6,
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.2s ease',
-                    textShadow: isActive ? '0 0 8px rgba(255,214,0,0.5)' : 'none',
-                  }}
-                  onMouseOver={(e) => {
-                    if (isEnabled && !isActive) {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
-                      e.currentTarget.style.color = '#ffd600';
-                    }
-                  }}
-                  onMouseOut={(e) => {
-                    if (!isActive) {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.color = '#fff';
-                    }
-                  }}
-                  title={!isEnabled ? '구조분석 확정 후 사용 가능' : ''}
-                >
-                  {tab.label}
-                  {!isEnabled && <span className="ml-1 text-[9px]">🔒</span>}
-                </button>
-              );
-            })}
-          </div>
+        <div className="flex gap-0.5 sm:gap-1">
+          {analysisTabs.map(tab => {
+            const isActive = state.tab === tab.id;
+            const isEnabled = isTabEnabled(tab.id);
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  const warning = getTabWarning(tab.id);
+                  if (warning) {
+                    alert(warning);
+                    return;
+                  }
+                  setState(prev => ({ ...prev, tab: tab.id }));
+                }}
+                className={`
+                  px-2 sm:px-3 lg:px-4 py-1 sm:py-1.5
+                  text-[10px] sm:text-[11px] lg:text-xs
+                  rounded transition-all duration-200 whitespace-nowrap shrink-0
+                  ${isActive 
+                    ? 'bg-indigo-700 border border-yellow-400 text-yellow-400 font-bold shadow-lg' 
+                    : 'bg-transparent border border-transparent text-white font-medium hover:bg-white/15 hover:text-yellow-400'
+                  }
+                  ${isEnabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}
+                `}
+                title={!isEnabled ? '구조분석 확정 후 사용 가능' : tab.label}
+              >
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden">{tab.label.replace('분석', '').replace('기능', 'F').replace('고장', 'X')}</span>
+                {!isEnabled && <span className="ml-0.5 text-[8px]">🔒</span>}
+              </button>
+            );
+          })}
+        </div>
 
-        {/* 단계별 토글 버튼 */}
-        <div className="w-px h-5 bg-white/30 mx-2" />
-        <StepToggleButtons state={state} setState={setState} />
+        {/* 구분선 */}
+        <div className="hidden sm:block w-px h-5 bg-white/30 mx-1 lg:mx-2 shrink-0" />
+        
+        {/* 단계별 토글 버튼 - 큰 화면에서만 */}
+        <div className="hidden md:block">
+          <StepToggleButtons state={state} setState={setState} />
+        </div>
       </div>
 
-      {/* 우측: 6단계 AP 상태 (280px) (표준화: 80px 레이블 + 200px 값) */}
-      <div className="w-[280px] h-9 flex items-stretch bg-gradient-to-r from-indigo-800 to-indigo-700 border-l-[2px] border-white shrink-0">
-        <div className="w-[80px] h-9 flex items-center justify-center border-r border-white/30 shrink-0">
-          <span className="text-yellow-400 text-xs font-bold whitespace-nowrap">6단계:</span>
+      {/* 우측: 6단계 AP 상태 - 반응형 */}
+      <div className="hidden sm:flex h-full items-stretch bg-gradient-to-r from-indigo-800 to-indigo-700 border-l-2 border-white shrink-0">
+        {/* 레이블 - 큰 화면에서만 */}
+        <div className="hidden lg:flex w-[60px] xl:w-[80px] h-full items-center justify-center border-r border-white/30">
+          <span className="text-yellow-400 text-[10px] xl:text-xs font-bold whitespace-nowrap">6단계:</span>
         </div>
-        <div className="w-[66px] h-9 flex items-center justify-center border-r border-white/30 shrink-0">
-          <span className="text-red-400 text-xs font-bold whitespace-nowrap">H:0</span>
+        <div className="w-[45px] sm:w-[55px] lg:w-[66px] h-full flex items-center justify-center border-r border-white/30">
+          <span className="text-red-400 text-[10px] lg:text-xs font-bold whitespace-nowrap">H:0</span>
         </div>
-        <div className="w-[66px] h-9 flex items-center justify-center border-r border-white/30 shrink-0">
-          <span className="text-yellow-400 text-xs font-bold whitespace-nowrap">M:0</span>
+        <div className="w-[45px] sm:w-[55px] lg:w-[66px] h-full flex items-center justify-center border-r border-white/30">
+          <span className="text-yellow-400 text-[10px] lg:text-xs font-bold whitespace-nowrap">M:0</span>
         </div>
-        <div className="w-[68px] h-9 flex items-center justify-center shrink-0">
-          <span className="text-green-400 text-xs font-bold whitespace-nowrap">L:0</span>
+        <div className="w-[45px] sm:w-[55px] lg:w-[68px] h-full flex items-center justify-center">
+          <span className="text-green-400 text-[10px] lg:text-xs font-bold whitespace-nowrap">L:0</span>
         </div>
       </div>
     </div>
   );
 }
-
