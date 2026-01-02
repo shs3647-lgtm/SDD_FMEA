@@ -179,6 +179,7 @@ export function StructureHeader({ onProcessModalOpen, missingCounts, isConfirmed
                   onClick={(e) => {
                     console.log('[StructureHeader] 확정 버튼 클릭 이벤트');
                     console.log('[StructureHeader] onConfirm:', typeof onConfirm);
+                    console.log('[StructureHeader] workElementCount:', workElementCount);
                     e.preventDefault();
                     e.stopPropagation();
                     if (onConfirm) {
@@ -187,7 +188,9 @@ export function StructureHeader({ onProcessModalOpen, missingCounts, isConfirmed
                       console.error('[StructureHeader] onConfirm이 없습니다!');
                     }
                   }} 
-                  className={btnConfirm}
+                  disabled={workElementCount === 0}
+                  className={`${btnConfirm} ${workElementCount === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  title={workElementCount === 0 ? '작업요소를 먼저 연결해주세요' : '확정'}
                 >
                   확정
                 </button>
@@ -368,6 +371,14 @@ export default function StructureTab(props: StructureTabProps) {
     console.log('[StructureTab] missingCounts.total:', missingCounts.total);
     console.log('[StructureTab] isConfirmed:', isConfirmed);
     console.log('[StructureTab] saveToLocalStorage:', typeof saveToLocalStorage);
+    console.log('[StructureTab] workElementCount:', workElementCount);
+    
+    // ✅ 작업요소가 연결되어 있는지 확인
+    if (workElementCount === 0) {
+      console.log('[StructureTab] 작업요소 없음, 확정 불가');
+      alert('⚠️ 작업요소를 먼저 연결해주세요.\n\n작업요소가 없으면 확정할 수 없습니다.');
+      return;
+    }
     
     if (missingCounts.total > 0) {
       console.log('[StructureTab] 누락 항목 있음, 확정 불가');
