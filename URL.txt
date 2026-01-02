@@ -1,30 +1,29 @@
-http://localhost:3000/pfmea/worksheet?v=1.0.24-20260102-horizontal-fix
+http://localhost:3000/pfmea/worksheet?v=1.0.25-20260102-multi-select-fix
 
 === VERSION INFO ===
-Version: 1.0.24
+Version: 1.0.25
 Last Updated: 2025-01-02
-Changes: 기존 항목 수정 문제 - 수평전개 완료
+Changes: 다중선택 개별 수정 패턴 적용 - 수평전개 완료
 
-=== 수정 내역 (수평전개) ===
-✅ FunctionL1Tab.tsx
-   - funcId 전달 및 수정 로직 추가 (기존 기능 수정)
-   - reqId 전달 및 수정 로직 추가 (기존 요구사항 수정)
+=== 선택 방식 3가지 패턴 (메모리 저장됨) ===
+1) 단일 선택: 한 셀에 하나의 값 → itemId 필요
+   예: 기능(funcId), 요구사항(reqId)
 
-✅ FunctionL2Tab.tsx  
-   - funcId 전달 추가 (기존 기능 수정)
+2) 다중 선택: 단일 선택의 확장, 개별 항목 수정 → itemId 필요
+   예: 제품특성(charId), 공정특성(charId), 고장영향(effectId), 
+       고장형태(modeId), 고장원인(causeId)
 
-✅ FunctionL3Tab.tsx
-   - funcId 전달 추가 (기존 기능 수정) - 630번줄 누락분
+3) 전체 선택: 전체 목록이 새로 대체됨 → itemId 불필요
 
-=== 표준화 패턴 (메모리 저장됨) ===
-1) 빈 셀 클릭 = itemId 없음 → 새 항목 추가
-2) 기존 항목 클릭 = itemId 전달 → 해당 항목 수정
+=== 수정된 파일 ===
+기능분석:
+  ✅ FunctionL2Tab.tsx - 제품특성 charId 추가 + handleSave 개별 수정
+  ✅ FunctionL3Tab.tsx - 공정특성 charId 추가 + handleSave 개별 수정
 
-=== 다중선택 예외 (수정 불필요) ===
-- 제품특성, 공정특성: 전체 대체 방식
-- 고장형태, 고장원인: 전체 대체 방식
-→ 개별 itemId 불필요, 선택 집합으로 대체
+고장분석:
+  ✅ FailureL1Tab.tsx - effectId 개별 수정 로직 추가
+  ✅ FailureL2Tab.tsx - modeId 추가 + handleSave 개별 수정
+  ✅ FailureL3Tab.tsx - causeId 추가 + handleSave 개별 수정
 
-=== 구조분석/고장분석 ===
-- 구조분석: 별도 모달 시스템 (setIsProcessModalOpen)
-- 고장분석: 다중선택 방식이므로 수정 불필요
+=== 수평전개 원칙 ===
+하나의 컴포넌트에서 문제 발견 시 반드시 유사한 모든 컴포넌트 검토
