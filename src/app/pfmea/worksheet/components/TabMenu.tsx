@@ -97,23 +97,6 @@ export default function TabMenu({ state, setState }: TabMenuProps) {
           <StepToggleButtons state={state} setState={setState} />
         </div>
       </div>
-
-      {/* 우측: 6단계 AP 상태 - 반응형 */}
-      <div className="hidden sm:flex h-full items-stretch bg-gradient-to-r from-indigo-800 to-indigo-700 border-l-2 border-white shrink-0">
-        {/* 레이블 - 큰 화면에서만 */}
-        <div className="hidden lg:flex w-[60px] xl:w-[80px] h-full items-center justify-center border-r border-white/30">
-          <span className="text-yellow-400 text-[10px] xl:text-xs font-bold whitespace-nowrap">6단계:</span>
-        </div>
-        <div className="w-[45px] sm:w-[55px] lg:w-[66px] h-full flex items-center justify-center border-r border-white/30">
-          <span className="text-red-400 text-[10px] lg:text-xs font-bold whitespace-nowrap">H:0</span>
-        </div>
-        <div className="w-[45px] sm:w-[55px] lg:w-[66px] h-full flex items-center justify-center border-r border-white/30">
-          <span className="text-yellow-400 text-[10px] lg:text-xs font-bold whitespace-nowrap">M:0</span>
-        </div>
-        <div className="w-[45px] sm:w-[55px] lg:w-[68px] h-full flex items-center justify-center">
-          <span className="text-green-400 text-[10px] lg:text-xs font-bold whitespace-nowrap">L:0</span>
-        </div>
-      </div>
     </div>
   );
 }

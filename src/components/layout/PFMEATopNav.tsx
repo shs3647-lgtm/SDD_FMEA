@@ -1,12 +1,9 @@
 'use client';
 
-import CommonTopNav, { TopNavMenuItem, TopNavStatItem } from './CommonTopNav';
+import CommonTopNav, { TopNavMenuItem } from './CommonTopNav';
 
 interface PFMEATopNavProps {
   selectedFmeaId?: string;
-  fmCount?: number;
-  feCount?: number;
-  fcCount?: number;
 }
 
 /**
@@ -15,7 +12,7 @@ interface PFMEATopNavProps {
  * 
  * @version 3.0.0 - CommonTopNav 기반으로 리팩토링
  */
-export default function PFMEATopNav({ selectedFmeaId, fmCount = 0, feCount = 0, fcCount = 0 }: PFMEATopNavProps) {
+export default function PFMEATopNav({ selectedFmeaId }: PFMEATopNavProps) {
   const menuItems: TopNavMenuItem[] = [
     { label: 'FMEA등록', shortLabel: '등록', path: '/pfmea/register', icon: '📝' },
     { label: 'FMEA 리스트', shortLabel: '리스트', path: '/pfmea/list', icon: '📋' },
@@ -23,18 +20,10 @@ export default function PFMEATopNav({ selectedFmeaId, fmCount = 0, feCount = 0, 
     { label: 'FMEA 개정관리', shortLabel: '개정', path: '/pfmea/revision', icon: '📜' },
   ];
 
-  const statItems: TopNavStatItem[] = [
-    { label: 'FM', value: fmCount, color: 'orange' },
-    { label: 'FE', value: feCount, color: 'blue' },
-    { label: 'FC', value: fcCount, color: 'green' },
-  ];
-
   return (
     <CommonTopNav
       title="P-FMEA"
       menuItems={menuItems}
-      statItems={statItems}
-      statLabel="4단계:"
       selectedId={selectedFmeaId}
       gradientFrom="#1a237e"
       gradientTo="#283593"

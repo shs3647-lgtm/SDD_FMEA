@@ -9,7 +9,7 @@
 
 'use client';
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import { WorksheetState } from '../constants';
 
@@ -46,54 +46,12 @@ const menuBtn = `
   hover:bg-white/15 hover:text-yellow-400 whitespace-nowrap
 `;
 
-/** AP 계산 함수 */
-function calculateAP(s: number, o: number, d: number): 'H' | 'M' | 'L' {
-  if (s >= 9 && o >= 4) return 'H';
-  if (s >= 7 && o >= 6) return 'H';
-  if (s >= 5 && o >= 8) return 'H';
-  if (s >= 7 || o >= 6 || d >= 7) return 'M';
-  return 'L';
-}
-
 export default function TopMenuBar({ 
   fmeaList, selectedFmeaId, dirty, isSaving, importMessage, fileInputRef, state,
   onFmeaChange, onSave, onNavigateToList, onExport, onImportFile, onDownloadTemplate, onOpenSpecialChar, onOpenSOD, onOpen5AP, onOpen6AP, onOpenRPN
 }: TopMenuBarProps) {
   const router = useRouter();
   const [showImportMenu, setShowImportMenu] = React.useState(false);
-  
-  // 5단계 AP 통계 계산
-  const ap5Stats = useMemo(() => {
-    const riskData = state.riskData || {};
-    let h = 0, m = 0, l = 0;
-    
-    let maxS = 0;
-    Object.keys(riskData).forEach(key => {
-      if (key.startsWith('S-fe-')) {
-        const val = Number(riskData[key]) || 0;
-        if (val > maxS) maxS = val;
-      }
-    });
-    
-    const indices = new Set<number>();
-    Object.keys(riskData).forEach(key => {
-      const match = key.match(/^risk-(\d+)-(O|D)$/);
-      if (match) indices.add(parseInt(match[1]));
-    });
-    
-    indices.forEach(idx => {
-      const o = Number(riskData[`risk-${idx}-O`]) || 0;
-      const d = Number(riskData[`risk-${idx}-D`]) || 0;
-      if (maxS > 0 && o > 0 && d > 0) {
-        const ap = calculateAP(maxS, o, d);
-        if (ap === 'H') h++;
-        else if (ap === 'M') m++;
-        else l++;
-      }
-    });
-    
-    return { h, m, l };
-  }, [state.riskData]);
 
   return (
     <div 
@@ -221,28 +179,6 @@ export default function TopMenuBar({
         </button>
       </div>
 
-      {/* Spacer */}
-      <div className="flex-1 min-w-[10px]" />
-
-      {/* 우측: 5단계 AP - 반응형 */}
-      <div 
-        className="h-8 flex items-stretch border-l-2 border-white shrink-0"
-        style={{ background: 'linear-gradient(to right, #1565c0, #1976d2)' }}
-      >
-        {/* 레이블 - 큰 화면에서만 */}
-        <div className="hidden lg:flex w-[60px] xl:w-[80px] h-8 items-center justify-center border-r border-white/30">
-          <span className="text-yellow-400 text-[10px] xl:text-xs font-bold whitespace-nowrap">5단계:</span>
-        </div>
-        <div className="w-[40px] sm:w-[50px] lg:w-[66px] h-8 flex items-center justify-center border-r border-white/30">
-          <span className="text-red-400 text-[9px] sm:text-[10px] lg:text-xs font-bold whitespace-nowrap">H:{ap5Stats.h}</span>
-        </div>
-        <div className="w-[40px] sm:w-[50px] lg:w-[66px] h-8 flex items-center justify-center border-r border-white/30">
-          <span className="text-yellow-400 text-[9px] sm:text-[10px] lg:text-xs font-bold whitespace-nowrap">M:{ap5Stats.m}</span>
-        </div>
-        <div className="w-[40px] sm:w-[50px] lg:w-[68px] h-8 flex items-center justify-center">
-          <span className="text-green-400 text-[9px] sm:text-[10px] lg:text-xs font-bold whitespace-nowrap">L:{ap5Stats.l}</span>
-        </div>
-      </div>
     </div>
   );
 }
