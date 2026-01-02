@@ -200,123 +200,104 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
   }, [setState, setDirty, saveToLocalStorage]);
 
   const handleSave = useCallback((selectedValues: string[]) => {
-    if (!modal) {
-      console.error('[FunctionL3Tab] modal이 없습니다!');
-      return;
-    }
-    
+    if (!modal) return;
     const { type, procId, l3Id, funcId } = modal;
-    
-    if (!procId || !l3Id) {
-      console.error('[FunctionL3Tab] procId 또는 l3Id가 없습니다!', { procId, l3Id });
-      return;
-    }
-    
-    if (!selectedValues || selectedValues.length === 0) {
-      console.warn('[FunctionL3Tab] selectedValues가 비어있습니다!');
-      return;
-    }
-    
-    console.log('[FunctionL3Tab] 저장 시작', { type, procId, l3Id, funcId, selectedCount: selectedValues.length, selectedValues });
+    const isConfirmed = state.l3Confirmed || false;
     
     setState(prev => {
-      const isConfirmed = prev.l3Confirmed || false;
       const newState = JSON.parse(JSON.stringify(prev));
-      
-      // ✅ procId로 공정 찾기
-      const proc = newState.l2.find((p: any) => p.id === procId);
-      if (!proc) {
-        console.error('[FunctionL3Tab] procId에 해당하는 공정을 찾을 수 없습니다!', procId);
-        return newState;
-      }
-      
-      // ✅ l3Id로 작업요소 찾기
-      const we = proc.l3?.find((w: any) => w.id === l3Id);
-      if (!we) {
-        console.error('[FunctionL3Tab] l3Id에 해당하는 작업요소를 찾을 수 없습니다!', l3Id);
-        return newState;
-      }
 
       if (type === 'l3Function') {
-        const currentFuncs = we.functions || [];
-        console.log('[FunctionL3Tab] 현재 기능 개수:', currentFuncs.length, '선택 개수:', selectedValues.length);
-        
-        // funcId가 있으면 해당 기능만 수정
-        if (funcId) {
-          console.log('[FunctionL3Tab] 기존 기능 수정:', funcId);
-          we.functions = currentFuncs.map((f: any) => 
-            f.id === funcId 
-              ? { ...f, name: selectedValues[0] || f.name }
-              : f
-          );
-        } else {
-          // 빈 기능 셀 클릭 시: 첫 번째 선택값만 첫 번째 빈 기능에 적용
-          const emptyFunc = currentFuncs.find((f: any) => !f.name || f.name === '' || f.name.includes('클릭하여'));
-          
-          if (emptyFunc && selectedValues.length > 0) {
-            console.log('[FunctionL3Tab] 빈 기능에 할당:', selectedValues[0]);
-            we.functions = currentFuncs.map((f: any) => 
-              f.id === emptyFunc.id 
-                ? { ...f, name: selectedValues[0] }
-                : f
-            );
-          } else if (!isConfirmed && selectedValues.length > 0) {
-            // ✅ 수정 모드: 빈 기능이 없어도 새로 추가 가능
-            console.log('[FunctionL3Tab] 새 기능 추가 (수정 모드):', selectedValues[0]);
-            const newFunc = { id: uid(), name: selectedValues[0], processChars: [] };
-            we.functions = [...currentFuncs, newFunc];
-          } else {
-            console.warn('[FunctionL3Tab] 기능 추가 안됨', { isConfirmed, selectedCount: selectedValues.length, currentFuncsCount: currentFuncs.length, hasEmptyFunc: !!emptyFunc });
-          }
-        }
-        
-        // ✅ 업데이트된 we를 proc.l3에 반영
-        proc.l3 = proc.l3.map((w: any) => w.id === l3Id ? we : w);
-        
-        // ✅ 업데이트된 proc을 newState.l2에 반영
-        newState.l2 = newState.l2.map((p: any) => p.id === procId ? proc : p);
+        // 작업요소 기능 저장
+        newState.l2 = newState.l2.map((proc: any) => {
+          if (proc.id !== procId) return proc;
+          return {
+            ...proc,
+            l3: proc.l3.map((we: any) => {
+              if (we.id !== l3Id) return we;
+              const currentFuncs = we.functions || [];
+              
+              // 기존 funcId가 있으면 해당 기능만 수정
+              if (funcId) {
+                if (selectedValues.length === 0) {
+                  // 선택 해제 시 해당 기능 삭제
+                  return {
+                    ...we,
+                    functions: currentFuncs.filter((f: any) => f.id !== funcId)
+                  };
+                }
+                return {
+                  ...we,
+                  functions: currentFuncs.map((f: any) => 
+                    f.id === funcId 
+                      ? { ...f, name: selectedValues[0] || f.name }
+                      : f
+                  )
+                };
+              }
+              
+              // 빈 기능 셀 클릭 시: 첫 번째 선택값만 첫 번째 빈 기능에 적용
+              const emptyFunc = currentFuncs.find((f: any) => !f.name || f.name === '');
+              
+              if (emptyFunc && selectedValues.length > 0) {
+                // 빈 기능이 있으면 첫 번째 선택값만 할당
+                return {
+                  ...we,
+                  functions: currentFuncs.map((f: any) => 
+                    f.id === emptyFunc.id 
+                      ? { ...f, name: selectedValues[0] }
+                      : f
+                  )
+                };
+              }
+              
+              // ✅ 수정 모드: 빈 기능이 없어도 새로 추가 가능
+              if (!isConfirmed && selectedValues.length > 0) {
+                const newFunc = { id: uid(), name: selectedValues[0], processChars: [] };
+                return {
+                  ...we,
+                  functions: [...currentFuncs, newFunc]
+                };
+              }
+              
+              return we;
+            })
+          };
+        });
       } else if (type === 'l3ProcessChar') {
         // 공정특성 저장 (특정 기능에 연결)
-        if (!funcId) {
-          console.error('[FunctionL3Tab] funcId가 없습니다! (공정특성 저장)');
-          return newState;
-        }
-        
-        const func = we.functions?.find((f: any) => f.id === funcId);
-        if (!func) {
-          console.error('[FunctionL3Tab] funcId에 해당하는 기능을 찾을 수 없습니다!', funcId);
-          return newState;
-        }
-        
-        const currentChars = func.processChars || [];
-        func.processChars = selectedValues.map(val => {
-          const existing = currentChars.find((c: any) => c.name === val);
-          return existing || { id: uid(), name: val };
+        newState.l2 = newState.l2.map((proc: any) => {
+          if (proc.id !== procId) return proc;
+          return {
+            ...proc,
+            l3: proc.l3.map((we: any) => {
+              if (we.id !== l3Id) return we;
+              return {
+                ...we,
+                functions: (we.functions || []).map((f: any) => {
+                  if (f.id !== funcId) return f;
+                  const currentChars = f.processChars || [];
+                  return {
+                    ...f,
+                    processChars: selectedValues.map(val => {
+                      const existing = currentChars.find((c: any) => c.name === val);
+                      return existing || { id: uid(), name: val };
+                    })
+                  };
+                })
+              };
+            })
+          };
         });
-        
-        // ✅ 업데이트된 func을 we.functions에 반영
-        we.functions = we.functions.map((f: any) => f.id === funcId ? func : f);
-        
-        // ✅ 업데이트된 we를 proc.l3에 반영
-        proc.l3 = proc.l3.map((w: any) => w.id === l3Id ? we : w);
-        
-        // ✅ 업데이트된 proc을 newState.l2에 반영
-        newState.l2 = newState.l2.map((p: any) => p.id === procId ? proc : p);
       }
       
-      console.log('[FunctionL3Tab] 상태 업데이트 완료');
       return newState;
     });
     
     setDirty(true);
     setModal(null);
-    
-    // ✅ 즉시 저장 (requestAnimationFrame 사용)
-    requestAnimationFrame(() => {
-      saveToLocalStorage?.();
-      console.log('[FunctionL3Tab] 저장 완료');
-    });
-  }, [modal, setState, setDirty, saveToLocalStorage]);
+    saveToLocalStorage?.(); // 영구 저장
+  }, [modal, state.l3Confirmed, setState, setDirty, saveToLocalStorage]);
 
   const handleDelete = useCallback((deletedValues: string[]) => {
     if (!modal) return;
