@@ -522,7 +522,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
             <th className="bg-[#c8e6c9] border border-[#ccc] p-1.5 text-xs font-semibold">
               작업요소기능<span className={`font-bold ${l3FunctionCount > 0 ? 'text-green-700' : 'text-red-500'}`}>({l3FunctionCount})</span>
             </th>
-            <th className="bg-[#c8e6c9] border border-[#ccc] border-r-[3px] border-r-orange-500 p-1.5 text-xs font-semibold">
+            <th className="bg-[#c8e6c9] border border-[#ccc] border-r-[2px] border-r-orange-500 p-1.5 text-xs font-semibold">
               공정특성<span className={`font-bold ${processCharCount > 0 ? 'text-green-700' : 'text-red-500'}`}>({processCharCount})</span>
             </th>
             <th className="bg-orange-500 text-white border border-[#ccc] border-l-0 p-1.5 text-xs font-semibold text-center">
@@ -540,7 +540,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
               <td className="border border-[#ccc] p-0">
                 <SelectableCell value="" placeholder="작업요소기능 선택" bgColor={'#e8f5e9'} onClick={() => {}} />
               </td>
-              <td className="border border-[#ccc] border-r-[3px] border-r-orange-500 p-0">
+              <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0">
                 <SelectableCell value="" placeholder="공정특성 선택" bgColor={'#e8f5e9'} onClick={() => {}} />
               </td>
               <td className="border border-[#ccc] border-l-0 p-1 text-center bg-[#fff3e0]">
@@ -579,7 +579,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                       <td className={cellP0}>
                         <SelectableCell value="" placeholder="작업요소기능 선택" bgColor={'#e8f5e9'} onClick={() => handleCellClick({ type: 'l3Function', procId: proc.id, l3Id: we.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} />
                       </td>
-                      <td className="border border-[#ccc] border-r-[3px] border-r-orange-500 p-0">
+                      <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0">
                         <SelectableCell value="" placeholder="공정특성 선택" bgColor={'#e8f5e9'} onClick={() => {}} />
                       </td>
                       <td className="border border-[#ccc] border-l-0 p-1 text-center bg-[#fff3e0]">
@@ -625,7 +625,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                             onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, we.id, f.id, newValue)}
                           />
                         </td>
-                        <td className="border border-[#ccc] border-r-[3px] border-r-orange-500 p-0">
+                        <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0">
                           <SelectableCell value="" placeholder="공정특성 선택" bgColor={'#c8e6c9'} onClick={() => handleCellClick({ type: 'l3ProcessChar', procId: proc.id, l3Id: we.id, funcId: f.id, title: '공정특성 선택', itemCode: 'B3', workElementName: we.name })} />
                         </td>
                         <td className="border border-[#ccc] border-l-0 p-1 text-center bg-[#fff3e0]">
@@ -668,7 +668,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                             />
                           </td>
                         )}
-                        <td className="border border-[#ccc] border-r-[3px] border-r-orange-500 p-0">
+                        <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0">
                           <SelectableCell 
                             value={c.name} 
                             placeholder="공정특성" 

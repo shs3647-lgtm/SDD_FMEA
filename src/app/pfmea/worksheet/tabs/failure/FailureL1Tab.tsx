@@ -535,7 +535,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
             <th className={`${F.h3} text-center whitespace-nowrap`}>
               요구사항
             </th>
-            <th className={`${X.h3} text-center whitespace-nowrap`}>
+            <th className={`${X.h3} text-center whitespace-nowrap`} style={{ minWidth: '200px' }}>
               고장영향(FE)
               {missingCounts.effectCount > 0 && (
                 <span className="ml-1 bg-white text-orange-500 px-1.5 py-0.5 rounded-lg text-[11px] font-semibold">
@@ -543,7 +543,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                 </span>
               )}
             </th>
-            <th className={`${X.h3} text-center whitespace-nowrap`}>
+            <th className={`${X.h3} text-center whitespace-nowrap`} style={{ width: '40px', minWidth: '40px', maxWidth: '40px' }}>
               S
             </th>
           </tr>
@@ -664,6 +664,9 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                     border: `1px solid #ccc`, 
                     padding: '4px', 
                     textAlign: 'center', 
+                    width: '40px',
+                    minWidth: '40px',
+                    maxWidth: '40px',
                     background: row.severity && row.severity >= 8 ? '#ffe0b2' : row.severity && row.severity >= 5 ? '#fff9c4' : zebraBg,
                     cursor: row.effectId ? 'pointer' : 'default'
                   }}

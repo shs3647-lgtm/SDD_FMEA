@@ -508,10 +508,10 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
             <th className="bg-[#c8e6c9] border border-[#ccc] p-1.5 text-xs font-semibold">
               메인공정기능<span className={`font-bold ${l2FunctionCount > 0 ? 'text-green-700' : 'text-red-500'}`}>({l2FunctionCount})</span>
             </th>
-            <th className="bg-[#c8e6c9] border border-[#ccc] p-1.5 text-xs font-semibold">
+            <th className="bg-[#c8e6c9] border border-[#ccc] border-r-[2px] border-r-orange-500 p-1.5 text-xs font-semibold">
               제품특성<span className={`font-bold ${productCharCount > 0 ? 'text-green-700' : 'text-red-500'}`}>({productCharCount})</span>
             </th>
-            <th className="bg-[#fff3e0] border border-[#ccc] p-1.5 text-xs font-semibold">
+            <th className="bg-orange-500 text-white border border-[#ccc] border-l-0 p-1.5 text-xs font-semibold text-center">
               특별특성
             </th>
           </tr>
@@ -611,7 +611,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                         />
                       </td>
                     )}
-                    <td className={cellP0}>
+                    <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0">
                       <SelectableCell 
                         value={c.name} 
                         placeholder="제품특성" 
