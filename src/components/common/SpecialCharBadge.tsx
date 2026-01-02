@@ -13,10 +13,17 @@
 import React from 'react';
 
 // 특별특성 데이터 (색상 및 아이콘)
+// 제품특별특성: 주황색 계열, 공정특별특성: 파란색 계열
 export const SPECIAL_CHAR_DATA = [
+  // 제품특별특성 (Product) - 주황색 계열
   { symbol: 'CC', meaning: 'Critical Characteristic (치명 특성)', color: '#d32f2f', icon: '🔴' },
   { symbol: 'SC', meaning: 'Significant Characteristic (중요 특성)', color: '#f57c00', icon: '🟠' },
   { symbol: 'HC', meaning: 'High Characteristic (높은 특성)', color: '#fbc02d', icon: '🟡' },
+  // 공정특별특성 (Process) - 파란색 계열
+  { symbol: 'PC', meaning: 'Process Characteristic (공정 특성)', color: '#1565c0', icon: '🔵' },
+  { symbol: 'IC', meaning: 'Important Characteristic (중요 공정특성)', color: '#1976d2', icon: '🔵' },
+  { symbol: 'QC', meaning: 'Quality Characteristic (품질 특성)', color: '#42a5f5', icon: '🔵' },
+  // 공통
   { symbol: 'F', meaning: 'Fit (적합)', color: '#388e3c', icon: '🟢' },
   { symbol: 'S', meaning: 'Safety (안전)', color: '#1976d2', icon: '🔵' },
   { symbol: 'R', meaning: 'Regulatory (규제)', color: '#7b1fa2', icon: '🟣' },
