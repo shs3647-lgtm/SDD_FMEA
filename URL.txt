@@ -1,31 +1,39 @@
-http://localhost:3000/pfmea/worksheet?v=1.0.2-20260102-fm-confirmed-fix
+http://localhost:3000/pfmea/worksheet?v=1.0.4-20260102-header-unified
 
 === VERSION INFO ===
-Version: 1.0.2
-Last Updated: 2026-01-02 21:38:45 KST
-Changes: 고장분석 확정 상태에 따른 데이터 표시 근본 수정
+Version: 1.0.4
+Last Updated: 2026-01-02 21:55:33 KST
+Changes: 모든 탭 헤더 색상 표준화 수평전개
 Status: CODE-FREEZE
-Cache Busting: fm-confirmed-fix
+Cache Busting: header-unified
 
 === COMMIT INFO ===
-Commit: 2254853
-Tag: code-freeze-20260102-fm-confirmed-fix
-Backup: C:\05_REFACTORING_FORK\backup\fmea-20260102-213845
+Commit: 259eed4
+Tag: code-freeze-20260102-header-unified
+Backup: C:\05_REFACTORING_FORK\backup\fmea-20260102-215533
 
-=== 근본 수정 내용 ===
-✅ FailureLinkTab: FE/FM/FC 데이터 추출 시 확정 상태 체크
-   - isL1Confirmed: 1L 고장영향 확정 시에만 FE 데이터 표시
-   - isL2Confirmed: 2L 고장형태 확정 시에만 FM 데이터 표시
-   - isL3Confirmed: 3L 고장원인 확정 시에만 FC 데이터 표시
-   
-✅ FailureLinkTab: 미확정 시 경고 화면 표시
-   - 모든 분석(1L/2L/3L)이 확정되어야 고장연결 진행 가능
-   - 미확정 항목 목록 표시
+=== 표준 색상 체계 ===
+| 단계 | 색상 | HEX |
+|------|------|-----|
+| 구조분석(2단계) | 파란색 | #1976d2 |
+| 기능분석(3단계) | 녹색 | #388e3c |
+| 고장분석(4단계) | 주황색 | #e65100 |
 
-✅ TreePanel: 확정 상태 체크 추가
-   - 2L 고장형태 트리: failureL2Confirmed 체크
-   - 3L 고장원인 트리: failureL3Confirmed 체크
-   - 미확정 시 안내 메시지 표시
+=== 수평전개 완료 ===
+✅ StructureTab: 헤더 디자인 표준화
+✅ FunctionL1Tab: 확인 완료 (기존 표준)
+✅ FunctionL2Tab: 기준 (표준)
+✅ FunctionL3Tab: 확인 완료 (기존 표준)
+✅ FailureL1Tab: 색상 통일 (#1976d2/#388e3c/#e65100)
+✅ FailureL2Tab: 패딩 통일 (p-2)
+✅ FailureL3Tab: 2행 색상 통일
+
+=== 모듈화 TDD 개발 원칙 적용 ===
+1. 표준화: 동일한 색상 체계 정의
+2. 모듈화: 공통 스타일 정의 (@/styles/worksheet.ts)
+3. 공용화: 모든 탭에 동일하게 적용
+4. TDD 검증: 린트 오류 없음 확인
+5. 수평전개: 모든 탭에 확대 적용 완료
 
 === 롤백 명령어 ===
-git checkout code-freeze-20260102-fm-confirmed-fix
+git checkout code-freeze-20260102-header-unified
