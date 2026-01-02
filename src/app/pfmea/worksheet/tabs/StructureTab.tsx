@@ -173,7 +173,23 @@ export function StructureHeader({ onProcessModalOpen, missingCounts, isConfirmed
               {isConfirmed ? (
                 <span className={badgeConfirmed}>✓ 확정됨</span>
               ) : (
-                <button type="button" onClick={onConfirm} className={btnConfirm}>확정</button>
+                <button 
+                  type="button" 
+                  onClick={(e) => {
+                    console.log('[StructureHeader] 확정 버튼 클릭 이벤트');
+                    console.log('[StructureHeader] onConfirm:', typeof onConfirm);
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (onConfirm) {
+                      onConfirm();
+                    } else {
+                      console.error('[StructureHeader] onConfirm이 없습니다!');
+                    }
+                  }} 
+                  className={btnConfirm}
+                >
+                  확정
+                </button>
               )}
               <span className={totalMissing > 0 ? badgeMissing : badgeOk}>누락 {totalMissing}건</span>
               {isConfirmed && (
@@ -341,8 +357,14 @@ export default function StructureTab(props: StructureTabProps) {
 
   // ✅ 확정 핸들러 (고장분석 패턴 적용)
   const handleConfirm = useCallback(() => {
-    console.log('[StructureTab] 확정 버튼 클릭, missingCount:', missingCounts.total);
+    console.log('[StructureTab] ========== 확정 버튼 클릭 ==========');
+    console.log('[StructureTab] missingCounts:', missingCounts);
+    console.log('[StructureTab] missingCounts.total:', missingCounts.total);
+    console.log('[StructureTab] isConfirmed:', isConfirmed);
+    console.log('[StructureTab] saveToLocalStorage:', typeof saveToLocalStorage);
+    
     if (missingCounts.total > 0) {
+      console.log('[StructureTab] 누락 항목 있음, 확정 불가');
       alert(`누락된 항목이 ${missingCounts.total}건 있습니다.\n모든 항목을 입력 후 확정해 주세요.`);
       return;
     }
@@ -352,21 +374,29 @@ export default function StructureTab(props: StructureTabProps) {
     const weCount = state.l2.flatMap(p => p.l3).length;
     console.log('[StructureTab] 확정 시 공정:', procCount, '개, 작업요소:', weCount, '개');
     
+    console.log('[StructureTab] setState 호출 전');
     setState((prev: any) => {
       const newState = { ...prev, structureConfirmed: true, structureConfirmedAt: new Date().toISOString() };
       console.log('[StructureTab] 확정 상태 업데이트:', newState.structureConfirmed);
       return newState;
     });
+    console.log('[StructureTab] setState 호출 후');
     setDirty(true);
     
     // ✅ 즉시 저장 (requestAnimationFrame 사용)
     requestAnimationFrame(() => {
-      saveToLocalStorage?.();
-      console.log('[StructureTab] 확정 후 localStorage 저장 완료');
+      console.log('[StructureTab] requestAnimationFrame 실행');
+      if (saveToLocalStorage) {
+        saveToLocalStorage();
+        console.log('[StructureTab] 확정 후 localStorage 저장 완료');
+      } else {
+        console.error('[StructureTab] saveToLocalStorage가 없습니다!');
+      }
     });
     
     alert('✅ 구조분석(2단계)이 확정되었습니다.\n\n이제 기능분석(3단계) 탭이 활성화되었습니다.');
-  }, [missingCounts.total, state.l2, setState, setDirty, saveToLocalStorage]);
+    console.log('[StructureTab] ========== 확정 완료 ==========');
+  }, [missingCounts, isConfirmed, state.l2, setState, setDirty, saveToLocalStorage]);
 
   // ✅ 수정 핸들러 (고장분석 패턴 적용)
   const handleEdit = useCallback(() => {
