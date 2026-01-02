@@ -114,8 +114,16 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     }
   }, [(state as any).failureLinks]);
 
-  // ========== FE 데이터 추출 (중복 제거) ==========
+  // ========== FE 데이터 추출 (확정된 것만 사용 + 중복 제거) ==========
+  const isL1Confirmed = state.failureL1Confirmed || false;
+  
   const feData: FEItem[] = useMemo(() => {
+    // ✅ 핵심: 1L 고장영향 분석이 확정되지 않으면 FE 데이터 반환 안함
+    if (!isL1Confirmed) {
+      console.log('[FE 데이터] 1L 고장분석 미확정 → 빈 배열 반환');
+      return [];
+    }
+    
     const items: FEItem[] = [];
     const seen = new Set<string>(); // 구분+고장영향 조합으로 중복 체크
     const counters: Record<string, number> = { 'Your Plant': 0, 'Ship to Plant': 0, 'User': 0 };
@@ -157,12 +165,20 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       });
     });
     
-    console.log('[FE 데이터]', items.length, '개 (중복 제거됨):', items.map(f => `${f.feNo}:${f.text.substring(0, 20)}`));
+    console.log('[FE 데이터]', items.length, '개 (확정됨 + 중복 제거됨):', items.map(f => `${f.feNo}:${f.text.substring(0, 20)}`));
     return items;
-  }, [state.l1]);
+  }, [state.l1, isL1Confirmed]);
 
-  // ========== FM 데이터 추출 (중복 제거) ==========
+  // ========== FM 데이터 추출 (확정된 것만 사용 + 중복 제거) ==========
+  const isL2Confirmed = state.failureL2Confirmed || false;
+  
   const fmData: FMItem[] = useMemo(() => {
+    // ✅ 핵심: 2L 고장형태 분석이 확정되지 않으면 FM 데이터 반환 안함
+    if (!isL2Confirmed) {
+      console.log('[FM 데이터] 2L 고장분석 미확정 → 빈 배열 반환');
+      return [];
+    }
+    
     const items: FMItem[] = [];
     const seen = new Set<string>(); // 공정명+고장형태 조합으로 중복 체크
     let counter = 1;
@@ -192,12 +208,20 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       });
     });
     
-    console.log('[FM 데이터]', items.length, '개 (중복 제거됨):', items.map(f => `${f.fmNo}:${f.text.substring(0, 20)}`));
+    console.log('[FM 데이터]', items.length, '개 (확정됨 + 중복 제거됨):', items.map(f => `${f.fmNo}:${f.text.substring(0, 20)}`));
     return items;
-  }, [state.l2]);
+  }, [state.l2, isL2Confirmed]);
 
-  // ========== FC 데이터 추출 (중복 제거) ==========
+  // ========== FC 데이터 추출 (확정된 것만 사용 + 중복 제거) ==========
+  const isL3Confirmed = state.failureL3Confirmed || false;
+  
   const fcData: FCItem[] = useMemo(() => {
+    // ✅ 핵심: 3L 고장원인 분석이 확정되지 않으면 FC 데이터 반환 안함
+    if (!isL3Confirmed) {
+      console.log('[FC 데이터] 3L 고장분석 미확정 → 빈 배열 반환');
+      return [];
+    }
+    
     const items: FCItem[] = [];
     const seen = new Set<string>(); // 공정명+작업요소+고장원인 조합으로 중복 체크
     let counter = 1;
@@ -235,9 +259,9 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       });
     });
     
-    console.log('[FC 데이터]', items.length, '개 (중복 제거됨):', items.map(f => `${f.fcNo}:${f.text.substring(0, 20)}`));
+    console.log('[FC 데이터]', items.length, '개 (확정됨 + 중복 제거됨):', items.map(f => `${f.fcNo}:${f.text.substring(0, 20)}`));
     return items;
-  }, [state.l2]);
+  }, [state.l2, isL3Confirmed]);
 
   // ========== 현재 선택된 FM ==========
   const currentFM = useMemo(() => fmData.find(f => f.id === currentFMId), [fmData, currentFMId]);
@@ -565,7 +589,47 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     alert(msg);
   }, [savedLinks, state.l1]);
 
+  // ========== 필수 분석 확정 여부 체크 ==========
+  const allAnalysisConfirmed = isL1Confirmed && isL2Confirmed && isL3Confirmed;
+  const missingAnalysis: string[] = [];
+  if (!isL1Confirmed) missingAnalysis.push('1L 고장영향');
+  if (!isL2Confirmed) missingAnalysis.push('2L 고장형태');
+  if (!isL3Confirmed) missingAnalysis.push('3L 고장원인');
+
   // ========== 렌더링 ==========
+  
+  // ✅ 미확정 상태 경고 화면
+  if (!allAnalysisConfirmed) {
+    return (
+      <div style={{ ...containerStyle, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 40 }}>
+        <div style={{ fontSize: 48 }}>⚠️</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: '#e65100' }}>
+          고장분석이 완료되지 않았습니다
+        </div>
+        <div style={{ fontSize: 13, color: '#666', textAlign: 'center', lineHeight: 1.8 }}>
+          고장연결을 진행하려면 아래 분석을 먼저 완료하고 확정해주세요:
+          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {missingAnalysis.map(name => (
+              <div key={name} style={{ 
+                padding: '8px 20px', 
+                background: '#fff3e0', 
+                border: '1px solid #ffb74d', 
+                borderRadius: 6, 
+                color: '#e65100',
+                fontWeight: 600
+              }}>
+                ❌ {name} 분석 미확정
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ marginTop: 16, fontSize: 11, color: '#999' }}>
+          각 분석 탭에서 "확정" 버튼을 눌러 분석을 완료해주세요
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div style={containerStyle}>
       {/* 좌측: 3개 테이블 (60%) */}

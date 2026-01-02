@@ -337,14 +337,28 @@ export default function TreePanel({ state }: TreePanelProps) {
     );
   }
 
-  // ========== 2L 고장형태 트리 (FM) ==========
+  // ========== 2L 고장형태 트리 (FM) - 확정된 것만 표시 ==========
   if (tab === 'failure-l2') {
+    const isL2Confirmed = state.failureL2Confirmed || false;
+    
     return (
       <div className={tw.container}>
-        <div className={`${tw.header} ${tw.headerNavy}`}>🔥 2L 고장형태 트리 (FM)</div>
+        <div className={`${tw.header} ${tw.headerNavy}`}>
+          🔥 2L 고장형태 트리 (FM) 
+          {!isL2Confirmed && <span className="ml-2 text-yellow-300 text-[9px]">(미확정)</span>}
+        </div>
         <div className={`${tw.content} ${tw.contentNavy}`}>
-          {state.l2.filter((p: any) => p.name && !p.name.includes('클릭')).map((proc: any) => {
+          {/* ✅ 확정되지 않으면 안내 메시지 표시 */}
+          {!isL2Confirmed && (
+            <div className="text-center py-8 text-gray-500 text-xs">
+              ⚠️ 2L 고장형태 분석을 완료하고 확정해주세요
+            </div>
+          )}
+          
+          {/* ✅ 확정된 경우에만 데이터 표시 */}
+          {isL2Confirmed && state.l2.filter((p: any) => p.name && !p.name.includes('클릭')).map((proc: any) => {
             const functions = proc.functions || [];
+            const confirmedModes = proc.failureModes || [];
             return (
               <div key={proc.id} className="mb-2.5">
                 <div 
@@ -361,7 +375,7 @@ export default function TreePanel({ state }: TreePanelProps) {
                       {productChars.length > 0 ? productChars.map((pc: any) => (
                         <div key={pc.id} className="ml-3 mb-0.5">
                           <div className={`${tw.textXxs}`} style={{ color: TREE_FAILURE.itemText }}>🏷️ {pc.name}</div>
-                          {(proc.failureModes || []).filter((m: any) => !pc.name || m.productCharId === pc.id || !m.productCharId).slice(0, 3).map((m: any) => (
+                          {confirmedModes.filter((m: any) => !pc.name || m.productCharId === pc.id || !m.productCharId).slice(0, 3).map((m: any) => (
                             <div key={m.id} className={`ml-3 ${tw.textXxs} flex gap-1.5`} style={{ color: TREE_FAILURE.itemText }}>
                               <span>└ ⚠️ {m.name}</span>
                             </div>
@@ -375,7 +389,7 @@ export default function TreePanel({ state }: TreePanelProps) {
                 }) : (
                   <div className={tw.emptySmall}>└ (메인공정기능 미입력)</div>
                 )}
-                {functions.length === 0 && (proc.failureModes || []).map((m: any) => (
+                {functions.length === 0 && confirmedModes.map((m: any) => (
                   <div key={m.id} className={`ml-4 ${tw.textXxs} flex gap-1.5`} style={{ color: TREE_FAILURE.itemText }}>
                     <span>└ ⚠️ {m.name}</span>
                   </div>
@@ -388,13 +402,26 @@ export default function TreePanel({ state }: TreePanelProps) {
     );
   }
 
-  // ========== 3L 고장원인 트리 (FC) ==========
+  // ========== 3L 고장원인 트리 (FC) - 확정된 것만 표시 ==========
   if (tab === 'failure-l3') {
+    const isL3Confirmed = state.failureL3Confirmed || false;
+    
     return (
       <div className={tw.container}>
-        <div className={`${tw.header} ${tw.headerNavy}`}>⚡ 3L 고장원인 트리 (FC)</div>
+        <div className={`${tw.header} ${tw.headerNavy}`}>
+          ⚡ 3L 고장원인 트리 (FC)
+          {!isL3Confirmed && <span className="ml-2 text-yellow-300 text-[9px]">(미확정)</span>}
+        </div>
         <div className={`${tw.content} ${tw.contentNavy}`}>
-          {state.l2.filter((p: any) => p.name && !p.name.includes('클릭')).map((proc: any) => (
+          {/* ✅ 확정되지 않으면 안내 메시지 표시 */}
+          {!isL3Confirmed && (
+            <div className="text-center py-8 text-gray-500 text-xs">
+              ⚠️ 3L 고장원인 분석을 완료하고 확정해주세요
+            </div>
+          )}
+          
+          {/* ✅ 확정된 경우에만 데이터 표시 */}
+          {isL3Confirmed && state.l2.filter((p: any) => p.name && !p.name.includes('클릭')).map((proc: any) => (
             <div key={proc.id} className="mb-2">
               <div 
                 className={`${tw.textXs} font-bold py-0.5 px-1.5 rounded-sm`}
@@ -402,21 +429,23 @@ export default function TreePanel({ state }: TreePanelProps) {
               >
                 🔧 {proc.no}. {proc.name}
               </div>
-              {(proc.l3 || []).filter((w: any) => w.name && !w.name.includes('클릭')).map((we: any) => (
-                <div key={we.id} className="ml-3 mb-1">
-                  <div 
-                    className={`${tw.textXxs} font-semibold py-0.5 px-1 rounded-sm`}
-                    style={{ backgroundColor: TREE_FAILURE.itemBg, color: TREE_FAILURE.itemText }}
-                  >
-                    [{we.m4}] {we.name}
-                  </div>
-                  {(we.failureCauses || []).map((c: any) => (
-                    <div key={c.id} className={`ml-4 ${tw.textXxs} flex gap-2`} style={{ color: TREE_FAILURE.itemText }}>
-                      <span>└ {c.name}</span>
-                      {c.occurrence && (
-                        <span className={`${tw.severityBadge} ${c.occurrence >= 7 ? 'bg-orange-200 text-orange-800' : 'bg-orange-100 text-orange-700'}`}>
-                          O:{c.occurrence}
-                        </span>
+              {(proc.l3 || []).filter((w: any) => w.name && !w.name.includes('클릭')).map((we: any) => {
+                const confirmedCauses = we.failureCauses || [];
+                return (
+                  <div key={we.id} className="ml-3 mb-1">
+                    <div 
+                      className={`${tw.textXxs} font-semibold py-0.5 px-1 rounded-sm`}
+                      style={{ backgroundColor: TREE_FAILURE.itemBg, color: TREE_FAILURE.itemText }}
+                    >
+                      [{we.m4}] {we.name}
+                    </div>
+                    {confirmedCauses.map((c: any) => (
+                      <div key={c.id} className={`ml-4 ${tw.textXxs} flex gap-2`} style={{ color: TREE_FAILURE.itemText }}>
+                        <span>└ {c.name}</span>
+                        {c.occurrence && (
+                          <span className={`${tw.severityBadge} ${c.occurrence >= 7 ? 'bg-orange-200 text-orange-800' : 'bg-orange-100 text-orange-700'}`}>
+                            O:{c.occurrence}
+                          </span>
                       )}
                     </div>
                   ))}
