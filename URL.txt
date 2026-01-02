@@ -1,22 +1,30 @@
-http://localhost:3000/pfmea/worksheet?v=1.0.23-20260102-function-edit-fix
+http://localhost:3000/pfmea/worksheet?v=1.0.24-20260102-horizontal-fix
 
 === VERSION INFO ===
-Version: 1.0.23
+Version: 1.0.24
 Last Updated: 2025-01-02
-Changes:
-  - 기존 기능 수정 안되는 문제 해결
-  - FunctionL1Tab/L2Tab/L3Tab: funcId 전달 추가
-  - 기존 기능 셀 클릭 시 해당 기능 수정 가능
+Changes: 기존 항목 수정 문제 - 수평전개 완료
 
-=== 수정된 파일 ===
-✅ FunctionL1Tab.tsx - funcId 전달 및 handleSave 수정 로직 추가
-✅ FunctionL2Tab.tsx - 기존 기능 클릭 시 funcId 전달 추가
-✅ FunctionL3Tab.tsx - 기존 기능 클릭 시 funcId 전달 추가
+=== 수정 내역 (수평전개) ===
+✅ FunctionL1Tab.tsx
+   - funcId 전달 및 수정 로직 추가 (기존 기능 수정)
+   - reqId 전달 및 수정 로직 추가 (기존 요구사항 수정)
 
-=== 이전 문제 ===
-- 기존 기능 셀 클릭 시 funcId가 전달되지 않음
-- handleSave에서 funcId가 undefined → 새 기능 추가로 처리됨
+✅ FunctionL2Tab.tsx  
+   - funcId 전달 추가 (기존 기능 수정)
 
-=== 해결 방법 ===
-- setModal 호출 시 funcId: f.id 추가
-- handleSave에서 funcId가 있으면 해당 기능만 수정
+✅ FunctionL3Tab.tsx
+   - funcId 전달 추가 (기존 기능 수정) - 630번줄 누락분
+
+=== 표준화 패턴 (메모리 저장됨) ===
+1) 빈 셀 클릭 = itemId 없음 → 새 항목 추가
+2) 기존 항목 클릭 = itemId 전달 → 해당 항목 수정
+
+=== 다중선택 예외 (수정 불필요) ===
+- 제품특성, 공정특성: 전체 대체 방식
+- 고장형태, 고장원인: 전체 대체 방식
+→ 개별 itemId 불필요, 선택 집합으로 대체
+
+=== 구조분석/고장분석 ===
+- 구조분석: 별도 모달 시스템 (setIsProcessModalOpen)
+- 고장분석: 다중선택 방식이므로 수정 불필요
