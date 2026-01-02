@@ -338,7 +338,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
             <th className="bg-[#1976d2] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center">
               2단계 구조분석
             </th>
-            <th colSpan={3} className="bg-[#1976d2] text-white border border-[#ccc] p-2 text-xs font-semibold text-center relative">
+            <th colSpan={3} className="bg-[#388e3c] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center relative">
               <div className="flex items-center justify-center">
                 <span className="flex-1 text-center">3단계 : 1L 완제품 공정 기능분석</span>
                 <div className="flex gap-1 absolute right-2">

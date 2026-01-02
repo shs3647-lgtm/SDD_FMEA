@@ -404,7 +404,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
             <th className="bg-[#1976d2] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center">
               2단계 구조분석
             </th>
-            <th colSpan={3} className="bg-[#2e7d32] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center">
+            <th colSpan={3} className="bg-[#388e3c] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center">
               <div className="flex items-center justify-center gap-5">
                 <span>3단계 : 2L 메인공정 기능분석</span>
                 <div className="flex gap-1.5">
