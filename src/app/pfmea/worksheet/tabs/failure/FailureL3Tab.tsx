@@ -128,14 +128,14 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
     
     const isConfirmed = state.failureL3Confirmed || false;
     const { type, processId, weId } = modal;
+    const causeId = (modal as any).causeId;
     
-    console.log('[FailureL3Tab] 저장 시작', { processId, weId, selectedCount: selectedValues.length, isConfirmed });
+    console.log('[FailureL3Tab] 저장 시작', { processId, weId, causeId, selectedCount: selectedValues.length, isConfirmed });
     
     setState(prev => {
       const newState = JSON.parse(JSON.stringify(prev));
 
       if (type === 'l3FailureCause') {
-        // ✅ 고장원인 추가 (확정/수정 모드 모두 동일)
         newState.l2 = newState.l2.map((proc: any) => {
           if (proc.id !== processId) return proc;
           return {
@@ -143,15 +143,39 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
             l3: (proc.l3 || []).map((we: any) => {
               if (weId && we.id !== weId) return we;
               const currentCauses = we.failureCauses || [];
-              const newCauses = selectedValues.map(val => {
-                const existing = currentCauses.find((c: any) => c.name === val);
-                return existing || { id: uid(), name: val, occurrence: undefined };
-              });
-              console.log('[FailureL3Tab] 최종 failureCauses:', newCauses.length, '개');
-              return {
-                ...we,
-                failureCauses: newCauses
-              };
+              
+              // ✅ causeId가 있으면 해당 항목만 수정 (다중선택 개별 수정)
+              if (causeId) {
+                if (selectedValues.length === 0) {
+                  return { ...we, failureCauses: currentCauses.filter((c: any) => c.id !== causeId) };
+                }
+                return {
+                  ...we,
+                  failureCauses: currentCauses.map((c: any) => 
+                    c.id === causeId ? { ...c, name: selectedValues[0] || c.name } : c
+                  )
+                };
+              }
+              
+              // ✅ causeId가 없으면 빈 셀 클릭 → 새 항목 추가
+              const emptyCause = currentCauses.find((c: any) => !c.name || c.name === '');
+              if (emptyCause && selectedValues.length > 0) {
+                return {
+                  ...we,
+                  failureCauses: currentCauses.map((c: any) => 
+                    c.id === emptyCause.id ? { ...c, name: selectedValues[0] } : c
+                  )
+                };
+              }
+              
+              // 새 항목 추가
+              if (selectedValues.length > 0) {
+                const newCause = { id: uid(), name: selectedValues[0], occurrence: undefined };
+                console.log('[FailureL3Tab] 새 고장원인 추가:', newCause.name);
+                return { ...we, failureCauses: [...currentCauses, newCause] };
+              }
+              
+              return we;
             })
           };
         });
@@ -412,7 +436,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
                           alert('⚠️ 상위 항목(공정특성)이 없습니다.\n\n고장원인을 추가하려면 먼저 기능분석에서 공정특성을 입력해주세요.\n\n[기능분석 3L(작업요소) → 공정특성 입력]');
                           return;
                         }
-                        setModal({ type: 'l3FailureCause', processId: row.proc.id, weId: row.we.id, title: `${row.we.name} 고장원인`, itemCode: 'FC1' });
+                        setModal({ type: 'l3FailureCause', processId: row.proc.id, weId: row.we.id, causeId: row.cause?.id || undefined, title: `${row.we.name} 고장원인`, itemCode: 'FC1' });
                       }} 
                     />
                   ) : (

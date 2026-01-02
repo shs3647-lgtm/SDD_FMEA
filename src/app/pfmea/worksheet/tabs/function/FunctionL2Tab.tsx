@@ -266,6 +266,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
         });
       } else if (type === 'l2ProductChar') {
         // 제품특성 저장 (특정 기능에 연결)
+        const charId = (modal as any).charId;
         newState.l2 = newState.l2.map((proc: any) => {
           if (proc.id !== procId) return proc;
           return {
@@ -273,13 +274,38 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
             functions: proc.functions.map((f: any) => {
               if (f.id !== funcId) return f;
               const currentChars = f.productChars || [];
-              return {
-                ...f,
-                productChars: selectedValues.map(val => {
-                  const existing = currentChars.find((c: any) => c.name === val);
-                  return existing || { id: uid(), name: val, specialChar: '' };
-                })
-              };
+              
+              // ✅ charId가 있으면 해당 항목만 수정 (다중선택 개별 수정)
+              if (charId) {
+                if (selectedValues.length === 0) {
+                  return { ...f, productChars: currentChars.filter((c: any) => c.id !== charId) };
+                }
+                return {
+                  ...f,
+                  productChars: currentChars.map((c: any) => 
+                    c.id === charId ? { ...c, name: selectedValues[0] || c.name } : c
+                  )
+                };
+              }
+              
+              // ✅ charId가 없으면 빈 셀 클릭 → 새 항목 추가
+              const emptyChar = currentChars.find((c: any) => !c.name || c.name === '');
+              if (emptyChar && selectedValues.length > 0) {
+                return {
+                  ...f,
+                  productChars: currentChars.map((c: any) => 
+                    c.id === emptyChar.id ? { ...c, name: selectedValues[0] } : c
+                  )
+                };
+              }
+              
+              // 새 항목 추가
+              if (selectedValues.length > 0) {
+                const newChar = { id: uid(), name: selectedValues[0], specialChar: '' };
+                return { ...f, productChars: [...currentChars, newChar] };
+              }
+              
+              return f;
             })
           };
         });
@@ -578,7 +604,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                         value={c.name} 
                         placeholder="제품특성" 
                         bgColor={'#c8e6c9'} 
-                        onClick={() => setModal({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, title: '제품특성 선택', itemCode: 'A4' })} 
+                        onClick={() => setModal({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, charId: c.id, title: '제품특성 선택', itemCode: 'A4' })} 
                         onDoubleClickEdit={(newValue) => handleInlineEditProductChar(proc.id, f.id, c.id, newValue)}
                       />
                     </td>

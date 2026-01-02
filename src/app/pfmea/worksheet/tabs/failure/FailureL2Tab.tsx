@@ -142,8 +142,9 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
     
     const isConfirmed = state.failureL2Confirmed || false;
     const { processId, productCharId } = modal;
+    const modeId = (modal as any).modeId;
     
-    console.log('[FailureL2Tab] 저장 시작', { processId, productCharId, selectedCount: selectedValues.length, isConfirmed });
+    console.log('[FailureL2Tab] 저장 시작', { processId, productCharId, modeId, selectedCount: selectedValues.length, isConfirmed });
     
     setState(prev => {
       const newState = JSON.parse(JSON.stringify(prev));
@@ -153,10 +154,24 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
         
         const currentModes = proc.failureModes || [];
         
+        // ✅ modeId가 있으면 해당 항목만 수정 (다중선택 개별 수정)
+        if (modeId) {
+          if (selectedValues.length === 0) {
+            return { ...proc, failureModes: currentModes.filter((m: any) => m.id !== modeId) };
+          }
+          return {
+            ...proc,
+            failureModes: currentModes.map((m: any) => 
+              m.id === modeId ? { ...m, name: selectedValues[0] || m.name } : m
+            )
+          };
+        }
+        
+        // ✅ modeId가 없으면 빈 셀 클릭 → 새 항목 추가 (productCharId별)
         // 1. 다른 productCharId의 고장형태는 보존
         const otherModes = currentModes.filter((m: any) => m.productCharId !== productCharId);
         
-        // 2. ✅ 선택된 값들 각각 별도 레코드로 생성 (확정/수정 모드 모두 동일)
+        // 2. 선택된 값들 각각 별도 레코드로 생성
         const newModes = selectedValues.map(val => {
           const existing = currentModes.find((m: any) => 
             m.productCharId === productCharId && m.name === val
@@ -463,6 +478,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
                         type: 'l2FailureMode', 
                         processId: row.procId, 
                         productCharId: row.charId,
+                        modeId: row.modeId || undefined,  // ✅ 기존 항목 수정 시 modeId 전달
                         title: `${row.procNo}. ${row.procName} 고장형태`, 
                         itemCode: 'FM1',
                         parentProductChar: row.charName,

@@ -245,27 +245,37 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
     if (!modal || !modal.reqId) return;
     
     const isConfirmed = state.failureL1Confirmed || false;
+    const effectId = modal.effectId;
     
-    console.log('[FailureL1Tab] 저장 시작', { reqId: modal.reqId, selectedCount: selectedValues.length, isConfirmed });
+    console.log('[FailureL1Tab] 저장 시작', { reqId: modal.reqId, effectId, selectedCount: selectedValues.length, isConfirmed });
     
     setState(prev => {
       const newState = JSON.parse(JSON.stringify(prev));
       if (!newState.l1.failureScopes) newState.l1.failureScopes = [];
       
-      // 해당 요구사항의 기존 고장영향 제거
-      newState.l1.failureScopes = newState.l1.failureScopes.filter(
-        (s: any) => s.reqId !== modal.reqId
-      );
+      // ✅ effectId가 있으면 해당 항목만 수정 (다중선택 개별 수정)
+      if (effectId) {
+        if (selectedValues.length === 0) {
+          newState.l1.failureScopes = newState.l1.failureScopes.filter((s: any) => s.id !== effectId);
+        } else {
+          newState.l1.failureScopes = newState.l1.failureScopes.map((s: any) => 
+            s.id === effectId ? { ...s, effect: selectedValues[0] || s.effect } : s
+          );
+        }
+        console.log('[FailureL1Tab] 개별 항목 수정 완료');
+        return newState;
+      }
       
-      // ✅ 선택된 각 값을 개별 행으로 추가 (확정/수정 모드 모두 동일)
-      selectedValues.forEach(val => {
+      // ✅ effectId가 없으면 빈 셀 클릭 → 새 항목 추가
+      // 해당 요구사항의 기존 고장영향 보존하면서 새 항목 추가
+      if (selectedValues.length > 0) {
         newState.l1.failureScopes.push({
           id: uid(),
           reqId: modal.reqId,
-          effect: val,
+          effect: selectedValues[0],
           severity: undefined
         });
-      });
+      }
       
       console.log('[FailureL1Tab] 상태 업데이트 완료, 최종 failureScopes:', newState.l1.failureScopes.length, '개');
       return newState;
