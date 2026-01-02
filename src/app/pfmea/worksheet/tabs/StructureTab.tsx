@@ -164,9 +164,9 @@ export function StructureHeader({ onProcessModalOpen, missingCounts, isConfirmed
   
   return (
     <>
-      {/* 1행: 구조분석(2단계) 헤더 + 확정/수정 버튼 */}
+      {/* 1행: 단계 구분 + 확정/수정 버튼 (기능분석과 동일한 구조) */}
       <tr>
-        <th colSpan={4} className="bg-[#1565c0] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center">
+        <th colSpan={4} className="bg-[#1976d2] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center">
           <div className="flex items-center justify-center gap-5">
             <span>2단계 : 구조분석</span>
             <div className="flex gap-1.5">
@@ -183,38 +183,39 @@ export function StructureHeader({ onProcessModalOpen, missingCounts, isConfirmed
           </div>
         </th>
       </tr>
-      {/* 2행: 상세 헤더 */}
+      {/* 2행: 항목 그룹 (기능분석과 동일한 구조) */}
       <tr>
-        <th className={`w-[30%] ${L1.h2}`}>
+        <th className="bg-[#1976d2] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
           1. 완제품 공정명
           {missingCounts && missingCounts.l1Count > 0 && (
-            <span className="ml-1.5 bg-white text-orange-500 px-1.5 py-0.5 rounded-lg text-[11px] font-semibold">
+            <span className="ml-1.5 bg-orange-500 text-white px-2 py-0.5 rounded-full text-xs">
               {missingCounts.l1Count}
             </span>
           )}
         </th>
-        <th onClick={onProcessModalOpen} className={`w-[30%] cursor-pointer hover:bg-green-600 ${L2.h2}`}>
+        <th onClick={onProcessModalOpen} className="bg-[#388e3c] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center cursor-pointer hover:bg-green-600">
           2. 메인 공정명 {showSearchIcon && '🔍'}
           {missingCounts && missingCounts.l2Count > 0 && (
-            <span className="ml-1.5 bg-white text-orange-500 px-1.5 py-0.5 rounded-lg text-[11px] font-semibold">
+            <span className="ml-1.5 bg-orange-500 text-white px-2 py-0.5 rounded-full text-xs">
               {missingCounts.l2Count}
             </span>
           )}
         </th>
-        <th colSpan={2} className={L3.h2}>
+        <th colSpan={2} className="bg-[#f57c00] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
           3. 작업 요소명 {!isConfirmed && missingCounts && missingCounts.l3Count > 0 && '🔍'}
           {missingCounts && missingCounts.l3Count > 0 && (
-            <span className="ml-1.5 bg-white text-orange-500 px-1.5 py-0.5 rounded-lg text-[11px] font-semibold">
+            <span className="ml-1.5 bg-white text-orange-600 px-2 py-0.5 rounded-full text-xs font-bold">
               {missingCounts.l3Count}
             </span>
           )}
         </th>
       </tr>
+      {/* 3행: 서브 헤더 (기능분석과 동일한 구조) */}
       <tr>
-        <th className={`${L1.h3} border-b-[3px] border-b-white`}>완제품명+라인</th>
-        <th className={`${L2.h3} border-b-[3px] border-b-white`}>공정NO+공정명</th>
-        <th className="w-20 max-w-[80px] min-w-[80px] bg-[#29b6f6] text-white border border-[#ccc] border-b-[3px] border-b-white p-0 h-6 font-bold text-xs">4M</th>
-        <th className={`${L3.h3} border-b-[3px] border-b-white`}>작업요소</th>
+        <th className="bg-[#e3f2fd] border border-[#ccc] p-1 text-xs font-semibold text-center border-b-[3px] border-b-[#1976d2]">완제품명+라인</th>
+        <th className="bg-[#c8e6c9] border border-[#ccc] p-1 text-xs font-semibold text-center border-b-[3px] border-b-[#388e3c]">공정NO+공정명</th>
+        <th className="w-20 max-w-[80px] min-w-[80px] bg-[#29b6f6] text-white border border-[#ccc] border-b-[3px] border-b-[#0288d1] p-1 text-xs font-bold text-center">4M</th>
+        <th className="bg-[#ffe0b2] border border-[#ccc] p-1 text-xs font-semibold text-center border-b-[3px] border-b-[#f57c00]">작업요소</th>
       </tr>
     </>
   );
