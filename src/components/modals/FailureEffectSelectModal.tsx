@@ -141,8 +141,8 @@ export default function FailureEffectSelectModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-start justify-end bg-black/40" onClick={onClose} style={{ paddingTop: '80px', paddingRight: '20px' }}>
-      <div className="bg-white rounded-lg shadow-2xl w-[500px] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()} style={{ maxHeight: 'calc(100vh - 120px)' }}>
+    <div className="fixed inset-0 z-[9999] flex items-start justify-end bg-black/40 pt-36 pr-5" onClick={onClose}>
+      <div className="bg-white rounded-lg shadow-2xl w-[500px] flex flex-col overflow-hidden max-h-[calc(100vh-160px)]" onClick={e => e.stopPropagation()}>
         {/* 헤더 */}
         <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white">
           <div className="flex items-center gap-2">

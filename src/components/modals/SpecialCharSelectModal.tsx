@@ -50,8 +50,8 @@ interface SpecialCharSelectModalProps {
 
 /** 공통 스타일 */
 const tw = {
-  overlay: 'fixed inset-0 flex items-start justify-end pt-20 pr-5 z-[10000] bg-black/40',
-  modal: 'bg-white rounded-lg w-[500px] max-h-[calc(100vh-120px)] flex flex-col shadow-xl overflow-hidden',
+  overlay: 'fixed inset-0 flex items-start justify-end pt-36 pr-5 z-[10000] bg-black/40',
+  modal: 'bg-white rounded-lg w-[500px] max-h-[calc(100vh-160px)] flex flex-col shadow-xl overflow-hidden',
   header: 'bg-gradient-to-r from-red-600 to-red-700 py-2 px-3 text-white',
   select: 'py-2 px-3 border border-gray-300 rounded-md text-xs min-w-[120px]',
   input: 'flex-1 py-2 px-3 border border-gray-300 rounded-md text-xs',

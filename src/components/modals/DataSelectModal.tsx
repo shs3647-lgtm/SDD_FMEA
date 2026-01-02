@@ -305,11 +305,11 @@ export default function DataSelectModal({
 
   return (
     <div 
-      className="fixed inset-0 z-[9999] flex items-start justify-end bg-black/40 pt-20 pr-5"
+      className="fixed inset-0 z-[9999] flex items-start justify-end bg-black/40 pt-36 pr-5"
       onClick={onClose}
     >
       <div 
-        className="bg-white rounded-lg shadow-2xl w-[350px] flex flex-col overflow-hidden max-h-[calc(100vh-120px)]"
+        className="bg-white rounded-lg shadow-2xl w-[420px] flex flex-col overflow-hidden max-h-[calc(100vh-160px)]"
         onClick={e => e.stopPropagation()}
       >
         {/* ===== 헤더: 제목 + 닫기 ===== */}
@@ -457,7 +457,7 @@ export default function DataSelectModal({
                   key={item.id}
                   onClick={() => !isEditing && toggleSelect(item.id)}
                   onDoubleClick={() => handleDoubleClick(item)}
-                  className={`flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer transition-all ${
+                  className={`flex items-start gap-2 px-2 py-1.5 rounded border cursor-pointer transition-all min-h-[32px] ${
                     isEditing
                       ? 'bg-yellow-50 border-yellow-400'
                       : isSelected 
@@ -499,7 +499,7 @@ export default function DataSelectModal({
                       className="flex-1 text-[10px] px-1 py-0.5 border border-yellow-400 rounded focus:outline-none focus:ring-1 focus:ring-yellow-500 bg-white"
                     />
                   ) : (
-                    <span className={`flex-1 text-[10px] truncate ${
+                    <span className={`flex-1 text-[10px] break-words leading-tight ${
                       isSelected ? (isCurrent ? 'text-green-800 font-medium' : 'text-blue-800 font-medium') : 'text-gray-700'
                     }`}>
                       {item.value}

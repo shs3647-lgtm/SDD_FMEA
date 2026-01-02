@@ -224,7 +224,7 @@ export default function WorkElementSelectModal({
 
   return (
     <div 
-      className="fixed inset-0 z-[9999] flex items-start justify-end bg-black/40 pt-20 pr-5"
+      className="fixed inset-0 z-[9999] flex items-start justify-end bg-black/40 pt-36 pr-5"
       onClick={onClose}
     >
       <div 

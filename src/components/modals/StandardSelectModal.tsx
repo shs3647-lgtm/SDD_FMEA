@@ -195,12 +195,11 @@ export default function StandardSelectModal({
 
   return (
     <div 
-      className="fixed inset-0 z-[9999] flex items-start justify-end bg-black/40"
+      className="fixed inset-0 z-[9999] flex items-start justify-end bg-black/40 pt-36 pr-5"
       onClick={onClose}
-      style={{ paddingTop: '80px', paddingRight: '20px' }}
     >
       <div 
-        className="bg-white rounded-lg shadow-2xl w-[500px] flex flex-col overflow-hidden"
+        className="bg-white rounded-lg shadow-2xl w-[500px] flex flex-col overflow-hidden max-h-[calc(100vh-160px)]"
         onClick={e => e.stopPropagation()}
         style={{ maxHeight: 'calc(100vh - 120px)' }}
       >
