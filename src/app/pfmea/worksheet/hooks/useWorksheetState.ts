@@ -446,6 +446,34 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         const parsed = JSON.parse(savedData);
         console.log('[워크시트] 레거시 데이터 발견:', parsed);
         
+        // ✅ 고장형태 데이터 초기화 옵션 (URL 파라미터: ?reset-fm=true)
+        if (typeof window !== 'undefined') {
+          const urlParams = new URLSearchParams(window.location.search);
+          if (urlParams.get('reset-fm') === 'true') {
+          console.log('[초기화] 고장형태 데이터 초기화 시작...');
+          const beforeCount = parsed.l2?.reduce((sum: number, p: any) => sum + (p.failureModes?.length || 0), 0) || 0;
+          console.log('[초기화 전] 고장형태 개수:', beforeCount);
+          
+          if (parsed.l2) {
+            parsed.l2.forEach((p: any) => {
+              p.failureModes = [];
+            });
+            parsed.failureL2Confirmed = false;
+          }
+          
+          // 초기화된 데이터 저장
+          localStorage.setItem(`pfmea_worksheet_${selectedFmeaId}`, JSON.stringify(parsed));
+          console.log('[초기화 완료] 고장형태 데이터가 삭제되었습니다.');
+          
+          // URL에서 파라미터 제거 후 새로고침
+          urlParams.delete('reset-fm');
+          const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+          window.history.replaceState({}, '', newUrl);
+          setTimeout(() => location.reload(), 500);
+          return;
+          }
+        }
+        
         if (parsed.l1 && parsed.l2) {
           // 마이그레이션 및 방어 코드 - failureScopes 명시적 포함
           const migratedL1 = {
