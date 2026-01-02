@@ -5,9 +5,9 @@
 
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { WorksheetState, COLORS, FlatRow, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../constants';
-import { S, F, X, L1, L2, L3, cell, cellCenter, border } from '@/styles/worksheet';
+import { S, F, X, L1, L2, L3, cell, cellCenter, border, btnConfirm, btnEdit, badgeConfirmed, badgeOk, badgeMissing } from '@/styles/worksheet';
 
 interface StructureTabProps {
   state: WorksheetState;
@@ -148,12 +148,42 @@ interface MissingCounts {
   l3Count: number;  // 작업요소 누락
 }
 
-export function StructureHeader({ onProcessModalOpen, missingCounts, isConfirmed }: { onProcessModalOpen: () => void; missingCounts?: MissingCounts; isConfirmed?: boolean }) {
+interface StructureHeaderProps {
+  onProcessModalOpen: () => void;
+  missingCounts?: MissingCounts & { total?: number };
+  isConfirmed?: boolean;
+  onConfirm?: () => void;
+  onEdit?: () => void;
+}
+
+export function StructureHeader({ onProcessModalOpen, missingCounts, isConfirmed, onConfirm, onEdit }: StructureHeaderProps) {
   // 확정된 경우 돋보기 숨김
   const showSearchIcon = !isConfirmed && missingCounts && missingCounts.l2Count > 0;
   
+  const totalMissing = missingCounts?.total || ((missingCounts?.l1Count || 0) + (missingCounts?.l2Count || 0) + (missingCounts?.l3Count || 0));
+  
   return (
     <>
+      {/* 1행: 구조분석(2단계) 헤더 + 확정/수정 버튼 */}
+      <tr>
+        <th colSpan={4} className="bg-[#1565c0] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center">
+          <div className="flex items-center justify-center gap-5">
+            <span>2단계 : 구조분석</span>
+            <div className="flex gap-1.5">
+              {isConfirmed ? (
+                <span className={badgeConfirmed}>✓ 확정됨</span>
+              ) : (
+                <button type="button" onClick={onConfirm} className={btnConfirm}>확정</button>
+              )}
+              <span className={totalMissing > 0 ? badgeMissing : badgeOk}>누락 {totalMissing}건</span>
+              {isConfirmed && (
+                <button type="button" onClick={onEdit} className={btnEdit}>수정</button>
+              )}
+            </div>
+          </div>
+        </th>
+      </tr>
+      {/* 2행: 상세 헤더 */}
       <tr>
         <th className={`w-[30%] ${L1.h2}`}>
           1. 완제품 공정명
@@ -231,10 +261,26 @@ export function StructureRow({
 }
 
 export default function StructureTab(props: StructureTabProps) {
-  const { rows, setIsProcessModalOpen, state } = props;
+  const { rows, setIsProcessModalOpen, state, setState, setDirty, saveToLocalStorage } = props;
   
+  // ✅ 확정 상태 (고장분석 패턴 적용)
+  const isConfirmed = (state as any).structureConfirmed || false;
+
+  // ✅ 구조 데이터 변경 감지용 ref (고장분석 패턴 적용)
+  const structureDataRef = useRef<string>('');
+  
+  // ✅ 구조 데이터 변경 시 자동 저장 (확실한 저장 보장)
+  useEffect(() => {
+    const dataKey = JSON.stringify({ l1: state.l1, l2: state.l2.map(p => ({ id: p.id, no: p.no, name: p.name, l3: p.l3 })) });
+    if (structureDataRef.current && dataKey !== structureDataRef.current) {
+      console.log('[StructureTab] 구조 데이터 변경 감지, 자동 저장');
+      saveToLocalStorage?.();
+    }
+    structureDataRef.current = dataKey;
+  }, [state.l1, state.l2, saveToLocalStorage]);
+
   // 누락 건수 계산 (rows 배열 기반 - 화면에 표시되는 것과 일치)
-  const missingCounts = React.useMemo(() => {
+  const missingCounts = useMemo(() => {
     const isMissing = (name: string | undefined | null) => {
       if (name === null || name === undefined) return true;
       if (!name) return true;
@@ -274,15 +320,57 @@ export default function StructureTab(props: StructureTabProps) {
       if (isMissing(row.m4)) m4Count++;
     });
     
-    return { l1Count, l2Count, l3Count: l3Count + m4Count };
+    return { l1Count, l2Count, l3Count: l3Count + m4Count, total: l1Count + l2Count + l3Count + m4Count };
   }, [state.l1.name, rows]);
+
+  // ✅ 확정 핸들러 (고장분석 패턴 적용)
+  const handleConfirm = useCallback(() => {
+    console.log('[StructureTab] 확정 버튼 클릭, missingCount:', missingCounts.total);
+    if (missingCounts.total > 0) {
+      alert(`누락된 항목이 ${missingCounts.total}건 있습니다.\n모든 항목을 입력 후 확정해 주세요.`);
+      return;
+    }
+    
+    // ✅ 현재 구조 통계 로그
+    const procCount = state.l2.length;
+    const weCount = state.l2.flatMap(p => p.l3).length;
+    console.log('[StructureTab] 확정 시 공정:', procCount, '개, 작업요소:', weCount, '개');
+    
+    setState((prev: any) => {
+      const newState = { ...prev, structureConfirmed: true, structureConfirmedAt: new Date().toISOString() };
+      console.log('[StructureTab] 확정 상태 업데이트:', newState.structureConfirmed);
+      return newState;
+    });
+    setDirty(true);
+    
+    // ✅ 즉시 저장 (requestAnimationFrame 사용)
+    requestAnimationFrame(() => {
+      saveToLocalStorage?.();
+      console.log('[StructureTab] 확정 후 localStorage 저장 완료');
+    });
+    
+    alert('✅ 구조분석(2단계)이 확정되었습니다.\n\n이제 기능분석(3단계) 탭이 활성화되었습니다.');
+  }, [missingCounts.total, state.l2, setState, setDirty, saveToLocalStorage]);
+
+  // ✅ 수정 핸들러 (고장분석 패턴 적용)
+  const handleEdit = useCallback(() => {
+    setState((prev: any) => ({ ...prev, structureConfirmed: false }));
+    setDirty(true);
+    requestAnimationFrame(() => saveToLocalStorage?.());
+  }, [setState, setDirty, saveToLocalStorage]);
   
   return (
     <>
       <StructureColgroup />
       {/* 헤더 - 하단 2px 검은색 구분선 */}
       <thead className="sticky top-0 z-20 bg-white border-b-2 border-black">
-        <StructureHeader onProcessModalOpen={() => setIsProcessModalOpen(true)} missingCounts={missingCounts} isConfirmed={isConfirmed} />
+        <StructureHeader 
+          onProcessModalOpen={() => setIsProcessModalOpen(true)} 
+          missingCounts={missingCounts} 
+          isConfirmed={isConfirmed}
+          onConfirm={handleConfirm}
+          onEdit={handleEdit}
+        />
       </thead>
       <tbody>
         {rows.map((row, idx) => {
