@@ -260,17 +260,24 @@ export function migrateToAtomicDB(oldData: OldWorksheetData): FMEAWorksheetDB {
       }
     });
     
-    // L2 고장형태 (FM)
+    // L2 고장형태 (FM) - ✅ productCharId 보존
     const failureModes = proc.failureModes || [];
     failureModes.forEach(fm => {
-      // 가장 최근 L2Function을 상위로 연결 (또는 첫 번째)
-      const relatedL2Func = db.l2Functions.find(f => f.l2StructId === l2Struct.id);
+      // productCharId가 있으면 해당 제품특성의 L2Function 연결
+      let relatedL2Func = fm.productCharId 
+        ? db.l2Functions.find(f => f.id === fm.productCharId)
+        : null;
+      // 없으면 첫 번째 L2Function 사용
+      if (!relatedL2Func) {
+        relatedL2Func = db.l2Functions.find(f => f.l2StructId === l2Struct.id);
+      }
       
       db.failureModes.push({
         id: fm.id || uid(),
         fmeaId: oldData.fmeaId,
         l2FuncId: relatedL2Func?.id || '',
         l2StructId: l2Struct.id,
+        productCharId: fm.productCharId || '', // ✅ productCharId 저장
         mode: fm.name,
         specialChar: fm.sc,
       });
@@ -525,12 +532,13 @@ export function convertToLegacyFormat(db: FMEAWorksheetDB): OldWorksheetData {
       });
     });
     
-    // FM
+    // FM - ✅ productCharId 복원
     const fms = db.failureModes.filter(m => m.l2StructId === l2.id);
     procObj.failureModes = fms.map(m => ({
       id: m.id,
       name: m.mode,
       sc: m.specialChar,
+      productCharId: m.productCharId || '', // ✅ productCharId 복원
     }));
     
     // L3

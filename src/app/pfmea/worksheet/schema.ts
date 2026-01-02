@@ -138,6 +138,7 @@ export interface FailureMode extends AtomicRecord {
   fmeaId: string;         // FK: FMEA 프로젝트 ID
   l2FuncId: string;       // FK: L2Function.id (상위 기능분석 - 제품특성)
   l2StructId: string;     // FK: L2Structure.id (메인공정 - 역전개용)
+  productCharId?: string; // FK: productChar.id (제품특성 연결용) - ✅ 추가
   mode: string;           // 고장형태 내용
   specialChar?: boolean;  // 특별특성 여부
 }
