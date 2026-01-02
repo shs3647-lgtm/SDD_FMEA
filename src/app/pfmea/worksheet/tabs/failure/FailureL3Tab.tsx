@@ -97,12 +97,14 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
   // 총 누락 건수 (기존 호환성)
   const missingCount = missingCounts.total;
 
-  // ✅ failureCauses 변경 감지용 ref
+  // ✅ failureCauses 변경 감지용 ref (FailureL2Tab 패턴과 동일)
   const failureCausesRef = useRef<string>('');
   
   // ✅ failureCauses 변경 시 자동 저장 (확실한 저장 보장)
+  // ⚠️ 중요: failureCauses는 proc.failureCauses에 저장됨 (FailureL2Tab 패턴)
   useEffect(() => {
-    const allCauses = state.l2.flatMap((p: any) => (p.l3 || []).flatMap((we: any) => we.failureCauses || []));
+    // proc.failureCauses를 확인 (we.failureCauses가 아님!)
+    const allCauses = state.l2.flatMap((p: any) => p.failureCauses || []);
     const causesKey = JSON.stringify(allCauses);
     
     if (failureCausesRef.current && causesKey !== failureCausesRef.current) {
