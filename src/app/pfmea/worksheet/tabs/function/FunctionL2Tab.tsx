@@ -96,15 +96,6 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
     l2FuncDataRef.current = dataKey;
   }, [state.l2, saveToLocalStorage]);
 
-  // ✅ 데이터 불일치 자동 수정: missingCount > 0인데 확정 상태이면 자동 해제
-  useEffect(() => {
-    if (isConfirmed && missingCount > 0) {
-      console.log('[FunctionL2Tab] 데이터 불일치 감지: 확정 상태이지만 누락 항목 존재, 자동 해제');
-      setState(prev => ({ ...prev, l2Confirmed: false }));
-      setDirty(true);
-      saveToLocalStorage?.();
-    }
-  }, [isConfirmed, missingCount, setState, setDirty, saveToLocalStorage]);
 
   // 확정 핸들러 (고장분석 패턴 적용)
   const handleConfirm = useCallback(() => {
@@ -262,8 +253,8 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
             };
           }
           
-          // ✅ 수정 모드: 빈 기능이 없어도 새로 추가 가능
-          if (!isConfirmed && selectedValues.length > 0) {
+          // ✅ 확정 상태에서도 새로 추가 가능 (확정됨 유지)
+          if (selectedValues.length > 0) {
             const newFunc = { id: uid(), name: selectedValues[0], productChars: [] };
             return {
               ...proc,

@@ -94,15 +94,6 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
     l1DataRef.current = dataKey;
   }, [state.l1.types, saveToLocalStorage]);
 
-  // ✅ 데이터 불일치 자동 수정: missingCount > 0인데 확정 상태이면 자동 해제
-  useEffect(() => {
-    if (isConfirmed && missingCount > 0) {
-      console.log('[FunctionL1Tab] 데이터 불일치 감지: 확정 상태이지만 누락 항목 존재, 자동 해제');
-      setState(prev => ({ ...prev, l1Confirmed: false }));
-      setDirty(true);
-      saveToLocalStorage?.();
-    }
-  }, [isConfirmed, missingCount, setState, setDirty, saveToLocalStorage]);
 
   // 확정 핸들러 (고장분석 패턴 적용)
   const handleConfirm = useCallback(() => {
@@ -210,8 +201,8 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
               ? { ...t, name: selectedValues[0] }
               : t
           );
-        } else if (!isConfirmed && selectedValues.length > 0) {
-          // ✅ 수정 모드: 빈 타입이 없어도 새로 추가 가능
+        } else if (selectedValues.length > 0) {
+          // ✅ 확정 상태에서도 새로 추가 가능 (확정됨 유지)
           const newType = { id: uid(), name: selectedValues[0], functions: [] };
           newState.l1.types = [...currentTypes, newType];
         }
@@ -232,8 +223,8 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                   : f
               )
             };
-          } else if (!isConfirmed && selectedValues.length > 0) {
-            // ✅ 수정 모드: 빈 기능이 없어도 새로 추가 가능
+          } else if (selectedValues.length > 0) {
+            // ✅ 확정 상태에서도 새로 추가 가능 (확정됨 유지)
             const newFunc = { id: uid(), name: selectedValues[0], requirements: [] };
             return {
               ...t,
@@ -261,8 +252,8 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                     : r
                 )
               };
-            } else if (!isConfirmed && selectedValues.length > 0) {
-              // ✅ 수정 모드: 빈 요구사항이 없어도 새로 추가 가능
+            } else if (selectedValues.length > 0) {
+              // ✅ 확정 상태에서도 새로 추가 가능 (확정됨 유지)
               const newReq = { id: uid(), name: selectedValues[0] };
               return {
                 ...f,
