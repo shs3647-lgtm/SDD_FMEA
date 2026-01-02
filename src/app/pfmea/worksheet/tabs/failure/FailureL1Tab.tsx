@@ -276,8 +276,8 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
         const existingSet = new Set(existingEffects);
         const newValue = selectedValues[0];
         if (existingSet.has(newValue)) {
-          console.log('[FailureL1Tab] 중복 고장영향 무시:', newValue);
-          return prev; // 중복이면 변경 없음
+          alert(`⚠️ 중복 항목: "${newValue}"는 이미 등록되어 있습니다.`);
+          return prev;
         }
         newState.l1.failureScopes.push({
           id: uid(),

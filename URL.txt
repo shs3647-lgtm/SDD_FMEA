@@ -1,4 +1,4 @@
-http://localhost:3000/pfmea/worksheet?v=1.0.27-20260103-duplicate-check
+http://localhost:3000/pfmea/worksheet?v=1.0.28-20260103-duplicate-alert
 
 === VERSION INFO ===
 Version: 1.0.26

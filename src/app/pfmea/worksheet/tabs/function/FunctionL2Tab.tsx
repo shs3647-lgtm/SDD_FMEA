@@ -258,7 +258,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
             const existingNames = new Set(currentFuncs.map((f: any) => f.name));
             const newValue = selectedValues[0];
             if (existingNames.has(newValue)) {
-              console.log('[FunctionL2Tab] 중복 기능 무시:', newValue);
+              alert(`⚠️ 중복 항목: "${newValue}"는 이미 등록되어 있습니다.`);
               return proc;
             }
             const newFunc = { id: uid(), name: newValue, productChars: [] };
@@ -310,7 +310,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                 const existingNames = new Set(currentChars.map((c: any) => c.name));
                 const newValue = selectedValues[0];
                 if (existingNames.has(newValue)) {
-                  console.log('[FunctionL2Tab] 중복 제품특성 무시:', newValue);
+                  alert(`⚠️ 중복 항목: "${newValue}"는 이미 등록되어 있습니다.`);
                   return f;
                 }
                 const newChar = { id: uid(), name: newValue, specialChar: '' };

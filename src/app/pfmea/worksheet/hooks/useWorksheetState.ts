@@ -723,7 +723,18 @@ export function useWorksheetState(): UseWorksheetStateReturn {
   }, []);
 
   const handleProcessSelect = useCallback((selectedProcesses: Array<{ processNo: string; processName: string }>) => {
-    const selectedNames = new Set(selectedProcesses.map(p => p.processName));
+    // 중복 제거 (이름 기준) + 경고 메시지
+    const duplicates = selectedProcesses.filter((p, idx, arr) => 
+      arr.findIndex(x => x.processName === p.processName) !== idx
+    );
+    if (duplicates.length > 0) {
+      const dupNames = [...new Set(duplicates.map(d => d.processName))].join(', ');
+      alert(`⚠️ 중복 공정이 제거되었습니다: ${dupNames}`);
+    }
+    const uniqueProcesses = selectedProcesses.filter((p, idx, arr) => 
+      arr.findIndex(x => x.processName === p.processName) === idx
+    );
+    const selectedNames = new Set(uniqueProcesses.map(p => p.processName));
     
     setState(prev => {
       const keptProcesses = prev.l2.filter(p => {
@@ -734,7 +745,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       });
       
       const existingNames = new Set(keptProcesses.map(p => p.name));
-      const newProcesses: Process[] = selectedProcesses
+      const newProcesses: Process[] = uniqueProcesses
         .filter(p => !existingNames.has(p.processName))
         .map((p, idx) => ({
           id: uid(),

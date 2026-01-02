@@ -173,7 +173,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
                 const existingNames = new Set(currentCauses.map((c: any) => c.name));
                 const newValue = selectedValues[0];
                 if (existingNames.has(newValue)) {
-                  console.log('[FailureL3Tab] 중복 고장원인 무시:', newValue);
+                  alert(`⚠️ 중복 항목: "${newValue}"는 이미 등록되어 있습니다.`);
                   return we;
                 }
                 const newCause = { id: uid(), name: newValue, occurrence: undefined };

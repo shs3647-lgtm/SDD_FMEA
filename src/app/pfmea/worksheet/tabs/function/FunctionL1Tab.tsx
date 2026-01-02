@@ -249,7 +249,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
             const existingNames = new Set(currentFuncs.map(f => f.name));
             const newValue = selectedValues[0];
             if (existingNames.has(newValue)) {
-              console.log('[FunctionL1Tab] 중복 기능 무시:', newValue);
+              alert(`⚠️ 중복 항목: "${newValue}"는 이미 등록되어 있습니다.`);
               return t;
             }
             const newFunc = { id: uid(), name: newValue, requirements: [] };
@@ -299,8 +299,8 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
               const existingNames = new Set(currentReqs.map(r => r.name));
               const newValue = selectedValues[0];
               if (existingNames.has(newValue)) {
-                console.log('[FunctionL1Tab] 중복 요구사항 무시:', newValue);
-                return f; // 중복이면 추가하지 않음
+                alert(`⚠️ 중복 항목: "${newValue}"는 이미 등록되어 있습니다.`);
+                return f;
               }
               const newReq = { id: uid(), name: newValue };
               return {

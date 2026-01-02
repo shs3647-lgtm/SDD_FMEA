@@ -249,7 +249,14 @@ function FMEAWorksheetPageContent() {
     const isConfirmed = state.structureConfirmed || false;
     console.log('[작업요소 저장] 시작', { targetL2Id, selectedCount: selectedElements.length, isConfirmed });
     
-    // 중복 제거 (이름 기준)
+    // 중복 제거 (이름 기준) + 경고 메시지
+    const duplicates = selectedElements.filter((e, idx, arr) => 
+      arr.findIndex(x => x.name === e.name) !== idx
+    );
+    if (duplicates.length > 0) {
+      const dupNames = [...new Set(duplicates.map(d => d.name))].join(', ');
+      alert(`⚠️ 중복 항목이 제거되었습니다: ${dupNames}`);
+    }
     const uniqueElements = selectedElements.filter((e, idx, arr) => 
       arr.findIndex(x => x.name === e.name) === idx
     );
