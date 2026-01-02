@@ -74,6 +74,13 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
   // 총 누락 건수 (기존 호환성)
   const missingCount = missingCounts.total;
 
+  // ✅ 요구사항 개수 계산
+  const requirementCount = React.useMemo(() => {
+    return state.l1.types.reduce((sum, type) => 
+      sum + (type.functions || []).reduce((funcSum, func) => 
+        funcSum + (func.requirements || []).length, 0), 0);
+  }, [state.l1.types]);
+
   // ✅ L1 기능 데이터 변경 감지용 ref (고장분석 패턴 적용)
   const l1DataRef = useRef<string>('');
   
@@ -343,7 +350,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                 <span className="flex-1 text-center">3단계 : 1L 완제품 공정 기능분석</span>
                 <div className="flex gap-1 absolute right-2">
                   {isConfirmed ? (
-                    <span className={badgeConfirmed}>✓ 확정됨</span>
+                    <span className={badgeConfirmed}>✓ 확정됨({requirementCount})</span>
                   ) : (
                     <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
                   )}

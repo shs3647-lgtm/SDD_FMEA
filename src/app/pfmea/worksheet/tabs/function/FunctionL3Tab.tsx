@@ -85,6 +85,14 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
   // 총 누락 건수 (기존 호환성)
   const missingCount = missingCounts.total;
 
+  // ✅ 공정특성 개수 계산
+  const processCharCount = React.useMemo(() => {
+    return state.l2.reduce((sum, proc) => 
+      sum + (proc.l3 || []).reduce((weSum, we) => 
+        weSum + (we.functions || []).reduce((funcSum, func) => 
+          funcSum + (func.processChars || []).length, 0), 0), 0);
+  }, [state.l2]);
+
   // ✅ L3 기능 데이터 변경 감지용 ref (고장분석 패턴 적용)
   const l3FuncDataRef = useRef<string>('');
   
@@ -408,7 +416,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                 <span>3단계 : 3L 작업요소 기능분석</span>
                 <div className="flex gap-1.5">
                   {isConfirmed ? (
-                    <span className={badgeConfirmed}>✓ 확정됨</span>
+                    <span className={badgeConfirmed}>✓ 확정됨({processCharCount})</span>
                   ) : (
                     <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
                   )}

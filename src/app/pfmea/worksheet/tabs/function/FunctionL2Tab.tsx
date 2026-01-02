@@ -75,6 +75,13 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
   // 총 누락 건수 (기존 호환성)
   const missingCount = missingCounts.total;
 
+  // ✅ 제품특성 개수 계산
+  const productCharCount = React.useMemo(() => {
+    return state.l2.reduce((sum, proc) => 
+      sum + (proc.functions || []).reduce((funcSum, func) => 
+        funcSum + (func.productChars || []).length, 0), 0);
+  }, [state.l2]);
+
   // ✅ L2 기능 데이터 변경 감지용 ref (고장분석 패턴 적용)
   const l2FuncDataRef = useRef<string>('');
   
@@ -409,7 +416,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                 <span>3단계 : 2L 메인공정 기능분석</span>
                 <div className="flex gap-1.5">
                   {isConfirmed ? (
-                    <span className={badgeConfirmed}>✓ 확정됨</span>
+                    <span className={badgeConfirmed}>✓ 확정됨({productCharCount})</span>
                   ) : (
                     <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
                   )}
