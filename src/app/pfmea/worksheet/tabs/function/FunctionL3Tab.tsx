@@ -107,6 +107,16 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
     l3FuncDataRef.current = dataKey;
   }, [state.l2, saveToLocalStorage]);
 
+  // ✅ 데이터 불일치 자동 수정: missingCount > 0인데 확정 상태이면 자동 해제
+  useEffect(() => {
+    if (isConfirmed && missingCount > 0) {
+      console.log('[FunctionL3Tab] 데이터 불일치 감지: 확정 상태이지만 누락 항목 존재, 자동 해제');
+      setState(prev => ({ ...prev, l3Confirmed: false }));
+      setDirty(true);
+      saveToLocalStorage?.();
+    }
+  }, [isConfirmed, missingCount, setState, setDirty, saveToLocalStorage]);
+
   // 확정 핸들러 (고장분석 패턴 적용)
   const handleConfirm = useCallback(() => {
     console.log('[FunctionL3Tab] 확정 버튼 클릭, missingCount:', missingCount);

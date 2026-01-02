@@ -82,6 +82,16 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
   
   const missingCount = missingCounts.total;
 
+  // ✅ 데이터 불일치 자동 수정: missingCount > 0인데 확정 상태이면 자동 해제
+  useEffect(() => {
+    if (isConfirmed && missingCount > 0) {
+      console.log('[FailureL2Tab] 데이터 불일치 감지: 확정 상태이지만 누락 항목 존재, 자동 해제');
+      setState(prev => ({ ...prev, failureL2Confirmed: false }));
+      setDirty(true);
+      saveToLocalStorage?.();
+    }
+  }, [isConfirmed, missingCount, setState, setDirty, saveToLocalStorage]);
+
   const handleConfirm = useCallback(() => {
     console.log('[FailureL2Tab] 확정 버튼 클릭, missingCount:', missingCount);
     if (missingCount > 0) {
