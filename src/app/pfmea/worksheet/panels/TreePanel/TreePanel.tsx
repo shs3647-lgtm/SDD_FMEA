@@ -446,9 +446,9 @@ export default function TreePanel({ state }: TreePanelProps) {
                           <span className={`${tw.severityBadge} ${c.occurrence >= 7 ? 'bg-orange-200 text-orange-800' : 'bg-orange-100 text-orange-700'}`}>
                             O:{c.occurrence}
                           </span>
-                      )}
-                    </div>
-                  ))}
+                        )}
+                      </div>
+                    ))}
                 </div>
               ))}
             </div>
