@@ -1,28 +1,22 @@
-http://localhost:3000/pfmea/worksheet?v=1.0.22-20260102-confirmed-keep
+http://localhost:3000/pfmea/worksheet?v=1.0.23-20260102-function-edit-fix
 
 === VERSION INFO ===
-Version: 1.0.22
+Version: 1.0.23
 Last Updated: 2025-01-02
 Changes:
-  - 확정됨 상태에서도 데이터 추가/수정 가능
-  - 확정됨 상태 유지: 데이터 수정해도 확정 버튼 활성화 안됨
-  - "수정" 버튼 클릭해야만 확정 해제
+  - 기존 기능 수정 안되는 문제 해결
+  - FunctionL1Tab/L2Tab/L3Tab: funcId 전달 추가
+  - 기존 기능 셀 클릭 시 해당 기능 수정 가능
 
-=== 변경된 로직 ===
-이전: 확정됨 상태에서 데이터 수정 불가
-현재: 확정됨 상태에서도 데이터 수정 가능, 확정 상태 유지
+=== 수정된 파일 ===
+✅ FunctionL1Tab.tsx - funcId 전달 및 handleSave 수정 로직 추가
+✅ FunctionL2Tab.tsx - 기존 기능 클릭 시 funcId 전달 추가
+✅ FunctionL3Tab.tsx - 기존 기능 클릭 시 funcId 전달 추가
 
-=== 적용된 파일 (6개) ===
-✅ FunctionL1Tab.tsx
-✅ FunctionL2Tab.tsx  
-✅ FunctionL3Tab.tsx
-✅ FailureL1Tab.tsx
-✅ FailureL2Tab.tsx
-✅ FailureL3Tab.tsx
+=== 이전 문제 ===
+- 기존 기능 셀 클릭 시 funcId가 전달되지 않음
+- handleSave에서 funcId가 undefined → 새 기능 추가로 처리됨
 
-=== 테스트 시나리오 ===
-1. 확정됨 상태에서 셀 클릭
-2. 모달에서 새 항목 선택 후 "적용"
-3. 새 항목 추가됨
-4. "✓ 확정됨(N)" 상태 유지 (숫자만 증가)
-5. "수정" 버튼 클릭 시에만 "확정" 버튼으로 변경
+=== 해결 방법 ===
+- setModal 호출 시 funcId: f.id 추가
+- handleSave에서 funcId가 있으면 해당 기능만 수정
