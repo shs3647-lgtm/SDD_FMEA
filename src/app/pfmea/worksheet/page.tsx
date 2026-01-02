@@ -239,33 +239,28 @@ function FMEAWorksheetPageContent() {
     setDirty(true);
   }, [setState, setDirty]);
 
-  // 작업요소 모달 저장 핸들러 (2개 이상이면 행 삭제 가능, 1개면 내용만 삭제)
+  // 작업요소 모달 저장 핸들러 (확정/수정 모드 모두 동일하게 작동)
   const handleWorkElementSelect = useCallback((selectedElements: { id: string; m4: string; name: string }[]) => {
-    console.log('[저장] targetL2Id:', targetL2Id);
-    console.log('[저장] 선택된 항목:', selectedElements.map(e => `${e.m4}:${e.name}`));
-    
     if (!targetL2Id) {
-      console.log('[저장] targetL2Id 없음 - 중단');
+      console.warn('[작업요소 저장] targetL2Id 없음 - 중단');
       return;
     }
+    
+    const isConfirmed = (state as any).structureConfirmed || false;
+    console.log('[작업요소 저장] 시작', { targetL2Id, selectedCount: selectedElements.length, isConfirmed });
     
     // 중복 제거 (이름 기준)
     const uniqueElements = selectedElements.filter((e, idx, arr) => 
       arr.findIndex(x => x.name === e.name) === idx
     );
-    console.log('[저장] 중복제거 후:', uniqueElements.map(e => `${e.m4}:${e.name}`));
     
     setState(prev => {
-      const proc = prev.l2.find(p => p.id === targetL2Id);
-      console.log('[저장] 현재 공정:', proc?.name, '현재 l3:', proc?.l3.map(w => `${w.m4}:${w.name}`));
-      
       const newL2 = prev.l2.map(proc => {
         if (proc.id !== targetL2Id) return proc;
         
         const existingCount = proc.l3.length;
-        console.log('[저장] 기존 행 수:', existingCount, '선택 수:', uniqueElements.length);
         
-        // 선택된 항목들로 새 리스트 생성 (m4 기본값 'MN' 설정)
+        // ✅ 선택된 항목들로 새 리스트 생성 (확정/수정 모드 모두 동일)
         const newL3: WorkElement[] = uniqueElements.map((e, idx) => ({
           id: uid(),
           m4: e.m4 || 'MN',  // m4가 없으면 기본값 'MN'
@@ -277,7 +272,6 @@ function FMEAWorksheetPageContent() {
         
         // 행이 1개만 남았는데 0개 선택 → 내용만 비우고 행 유지
         if (existingCount === 1 && newL3.length === 0) {
-          console.log('[저장] 1개→0개: 내용만 비움');
           newL3.push({ 
             id: proc.l3[0]?.id || uid(), 
             m4: '', 
@@ -288,19 +282,19 @@ function FMEAWorksheetPageContent() {
           });
         }
         
-        // 최소 1행 보장 (혹시 모든 경우 대비)
+        // 최소 1행 보장
         if (newL3.length === 0) {
-          console.log('[저장] 0개: 기본 행 추가');
           newL3.push({ id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10, functions: [], processChars: [] });
         }
         
-        console.log('[저장] 최종 l3:', newL3.map(w => w.name));
+        console.log('[작업요소 저장] 완료, 최종 l3:', newL3.length, '개');
         return { ...proc, l3: newL3 };
       });
       return { ...prev, l2: newL2 };
     });
     setDirty(true);
-  }, [targetL2Id, setState, setDirty]);
+    requestAnimationFrame(() => saveToLocalStorage?.());
+  }, [targetL2Id, state, setState, setDirty, saveToLocalStorage]);
 
   // 작업요소 모달 삭제 핸들러 (2개 이상이면 행 삭제, 1개면 내용만 삭제)
   const handleWorkElementDelete = useCallback((deletedNames: string[]) => {

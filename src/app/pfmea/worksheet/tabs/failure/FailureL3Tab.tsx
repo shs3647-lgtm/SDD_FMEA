@@ -125,17 +125,16 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
     
-    console.log('[FailureL3Tab] 저장 시작');
-    console.log('  - processId:', modal.processId);
-    console.log('  - weId:', modal.weId);
-    console.log('  - selectedValues:', selectedValues);
+    const isConfirmed = state.failureL3Confirmed || false;
+    const { type, processId, weId } = modal;
+    
+    console.log('[FailureL3Tab] 저장 시작', { processId, weId, selectedCount: selectedValues.length, isConfirmed });
     
     setState(prev => {
       const newState = JSON.parse(JSON.stringify(prev));
-      const { type, processId, weId } = modal;
 
       if (type === 'l3FailureCause') {
-        // 고장원인 추가
+        // ✅ 고장원인 추가 (확정/수정 모드 모두 동일)
         newState.l2 = newState.l2.map((proc: any) => {
           if (proc.id !== processId) return proc;
           return {
@@ -147,7 +146,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
                 const existing = currentCauses.find((c: any) => c.name === val);
                 return existing || { id: uid(), name: val, occurrence: undefined };
               });
-              console.log('  - 최종 failureCauses:', newCauses.length, '개');
+              console.log('[FailureL3Tab] 최종 failureCauses:', newCauses.length, '개');
               return {
                 ...we,
                 failureCauses: newCauses
@@ -165,12 +164,11 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
     setModal(null);
     
     // ✅ 즉시 저장 (requestAnimationFrame 사용)
-    console.log('[FailureL3Tab] 즉시 저장 시작');
     requestAnimationFrame(() => {
       saveToLocalStorage?.();
       console.log('[FailureL3Tab] 저장 완료');
     });
-  }, [modal, setState, setDirty, saveToLocalStorage]);
+  }, [modal, state.failureL3Confirmed, setState, setDirty, saveToLocalStorage]);
 
   const handleDelete = useCallback((deletedValues: string[]) => {
     if (!modal) return;

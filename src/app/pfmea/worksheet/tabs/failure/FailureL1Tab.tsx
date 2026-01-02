@@ -243,9 +243,9 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal || !modal.reqId) return;
     
-    console.log('[FailureL1Tab] 저장 시작');
-    console.log('  - reqId:', modal.reqId);
-    console.log('  - selectedValues:', selectedValues);
+    const isConfirmed = state.failureL1Confirmed || false;
+    
+    console.log('[FailureL1Tab] 저장 시작', { reqId: modal.reqId, selectedCount: selectedValues.length, isConfirmed });
     
     setState(prev => {
       const newState = JSON.parse(JSON.stringify(prev));
@@ -256,7 +256,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
         (s: any) => s.reqId !== modal.reqId
       );
       
-      // 선택된 각 값을 개별 행으로 추가
+      // ✅ 선택된 각 값을 개별 행으로 추가 (확정/수정 모드 모두 동일)
       selectedValues.forEach(val => {
         newState.l1.failureScopes.push({
           id: uid(),
@@ -266,8 +266,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
         });
       });
       
-      console.log('  - 최종 failureScopes:', newState.l1.failureScopes.length, '개');
-      console.log('[FailureL1Tab] 상태 업데이트 완료');
+      console.log('[FailureL1Tab] 상태 업데이트 완료, 최종 failureScopes:', newState.l1.failureScopes.length, '개');
       return newState;
     });
     
@@ -275,12 +274,11 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
     setModal(null);
     
     // ✅ 즉시 저장 (requestAnimationFrame 사용)
-    console.log('[FailureL1Tab] 즉시 저장 시작');
     requestAnimationFrame(() => {
       saveToLocalStorage?.();
       console.log('[FailureL1Tab] 저장 완료');
     });
-  }, [modal, setState, setDirty, saveToLocalStorage]);
+  }, [modal, state.failureL1Confirmed, setState, setDirty, saveToLocalStorage]);
 
   // 삭제 핸들러
   const handleDelete = useCallback((deletedValues: string[]) => {

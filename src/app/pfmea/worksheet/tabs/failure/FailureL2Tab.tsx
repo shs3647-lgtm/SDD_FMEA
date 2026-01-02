@@ -139,12 +139,10 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
     
+    const isConfirmed = state.failureL2Confirmed || false;
     const { processId, productCharId } = modal;
     
-    console.log('[FailureL2Tab] 저장 시작');
-    console.log('  - processId:', processId);
-    console.log('  - productCharId:', productCharId);
-    console.log('  - selectedValues:', selectedValues);
+    console.log('[FailureL2Tab] 저장 시작', { processId, productCharId, selectedCount: selectedValues.length, isConfirmed });
     
     setState(prev => {
       const newState = JSON.parse(JSON.stringify(prev));
@@ -157,7 +155,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
         // 1. 다른 productCharId의 고장형태는 보존
         const otherModes = currentModes.filter((m: any) => m.productCharId !== productCharId);
         
-        // 2. 선택된 값들 각각 별도 레코드로 생성
+        // 2. ✅ 선택된 값들 각각 별도 레코드로 생성 (확정/수정 모드 모두 동일)
         const newModes = selectedValues.map(val => {
           const existing = currentModes.find((m: any) => 
             m.productCharId === productCharId && m.name === val
@@ -170,8 +168,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
           };
         });
         
-        console.log('  - 보존:', otherModes.length, '새로:', newModes.length);
-        console.log('  - 최종 failureModes:', [...otherModes, ...newModes].length, '개');
+        console.log('[FailureL2Tab] 보존:', otherModes.length, '새로:', newModes.length, '최종:', [...otherModes, ...newModes].length, '개');
         
         return {
           ...proc,
@@ -179,7 +176,6 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
         };
       });
       
-      // ✅ 확정 상태에서 고장형태가 추가되면 dirty 플래그 설정
       console.log('[FailureL2Tab] 상태 업데이트 완료');
       return newState;
     });
@@ -187,16 +183,12 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
     setDirty(true);
     setModal(null);
     
-    // ✅ 즉시 저장 (setTimeout 없이)
-    console.log('[FailureL2Tab] 즉시 저장 시작');
-    if (saveToLocalStorage) {
-      // requestAnimationFrame으로 상태 업데이트 후 저장 보장
-      requestAnimationFrame(() => {
-        saveToLocalStorage();
-        console.log('[FailureL2Tab] 저장 완료');
-      });
-    }
-  }, [modal, setState, setDirty, saveToLocalStorage]);
+    // ✅ 즉시 저장 (requestAnimationFrame 사용)
+    requestAnimationFrame(() => {
+      saveToLocalStorage?.();
+      console.log('[FailureL2Tab] 저장 완료');
+    });
+  }, [modal, state.failureL2Confirmed, setState, setDirty, saveToLocalStorage]);
 
   const handleDelete = useCallback((deletedValues: string[]) => {
     if (!modal) return;
