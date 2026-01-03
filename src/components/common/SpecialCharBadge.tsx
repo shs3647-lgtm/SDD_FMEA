@@ -21,7 +21,7 @@ export const SPECIAL_CHAR_DATA = [
   { symbol: 'HC', meaning: 'High Characteristic (높은 특성)', color: '#fbc02d', icon: '🟡' },
   // 공정특별특성 (Process) - 파란색 계열
   { symbol: 'PC', meaning: 'Process Characteristic (공정 특성)', color: '#1565c0', icon: '🔵' },
-  { symbol: 'IC', meaning: 'Important Characteristic (중요 공정특성)', color: '#1976d2', icon: '🔵' },
+  { symbol: 'IC', meaning: 'Important Characteristic (중요 공정특성)', color: '#f57c00', icon: '🟠' },
   { symbol: 'QC', meaning: 'Quality Characteristic (품질 특성)', color: '#42a5f5', icon: '🔵' },
   // 공통
   { symbol: 'F', meaning: 'Fit (적합)', color: '#388e3c', icon: '🟢' },
