@@ -523,7 +523,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                     )}
                     {fIdx === 0 && (
                       <td rowSpan={typeRowSpan} className={`border border-[#ccc] p-0 align-middle`} style={{ background: getTypeColor(t.name).light }}>
-                        <SelectableCell value={t.name} placeholder="구분" bgColor={getTypeColor(t.name).light} textColor={getTypeColor(t.name).text} textAlign="center" onClick={() => handleCellClick({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
+                        <SelectableCell value={getTypeColor(t.name).short} placeholder="구분" bgColor={getTypeColor(t.name).light} textColor={getTypeColor(t.name).text} textAlign="center" onClick={() => handleCellClick({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
                       </td>
                     )}
                     <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle">
@@ -543,7 +543,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                     )}
                     {fIdx === 0 && rIdx === 0 && (
                       <td rowSpan={typeRowSpan} className={`border border-[#ccc] p-0 align-middle`} style={{ background: getTypeColor(t.name).light }}>
-                        <SelectableCell value={t.name} placeholder="구분" bgColor={getTypeColor(t.name).light} textColor={getTypeColor(t.name).text} textAlign="center" onClick={() => handleCellClick({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
+                        <SelectableCell value={getTypeColor(t.name).short} placeholder="구분" bgColor={getTypeColor(t.name).light} textColor={getTypeColor(t.name).text} textAlign="center" onClick={() => handleCellClick({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
                       </td>
                     )}
                     {rIdx === 0 && (
