@@ -153,8 +153,14 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       }
       seen.add(key);
       
-      // 번호 생성
-      const prefix = scope === 'Your Plant' ? 'Y' : scope === 'Ship to Plant' ? 'S' : scope === 'User' ? 'U' : 'X';
+      // 번호 생성 (Your Plant → Y, Ship to Plant → S, User → U)
+      const getPrefix = (s: string) => {
+        if (s === 'Your Plant' || s === 'YP' || s.startsWith('Y')) return 'Y';
+        if (s === 'Ship to Plant' || s === 'SP' || s.startsWith('S')) return 'S';
+        if (s === 'User' || s.startsWith('U')) return 'U';
+        return 'U'; // 기본값 User
+      };
+      const prefix = getPrefix(scope);
       counters[scope] = (counters[scope] || 0) + 1;
       const feNo = `${prefix}${counters[scope]}`;
       
