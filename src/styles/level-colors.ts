@@ -7,26 +7,41 @@
 
 // ============ 1L 구분(Type) 색상 - Your Plant / Ship to Plant / User ============
 // 약어: YP, SP, User
+// ⭐ 표준 색상 v2.0 (2026-01-03 확정)
 export const L1_TYPE_COLORS: Record<string, { bg: string; light: string; text: string; border: string; short: string }> = {
   'Your Plant': { 
-    bg: '#7b1fa2',      // 보라색
-    light: '#e1bee7', 
-    text: '#4a148c',
-    border: '#7b1fa2',
+    bg: '#1976d2',      // 🔵 파란색 (자사)
+    light: '#bbdefb', 
+    text: '#0d47a1',
+    border: '#1976d2',
+    short: 'YP'
+  },
+  'YP': { 
+    bg: '#1976d2',      // 🔵 파란색 (자사) - 약어
+    light: '#bbdefb', 
+    text: '#0d47a1',
+    border: '#1976d2',
     short: 'YP'
   },
   'Ship to Plant': { 
-    bg: '#f57c00',      // 주황색
+    bg: '#f57c00',      // 🟠 주황색 (고객사)
+    light: '#ffe0b2', 
+    text: '#e65100',
+    border: '#f57c00',
+    short: 'SP'
+  },
+  'SP': { 
+    bg: '#f57c00',      // 🟠 주황색 (고객사) - 약어
     light: '#ffe0b2', 
     text: '#e65100',
     border: '#f57c00',
     short: 'SP'
   },
   'User': { 
-    bg: '#388e3c',      // 녹색
-    light: '#c8e6c9', 
-    text: '#1b5e20',
-    border: '#388e3c',
+    bg: '#7b1fa2',      // 🟣 보라색 (사용자)
+    light: '#e1bee7', 
+    text: '#4a148c',
+    border: '#7b1fa2',
     short: 'User'
   },
 };

@@ -30,11 +30,13 @@ interface TreePanelProps {
   setCollapsedIds?: (ids: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
 }
 
-// 구분별 색상 정의 - 네이비 기반 고급스러운 디자인
+// 구분별 색상 정의 - 표준 색상 v2.0 (2026-01-03 확정)
 const TYPE_COLORS: Record<string, { bg: string; light: string; text: string; border: string }> = {
-  'Your Plant': { bg: '#1565c0', light: '#e3f2fd', text: '#0d47a1', border: '#1976d2' },
-  'Ship to Plant': { bg: '#5c6bc0', light: '#e8eaf6', text: '#3949ab', border: '#5c6bc0' },
-  'User': { bg: '#7986cb', light: '#e8eaf6', text: '#3949ab', border: '#7986cb' },
+  'Your Plant': { bg: '#1976d2', light: '#bbdefb', text: '#0d47a1', border: '#1976d2' },  // 🔵 파란색
+  'YP': { bg: '#1976d2', light: '#bbdefb', text: '#0d47a1', border: '#1976d2' },          // 🔵 파란색 (약어)
+  'Ship to Plant': { bg: '#f57c00', light: '#ffe0b2', text: '#e65100', border: '#f57c00' }, // 🟠 주황색
+  'SP': { bg: '#f57c00', light: '#ffe0b2', text: '#e65100', border: '#f57c00' },          // 🟠 주황색 (약어)
+  'User': { bg: '#7b1fa2', light: '#e1bee7', text: '#4a148c', border: '#7b1fa2' },        // 🟣 보라색
 };
 
 // 고장분석 트리 색상 정의 - 네이비 기반
