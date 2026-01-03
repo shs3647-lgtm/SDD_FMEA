@@ -503,8 +503,8 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
             <th className="bg-[#c8e6c9] border border-[#ccc] p-1.5 text-xs font-semibold">
               메인공정기능<span className={`font-bold ${l2FunctionCount > 0 ? 'text-green-700' : 'text-red-500'}`}>({l2FunctionCount})</span>
             </th>
-            <th className="bg-[#c8e6c9] border border-[#ccc] border-r-[2px] border-r-orange-500 p-1.5 text-xs font-semibold">
-              제품특성<span className={`font-bold ${productCharCount > 0 ? 'text-green-700' : 'text-red-500'}`}>({productCharCount})</span>
+            <th className="bg-[#ffe0b2] border border-[#ccc] border-r-[2px] border-r-orange-500 p-1.5 text-xs font-semibold text-[#e65100]">
+              제품특성<span className={`font-bold ${productCharCount > 0 ? 'text-[#e65100]' : 'text-red-500'}`}>({productCharCount})</span>
             </th>
             <th className="bg-orange-500 text-white border border-[#ccc] border-l-0 p-1.5 text-xs font-semibold text-center whitespace-nowrap">
               특별특성
@@ -522,7 +522,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                 <SelectableCell value="" placeholder="공정기능 선택" bgColor={'#e8f5e9'} onClick={() => {}} />
               </td>
               <td className={cellP0}>
-                <SelectableCell value="" placeholder="제품특성 선택" bgColor={'#e8f5e9'} onClick={() => {}} />
+                <SelectableCell value="" placeholder="제품특성 선택" bgColor={'#fff3e0'} textColor={'#e65100'} onClick={() => {}} />
               </td>
               <td className="border border-[#ccc] p-1 text-center bg-[#fff3e0] text-[#999] text-xs">
                 -
@@ -545,7 +545,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                       <SelectableCell value="" placeholder="공정기능 선택" bgColor={'#e8f5e9'} onClick={() => handleCellClick({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
                     </td>
                     <td className={cellP0}>
-                      <SelectableCell value="" placeholder="제품특성 선택" bgColor={'#e8f5e9'} onClick={() => {}} />
+                      <SelectableCell value="" placeholder="제품특성 선택" bgColor={'#fff3e0'} textColor={'#e65100'} onClick={() => {}} />
                     </td>
                     <td className="border border-[#ccc] p-1 text-center bg-[#fff3e0] text-[#999] text-xs">
                       -
@@ -578,7 +578,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                         />
                       </td>
                       <td className={cellP0}>
-                        <SelectableCell value="" placeholder="제품특성 선택" bgColor={'#c8e6c9'} onClick={() => handleCellClick({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, title: '제품특성 선택', itemCode: 'A4' })} />
+                        <SelectableCell value="" placeholder="제품특성 선택" bgColor={'#ffe0b2'} textColor={'#e65100'} onClick={() => handleCellClick({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, title: '제품특성 선택', itemCode: 'A4' })} />
                       </td>
                       <td className="border border-[#ccc] p-1 text-center bg-[#fff3e0] text-[#999] text-xs">
                         -
@@ -610,7 +610,8 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                       <SelectableCell 
                         value={c.name} 
                         placeholder="제품특성" 
-                        bgColor={'#c8e6c9'} 
+                        bgColor={'#ffe0b2'} 
+                        textColor={'#e65100'}
                         onClick={() => handleCellClick({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, charId: c.id, title: '제품특성 선택', itemCode: 'A4' })} 
                         onDoubleClickEdit={(newValue) => handleInlineEditProductChar(proc.id, f.id, c.id, newValue)}
                       />

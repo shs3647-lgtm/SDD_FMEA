@@ -199,7 +199,7 @@ export default function TreePanel({ state }: TreePanelProps) {
                     ⚙️ {f.name}
                   </div>
                   {(f.productChars || []).map((c: any) => (
-                    <div key={c.id} className={`ml-4 ${tw.textXxs} py-0.5 px-1 flex items-center gap-1 ${c.specialChar ? 'bg-orange-100 rounded font-bold' : ''}`} style={{ color: c.specialChar ? '#e65100' : TREE_FUNCTION.itemText }}>
+                    <div key={c.id} className={`ml-4 ${tw.textXxs} py-0.5 px-1 flex items-center gap-1 rounded ${c.specialChar ? 'bg-orange-200 font-bold' : 'bg-orange-50'}`} style={{ color: '#e65100' }}>
                       📐 {c.name}
                       {c.specialChar && <span className="bg-orange-500 text-white px-1 rounded text-[7px] font-bold">{c.specialChar}</span>}
                     </div>
