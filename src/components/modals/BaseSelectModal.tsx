@@ -1,0 +1,396 @@
+/**
+ * @file BaseSelectModal.tsx
+ * @description 모든 선택 모달의 공통 베이스 컴포넌트
+ * @version 1.0.0
+ * @created 2026-01-03
+ * 
+ * 공통 기능:
+ * - 모달 레이아웃 (fixed, backdrop)
+ * - 헤더 (아이콘, 제목, 닫기)
+ * - 검색 + 전체/해제/적용/삭제 버튼
+ * - 새 항목 추가 (맨 위에 표시)
+ * - 2열 그리드 리스트
+ * - 선택 개수 표시
+ * 
+ * 커스터마이징:
+ * - themeColor: 테마 색상 (orange, blue, green, red 등)
+ * - icon: 헤더 아이콘
+ * - title: 모달 제목
+ * - items: 데이터 항목
+ * - renderParentInfo: 상위항목 렌더링 (옵션)
+ * - extraColumns: 추가 컬럼 렌더링 (그룹 등)
+ */
+
+'use client';
+
+import React, { useState, useMemo, useCallback } from 'react';
+
+// ============ 타입 정의 ============
+export interface BaseItem {
+  id: string;
+  value: string;
+  category: string;
+  group?: string;
+  [key: string]: any;
+}
+
+export interface ThemeColors {
+  primary: string;      // 헤더 배경 (예: from-orange-600 to-orange-700)
+  accent: string;       // 강조색 (예: orange-500)
+  light: string;        // 연한 배경 (예: orange-50)
+  ring: string;         // 포커스 링 (예: ring-orange-500)
+  selectedBg: string;   // 선택된 항목 배경 (예: bg-orange-50)
+  selectedBorder: string; // 선택된 항목 테두리 (예: border-orange-400)
+  checkBg: string;      // 체크박스 배경 (예: bg-orange-500)
+}
+
+// 사전 정의된 테마
+export const THEMES: Record<string, ThemeColors> = {
+  orange: {
+    primary: 'from-orange-600 to-orange-700',
+    accent: 'orange-500',
+    light: 'orange-50',
+    ring: 'ring-orange-500',
+    selectedBg: 'bg-orange-50',
+    selectedBorder: 'border-orange-400',
+    checkBg: 'bg-orange-500',
+  },
+  blue: {
+    primary: 'from-blue-600 to-blue-700',
+    accent: 'blue-500',
+    light: 'blue-50',
+    ring: 'ring-blue-500',
+    selectedBg: 'bg-blue-50',
+    selectedBorder: 'border-blue-400',
+    checkBg: 'bg-blue-500',
+  },
+  green: {
+    primary: 'from-green-600 to-green-700',
+    accent: 'green-500',
+    light: 'green-50',
+    ring: 'ring-green-500',
+    selectedBg: 'bg-green-50',
+    selectedBorder: 'border-green-400',
+    checkBg: 'bg-green-500',
+  },
+  red: {
+    primary: 'from-red-600 to-red-700',
+    accent: 'red-500',
+    light: 'red-50',
+    ring: 'ring-red-500',
+    selectedBg: 'bg-red-50',
+    selectedBorder: 'border-red-400',
+    checkBg: 'bg-red-500',
+  },
+  indigo: {
+    primary: 'from-indigo-600 to-indigo-700',
+    accent: 'indigo-500',
+    light: 'indigo-50',
+    ring: 'ring-indigo-500',
+    selectedBg: 'bg-indigo-50',
+    selectedBorder: 'border-indigo-400',
+    checkBg: 'bg-indigo-500',
+  },
+};
+
+// 카테고리 색상
+export const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
+  '기본': { bg: '#e8f5e9', text: '#2e7d32' },
+  '추가': { bg: '#fff3e0', text: '#e65100' },
+  '워크시트': { bg: '#e3f2fd', text: '#1565c0' },
+};
+
+export interface BaseSelectModalProps {
+  // 필수
+  isOpen: boolean;
+  onClose: () => void;
+  onApply: (selectedItems: BaseItem[]) => void;
+  items: BaseItem[];
+  setItems: React.Dispatch<React.SetStateAction<BaseItem[]>>;
+  selectedIds: Set<string>;
+  setSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+  
+  // 테마
+  theme?: keyof typeof THEMES | ThemeColors;
+  icon?: string;
+  title: string;
+  
+  // 옵션
+  searchPlaceholder?: string;
+  addPlaceholder?: string;
+  subTitle?: string;
+  showDeleteAll?: boolean;
+  onDeleteAll?: () => void;
+  minRows?: number;
+  
+  // 상위항목 렌더링 (옵션)
+  renderParentInfo?: () => React.ReactNode;
+  
+  // 추가 컬럼 렌더링 (그룹 등)
+  renderExtraColumns?: (item: BaseItem) => React.ReactNode;
+  
+  // 현재 선택된 항목 (초록색 표시용)
+  currentValues?: string[];
+}
+
+export default function BaseSelectModal({
+  isOpen,
+  onClose,
+  onApply,
+  items,
+  setItems,
+  selectedIds,
+  setSelectedIds,
+  theme = 'orange',
+  icon = '📋',
+  title,
+  searchPlaceholder = '🔍 검색...',
+  addPlaceholder = '새 항목 입력...',
+  subTitle,
+  showDeleteAll = true,
+  onDeleteAll,
+  minRows = 10,
+  renderParentInfo,
+  renderExtraColumns,
+  currentValues = [],
+}: BaseSelectModalProps) {
+  const [search, setSearch] = useState('');
+  const [newValue, setNewValue] = useState('');
+  
+  // 테마 색상 결정
+  const colors: ThemeColors = typeof theme === 'string' ? THEMES[theme] : theme;
+  
+  // 필터링된 아이템
+  const filteredItems = useMemo(() => {
+    if (!search.trim()) return items;
+    const q = search.toLowerCase();
+    return items.filter(i => i.value.toLowerCase().includes(q));
+  }, [items, search]);
+  
+  // 선택 토글
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) newSet.delete(id);
+      else newSet.add(id);
+      return newSet;
+    });
+  }, [setSelectedIds]);
+  
+  // 전체 선택/해제
+  const selectAll = () => setSelectedIds(new Set(filteredItems.map(i => i.id)));
+  const deselectAll = () => setSelectedIds(new Set());
+  
+  // 적용
+  const handleApply = () => {
+    const selected = items.filter(i => selectedIds.has(i.id));
+    onApply(selected);
+    onClose();
+  };
+  
+  // 삭제
+  const handleDeleteAll = () => {
+    if (!confirm('모든 항목을 삭제하시겠습니까?')) return;
+    onDeleteAll?.();
+    onClose();
+  };
+  
+  // 새 항목 추가 (맨 위에)
+  const handleAddSave = () => {
+    if (!newValue.trim()) return;
+    const trimmed = newValue.trim();
+    
+    // 중복 체크
+    if (items.some(i => i.value === trimmed)) {
+      alert('이미 존재하는 항목입니다.');
+      return;
+    }
+    
+    const newItem: BaseItem = { 
+      id: `new_${Date.now()}`, 
+      value: trimmed, 
+      category: '추가' 
+    };
+    
+    setItems(prev => [newItem, ...prev]); // 맨 위에 추가
+    setSelectedIds(prev => new Set([...prev, newItem.id]));
+    setNewValue('');
+  };
+  
+  if (!isOpen) return null;
+  
+  return (
+    <div 
+      className="fixed inset-0 z-[9999] flex items-start justify-end bg-black/40 pt-36 pr-5" 
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-lg shadow-2xl w-[500px] flex flex-col overflow-hidden max-h-[calc(100vh-160px)]" 
+        onClick={e => e.stopPropagation()}
+      >
+        {/* ===== 헤더 ===== */}
+        <div className={`flex items-center justify-between px-3 py-2 bg-gradient-to-r ${colors.primary} text-white`}>
+          <div className="flex items-center gap-2">
+            <span>{icon}</span>
+            <h2 className="text-xs font-bold">{title}</h2>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="text-[10px] px-2 py-0.5 bg-white/20 hover:bg-white/30 rounded"
+          >
+            닫기
+          </button>
+        </div>
+        
+        {/* ===== 상위항목 (옵션) ===== */}
+        {renderParentInfo && (
+          <div className={`px-3 py-2 border-b bg-gradient-to-r from-${colors.light} to-white`}>
+            {renderParentInfo()}
+          </div>
+        )}
+        
+        {/* ===== 하위항목 라벨 (옵션) ===== */}
+        {subTitle && (
+          <div className={`px-3 py-1 border-b bg-${colors.light}`}>
+            <span className={`text-[10px] font-bold text-${colors.accent}`}>▼ {subTitle}</span>
+          </div>
+        )}
+        
+        {/* ===== 검색 + 버튼 ===== */}
+        <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-2">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={searchPlaceholder}
+            className={`flex-1 px-2 py-1 text-[10px] border rounded focus:outline-none focus:ring-1 focus:${colors.ring}`}
+          />
+          <button onClick={selectAll} className="px-2 py-1 text-[10px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600">전체</button>
+          <button onClick={deselectAll} className="px-2 py-1 text-[10px] font-bold bg-gray-300 text-gray-700 rounded hover:bg-gray-400">해제</button>
+          <button onClick={handleApply} className="px-2 py-1 text-[10px] font-bold bg-green-600 text-white rounded hover:bg-green-700">적용</button>
+          {showDeleteAll && (
+            <button onClick={handleDeleteAll} className="px-2 py-1 text-[10px] font-bold bg-red-500 text-white rounded hover:bg-red-600">삭제</button>
+          )}
+        </div>
+        
+        {/* ===== 새 항목 입력 ===== */}
+        <div className={`px-3 py-1.5 border-b bg-${colors.light} flex items-center gap-1`}>
+          <span className={`text-[10px] font-bold text-${colors.accent}`}>+</span>
+          <input
+            type="text"
+            value={newValue}
+            onChange={(e) => setNewValue(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddSave()}
+            placeholder={addPlaceholder}
+            className={`flex-1 px-2 py-0.5 text-[10px] border rounded focus:outline-none focus:ring-1 focus:${colors.ring}`}
+          />
+          <button 
+            onClick={handleAddSave} 
+            disabled={!newValue.trim()} 
+            className={`px-2 py-0.5 text-[10px] font-bold bg-${colors.accent} text-white rounded hover:opacity-90 disabled:opacity-50`}
+          >
+            저장
+          </button>
+        </div>
+        
+        {/* ===== 리스트 ===== */}
+        <div className="overflow-auto p-2 h-[280px] min-h-[280px]">
+          <div className="grid grid-cols-2 gap-1">
+            {filteredItems.map(item => {
+              const isSelected = selectedIds.has(item.id);
+              const isCurrent = currentValues.includes(item.value);
+              const catColor = CATEGORY_COLORS[item.category] || CATEGORY_COLORS['기본'];
+              
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => toggleSelect(item.id)}
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer transition-all ${
+                    isSelected 
+                      ? (isCurrent ? 'bg-green-50 border-green-400' : `${colors.selectedBg} ${colors.selectedBorder}`) 
+                      : `bg-white border-gray-200 hover:${colors.selectedBorder}`
+                  }`}
+                >
+                  {/* 체크박스 */}
+                  <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                    isSelected 
+                      ? (isCurrent ? 'bg-green-500 border-green-500' : `${colors.checkBg} border-${colors.accent}`) 
+                      : 'bg-white border-gray-300'
+                  }`}>
+                    {isSelected && <span className="text-white text-[8px] font-bold">✓</span>}
+                  </div>
+                  
+                  {/* 카테고리 */}
+                  <span 
+                    className="text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0" 
+                    style={{ background: catColor.bg, color: catColor.text }}
+                  >
+                    {item.category}
+                  </span>
+                  
+                  {/* 추가 컬럼 */}
+                  {renderExtraColumns?.(item)}
+                  
+                  {/* 값 */}
+                  <span className={`flex-1 text-[10px] truncate ${isSelected ? 'font-medium' : ''}`}>
+                    {item.value}
+                  </span>
+                  
+                  {/* 선택 해제 버튼 */}
+                  {isSelected && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); toggleSelect(item.id); }} 
+                      className="text-red-400 hover:text-red-600 text-xs shrink-0"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            
+            {/* 빈 행 채우기 */}
+            {Array.from({ length: Math.max(0, minRows - filteredItems.length) }).map((_, idx) => (
+              <div key={`empty-${idx}`} className="flex items-center gap-2 px-2 py-1.5 rounded border border-gray-100 bg-gray-50/50">
+                <div className="w-4 h-4 rounded border border-gray-200 bg-white shrink-0" />
+                <span className="text-[9px] text-gray-300">--</span>
+                <span className="flex-1 text-[10px] text-gray-300">-</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* ===== 푸터 ===== */}
+        <div className="px-3 py-2 border-t bg-gray-50 flex items-center justify-center">
+          <span className={`text-xs font-bold text-${colors.accent}`}>✓ {selectedIds.size}개 선택</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============ 훅: 모달 상태 관리 ============
+export function useBaseModalState<T extends BaseItem>(defaultItems: T[] = []) {
+  const [items, setItems] = useState<T[]>(defaultItems);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  
+  const reset = useCallback((newItems: T[], selected: string[] = []) => {
+    setItems(newItems);
+    setSelectedIds(new Set(selected));
+  }, []);
+  
+  const addItem = useCallback((item: T) => {
+    setItems(prev => [item, ...prev]); // 맨 위에 추가
+    setSelectedIds(prev => new Set([...prev, item.id]));
+  }, []);
+  
+  return {
+    items,
+    setItems,
+    selectedIds,
+    setSelectedIds,
+    reset,
+    addItem,
+  };
+}
+
