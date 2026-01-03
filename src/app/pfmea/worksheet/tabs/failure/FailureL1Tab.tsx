@@ -476,7 +476,15 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
       )}
 
       <table className="w-full border-collapse table-fixed">
-        <colgroup><col  /><col  /><col  /><col  /><col /><col  /></colgroup>
+        {/* 컬럼: 완제품공정명 120px, 구분 50px, 요구사항 150px, FE번호 40px, 고장영향 auto(넓게), S 30px */}
+        <colgroup>
+          <col className="w-[120px]" />
+          <col className="w-[50px]" />
+          <col className="w-[150px]" />
+          <col className="w-[40px]" />
+          <col />
+          <col className="w-[30px]" />
+        </colgroup>
         
         {/* 3행 헤더 구조 - 하단 2px 검은색 구분선 */}
         <thead className="border-b-2 border-black">
@@ -590,13 +598,13 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                       padding: '2px 4px', 
                       textAlign: 'center', 
                       background: getL1TypeColor(row.typeName).light, 
-                      fontWeight: FONT_WEIGHTS.semibold, 
+                      fontWeight: 700, 
                       verticalAlign: 'middle',
-                      fontSize: FONT_SIZES.cell,
+                      fontSize: '11px',
                       color: getL1TypeColor(row.typeName).text
                     }}
                   >
-                    {row.typeName}
+                    {getL1TypeColor(row.typeName).short || row.typeName}
                   </td>
                 )}
                 
