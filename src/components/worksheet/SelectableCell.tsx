@@ -120,7 +120,7 @@ export default function SelectableCell({
 
   return (
     <div
-      className="cursor-pointer hover:bg-black/5 w-full h-full flex items-center p-1"
+      className="cursor-pointer hover:bg-black/5 w-full h-full flex items-start p-1"
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       style={{ 
@@ -131,14 +131,17 @@ export default function SelectableCell({
         fontWeight: isMissing ? 600 : (textColor ? 700 : 'inherit'),
         fontStyle: isMissing ? 'italic' : 'normal',
         justifyContent: textAlign === 'center' ? 'center' : textAlign === 'right' ? 'flex-end' : 'flex-start',
-        background: isMissing ? `repeating-linear-gradient(45deg, #fff3e0, #fff3e0 4px, #fff 4px, #fff 8px)` : 'transparent'
+        background: isMissing ? `repeating-linear-gradient(45deg, #fff3e0, #fff3e0 4px, #fff 4px, #fff 8px)` : 'transparent',
+        wordBreak: 'break-word',
+        whiteSpace: 'normal',
+        lineHeight: '1.4',
       }}
       title="클릭: 모달 선택 | 더블클릭: 직접 편집"
     >
       {value ? (
-        isMissing ? <span>🔍 {value}</span> : value
+        isMissing ? <span style={{ wordBreak: 'break-word' }}>🔍 {value}</span> : <span style={{ wordBreak: 'break-word' }}>{value}</span>
       ) : (
-        <span>🔍 {placeholder}</span>
+        <span style={{ wordBreak: 'break-word' }}>🔍 {placeholder}</span>
       )}
     </div>
   );

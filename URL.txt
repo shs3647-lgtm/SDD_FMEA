@@ -1,4 +1,4 @@
-http://localhost:3000/pfmea/worksheet?v=1.0.52-20260103-zebra-fix
+http://localhost:3000/pfmea/worksheet?v=1.0.53-20260103-column-optimize
 
 === VERSION INFO ===
 Version: 1.0.34
