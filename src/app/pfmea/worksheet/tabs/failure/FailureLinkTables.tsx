@@ -192,9 +192,8 @@ export default function FailureLinkTables({
                   }
                   
                   let statusIcon = '';
-                  if (isLinked) {
-                    statusIcon = ` (FE:${counts.feCount} FC:${counts.fcCount})`;
-                  } else if (counts.feCount > 0 || counts.fcCount > 0) {
+                  // FE:N, FC:N 표시 제거 - 누락 경고만 유지
+                  if (!isLinked && (counts.feCount > 0 || counts.fcCount > 0)) {
                     const missing = [];
                     if (counts.feCount === 0) missing.push('FE');
                     if (counts.fcCount === 0) missing.push('FC');
