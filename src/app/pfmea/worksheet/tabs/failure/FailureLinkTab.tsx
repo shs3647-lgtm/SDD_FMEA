@@ -764,7 +764,6 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
           </button>
           
           <div className="flex-1 flex gap-1 min-w-0">
-            <div style={fmeaNameStyle}>{state.l1?.name || 'FMEA'}</div>
             <button onClick={() => setViewMode('result')} style={resultButtonStyle(viewMode === 'result')}>
               분석결과
             </button>
@@ -797,8 +796,19 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
               연결확정
             </button>
             
-            {/* 수정 버튼 (확정 상태에서만 표시) */}
-            {isConfirmed && (
+            {/* 전체 확정/수정 버튼 */}
+            {!isConfirmed ? (
+              <button 
+                onClick={handleConfirmAll} 
+                disabled={savedLinks.length === 0}
+                style={actionButtonStyle({ 
+                  bg: '#4caf50', color: '#fff', 
+                  opacity: savedLinks.length === 0 ? 0.5 : 1
+                })}
+              >
+                ✅ 전체확정
+              </button>
+            ) : (
               <button 
                 onClick={handleEditMode}
                 style={actionButtonStyle({ 
