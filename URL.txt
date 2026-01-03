@@ -1,18 +1,20 @@
-http://localhost:3000?v=2.1.0-20260103-db-schema-docs
+http://localhost:3000/pfmea/worksheet?id=PFM25-310&v=2.2.0-20260103-requirement-orange
 
 === VERSION INFO ===
-Version: 2.1.0
+Version: 2.2.0
 Last Updated: 2026-01-03
 Changes: 
-  - DB 스키마 문서화 완료
-  - docs/DB_SCHEMA.md (텍스트 스키마)
-  - docs/DB_SCHEMA_ERD.md (Mermaid 다이어그램)
-  - docs/DB_SCHEMA_ERD_PURE.md (Mermaid Live Editor용)
-  - docs/DB_SAMPLE_RECORDS.md (16개 테이블 샘플 레코드)
-  - Welcome Board를 루트 URL로 설정
-  - 개발 히스토리 문서 생성
-Status: DB 문서화 완료
-Cache Busting: v=2.1.0-20260103-db-schema-docs
+  - 요구사항 주황색 표준화 (트리뷰/입력셀)
+  - YP/SP/User 색상 표준화 (옵션2)
+  - 다중선택 기능 수정 완료 (1L/2L)
+  - FMEA ID 자동 순차 부여 기능
+Status: 색상 표준화 완료
+Cache Busting: v=2.2.0-20260103-requirement-orange
+
+=== LAST COMMIT ===
+Commit: 58223ca
+Tag: codefreeze-20260103-requirement-orange
+Summary: 요구사항 주황색 표준화 (트리뷰/입력셀)
 
 === 모듈 구조 ===
 welcomeboard/

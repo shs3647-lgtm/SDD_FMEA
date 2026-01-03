@@ -291,11 +291,8 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
             if (f.id !== id) return f;
             const currentReqs = f.requirements || [];
             
-            // ✅ reqId가 있으면 해당 요구사항만 수정
-            if (reqId) {
-              if (selectedValues.length === 0) {
-                return { ...f, requirements: currentReqs.filter(r => r.id !== reqId) };
-              }
+            // ✅ reqId가 있고 단일 선택(1개)인 경우만 해당 요구사항 수정
+            if (reqId && selectedValues.length === 1) {
               return {
                 ...f,
                 requirements: currentReqs.map(r => 
@@ -304,7 +301,12 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
               };
             }
             
-            // ✅ 다중 선택: 각각 별도 행으로 추가
+            // ✅ reqId가 있고 선택값이 없으면 삭제
+            if (reqId && selectedValues.length === 0) {
+              return { ...f, requirements: currentReqs.filter(r => r.id !== reqId) };
+            }
+            
+            // ✅ 다중 선택: 각각 별도 행으로 추가 (reqId가 있어도 2개 이상 선택 시)
             const updatedReqs = [...currentReqs];
             const existingNames = new Set(currentReqs.filter(r => r.name && !r.name.includes('클릭하여')).map(r => r.name));
             
