@@ -372,7 +372,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
         </colgroup>
         
         {/* 헤더 - 하단 2px 검은색 구분선 */}
-        <thead className="border-b-2 border-black">
+        <thead className="sticky top-0 z-20 bg-white border-b-2 border-black">
           {/* 1행: 단계 구분 + 확정/수정 버튼 (표준화) */}
           <tr>
             <th className="bg-[#1976d2] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center">

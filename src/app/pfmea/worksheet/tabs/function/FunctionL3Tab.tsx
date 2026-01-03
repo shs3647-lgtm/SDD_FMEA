@@ -469,7 +469,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
         </colgroup>
         
         {/* 3행 헤더 구조 - 하단 2px 검은색 구분선 */}
-        <thead className="border-b-2 border-black">
+        <thead className="sticky top-0 z-20 bg-white border-b-2 border-black">
           {/* 1행: 단계 구분 */}
           <tr>
             <th colSpan={3} className="bg-[#1976d2] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center">

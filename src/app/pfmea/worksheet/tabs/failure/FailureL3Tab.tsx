@@ -386,7 +386,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
         </colgroup>
         
         {/* 3행 헤더 구조 - 하단 2px 검은색 구분선 */}
-        <thead className="border-b-2 border-black">
+        <thead className="sticky top-0 z-20 bg-white border-b-2 border-black">
           {/* 1행: 단계 구분 */}
           <tr>
             <th colSpan={2} className="bg-[#1976d2] text-white border border-[#ccc] px-1.5 py-1 text-xs font-extrabold text-center whitespace-nowrap">
