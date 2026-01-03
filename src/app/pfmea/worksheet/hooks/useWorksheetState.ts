@@ -221,15 +221,37 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       setAtomicDB(newAtomicDB);
       
       // 로그
+      const failureCausesCount = currentState.l2.flatMap((p: any) => p.failureCauses || []).length;
       console.log('[저장] 워크시트 데이터 저장 완료:', targetId, '탭:', currentState.tab);
       console.log('[저장] 고장영향(failureScopes):', failureScopesCount, '개');
+      console.log('[저장] 고장원인(failureCauses):', failureCausesCount, '개');
       console.log('[저장] 원자성 DB:', {
         l2Structs: newAtomicDB.l2Structures.length,
         l3Structs: newAtomicDB.l3Structures.length,
         failureEffects: newAtomicDB.failureEffects.length,
         failureModes: newAtomicDB.failureModes.length,
+        failureCauses: newAtomicDB.failureCauses.length,
         failureLinks: newAtomicDB.failureLinks.length,
       });
+      
+      // ✅ 저장 검증: failureCauses가 제대로 저장되었는지 확인
+      const savedData = localStorage.getItem(`pfmea_worksheet_${targetId}`);
+      if (savedData) {
+        try {
+          const parsed = JSON.parse(savedData);
+          const savedCausesCount = parsed.l2?.flatMap((p: any) => p.failureCauses || []).length || 0;
+          if (savedCausesCount !== failureCausesCount) {
+            console.error('[저장 검증 실패] failureCauses 개수 불일치:', {
+              저장된개수: savedCausesCount,
+              현재개수: failureCausesCount
+            });
+          } else {
+            console.log('[저장 검증 성공] failureCauses 개수 일치:', failureCausesCount, '개');
+          }
+        } catch (e) {
+          console.error('[저장 검증] 파싱 오류:', e);
+        }
+      }
       
       setDirty(false);
       setLastSaved(new Date().toLocaleTimeString('ko-KR'));
@@ -277,17 +299,67 @@ export function useWorksheetState(): UseWorksheetStateReturn {
   // ✅ 고장원인(failureCauses) 변경 시 즉시 저장 (3L 고장분석 데이터 손실 방지)
   // ⚠️ 중요: failureCauses는 proc.failureCauses에 저장됨 (we.failureCauses가 아님!)
   const failureCausesRef = useRef<string>('');
+  const failureCausesSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
   useEffect(() => {
     // proc.failureCauses를 확인 (we.failureCauses가 아님!)
     const allCauses = state.l2.flatMap((p: any) => p.failureCauses || []);
     const causesKey = JSON.stringify(allCauses);
     
-    if (failureCausesRef.current && causesKey !== failureCausesRef.current) {
-      console.log('[자동저장] failureCauses 변경 감지:', allCauses.length, '개');
-      saveToLocalStorage();
+    // 초기화 시에도 저장 (첫 로드 후)
+    const isInitial = failureCausesRef.current === '';
+    
+    if (isInitial) {
+      failureCausesRef.current = causesKey;
+      console.log('[자동저장] failureCauses 초기화:', allCauses.length, '개');
+      return;
     }
+    
+    if (causesKey !== failureCausesRef.current) {
+      console.log('[자동저장] failureCauses 변경 감지:', allCauses.length, '개');
+      
+      // 기존 타이머 취소
+      if (failureCausesSaveTimeoutRef.current) {
+        clearTimeout(failureCausesSaveTimeoutRef.current);
+      }
+      
+      // 디바운싱: 300ms 후 저장 (빠른 연속 변경 방지)
+      failureCausesSaveTimeoutRef.current = setTimeout(() => {
+        saveToLocalStorage();
+        console.log('[자동저장] failureCauses 저장 완료');
+        
+        // 저장 후 검증
+        requestAnimationFrame(() => {
+          const targetId = selectedFmeaId || currentFmea?.id;
+          if (targetId) {
+            const savedKey = `pfmea_worksheet_${targetId}`;
+            const saved = localStorage.getItem(savedKey);
+            if (saved) {
+              try {
+                const parsed = JSON.parse(saved);
+                const savedCauses = parsed.l2?.flatMap((p: any) => p.failureCauses || []) || [];
+                console.log('[자동저장] failureCauses 저장 검증:', {
+                  저장된개수: savedCauses.length,
+                  현재개수: allCauses.length,
+                  일치: savedCauses.length === allCauses.length
+                });
+              } catch (e) {
+                console.error('[자동저장] failureCauses 저장 검증 오류:', e);
+              }
+            }
+          }
+        });
+      }, 300);
+    }
+    
     failureCausesRef.current = causesKey;
-  }, [state.l2, saveToLocalStorage]);
+    
+    return () => {
+      if (failureCausesSaveTimeoutRef.current) {
+        clearTimeout(failureCausesSaveTimeoutRef.current);
+      }
+    };
+  }, [state.l2, saveToLocalStorage, selectedFmeaId, currentFmea?.id]);
 
   // ✅ riskData 변경 시 별도 키로 즉시 저장 (확실한 저장)
   const riskDataRef = useRef<any>({});
@@ -370,6 +442,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         l2Structures: loadedDB.l2Structures.length,
         failureEffects: loadedDB.failureEffects.length,
         failureModes: loadedDB.failureModes.length,
+        failureCauses: loadedDB.failureCauses.length,
       });
       setAtomicDB(loadedDB);
       
@@ -392,13 +465,25 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         }
       }
       
+      const legacyFailureCausesCount = legacy.l2.flatMap((p: any) => p.failureCauses || []).length;
       console.log('[워크시트] 역변환된 레거시 데이터:', {
         l1Name: legacy.l1.name,
         failureScopesCount: (legacy.l1 as any).failureScopes?.length || 0,
         l2Count: legacy.l2.length,
+        failureCausesCount: legacyFailureCausesCount,
         riskDataCount: Object.keys(legacyRiskData).length,
         tab: legacyTab,
       });
+      
+      // ✅ 로드 검증: 원자성 DB의 failureCauses와 레거시 변환 결과 비교
+      if (loadedDB.failureCauses.length !== legacyFailureCausesCount) {
+        console.warn('[로드 검증] failureCauses 개수 불일치:', {
+          원자성DB개수: loadedDB.failureCauses.length,
+          레거시변환개수: legacyFailureCausesCount
+        });
+      } else {
+        console.log('[로드 검증 성공] failureCauses 개수 일치:', legacyFailureCausesCount, '개');
+      }
       
       // ✅ 기존 state의 tab/riskData가 있으면 유지 (초기화 함수에서 이미 설정됨)
       setState(prev => {
