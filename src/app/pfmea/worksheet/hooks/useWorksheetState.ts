@@ -449,10 +449,12 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       // 원자성 DB를 레거시 형식으로 변환하여 state에 적용
       const legacy = convertToLegacyFormat(loadedDB);
       
-      // ✅ 레거시 데이터에서 tab과 riskData 가져오기 (원자성 DB에는 저장 안됨)
+      // ✅ 레거시 원본 데이터에서 직접 추출 (근본적인 해결책)
       const legacyKeys = [`pfmea_worksheet_${selectedFmeaId}`, `fmea-worksheet-${selectedFmeaId}`];
       let legacyTab = 'structure';
       let legacyRiskData: { [key: string]: number | string } = {};
+      let legacyOriginalData: any = null;
+      
       for (const key of legacyKeys) {
         const saved = localStorage.getItem(key);
         if (saved) {
@@ -460,34 +462,14 @@ export function useWorksheetState(): UseWorksheetStateReturn {
             const parsed = JSON.parse(saved);
             legacyTab = parsed.tab || 'structure';
             legacyRiskData = parsed.riskData || {};
+            legacyOriginalData = parsed; // 원본 데이터 보관
             break;
           } catch (e) { /* ignore */ }
         }
       }
       
-      const legacyFailureCausesCount = legacy.l2.flatMap((p: any) => p.failureCauses || []).length;
-      console.log('[워크시트] 역변환된 레거시 데이터:', {
-        l1Name: legacy.l1.name,
-        failureScopesCount: (legacy.l1 as any).failureScopes?.length || 0,
-        l2Count: legacy.l2.length,
-        failureCausesCount: legacyFailureCausesCount,
-        riskDataCount: Object.keys(legacyRiskData).length,
-        tab: legacyTab,
-      });
-      
-      // ✅ 로드 검증: 원자성 DB의 failureCauses와 레거시 변환 결과 비교
-      if (loadedDB.failureCauses.length !== legacyFailureCausesCount) {
-        console.warn('[로드 검증] failureCauses 개수 불일치:', {
-          원자성DB개수: loadedDB.failureCauses.length,
-          레거시변환개수: legacyFailureCausesCount
-        });
-      } else {
-        console.log('[로드 검증 성공] failureCauses 개수 일치:', legacyFailureCausesCount, '개');
-      }
-      
-      // ========== 트리뷰/테이블/원자성DB 일관성 검증 및 복구 ==========
-      // 1. 트리뷰 데이터 추출 (state.l2의 proc.failureCauses - 화면에 표시되는 것)
-      const treeViewCauses = legacy.l2.flatMap((proc: any) => {
+      // ========== 근본적인 해결: 레거시 원본 데이터에서 failureCauses 추출 ==========
+      const legacyOriginalCauses = legacyOriginalData?.l2?.flatMap((proc: any) => {
         return (proc.failureCauses || []).map((fc: any) => ({
           procId: proc.id,
           procName: proc.name || proc.no,
@@ -496,7 +478,33 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           processCharId: fc.processCharId || '',
           occurrence: fc.occurrence
         }));
+      }) || [];
+      
+      const legacyFailureCausesCount = legacy.l2.flatMap((p: any) => p.failureCauses || []).length;
+      console.log('[워크시트] 역변환된 레거시 데이터:', {
+        l1Name: legacy.l1.name,
+        failureScopesCount: (legacy.l1 as any).failureScopes?.length || 0,
+        l2Count: legacy.l2.length,
+        failureCausesCount: legacyFailureCausesCount,
+        레거시원본개수: legacyOriginalCauses.length,
+        riskDataCount: Object.keys(legacyRiskData).length,
+        tab: legacyTab,
       });
+      
+      // ✅ 로드 검증: 원자성 DB vs 레거시 원본 데이터 비교
+      if (loadedDB.failureCauses.length !== legacyOriginalCauses.length) {
+        console.warn('[로드 검증] failureCauses 개수 불일치:', {
+          원자성DB개수: loadedDB.failureCauses.length,
+          레거시원본개수: legacyOriginalCauses.length,
+          레거시변환개수: legacyFailureCausesCount
+        });
+      } else {
+        console.log('[로드 검증 성공] failureCauses 개수 일치:', legacyOriginalCauses.length, '개');
+      }
+      
+      // ========== 트리뷰/테이블/원자성DB 일관성 검증 및 복구 ==========
+      // 1. 트리뷰 데이터 = 레거시 원본 데이터의 failureCauses (근본적인 해결)
+      const treeViewCauses = legacyOriginalCauses;
       
       // 2. 테이블 입력 데이터 (동일 - state.l2의 proc.failureCauses)
       const tableInputCauses = treeViewCauses; // 동일한 소스
@@ -600,6 +608,24 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         console.log('✅ [일관성 검증 성공] 모든 데이터 소스가 일치합니다.');
       }
       console.log('═══════════════════════════════════════════════════════');
+      
+      // ✅ 근본적인 해결: 레거시 원본 데이터의 failureCauses를 finalLegacy에 반영
+      if (legacyOriginalData && legacyOriginalData.l2 && legacyOriginalCauses.length > 0) {
+        console.log('🔧 [근본 해결] 레거시 원본 데이터의 failureCauses를 finalLegacy에 반영');
+        // 각 공정별로 failureCauses 복사
+        finalLegacy.l2 = finalLegacy.l2.map((proc: any) => {
+          const originalProc = legacyOriginalData.l2.find((p: any) => p.id === proc.id);
+          if (originalProc && originalProc.failureCauses) {
+            return {
+              ...proc,
+              failureCauses: originalProc.failureCauses // 레거시 원본 데이터의 failureCauses 사용
+            };
+          }
+          return proc;
+        });
+        console.log('✅ [근본 해결] 레거시 원본 데이터의 failureCauses 반영 완료:', 
+          finalLegacy.l2.flatMap((p: any) => p.failureCauses || []).length, '개');
+      }
       
       // ✅ 기존 state의 tab/riskData가 있으면 유지 (초기화 함수에서 이미 설정됨)
       setState(prev => {
@@ -792,8 +818,8 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           saveWorksheetDB(atomicData);
           
           // ========== 레거시 마이그레이션 후 일관성 검증 및 복구 ==========
-          // 트리뷰 데이터 추출 (migratedL2의 proc.failureCauses)
-          const treeViewCauses = migratedL2.flatMap((proc: any) => {
+          // ✅ 근본적인 해결: 원본 데이터(parsed.l2)에서 직접 추출
+          const originalCauses = parsed.l2?.flatMap((proc: any) => {
             return (proc.failureCauses || []).map((fc: any) => ({
               procId: proc.id,
               procName: proc.name || proc.no,
@@ -802,7 +828,10 @@ export function useWorksheetState(): UseWorksheetStateReturn {
               processCharId: fc.processCharId || '',
               occurrence: fc.occurrence
             }));
-          });
+          }) || [];
+          
+          // 트리뷰 데이터 = 원본 데이터의 failureCauses
+          const treeViewCauses = originalCauses;
           
           // 원자성 DB 데이터 추출
           const atomicDBCauses = atomicData.failureCauses.map(fc => {
@@ -861,11 +890,27 @@ export function useWorksheetState(): UseWorksheetStateReturn {
             console.log('✅ [복구 완료] 원자성 DB가 트리뷰 데이터로 복구되었습니다.');
             console.log('   - 복구된 failureCauses:', recoveredCauses.length, '개');
             
-            // 복구된 원자성 DB를 레거시 형식으로 변환하여 migratedL2 업데이트
-            const recoveredLegacy = convertToLegacyFormat(atomicData);
-            migratedL2 = recoveredLegacy.l2 as any;
-            
-            console.log('✅ [복구 완료] migratedL2도 트리뷰 데이터로 업데이트되었습니다.');
+            // ✅ 근본적인 해결: 원본 데이터의 failureCauses를 migratedL2에 직접 반영
+            if (originalCauses.length > 0) {
+              console.log('🔧 [근본 해결] 원본 데이터의 failureCauses를 migratedL2에 직접 반영');
+              migratedL2 = migratedL2.map((proc: any) => {
+                const originalProc = parsed.l2?.find((p: any) => p.id === proc.id);
+                if (originalProc && originalProc.failureCauses) {
+                  return {
+                    ...proc,
+                    failureCauses: originalProc.failureCauses // 원본 데이터의 failureCauses 사용
+                  };
+                }
+                return proc;
+              });
+              console.log('✅ [근본 해결] migratedL2에 원본 failureCauses 반영 완료:', 
+                migratedL2.flatMap((p: any) => p.failureCauses || []).length, '개');
+            } else {
+              // 원본 데이터가 없으면 복구된 원자성 DB를 레거시 형식으로 변환
+              const recoveredLegacy = convertToLegacyFormat(atomicData);
+              migratedL2 = recoveredLegacy.l2 as any;
+              console.log('✅ [복구 완료] migratedL2도 원자성 DB로 업데이트되었습니다.');
+            }
           }
 
           // ✅ 기존 state의 tab/riskData가 있으면 유지
