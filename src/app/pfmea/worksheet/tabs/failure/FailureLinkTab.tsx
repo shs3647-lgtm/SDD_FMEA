@@ -880,20 +880,19 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
             <button onClick={() => setViewMode('result')} style={resultButtonStyle(viewMode === 'result')}>
               분석결과(<span style={{color: viewMode === 'result' ? '#90caf9' : '#1976d2',fontWeight:700}}>FE:{linkStats.feLinkedCount}</span>,<span style={{color: viewMode === 'result' ? '#ffab91' : '#e65100',fontWeight:700}}>FM:{linkStats.fmLinkedCount}</span>,<span style={{color: viewMode === 'result' ? '#a5d6a7' : '#388e3c',fontWeight:700}}>FC:{linkStats.fcLinkedCount}</span>{linkStats.fmMissingCount > 0 && <span style={{color: viewMode === 'result' ? '#ff8a80' : '#d32f2f',fontWeight:700}}>,누락:{linkStats.fmMissingCount}</span>})
             </button>
-            {/* 확정 상태 배지 */}
-            {isConfirmed && (
-              <span style={{ 
-                padding: '2px 8px', 
-                borderRadius: 4, 
-                background: '#4caf50', 
-                color: '#fff', 
-                fontSize: 11, 
-                fontWeight: 700,
-                marginLeft: 4
-              }}>
-                ✅ 확정완료
-              </span>
-            )}
+            {/* 확정 상태 배지 - 색상으로 상태 표시 */}
+            <span style={{ 
+              padding: '2px 8px', 
+              borderRadius: 4, 
+              background: isConfirmed ? '#4caf50' : '#9e9e9e',
+              color: '#fff', 
+              fontSize: 11, 
+              fontWeight: 700,
+              marginLeft: 4,
+              whiteSpace: 'nowrap'
+            }}>
+              {isConfirmed ? '확정완료' : '미확정'}
+            </span>
           </div>
           
           <div style={actionButtonGroupStyle}>
