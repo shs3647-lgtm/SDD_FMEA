@@ -485,7 +485,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
             const functionZebra = idx % 2 === 1 ? '#c8e6c9' : '#e8f5e9';
             
             return (
-              <tr key={`${row.proc.id}-${row.we?.id || 'empty'}-${row.processChar?.id || 'nochar'}-${row.cause?.id || idx}`} className={zebraBg}>
+              <tr key={`${row.proc.id}-${row.we?.id || 'empty'}-${row.processChar?.id || 'nochar'}-${row.cause?.id || idx}`} style={{ background: zebraBg }}>
                 {/* 공정 셀: showProc && procRowSpan > 0 */}
                 {row.showProc && row.procRowSpan > 0 && (
                   <td rowSpan={row.procRowSpan} className={`border border-[#ccc] p-1.5 text-center ${structureZebra} font-semibold align-middle text-xs`}>

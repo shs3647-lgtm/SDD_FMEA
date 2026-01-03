@@ -564,7 +564,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                 if (funcs.length === 0) {
                   const zebraBg = globalRowIdx++ % 2 === 1 ? '#c8e6c9' : '#e8f5e9';
                   const row = (
-                    <tr key={we.id} className={zebraBg}>
+                    <tr key={we.id} style={{ background: zebraBg }}>
                       {isFirstProcRow && (
                         <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center bg-[#e3f2fd] text-xs font-semibold align-middle">
                           {proc.no}. {proc.name}
@@ -600,7 +600,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                   if (chars.length === 0) {
                     const zebraBg = globalRowIdx++ % 2 === 1 ? '#c8e6c9' : '#e8f5e9';
                     const row = (
-                      <tr key={f.id} className={zebraBg}>
+                      <tr key={f.id} style={{ background: zebraBg }}>
                         {isFirstProcRow && (
                           <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center bg-[#e3f2fd] text-xs font-semibold align-middle">
                             {proc.no}. {proc.name}
@@ -641,7 +641,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                   return chars.map((c, cIdx) => {
                     const zebraBg = globalRowIdx++ % 2 === 1 ? '#c8e6c9' : '#e8f5e9';
                     const row = (
-                      <tr key={c.id} className={zebraBg}>
+                      <tr key={c.id} style={{ background: zebraBg }}>
                         {isFirstProcRow && (
                           <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center bg-[#e3f2fd] text-xs font-semibold align-middle">
                             {proc.no}. {proc.name}

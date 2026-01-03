@@ -460,7 +460,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
             const functionZebra = idx % 2 === 1 ? '#c8e6c9' : '#e8f5e9';
             
             return (
-              <tr key={`row-${idx}`} className={zebraBg}>
+              <tr key={`row-${idx}`} style={{ background: zebraBg }}>
                 {/* 공정명 - rowSpan */}
                 {row.showProc && (
                   <td rowSpan={row.procRowSpan} className={`border border-[#ccc] p-2 text-center ${structureZebra} font-semibold align-middle`}>

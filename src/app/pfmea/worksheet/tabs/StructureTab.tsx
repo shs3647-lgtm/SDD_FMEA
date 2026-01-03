@@ -590,7 +590,7 @@ export default function StructureTab(props: StructureTabProps) {
           rows.map((row, idx) => {
             const zebraBg = idx % 2 === 1 ? '#bbdefb' : '#e3f2fd';
             return (
-              <tr key={row.l3Id} className={`h-6 ${zebraBg}`}>
+              <tr key={row.l3Id} className="h-6" style={{ background: zebraBg }}>
                 <StructureRow {...props} row={row} idx={idx} zebraBg={zebraBg} isConfirmed={isConfirmed} />
               </tr>
             );
