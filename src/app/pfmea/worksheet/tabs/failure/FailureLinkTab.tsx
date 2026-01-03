@@ -765,7 +765,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
           
           <div className="flex-1 flex gap-1 min-w-0">
             <button onClick={() => setViewMode('result')} style={resultButtonStyle(viewMode === 'result')}>
-              분석결과
+              분석결과(FE:{linkStats.feLinkedCount},FM:{linkStats.fmLinkedCount},FC:{linkStats.fcLinkedCount})
             </button>
             {/* 확정 상태 배지 */}
             {isConfirmed && (
