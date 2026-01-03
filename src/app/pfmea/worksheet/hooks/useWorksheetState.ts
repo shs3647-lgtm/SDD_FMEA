@@ -275,9 +275,11 @@ export function useWorksheetState(): UseWorksheetStateReturn {
   }, [state.l2, saveToLocalStorage]);
 
   // ✅ 고장원인(failureCauses) 변경 시 즉시 저장 (3L 고장분석 데이터 손실 방지)
+  // ⚠️ 중요: failureCauses는 proc.failureCauses에 저장됨 (we.failureCauses가 아님!)
   const failureCausesRef = useRef<string>('');
   useEffect(() => {
-    const allCauses = state.l2.flatMap((p: any) => (p.l3 || []).flatMap((we: any) => we.failureCauses || []));
+    // proc.failureCauses를 확인 (we.failureCauses가 아님!)
+    const allCauses = state.l2.flatMap((p: any) => p.failureCauses || []);
     const causesKey = JSON.stringify(allCauses);
     
     if (failureCausesRef.current && causesKey !== failureCausesRef.current) {
