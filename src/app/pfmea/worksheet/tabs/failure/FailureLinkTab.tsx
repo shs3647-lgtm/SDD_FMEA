@@ -354,12 +354,40 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       if (link.fcId && link.fcId.trim() !== '') counts.fcCount++;
     });
     
-    // 하위호환: 텍스트 기반 매칭
-    const feLinkedTexts = new Set<string>(savedLinks.filter(l => l.feText).map(l => l.feText));
-    const fcLinkedTexts = new Set<string>(savedLinks.filter(l => l.fcText).map(l => l.fcText));
+    // 하위호환: 텍스트 기반 매칭 (trim 처리)
+    const feLinkedTexts = new Set<string>(
+      savedLinks
+        .filter(l => l.feText && l.feText.trim() !== '')
+        .map(l => l.feText.trim())
+    );
+    const fcLinkedTexts = new Set<string>(
+      savedLinks
+        .filter(l => l.fcText && l.fcText.trim() !== '')
+        .map(l => l.fcText.trim())
+    );
     
-    const feLinkedCount = feData.filter(fe => feLinkedIds.has(fe.id) || feLinkedTexts.has(fe.text)).length;
-    const fcLinkedCount = fcData.filter(fc => fcLinkedIds.has(fc.id) || fcLinkedTexts.has(fc.text)).length;
+    // 번호 기반 매칭도 추가
+    const feLinkedNos = new Set<string>(
+      savedLinks
+        .filter(l => l.feNo && l.feNo.trim() !== '')
+        .map(l => l.feNo.trim())
+    );
+    const fcLinkedNos = new Set<string>(
+      savedLinks
+        .filter(l => l.fcNo && l.fcNo.trim() !== '')
+        .map(l => l.fcNo.trim())
+    );
+    
+    const feLinkedCount = feData.filter(fe => 
+      feLinkedIds.has(fe.id) || 
+      feLinkedTexts.has(fe.text.trim()) || 
+      feLinkedNos.has(fe.feNo)
+    ).length;
+    const fcLinkedCount = fcData.filter(fc => 
+      fcLinkedIds.has(fc.id) || 
+      fcLinkedTexts.has(fc.text.trim()) || 
+      fcLinkedNos.has(fc.fcNo)
+    ).length;
     const fmLinkedCount = fmData.filter(fm => fmLinkedIds.has(fm.id)).length;
     
     return {
@@ -381,31 +409,70 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     const newFEs = new Map<string, FEItem>();
     const newFCs = new Map<string, FCItem>();
     
-    savedLinks.filter(l => l.fmId === currentFMId).forEach(link => {
-      // FE 로드 (ID 기반 → 텍스트 기반 폴백)
-      let feItem: FEItem | undefined;
+    const fmLinks = savedLinks.filter(l => l.fmId === currentFMId);
+    console.log('[FM 선택] 연결된 links:', fmLinks.length, '개', fmLinks.map(l => ({ feId: l.feId, feText: l.feText, fcId: l.fcId, fcText: l.fcText })));
+    
+    fmLinks.forEach(link => {
+      // FE 로드 (ID 기반 → 텍스트 기반 폴백 → 번호 기반 폴백)
       if (link.feId && link.feId.trim() !== '') {
-        feItem = feData.find(f => f.id === link.feId);
+        const feItem = feData.find(f => f.id === link.feId);
+        if (feItem) {
+          newFEs.set(feItem.id, feItem);
+          console.log('[FE 로드] ID 매칭:', link.feId, '→', feItem.text);
+        } else {
+          console.warn('[FE 로드 실패] ID 매칭 실패:', link.feId);
+        }
+      } else if (link.feText && link.feText.trim() !== '') {
+        const trimmedText = link.feText.trim();
+        const feItem = feData.find(f => f.text.trim() === trimmedText);
+        if (feItem) {
+          newFEs.set(feItem.id, feItem);
+          console.log('[FE 로드] 텍스트 매칭:', trimmedText, '→', feItem.id);
+        } else {
+          // 번호로도 시도
+          const feNo = link.feNo || '';
+          const feItemByNo = feData.find(f => f.feNo === feNo);
+          if (feItemByNo) {
+            newFEs.set(feItemByNo.id, feItemByNo);
+            console.log('[FE 로드] 번호 매칭:', feNo, '→', feItemByNo.id);
+          } else {
+            console.warn('[FE 로드 실패] 텍스트/번호 매칭 실패:', trimmedText, feNo);
+          }
+        }
       }
-      if (!feItem && link.feText && link.feText.trim() !== '') {
-        feItem = feData.find(f => f.text === link.feText);
-      }
-      if (feItem) newFEs.set(feItem.id, feItem);
       
-      // FC 로드 (ID 기반 → 텍스트 기반 폴백)
-      let fcItem: FCItem | undefined;
+      // FC 로드 (ID 기반 → 텍스트 기반 폴백 → 번호 기반 폴백)
       if (link.fcId && link.fcId.trim() !== '') {
-        fcItem = fcData.find(f => f.id === link.fcId);
+        const fcItem = fcData.find(f => f.id === link.fcId);
+        if (fcItem) {
+          newFCs.set(fcItem.id, fcItem);
+          console.log('[FC 로드] ID 매칭:', link.fcId, '→', fcItem.text);
+        } else {
+          console.warn('[FC 로드 실패] ID 매칭 실패:', link.fcId);
+        }
+      } else if (link.fcText && link.fcText.trim() !== '') {
+        const trimmedText = link.fcText.trim();
+        const fcItem = fcData.find(f => f.text.trim() === trimmedText);
+        if (fcItem) {
+          newFCs.set(fcItem.id, fcItem);
+          console.log('[FC 로드] 텍스트 매칭:', trimmedText, '→', fcItem.id);
+        } else {
+          // 번호로도 시도
+          const fcNo = link.fcNo || '';
+          const fcItemByNo = fcData.find(f => f.fcNo === fcNo);
+          if (fcItemByNo) {
+            newFCs.set(fcItemByNo.id, fcItemByNo);
+            console.log('[FC 로드] 번호 매칭:', fcNo, '→', fcItemByNo.id);
+          } else {
+            console.warn('[FC 로드 실패] 텍스트/번호 매칭 실패:', trimmedText, fcNo);
+          }
+        }
       }
-      if (!fcItem && link.fcText && link.fcText.trim() !== '') {
-        fcItem = fcData.find(f => f.text === link.fcText);
-      }
-      if (fcItem) newFCs.set(fcItem.id, fcItem);
     });
     
     setLinkedFEs(newFEs);
     setLinkedFCs(newFCs);
-    console.log('[FM 선택]', currentFMId, '→ FE:', newFEs.size, 'FC:', newFCs.size);
+    console.log('[FM 선택 완료]', currentFMId, '→ FE:', newFEs.size, 'FC:', newFCs.size, '| savedLinks:', savedLinks.length);
   }, [currentFMId, savedLinks, feData, fcData]);
 
   // ========== FM 선택 ==========
