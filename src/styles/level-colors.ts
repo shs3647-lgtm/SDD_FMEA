@@ -75,6 +75,15 @@ export const FUNCTION_COLORS = {
   text: '#1b5e20',
 };
 
+// ⭐ 요구사항 색상 - 주황색 (2026-01-03 확정)
+export const REQUIREMENT_COLORS = {
+  bg: '#f57c00',          // 🟠 주황색 (배경)
+  light: '#fff3e0',       // 연한 주황색 (셀 배경)
+  text: '#e65100',        // 주황색 (텍스트)
+  border: '#f57c00',      // 주황색 (테두리)
+  zebra: '#ffe0b2',       // 홀수행 배경
+};
+
 // 고장분석 (4단계) - 주황/남색 계열
 export const FAILURE_COLORS = {
   // 1L 고장영향 (FE)
@@ -90,26 +99,46 @@ export const FAILURE_COLORS = {
   text: '#1a237e',
 };
 
-// ============ Tailwind 클래스 버전 ============
+// ============ Tailwind 클래스 버전 (v2.0 표준) ============
 export const L1_TYPE_TW: Record<string, { bg: string; light: string; text: string; border: string }> = {
   'Your Plant': { 
-    bg: 'bg-purple-700',
-    light: 'bg-purple-100', 
-    text: 'text-purple-900',
-    border: 'border-purple-700'
+    bg: 'bg-blue-600',        // 🔵 파란색
+    light: 'bg-blue-100', 
+    text: 'text-blue-900',
+    border: 'border-blue-600'
+  },
+  'YP': { 
+    bg: 'bg-blue-600',        // 🔵 파란색 (약어)
+    light: 'bg-blue-100', 
+    text: 'text-blue-900',
+    border: 'border-blue-600'
   },
   'Ship to Plant': { 
-    bg: 'bg-orange-600',
+    bg: 'bg-orange-600',      // 🟠 주황색
+    light: 'bg-orange-100', 
+    text: 'text-orange-900',
+    border: 'border-orange-600'
+  },
+  'SP': { 
+    bg: 'bg-orange-600',      // 🟠 주황색 (약어)
     light: 'bg-orange-100', 
     text: 'text-orange-900',
     border: 'border-orange-600'
   },
   'User': { 
-    bg: 'bg-green-700',
-    light: 'bg-green-100', 
-    text: 'text-green-900',
-    border: 'border-green-700'
+    bg: 'bg-purple-700',      // 🟣 보라색
+    light: 'bg-purple-100', 
+    text: 'text-purple-900',
+    border: 'border-purple-700'
   },
+};
+
+// 요구사항 Tailwind 클래스
+export const REQUIREMENT_TW = {
+  bg: 'bg-orange-600',
+  light: 'bg-orange-50',
+  text: 'text-orange-700',
+  border: 'border-orange-500',
 };
 
 export const getL1TypeTw = (typeName: string) => 
