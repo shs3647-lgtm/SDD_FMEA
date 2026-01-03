@@ -67,13 +67,13 @@ export default function FailureLinkDiagram({
         </div>
       ) : (
         <div style={diagramMainStyle}>
-          {/* 상단 라벨 - 타입별 색상 */}
+          {/* 상단 라벨 - 타입별 색상 + 개수 표시 */}
           <div style={diagramLabelRowStyle}>
-            <div style={diagramLabelStyle('FE')}>FE(고장영향)</div>
+            <div style={diagramLabelStyle('FE')}>FE(고장영향:<span style={{color:'#ffd600'}}>{linkedFEs.size}</span>)</div>
             <div></div>
-            <div style={diagramLabelStyle('FM')}>FM(고장형태)</div>
+            <div style={diagramLabelStyle('FM')}>FM(고장형태:<span style={{color:'#ffd600'}}>1</span>)</div>
             <div></div>
-            <div style={diagramLabelStyle('FC')}>FC(고장원인)</div>
+            <div style={diagramLabelStyle('FC')}>FC(고장원인:<span style={{color:'#ffd600'}}>{linkedFCs.size}</span>)</div>
           </div>
           
           {/* 카드 영역 */}
