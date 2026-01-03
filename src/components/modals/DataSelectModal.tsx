@@ -267,14 +267,14 @@ export default function DataSelectModal({
     }
     
     const newItem: DataItem = { id: `new_${Date.now()}`, value: trimmedValue, category: '추가' };
-    setItems(prev => [...prev, newItem]);
+    setItems(prev => [newItem, ...prev]); // 맨 위에 추가
     setSelectedIds(prev => new Set([...prev, newItem.id]));
     
     // localStorage에 저장
     try {
       const savedData = localStorage.getItem('pfmea_master_data');
       const masterData = savedData ? JSON.parse(savedData) : [];
-      masterData.push({ 
+      masterData.unshift({ 
         id: newItem.id, 
         itemCode, 
         value: trimmedValue, 
@@ -405,15 +405,15 @@ export default function DataSelectModal({
                 const trimmed = search.trim();
                 const exists = items.some(i => i.value === trimmed);
                 if (!exists) {
-                  // 새 항목 추가
+                  // 새 항목 추가 (맨 위에)
                   const newItem: DataItem = { id: `new_${Date.now()}`, value: trimmed, category: '추가' };
-                  setItems(prev => [...prev, newItem]);
+                  setItems(prev => [newItem, ...prev]); // 맨 위에 추가
                   setSelectedIds(prev => new Set([...prev, newItem.id]));
                   // localStorage에 저장
                   try {
                     const savedData = localStorage.getItem('pfmea_master_data');
                     const dataList = savedData ? JSON.parse(savedData) : [];
-                    dataList.push({ itemCode, value: trimmed, category: '추가', createdAt: new Date().toISOString() });
+                    dataList.unshift({ itemCode, value: trimmed, category: '추가', createdAt: new Date().toISOString() }); // 맨 위에
                     localStorage.setItem('pfmea_master_data', JSON.stringify(dataList));
                   } catch (err) { console.error(err); }
                   setSearch('');
