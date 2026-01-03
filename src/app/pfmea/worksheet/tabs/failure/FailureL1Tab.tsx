@@ -476,13 +476,13 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
       )}
 
       <table className="w-full border-collapse table-fixed">
-        {/* 컬럼: 완제품공정명 120px, 구분 50px, 완제품기능 auto(넓게), 요구사항 100px, 고장영향 120px, S 30px */}
+        {/* 컬럼: 완제품공정명 100px, 구분 45px, 완제품기능 auto, 요구사항 80px, 고장영향 200px, S 30px */}
         <colgroup>
-          <col className="w-[120px]" />
-          <col className="w-[50px]" />
-          <col />
           <col className="w-[100px]" />
-          <col className="w-[120px]" />
+          <col className="w-[45px]" />
+          <col />
+          <col className="w-[80px]" />
+          <col className="w-[200px]" />
           <col className="w-[30px]" />
         </colgroup>
         
@@ -495,18 +495,18 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
             <th colSpan={3} className="bg-[#388e3c] text-white border border-[#ccc] px-1.5 py-1 text-xs font-extrabold text-center whitespace-nowrap">
               기능분석(3단계)
             </th>
-            <th colSpan={2} className="bg-[#e65100] text-white border border-[#ccc] px-1.5 py-1 text-xs font-extrabold text-center whitespace-nowrap">
-              <div className="flex items-center justify-center gap-2 flex-nowrap">
-                <span>고장분석(4단계)</span>
-                <div className="flex gap-1.5">
+            <th colSpan={2} className="bg-[#e65100] text-white border border-[#ccc] px-1 py-1 text-xs font-extrabold text-center">
+              <div className="flex items-center justify-center gap-1 flex-nowrap whitespace-nowrap">
+                <span className="whitespace-nowrap">고장분석(4단계)</span>
+                <div className="flex gap-1 flex-nowrap">
                   {isConfirmed ? (
-                    <span className={badgeConfirmed}>✓ 확정됨({(state.l1?.failureScopes || []).filter((s: any) => s.effect).length})</span>
+                    <span className={`${badgeConfirmed} whitespace-nowrap`}>✓ 확정됨({(state.l1?.failureScopes || []).filter((s: any) => s.effect).length})</span>
                   ) : (
-                    <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
+                    <button type="button" onClick={handleConfirm} className={`${btnConfirm} whitespace-nowrap`}>확정</button>
                   )}
-                  <span className={missingCount > 0 ? badgeMissing : badgeOk}>누락 {missingCount}건</span>
+                  <span className={`${missingCount > 0 ? badgeMissing : badgeOk} whitespace-nowrap`}>누락 {missingCount}건</span>
                   {isConfirmed && (
-                    <button type="button" onClick={handleEdit} className={btnEdit}>수정</button>
+                    <button type="button" onClick={handleEdit} className={`${btnEdit} whitespace-nowrap`}>수정</button>
                   )}
                 </div>
               </div>
