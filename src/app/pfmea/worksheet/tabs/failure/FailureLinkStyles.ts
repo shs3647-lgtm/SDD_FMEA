@@ -145,8 +145,8 @@ export const diagramLabelRowStyle: CSSProperties = {
 
 /** FE/FM/FC 색상 정의 (워크시트와 통일) */
 export const CHAIN_COLORS = {
-  FE: { bg: '#1a237e', light: '#c5cae9', text: '#ffffff', border: '#1a237e' }, // 남색 (1L 고장영향)
-  FM: { bg: '#e65100', light: '#ffe0b2', text: '#ffffff', border: '#e65100' }, // 주황 (2L 고장형태)
+  FE: { bg: '#1976d2', light: '#bbdefb', text: '#ffffff', border: '#1976d2' }, // 파란색 (1L 고장영향)
+  FM: { bg: '#e65100', light: '#ffe0b2', text: '#ffffff', border: '#e65100' }, // 주황색 (2L 고장형태)
   FC: { bg: '#388e3c', light: '#c8e6c9', text: '#ffffff', border: '#388e3c' }, // 녹색 (3L 고장원인)
 };
 

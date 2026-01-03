@@ -88,7 +88,12 @@ export default function FailureLinkDiagram({
                   <div style={cardBodyStyle()}>{fe.text}</div>
                 </div>
               ))}
-              {linkedFEs.size === 0 && <div className="text-gray-400 text-xs text-center">FE 클릭</div>}
+              {linkedFEs.size === 0 && (
+                <div className="text-center p-2">
+                  <div className="text-blue-600 text-xs font-semibold">← 좌측 FE 테이블에서</div>
+                  <div className="text-blue-600 text-xs font-semibold">고장영향을 클릭하세요</div>
+                </div>
+              )}
             </div>
 
             {/* 왼쪽 간격 (화살표 영역) */}
@@ -113,7 +118,12 @@ export default function FailureLinkDiagram({
                   <div style={cardBodyStyle()}>{fc.text}</div>
                 </div>
               ))}
-              {linkedFCs.size === 0 && <div className="text-gray-400 text-xs">FC 클릭</div>}
+              {linkedFCs.size === 0 && (
+                <div className="text-center p-2">
+                  <div className="text-green-700 text-xs font-semibold">좌측 FC 테이블에서 →</div>
+                  <div className="text-green-700 text-xs font-semibold">고장원인을 클릭하세요</div>
+                </div>
+              )}
             </div>
           </div>
         </div>
