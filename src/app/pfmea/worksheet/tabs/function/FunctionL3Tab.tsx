@@ -244,37 +244,31 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                 };
               }
               
-              // 빈 기능 셀 클릭 시: 첫 번째 선택값만 첫 번째 빈 기능에 적용
-              const emptyFunc = currentFuncs.find((f: any) => !f.name || f.name === '');
+              // ✅ 다중 선택: 각각 별도 행으로 추가 (L1/L2 패턴)
+              const updatedFuncs = [...currentFuncs];
+              const existingNames = new Set(currentFuncs.filter((f: any) => f.name && !f.name.includes('클릭')).map((f: any) => f.name));
               
-              if (emptyFunc && selectedValues.length > 0) {
-                // 빈 기능이 있으면 첫 번째 선택값만 할당
-                return {
-                  ...we,
-                  functions: currentFuncs.map((f: any) => 
-                    f.id === emptyFunc.id 
-                      ? { ...f, name: selectedValues[0] }
-                      : f
-                  )
-                };
+              // 빈 기능 찾기
+              const emptyFuncIdx = updatedFuncs.findIndex((f: any) => !f.name || f.name === '' || f.name.includes('클릭'));
+              let startIdx = 0;
+              
+              // 빈 기능이 있으면 첫 번째 선택값 할당
+              if (emptyFuncIdx !== -1 && selectedValues.length > 0 && !existingNames.has(selectedValues[0])) {
+                updatedFuncs[emptyFuncIdx] = { ...updatedFuncs[emptyFuncIdx], name: selectedValues[0] };
+                existingNames.add(selectedValues[0]);
+                startIdx = 1;
               }
               
-              // ✅ 중복 체크: 같은 이름의 기능이 이미 있으면 추가하지 않음
-              if (selectedValues.length > 0) {
-                const existingNames = new Set(currentFuncs.map((f: any) => f.name));
-                const newValue = selectedValues[0];
-                if (existingNames.has(newValue)) {
-                  alert(`⚠️ 중복 항목: "${newValue}"는 이미 등록되어 있습니다.`);
-                  return we;
+              // 나머지 선택값들 각각 새 행으로 추가 (중복 제외)
+              for (let i = startIdx; i < selectedValues.length; i++) {
+                const val = selectedValues[i];
+                if (!existingNames.has(val)) {
+                  updatedFuncs.push({ id: uid(), name: val, processChars: [] });
+                  existingNames.add(val);
                 }
-                const newFunc = { id: uid(), name: newValue, processChars: [] };
-                return {
-                  ...we,
-                  functions: [...currentFuncs, newFunc]
-                };
               }
               
-              return we;
+              return { ...we, functions: updatedFuncs };
             })
           };
         });
@@ -306,30 +300,31 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                     };
                   }
                   
-                  // ✅ charId가 없으면 빈 셀 클릭 → 새 항목 추가
-                  const emptyChar = currentChars.find((c: any) => !c.name || c.name === '');
-                  if (emptyChar && selectedValues.length > 0) {
-                    return {
-                      ...f,
-                      processChars: currentChars.map((c: any) => 
-                        c.id === emptyChar.id ? { ...c, name: selectedValues[0] } : c
-                      )
-                    };
+                  // ✅ 다중 선택: 각각 별도 행으로 추가 (L1/L2 패턴)
+                  const updatedChars = [...currentChars];
+                  const existingNames = new Set(currentChars.filter((c: any) => c.name && !c.name.includes('클릭')).map((c: any) => c.name));
+                  
+                  // 빈 공정특성 찾기
+                  const emptyCharIdx = updatedChars.findIndex((c: any) => !c.name || c.name === '' || c.name.includes('클릭'));
+                  let startIdx = 0;
+                  
+                  // 빈 공정특성이 있으면 첫 번째 선택값 할당
+                  if (emptyCharIdx !== -1 && selectedValues.length > 0 && !existingNames.has(selectedValues[0])) {
+                    updatedChars[emptyCharIdx] = { ...updatedChars[emptyCharIdx], name: selectedValues[0] };
+                    existingNames.add(selectedValues[0]);
+                    startIdx = 1;
                   }
                   
-                  // ✅ 중복 체크: 같은 이름의 공정특성이 이미 있으면 추가하지 않음
-                  if (selectedValues.length > 0) {
-                    const existingNames = new Set(currentChars.map((c: any) => c.name));
-                    const newValue = selectedValues[0];
-                    if (existingNames.has(newValue)) {
-                      alert(`⚠️ 중복 항목: "${newValue}"는 이미 등록되어 있습니다.`);
-                      return f;
+                  // 나머지 선택값들 각각 새 행으로 추가 (중복 제외)
+                  for (let i = startIdx; i < selectedValues.length; i++) {
+                    const val = selectedValues[i];
+                    if (!existingNames.has(val)) {
+                      updatedChars.push({ id: uid(), name: val, specialChar: '' });
+                      existingNames.add(val);
                     }
-                    const newChar = { id: uid(), name: newValue };
-                    return { ...f, processChars: [...currentChars, newChar] };
                   }
                   
-                  return f;
+                  return { ...f, processChars: updatedChars };
                 })
               };
             })

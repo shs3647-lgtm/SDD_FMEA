@@ -275,10 +275,9 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
         return newState;
       }
       
-      // ✅ effectId가 없으면 빈 셀 클릭 → 새 항목 추가
+      // ✅ effectId가 없으면 빈 셀 클릭 → 새 항목 추가 (다중선택 지원)
       // 해당 요구사항의 기존 고장영향 보존하면서 새 항목 추가
       if (selectedValues.length > 0) {
-        const newValue = selectedValues[0];
         const currentReqName = modal.parentReqName;
         
         // ✅ 동일한 요구사항 이름을 가진 모든 reqId 찾기
@@ -298,27 +297,29 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
         
         console.log('[FailureL1Tab] 동일 요구사항 자동 선택:', currentReqName, '→', sameNameReqIds.length, '개');
         
-        // 각 동일 이름 요구사항에 고장영향 추가 (중복 제외)
+        // ✅ 다중 선택: 각 선택값에 대해 고장영향 추가
         let addedCount = 0;
-        sameNameReqIds.forEach(reqId => {
-          const existingEffects = newState.l1.failureScopes
-            .filter((s: any) => s.reqId === reqId)
-            .map((s: any) => s.effect);
-          const existingSet = new Set(existingEffects);
-          
-          if (!existingSet.has(newValue)) {
-            newState.l1.failureScopes.push({
-              id: uid(),
-              reqId: reqId,
-              effect: newValue,
-              severity: undefined
-            });
-            addedCount++;
-          }
+        selectedValues.forEach(newValue => {
+          sameNameReqIds.forEach(reqId => {
+            const existingEffects = newState.l1.failureScopes
+              .filter((s: any) => s.reqId === reqId)
+              .map((s: any) => s.effect);
+            const existingSet = new Set(existingEffects);
+            
+            if (!existingSet.has(newValue)) {
+              newState.l1.failureScopes.push({
+                id: uid(),
+                reqId: reqId,
+                effect: newValue,
+                severity: undefined
+              });
+              addedCount++;
+            }
+          });
         });
         
         if (addedCount === 0) {
-          alert(`⚠️ 중복 항목: "${newValue}"는 이미 등록되어 있습니다.`);
+          alert(`⚠️ 중복 항목: 선택한 항목들이 이미 등록되어 있습니다.`);
           return prev;
         }
         
