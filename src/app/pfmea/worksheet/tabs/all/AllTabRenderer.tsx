@@ -61,30 +61,42 @@ export default function AllTabRenderer({
   // 고장연결 데이터
   const failureLinks = (state as any).failureLinks || [];
   
+  // 스크롤 래퍼 스타일 (좌우 스크롤 지원)
+  const scrollWrapperStyle: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    overflowX: 'auto',
+    overflowY: 'auto',
+  };
+
   // 전체보기(all) 탭: 고장연결 결과 기반 40열 테이블
   if (tab === 'all' && failureLinks.length > 0) {
     return (
-      <AllTabWithLinks
-        state={state}
-        setState={setState}
-        failureLinks={failureLinks}
-        visibleSteps={visibleSteps}
-      />
+      <div style={scrollWrapperStyle}>
+        <AllTabWithLinks
+          state={state}
+          setState={setState}
+          failureLinks={failureLinks}
+          visibleSteps={visibleSteps}
+        />
+      </div>
     );
   }
 
   // 기본 테이블 렌더링
   return (
-    <AllTabBasic
-      rows={rows}
-      state={state}
-      setState={setState}
-      l1Spans={l1Spans}
-      l1TypeSpans={l1TypeSpans}
-      l1FuncSpans={l1FuncSpans}
-      l2Spans={l2Spans}
-      visibleSteps={visibleSteps}
-      onAPClick={onAPClick}
-    />
+    <div style={scrollWrapperStyle}>
+      <AllTabBasic
+        rows={rows}
+        state={state}
+        setState={setState}
+        l1Spans={l1Spans}
+        l1TypeSpans={l1TypeSpans}
+        l1FuncSpans={l1FuncSpans}
+        l2Spans={l2Spans}
+        visibleSteps={visibleSteps}
+        onAPClick={onAPClick}
+      />
+    </div>
   );
 }

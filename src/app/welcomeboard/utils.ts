@@ -42,3 +42,4 @@ export const calculateAPStats = (data: APSummaryItem[]): APStats => ({
   completed: data.filter(a => a.status === '완료').length,
 });
 
+

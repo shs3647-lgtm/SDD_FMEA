@@ -386,3 +386,4 @@ export function getZebraClass(index: number, evenClass: string, oddClass: string
   return index % 2 === 0 ? evenClass : oddClass;
 }
 
+
