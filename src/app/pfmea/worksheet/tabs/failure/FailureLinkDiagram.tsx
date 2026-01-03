@@ -90,7 +90,8 @@ export default function FailureLinkDiagram({
               ))}
               {linkedFEs.size === 0 && (
                 <div className="text-center p-2">
-                  <div className="text-blue-600 text-xs font-semibold whitespace-nowrap">← 좌측 FE 선택하여,</div>
+                  <div className="text-blue-600 text-xs font-semibold">← 좌측 FE 선택하여,</div>
+                  <div className="text-blue-600 text-xs font-semibold">연결 필요</div>
                 </div>
               )}
             </div>
@@ -119,7 +120,8 @@ export default function FailureLinkDiagram({
               ))}
               {linkedFCs.size === 0 && (
                 <div className="text-center p-2">
-                  <div className="text-green-700 text-xs font-semibold whitespace-nowrap">좌측 FC 선택하여, →</div>
+                  <div className="text-green-700 text-xs font-semibold">좌측 FC 선택하여, →</div>
+                  <div className="text-green-700 text-xs font-semibold">연결 필요</div>
                 </div>
               )}
             </div>
