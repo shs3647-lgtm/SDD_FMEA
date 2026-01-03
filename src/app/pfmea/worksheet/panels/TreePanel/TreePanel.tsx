@@ -1,8 +1,8 @@
 /**
  * @file TreePanel.tsx
  * @description FMEA 워크시트 트리 패널 (BaseTreePanel 기반 리팩토링)
- * @version 3.0.0 - 표준화/모듈화
- * @updated 2026-01-03
+ * @version 3.1.0 - AI 추천 통합
+ * @updated 2026-01-04
  */
 
 'use client';
@@ -10,11 +10,13 @@
 import React from 'react';
 import BaseTreePanel, { TreeItem, TreeBranch, TreeLeaf, TreeEmpty, TreeBadge, tw } from './BaseTreePanel';
 import { getL1TypeColor, TREE_FUNCTION, TREE_FUNCTION_L3, TREE_FAILURE } from '@/styles/level-colors';
+import TreeAIRecommend from '@/components/ai/TreeAIRecommend';
 
 interface TreePanelProps {
   state: any;
   collapsedIds?: Set<string>;
   setCollapsedIds?: (ids: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
+  onAddAIItem?: (type: 'cause' | 'mode' | 'effect', value: string, context?: any) => void;
 }
 
 // 4M 색상
@@ -25,7 +27,7 @@ const M4_COLORS: Record<string, { bg: string; text: string }> = {
   EN: { bg: '#fff3e0', text: '#f57c00' },
 };
 
-export default function TreePanel({ state }: TreePanelProps) {
+export default function TreePanel({ state, onAddAIItem }: TreePanelProps) {
   const tab = state.tab;
 
   // ========== 구조 트리 ==========
@@ -291,6 +293,19 @@ export default function TreePanel({ state }: TreePanelProps) {
                         {confirmedModes.filter((m: any) => !pc.name || m.productCharId === pc.id || !m.productCharId).slice(0, 3).map((m: any) => (
                           <TreeLeaf key={m.id} icon="└ ⚠️" label={m.name} bgColor="#ffe0b2" textColor="#e65100" indent={3} />
                         ))}
+                        {/* AI 추천: 고장형태 */}
+                        {onAddAIItem && confirmedModes.filter((m: any) => m.productCharId === pc.id).length < 3 && (
+                          <TreeAIRecommend
+                            context={{
+                              processName: proc.name,
+                              productChar: pc.name,
+                            }}
+                            type="mode"
+                            onAccept={(value) => onAddAIItem('mode', value, { processId: proc.id, productCharId: pc.id })}
+                            existingItems={confirmedModes.map((m: any) => m.name)}
+                            maxItems={3}
+                          />
+                        )}
                       </div>
                     )) : <TreeEmpty message="└ (제품특성 미입력)" small />}
                   </div>
@@ -369,6 +384,20 @@ export default function TreePanel({ state }: TreePanelProps) {
                               badge={c.occurrence && <TreeBadge label={`O:${c.occurrence}`} bgColor={c.occurrence >= 7 ? '#f97316' : '#fb923c'} textColor="#fff" />}
                             />
                           ))}
+                          {/* AI 추천: 고장원인 */}
+                          {onAddAIItem && linkedCauses.length < 3 && (
+                            <TreeAIRecommend
+                              context={{
+                                processName: proc.name,
+                                workElement: we.name,
+                                m4Category: we.m4,
+                              }}
+                              type="cause"
+                              onAccept={(value) => onAddAIItem('cause', value, { processId: proc.id, workElementId: we.id, processCharId: pc.id })}
+                              existingItems={linkedCauses.map((c: any) => c.name)}
+                              maxItems={3}
+                            />
+                          )}
                         </div>
                       );
                     })}

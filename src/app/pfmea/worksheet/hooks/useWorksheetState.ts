@@ -1,7 +1,7 @@
 /**
  * @file useWorksheetState.ts
  * @description FMEA 워크시트 상태 관리 Hook (원자성 DB 스키마 적용)
- * @version 2.0.0 - 원자성 관계형 DB 구조 적용
+ * @version 2.1.0 - AI 학습 데이터 자동 저장 추가
  */
 
 'use client';
@@ -17,6 +17,7 @@ import {
   createInitialState, 
   uid 
 } from '../constants';
+import { saveToAIHistory } from '@/lib/ai-recommendation';
 import {
   FMEAWorksheetDB,
   FlattenedRow,
@@ -251,6 +252,46 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         } catch (e) {
           console.error('[저장 검증] 파싱 오류:', e);
         }
+      }
+      
+      // ✅ AI 학습 데이터 저장 (고장관계 데이터 축적)
+      try {
+        const l2Data = currentState.l2 || [];
+        l2Data.forEach((proc: any) => {
+          const processName = proc.name || '';
+          const failureModes = proc.failureModes || [];
+          const failureCauses = proc.failureCauses || [];
+          
+          failureModes.forEach((fm: any) => {
+            if (fm.name) {
+              saveToAIHistory({
+                processName,
+                processType: processName.split(' ')[0], // 첫 단어를 공정 유형으로
+                failureMode: fm.name,
+                projectId: targetId,
+              });
+            }
+          });
+          
+          failureCauses.forEach((fc: any) => {
+            if (fc.name) {
+              // 작업요소 찾기
+              const we = (proc.l3 || []).find((w: any) => w.id === fc.workElementId);
+              saveToAIHistory({
+                processName,
+                processType: processName.split(' ')[0],
+                workElement: we?.name || '',
+                m4Category: we?.m4 || '',
+                failureCause: fc.name,
+                occurrence: fc.occurrence,
+                projectId: targetId,
+              });
+            }
+          });
+        });
+        console.log('[AI] 학습 데이터 저장 완료');
+      } catch (e) {
+        console.warn('[AI] 학습 데이터 저장 오류 (무시):', e);
       }
       
       setDirty(false);
