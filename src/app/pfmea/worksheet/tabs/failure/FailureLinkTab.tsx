@@ -408,6 +408,26 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     console.log('[FM 선택]', currentFMId, '→ FE:', newFEs.size, 'FC:', newFCs.size);
   }, [currentFMId, savedLinks, feData, fcData]);
 
+  // ========== 엔터키로 연결확정 ==========
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 입력 필드에 포커스가 있으면 무시
+      const activeElement = document.activeElement;
+      if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+        return;
+      }
+      
+      // 엔터키를 누르면 연결확정
+      if (e.key === 'Enter' && currentFMId && (linkedFEs.size > 0 || linkedFCs.size > 0)) {
+        e.preventDefault();
+        confirmLink();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentFMId, linkedFEs.size, linkedFCs.size, confirmLink]);
+
   // ========== FM 선택 ==========
   const selectFM = useCallback((id: string) => {
     if (currentFMId === id) {
