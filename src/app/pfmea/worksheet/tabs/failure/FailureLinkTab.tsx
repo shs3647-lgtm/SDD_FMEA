@@ -332,6 +332,44 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     chainAreaRef, fmNodeRef, feColRef, fcColRef, linkedFEs, linkedFCs, currentFM
   );
 
+  // ========== viewMode 변경 시 화살표 다시 그리기 ==========
+  useEffect(() => {
+    if (viewMode === 'diagram') {
+      // diagram 모드로 전환 시 화살표 다시 그리기 (여러 타이밍)
+      const timer1 = setTimeout(drawLines, 100);
+      const timer2 = setTimeout(drawLines, 300);
+      const timer3 = setTimeout(drawLines, 500);
+      const timer4 = setTimeout(drawLines, 1000);
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+        clearTimeout(timer3);
+        clearTimeout(timer4);
+      };
+    }
+  }, [viewMode, drawLines]);
+
+  // ========== 컴포넌트 마운트/탭 전환 시 화살표 다시 그리기 ==========
+  useEffect(() => {
+    // 컴포넌트가 마운트될 때 화살표 그리기 (탭 전환 후)
+    const timer1 = setTimeout(drawLines, 100);
+    const timer2 = setTimeout(drawLines, 300);
+    const timer3 = setTimeout(drawLines, 500);
+    const timer4 = setTimeout(drawLines, 1000);
+    const timer5 = setTimeout(drawLines, 2000);
+    
+    console.log('[FailureLinkTab] 컴포넌트 마운트, 화살표 그리기 예약');
+    
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+      clearTimeout(timer4);
+      clearTimeout(timer5);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 마운트 시 한 번만 실행
+
   // ========== 연결 통계 계산 ==========
   const linkStats = useMemo(() => {
     // ID 기반 연결 확인 (빈 문자열 제외)

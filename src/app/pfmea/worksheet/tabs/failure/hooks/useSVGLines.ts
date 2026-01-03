@@ -18,11 +18,19 @@ export function useSVGLines(
 
   const drawLines = useCallback(() => {
     if (!chainAreaRef.current || !fmNodeRef.current) {
+      console.log('[SVG] drawLines 스킵: ref가 null');
       setSvgPaths([]);
       return;
     }
     const area = chainAreaRef.current.getBoundingClientRect();
     const fmRect = fmNodeRef.current.getBoundingClientRect();
+    
+    // DOM이 아직 렌더링되지 않은 경우 (크기가 0인 경우)
+    if (fmRect.width === 0 || fmRect.height === 0) {
+      console.log('[SVG] drawLines 스킵: FM 노드 크기가 0');
+      return;
+    }
+    
     const fmCenterY = fmRect.top + fmRect.height / 2 - area.top;
     const fmLeft = fmRect.left - area.left;
     const fmRight = fmRect.right - area.left;
@@ -58,15 +66,19 @@ export function useSVGLines(
     }
 
     setSvgPaths(paths);
+    console.log('[SVG] 화살표 그리기 완료:', paths.length, '개');
   }, [chainAreaRef, fmNodeRef, feColRef, fcColRef]);
 
   useEffect(() => {
+    console.log('[SVG] useEffect 실행: linkedFEs=', linkedFEs.size, 'linkedFCs=', linkedFCs.size, 'currentFM=', !!currentFM);
+    
     // 여러 타이밍에 drawLines 호출 (카드 렌더링 후 확실히 그리기)
     const timer1 = setTimeout(drawLines, 50);
     const timer2 = setTimeout(drawLines, 150);
     const timer3 = setTimeout(drawLines, 300);
     const timer4 = setTimeout(drawLines, 500);
     const timer5 = setTimeout(drawLines, 1000);
+    const timer6 = setTimeout(drawLines, 2000);
     window.addEventListener('resize', drawLines);
     
     // MutationObserver로 DOM 변경 감지
@@ -74,9 +86,19 @@ export function useSVGLines(
       setTimeout(drawLines, 50);
     });
     
-    if (chainAreaRef.current) {
-      observer.observe(chainAreaRef.current, { childList: true, subtree: true });
-    }
+    // ref.current가 있을 때 observe 등록
+    const setupObserver = () => {
+      if (chainAreaRef.current) {
+        observer.observe(chainAreaRef.current, { childList: true, subtree: true });
+        console.log('[SVG] MutationObserver 등록 완료');
+      }
+    };
+    
+    // 즉시 등록 시도
+    setupObserver();
+    
+    // ref가 아직 null이면 나중에 다시 시도
+    const observerTimer = setTimeout(setupObserver, 100);
     
     return () => {
       clearTimeout(timer1);
@@ -84,6 +106,8 @@ export function useSVGLines(
       clearTimeout(timer3);
       clearTimeout(timer4);
       clearTimeout(timer5);
+      clearTimeout(timer6);
+      clearTimeout(observerTimer);
       window.removeEventListener('resize', drawLines);
       observer.disconnect();
     };
