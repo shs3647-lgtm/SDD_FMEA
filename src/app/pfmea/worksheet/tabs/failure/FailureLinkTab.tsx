@@ -633,9 +633,66 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     setDirty(true);
     requestAnimationFrame(() => saveToLocalStorage?.());
     
-    setViewMode('result');
-    alert(`✅ ${currentFM.text} 연결 완료!\n\nFE: ${feArray.length}개, FC: ${fcArray.length}개`);
-  }, [currentFMId, currentFM, linkedFEs, linkedFCs, savedLinks, setState, setDirty, saveToLocalStorage]);
+    // ✅ 현재 공정의 모든 FM 연결 완료 확인 → 자동으로 다음 공정 이동
+    const currentProcess = currentFM.processName;
+    const currentProcessFMs = fmData.filter(fm => fm.processName === currentProcess);
+    
+    // 새로 저장된 links로 연결 상태 확인
+    const allLinkedInProcess = currentProcessFMs.every(fm => {
+      const fmLinks = newLinks.filter(l => l.fmId === fm.id);
+      const hasFE = fmLinks.some(l => l.feId && l.feId.trim() !== '');
+      const hasFC = fmLinks.some(l => l.fcId && l.fcId.trim() !== '');
+      return hasFE && hasFC;
+    });
+    
+    if (allLinkedInProcess) {
+      // 현재 공정 완료 → 다음 공정 찾기
+      const allProcesses = [...new Set(fmData.map(fm => fm.processName))];
+      const currentIdx = allProcesses.indexOf(currentProcess);
+      const nextProcess = allProcesses[currentIdx + 1];
+      
+      if (nextProcess) {
+        // 다음 공정의 첫 번째 FM 선택
+        const nextFM = fmData.find(fm => fm.processName === nextProcess);
+        if (nextFM) {
+          setTimeout(() => {
+            setCurrentFMId(nextFM.id);
+            setSelectedProcess(nextProcess);
+            setLinkedFEs(new Map());
+            setLinkedFCs(new Map());
+            setViewMode('diagram');
+          }, 100);
+          
+          alert(`✅ ${currentFM.text} 연결 완료!\n\n🎯 ${currentProcess} 공정 완료!\n\n➡️ 다음 공정: ${nextProcess}\n   (${nextFM.fmNo}: ${nextFM.text})`);
+          return;
+        }
+      } else {
+        // 모든 공정 완료
+        setViewMode('result');
+        alert(`✅ ${currentFM.text} 연결 완료!\n\n🎉 모든 공정의 고장연결이 완료되었습니다!\n\n[전체확정] 버튼을 눌러 확정해주세요.`);
+        return;
+      }
+    }
+    
+    // 같은 공정 내 다음 FM으로 이동
+    const sameProcFMs = fmData.filter(fm => fm.processName === currentProcess);
+    const currentFMIdx = sameProcFMs.findIndex(fm => fm.id === currentFMId);
+    const nextFMInProc = sameProcFMs[currentFMIdx + 1];
+    
+    if (nextFMInProc) {
+      setTimeout(() => {
+        setCurrentFMId(nextFMInProc.id);
+        setLinkedFEs(new Map());
+        setLinkedFCs(new Map());
+        setViewMode('diagram');
+      }, 100);
+      
+      alert(`✅ ${currentFM.text} 연결 완료!\n\n➡️ 다음 FM: ${nextFMInProc.fmNo}: ${nextFMInProc.text}`);
+    } else {
+      setViewMode('result');
+      alert(`✅ ${currentFM.text} 연결 완료!\n\nFE: ${feArray.length}개, FC: ${fcArray.length}개`);
+    }
+  }, [currentFMId, currentFM, linkedFEs, linkedFCs, savedLinks, fmData, setState, setDirty, saveToLocalStorage]);
 
   // ========== 고장연결 전체 확정 ==========
   const handleConfirmAll = useCallback(() => {
