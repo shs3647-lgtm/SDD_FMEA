@@ -205,21 +205,30 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
       const { type, id } = modal;
 
       if (type === 'l1Type') {
-        const currentTypes = newState.l1.types;
-        const emptyType = currentTypes.find(t => !t.name || t.name === '' || t.name.includes('클릭하여'));
+        const currentTypes = [...newState.l1.types];
+        const existingNames = new Set(currentTypes.filter(t => t.name && !t.name.includes('클릭하여')).map(t => t.name));
         
-        if (emptyType && selectedValues.length > 0) {
-          // 빈 타입이 있으면 첫 번째 선택값만 할당
-          newState.l1.types = currentTypes.map(t => 
-            t.id === emptyType.id 
-              ? { ...t, name: selectedValues[0] }
-              : t
-          );
-        } else if (selectedValues.length > 0) {
-          // ✅ 확정 상태에서도 새로 추가 가능 (확정됨 유지)
-          const newType = { id: uid(), name: selectedValues[0], functions: [] };
-          newState.l1.types = [...currentTypes, newType];
+        // 빈 타입 찾기
+        const emptyTypeIdx = currentTypes.findIndex(t => !t.name || t.name === '' || t.name.includes('클릭하여'));
+        let startIdx = 0;
+        
+        // 빈 타입이 있으면 첫 번째 선택값 할당
+        if (emptyTypeIdx !== -1 && selectedValues.length > 0 && !existingNames.has(selectedValues[0])) {
+          currentTypes[emptyTypeIdx] = { ...currentTypes[emptyTypeIdx], name: selectedValues[0] };
+          existingNames.add(selectedValues[0]);
+          startIdx = 1;
         }
+        
+        // ✅ 나머지 선택값들 각각 새 행으로 추가 (중복 제외)
+        for (let i = startIdx; i < selectedValues.length; i++) {
+          const val = selectedValues[i];
+          if (!existingNames.has(val)) {
+            currentTypes.push({ id: uid(), name: val, functions: [] });
+            existingNames.add(val);
+          }
+        }
+        
+        newState.l1.types = currentTypes;
       } 
       else if (type === 'l1Function') {
         const funcId = (modal as any).funcId;
@@ -246,33 +255,31 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
             };
           }
           
-          const emptyFunc = currentFuncs.find(f => !f.name || f.name === '' || f.name.includes('클릭하여'));
+          // ✅ 다중 선택: 각각 별도 행으로 추가
+          const updatedFuncs = [...currentFuncs];
+          const existingNames = new Set(currentFuncs.filter(f => f.name && !f.name.includes('클릭하여')).map(f => f.name));
           
-          if (emptyFunc && selectedValues.length > 0) {
-            // 빈 기능이 있으면 첫 번째 선택값만 할당
-            return {
-              ...t,
-              functions: currentFuncs.map(f => 
-                f.id === emptyFunc.id 
-                  ? { ...f, name: selectedValues[0] }
-                  : f
-              )
-            };
-          } else if (selectedValues.length > 0) {
-            // ✅ 중복 체크: 같은 이름의 기능이 이미 있으면 추가하지 않음
-            const existingNames = new Set(currentFuncs.map(f => f.name));
-            const newValue = selectedValues[0];
-            if (existingNames.has(newValue)) {
-              alert(`⚠️ 중복 항목: "${newValue}"는 이미 등록되어 있습니다.`);
-              return t;
-            }
-            const newFunc = { id: uid(), name: newValue, requirements: [] };
-            return {
-              ...t,
-              functions: [...currentFuncs, newFunc]
-            };
+          // 빈 기능 찾기
+          const emptyFuncIdx = updatedFuncs.findIndex(f => !f.name || f.name === '' || f.name.includes('클릭하여'));
+          let startIdx = 0;
+          
+          // 빈 기능이 있으면 첫 번째 선택값 할당
+          if (emptyFuncIdx !== -1 && selectedValues.length > 0 && !existingNames.has(selectedValues[0])) {
+            updatedFuncs[emptyFuncIdx] = { ...updatedFuncs[emptyFuncIdx], name: selectedValues[0] };
+            existingNames.add(selectedValues[0]);
+            startIdx = 1;
           }
-          return t;
+          
+          // 나머지 선택값들 각각 새 행으로 추가 (중복 제외)
+          for (let i = startIdx; i < selectedValues.length; i++) {
+            const val = selectedValues[i];
+            if (!existingNames.has(val)) {
+              updatedFuncs.push({ id: uid(), name: val, requirements: [] });
+              existingNames.add(val);
+            }
+          }
+          
+          return { ...t, functions: updatedFuncs };
         });
       }
       else if (type === 'l1Requirement') {
@@ -296,33 +303,31 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
               };
             }
             
-            const emptyReq = currentReqs.find(r => !r.name || r.name === '' || r.name.includes('클릭하여'));
+            // ✅ 다중 선택: 각각 별도 행으로 추가
+            const updatedReqs = [...currentReqs];
+            const existingNames = new Set(currentReqs.filter(r => r.name && !r.name.includes('클릭하여')).map(r => r.name));
             
-            if (emptyReq && selectedValues.length > 0) {
-              // 빈 요구사항이 있으면 첫 번째 선택값만 할당
-              return {
-                ...f,
-                requirements: currentReqs.map(r => 
-                  r.id === emptyReq.id 
-                    ? { ...r, name: selectedValues[0] }
-                    : r
-                )
-              };
-            } else if (selectedValues.length > 0) {
-              // ✅ 중복 체크: 같은 이름의 요구사항이 이미 있으면 추가하지 않음
-              const existingNames = new Set(currentReqs.map(r => r.name));
-              const newValue = selectedValues[0];
-              if (existingNames.has(newValue)) {
-                alert(`⚠️ 중복 항목: "${newValue}"는 이미 등록되어 있습니다.`);
-                return f;
-              }
-              const newReq = { id: uid(), name: newValue };
-              return {
-                ...f,
-                requirements: [...currentReqs, newReq]
-              };
+            // 빈 요구사항 찾기
+            const emptyReqIdx = updatedReqs.findIndex(r => !r.name || r.name === '' || r.name.includes('클릭하여'));
+            let startIdx = 0;
+            
+            // 빈 요구사항이 있으면 첫 번째 선택값 할당
+            if (emptyReqIdx !== -1 && selectedValues.length > 0 && !existingNames.has(selectedValues[0])) {
+              updatedReqs[emptyReqIdx] = { ...updatedReqs[emptyReqIdx], name: selectedValues[0] };
+              existingNames.add(selectedValues[0]);
+              startIdx = 1;
             }
-            return f;
+            
+            // 나머지 선택값들 각각 새 행으로 추가 (중복 제외)
+            for (let i = startIdx; i < selectedValues.length; i++) {
+              const val = selectedValues[i];
+              if (!existingNames.has(val)) {
+                updatedReqs.push({ id: uid(), name: val });
+                existingNames.add(val);
+              }
+            }
+            
+            return { ...f, requirements: updatedReqs };
           })
         }));
       }
