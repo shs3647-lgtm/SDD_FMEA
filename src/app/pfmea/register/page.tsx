@@ -123,28 +123,32 @@ function PFMEARegisterPageContent() {
         }
       }
     } else {
-      // 신규 등록 모드: 마지막 저장된 데이터 또는 임시 저장된 데이터 불러오기
-      const lastDraft = localStorage.getItem('pfmea-register-draft');
-      if (lastDraft) {
+      // 신규 등록 모드: 마지막 저장된 프로젝트 불러오기
+      const storedProjects = localStorage.getItem('pfmea-projects');
+      if (storedProjects) {
         try {
-          const draft = JSON.parse(lastDraft);
-          if (draft.fmeaInfo) {
-            setFmeaInfo(draft.fmeaInfo);
-          }
-          if (draft.cftMembers && draft.cftMembers.length > 0) {
-            setCftMembers(draft.cftMembers);
-          }
-          // ✅ 저장된 ID가 있으면 유지, 없으면 새로 생성
-          if (draft.fmeaId) {
-            setFmeaId(draft.fmeaId);
+          const projects = JSON.parse(storedProjects);
+          // ✅ 가장 최근 저장된 프로젝트 (첫 번째 = 가장 최신)
+          if (projects.length > 0) {
+            const lastProject = projects[0];
+            setFmeaId(lastProject.id);
+            if (lastProject.fmeaInfo) {
+              setFmeaInfo(lastProject.fmeaInfo);
+            }
+            if (lastProject.cftMembers && lastProject.cftMembers.length > 0) {
+              setCftMembers(lastProject.cftMembers);
+            }
+            console.log('[PFMEA 등록] 마지막 저장된 프로젝트 로드:', lastProject.id);
           } else {
+            // 저장된 프로젝트가 없으면 새 ID 생성
             setFmeaId(generateFMEAId());
           }
         } catch (e) {
-          console.error('임시 저장 데이터 로드 실패:', e);
+          console.error('프로젝트 데이터 로드 실패:', e);
           setFmeaId(generateFMEAId());
         }
       } else {
+        // 저장된 프로젝트가 없으면 새 ID 생성
         setFmeaId(generateFMEAId());
         
         // 저장된 CFT 데이터 불러오기
@@ -163,13 +167,15 @@ function PFMEARegisterPageContent() {
     }
   }, [isEditMode, editId]);
 
-  // ✅ 자동 임시 저장 (신규 등록 모드에서만, 데이터 변경 시)
-  useEffect(() => {
-    if (!isEditMode && fmeaId) {
-      const draft = { fmeaId, fmeaInfo, cftMembers };
-      localStorage.setItem('pfmea-register-draft', JSON.stringify(draft));
+  // ✅ 새로 등록 - 초기화 후 새 ID 생성
+  const handleNewRegister = () => {
+    if (confirm('새로운 FMEA를 등록하시겠습니까?\n현재 화면의 내용은 초기화됩니다.')) {
+      setFmeaInfo(INITIAL_FMEA);
+      setCftMembers(createInitialCFTMembers());
+      setFmeaId(generateFMEAId());
+      localStorage.removeItem('pfmea-register-draft');
     }
-  }, [isEditMode, fmeaId, fmeaInfo, cftMembers]);
+  };
 
   // 필드 업데이트
   const updateField = (field: keyof FMEAInfo, value: string) => {
@@ -292,9 +298,6 @@ function PFMEARegisterPageContent() {
       };
       existing.unshift(data);
       localStorage.setItem('pfmea-projects', JSON.stringify(existing));
-      
-      // ✅ 신규 등록 완료 후 임시 저장 삭제 + 다음 등록 준비
-      localStorage.removeItem('pfmea-register-draft');
     }
     
     setSaveStatus('saved');
@@ -304,14 +307,8 @@ function PFMEARegisterPageContent() {
     }, 1500);
   };
 
-  // 새로고침
-  const handleRefresh = () => {
-    if (confirm('입력한 내용을 초기화하시겠습니까?')) {
-      setFmeaInfo(INITIAL_FMEA);
-      setCftMembers(createInitialCFTMembers());
-      setFmeaId(generateFMEAId());
-    }
-  };
+  // 새로고침 (새로 등록과 동일)
+  const handleRefresh = handleNewRegister;
 
   // CFT 접속 로그
   const [accessLogs] = useState<CFTAccessLog[]>([
@@ -343,8 +340,8 @@ function PFMEARegisterPageContent() {
             {isEditMode && <span className="px-2 py-0.5 text-xs bg-yellow-200 text-yellow-800 rounded font-bold">수정모드</span>}
           </div>
         <div className="flex gap-2">
-          <button onClick={handleRefresh} className="px-3 py-1.5 bg-gray-100 border border-gray-400 text-gray-700 text-xs rounded hover:bg-gray-200">
-            🔄 새로고침
+          <button onClick={handleNewRegister} className="px-3 py-1.5 bg-green-100 border border-green-400 text-green-700 text-xs rounded hover:bg-green-200 font-semibold">
+            ➕ 새로 등록
           </button>
           <button 
             onClick={handleSave}
