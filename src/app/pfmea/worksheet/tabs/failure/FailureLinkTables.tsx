@@ -239,18 +239,26 @@ export default function FailureLinkTables({
                   const noBg = isLinkedInSaved ? COLORS.function.dark : '#f57c00';
                   const cellBg = isLinkedInSaved ? '#c8e6c9' : (idx % 2 === 1 ? '#c8e6c9' : '#e8f5e9');
                   return (
-                    <tr 
-                      key={fc.id} 
-                      onClick={() => handleFCClick(fc.id, onToggleFC)} 
-                      onDoubleClick={() => handleFCDoubleClick(fc.id, onUnlinkFC)}
-                      className="cursor-pointer"
-                      title="클릭: 연결 | 더블클릭: 연결 해제"
-                    >
-                      <td style={tdCenterStyle(noBg, BORDER_GREEN, '#fff')}>{fc.fcNo}</td>
+                    <tr key={fc.id}>
+                      {/* NO열 클릭 → 연결 해제 */}
+                      <td 
+                        style={{...tdCenterStyle(noBg, BORDER_GREEN, '#fff'), cursor: 'pointer'}}
+                        onClick={() => onUnlinkFC(fc.id)}
+                        title="클릭: 연결 해제"
+                      >
+                        {fc.fcNo}
+                      </td>
                       <td style={tdCenterStyle(cellBg, BORDER_GREEN, COLORS.function.text, { fontSize: FONT_SIZES.small, whiteSpace: 'nowrap' })}>{fc.processName}</td>
                       <td style={tdCenterStyle(cellBg, BORDER_GREEN, COLORS.function.text)}>{fc.m4}</td>
                       <td style={tdStyle(cellBg, BORDER_GREEN, { fontSize: FONT_SIZES.small, color: COLORS.function.text })}>{fc.workElem}</td>
-                      <td style={tdStyle(cellBg, BORDER_GREEN, { color: COLORS.function.text })}>{fc.text}{isLinkedInSaved ? ' ✓' : ''}</td>
+                      {/* 고장원인열 클릭 → 연결 추가 */}
+                      <td 
+                        style={{...tdStyle(cellBg, BORDER_GREEN, { color: COLORS.function.text }), cursor: 'pointer'}}
+                        onClick={() => onToggleFC(fc.id)}
+                        title="클릭: 연결 추가"
+                      >
+                        {fc.text}{isLinkedInSaved ? ' ✓' : ''}
+                      </td>
                     </tr>
                   );
                 })}
