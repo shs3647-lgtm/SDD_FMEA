@@ -570,7 +570,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
               const structureZebra = idx % 2 === 1 ? '#bbdefb' : '#e3f2fd';
               const functionZebra = idx % 2 === 1 ? '#c8e6c9' : '#e8f5e9';
               return (
-              <tr key={row.key} className={zebraBg}>
+              <tr key={row.key} style={{ background: zebraBg }}>
                 {/* 완제품 공정명 */}
                 {row.showProduct && (
                   <td 
