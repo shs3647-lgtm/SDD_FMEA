@@ -857,6 +857,8 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
         fmData={fmData}
         fcData={fcData}
         currentFMId={currentFMId}
+        linkedFEIds={new Set(linkedFEs.keys())}
+        linkedFCIds={new Set(linkedFCs.keys())}
         linkStats={linkStats}
         selectedProcess={selectedProcess}
         fcLinkScope={fcLinkScope}

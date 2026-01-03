@@ -18,6 +18,8 @@ interface FailureLinkTablesProps {
   fmData: FMItem[];
   fcData: FCItem[];
   currentFMId: string | null;
+  linkedFEIds: Set<string>;  // 현재 FM에 연결된 FE IDs
+  linkedFCIds: Set<string>;  // 현재 FM에 연결된 FC IDs
   linkStats: {
     feLinkedIds: Set<string>;
     feLinkedTexts: Set<string>;
@@ -87,6 +89,8 @@ export default function FailureLinkTables({
 
   const {
     currentFMId,
+    linkedFEIds,
+    linkedFCIds,
     linkStats,
     selectedProcess,
     fcLinkScope,
@@ -138,13 +142,17 @@ export default function FailureLinkTables({
               <tbody>
                 {feData.map((fe, idx) => {
                   const isLinkedInSaved = linkStats.feLinkedIds.has(fe.id) || linkStats.feLinkedTexts.has(fe.text);
+                  const isLinkedToCurrentFM = linkedFEIds.has(fe.id);  // 현재 FM에 연결됨
                   const noBg = isLinkedInSaved ? COLORS.structure.dark : '#f57c00';
                   const cellBg = isLinkedInSaved ? '#bbdefb' : (idx % 2 === 1 ? '#bbdefb' : '#e3f2fd');
                   const severityColor = fe.severity && fe.severity >= 8 ? '#f57c00' : fe.severity && fe.severity >= 5 ? '#f57f17' : COLORS.structure.text;
                   return (
                     <tr key={fe.id} onClick={() => onToggleFE(fe.id)} className={currentFMId ? 'cursor-pointer' : ''}>
                       <td style={tdCenterStyle(noBg, BORDER_BLUE, '#fff')}>{fe.feNo}</td>
-                      <td style={tdStyle(cellBg, BORDER_BLUE, { color: COLORS.structure.text })}>{fe.text}</td>
+                      <td style={tdStyle(cellBg, BORDER_BLUE, { color: COLORS.structure.text })}>
+                        {fe.text}
+                        {isLinkedToCurrentFM && <span className="ml-1 text-blue-700 font-bold">✓</span>}
+                      </td>
                       <td style={tdCenterStyle(cellBg, BORDER_BLUE, severityColor)}>{fe.severity || '-'}</td>
                     </tr>
                   );
@@ -236,6 +244,7 @@ export default function FailureLinkTables({
               <tbody>
                 {filteredFcData.map((fc, idx) => {
                   const isLinkedInSaved = linkStats.fcLinkedIds.has(fc.id) || linkStats.fcLinkedTexts.has(fc.text);
+                  const isLinkedToCurrentFM = linkedFCIds.has(fc.id);  // 현재 FM에 연결됨
                   const noBg = isLinkedInSaved ? COLORS.function.dark : '#f57c00';
                   const cellBg = isLinkedInSaved ? '#c8e6c9' : (idx % 2 === 1 ? '#c8e6c9' : '#e8f5e9');
                   return (
@@ -258,6 +267,7 @@ export default function FailureLinkTables({
                         title="클릭: 연결 추가"
                       >
                         {fc.text}
+                        {isLinkedToCurrentFM && <span className="ml-1 text-green-700 font-bold">✓</span>}
                       </td>
                     </tr>
                   );
