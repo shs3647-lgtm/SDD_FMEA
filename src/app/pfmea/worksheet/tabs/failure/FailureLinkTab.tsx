@@ -584,9 +584,29 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     setTimeout(drawLines, 50);
   }, [currentFMId, fcData, savedLinks, setState, setDirty, saveToLocalStorage, drawLines]);
 
-  // ========== 연결 확정 ==========
+  // ========== 현재 FM 연결 상태 확인 ==========
+  const isCurrentFMLinked = useMemo(() => {
+    if (!currentFMId) return false;
+    const fmLinks = savedLinks.filter(l => l.fmId === currentFMId);
+    const hasFE = fmLinks.some(l => l.feId && l.feId.trim() !== '');
+    const hasFC = fmLinks.some(l => l.fcId && l.fcId.trim() !== '');
+    return hasFE || hasFC;
+  }, [currentFMId, savedLinks]);
+
+  // ========== 연결 확정 (토글 방식) ==========
   const confirmLink = useCallback(() => {
     if (!currentFMId || !currentFM) return;
+    
+    // 이미 연결되어 있으면 해제
+    if (isCurrentFMLinked) {
+      const newLinks = savedLinks.filter(l => l.fmId !== currentFMId);
+      setSavedLinks(newLinks);
+      setState((prev: any) => ({ ...prev, failureLinks: newLinks }));
+      setDirty(true);
+      requestAnimationFrame(() => saveToLocalStorage?.());
+      console.log('[연결 해제]', currentFM.text);
+      return;
+    }
     
     const feArray = Array.from(linkedFEs.values());
     const fcArray = Array.from(linkedFCs.values());
@@ -896,32 +916,24 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
             <button onClick={() => setViewMode('result')} style={resultButtonStyle(viewMode === 'result')}>
               분석결과(<span style={{color: viewMode === 'result' ? '#90caf9' : '#1976d2',fontWeight:700}}>FE:{linkStats.feLinkedCount}</span>,<span style={{color: viewMode === 'result' ? '#ffab91' : '#e65100',fontWeight:700}}>FM:{linkStats.fmLinkedCount}</span>,<span style={{color: viewMode === 'result' ? '#a5d6a7' : '#388e3c',fontWeight:700}}>FC:{linkStats.fcLinkedCount}</span>{linkStats.fmMissingCount > 0 && <span style={{color: viewMode === 'result' ? '#ff8a80' : '#d32f2f',fontWeight:700}}>,누락:{linkStats.fmMissingCount}</span>})
             </button>
-            {/* 확정 상태 배지 - 색상으로 상태 표시 */}
-            <span style={{ 
-              padding: '2px 8px', 
-              borderRadius: 4, 
-              background: isConfirmed ? '#4caf50' : '#9e9e9e',
-              color: '#fff', 
-              fontSize: 11, 
-              fontWeight: 700,
-              marginLeft: 4,
-              whiteSpace: 'nowrap'
-            }}>
-              {isConfirmed ? '확정완료' : '미확정'}
-            </span>
           </div>
           
           <div style={actionButtonGroupStyle}>
-            {/* 개별 FM 연결확정 */}
+            {/* 연결확정 토글 버튼 */}
             <button 
               onClick={confirmLink} 
-              disabled={isConfirmed || !currentFMId || (linkedFEs.size === 0 && linkedFCs.size === 0)}
-              style={actionButtonStyle({
-                bg: '#2196f3', color: '#fff',
-                opacity: (isConfirmed || !currentFMId || (linkedFEs.size === 0 && linkedFCs.size === 0)) ? 0.5 : 1
-              })}
+              disabled={!currentFMId || (!isCurrentFMLinked && linkedFEs.size === 0 && linkedFCs.size === 0)}
+              style={{
+                ...actionButtonStyle({
+                  bg: isCurrentFMLinked ? '#2196f3' : '#9e9e9e', 
+                  color: '#fff',
+                  opacity: (!currentFMId || (!isCurrentFMLinked && linkedFEs.size === 0 && linkedFCs.size === 0)) ? 0.5 : 1
+                }),
+                whiteSpace: 'nowrap',
+                minWidth: '80px'
+              }}
             >
-              연결확정
+              {isCurrentFMLinked ? '연결확정' : '미확정'}
             </button>
             
             {/* 전체 확정/수정 버튼 */}
