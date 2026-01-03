@@ -115,18 +115,6 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     }
   }, [(state as any).failureLinks]);
 
-  // ========== 첫 번째 FM 자동 선택 (고장사슬 기본 표시) ==========
-  useEffect(() => {
-    // FM 데이터가 있고 현재 선택된 FM이 없으면 첫 번째 FM 자동 선택
-    if (fmData.length > 0 && !currentFMId) {
-      const firstFM = fmData[0];
-      console.log('[FailureLinkTab] 첫 번째 FM 자동 선택:', firstFM.fmNo, firstFM.text);
-      setCurrentFMId(firstFM.id);
-      setSelectedProcess(firstFM.processName);
-      setViewMode('diagram');
-    }
-  }, [fmData, currentFMId]);
-
   // ========== FE 데이터 추출 (확정된 것만 사용 + 중복 제거) ==========
   const isL1Confirmed = state.failureL1Confirmed || false;
   
@@ -315,6 +303,18 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
 
   // ========== 현재 선택된 FM ==========
   const currentFM = useMemo(() => fmData.find(f => f.id === currentFMId), [fmData, currentFMId]);
+
+  // ========== 첫 번째 FM 자동 선택 (고장사슬 기본 표시) ==========
+  useEffect(() => {
+    // FM 데이터가 있고 현재 선택된 FM이 없으면 첫 번째 FM 자동 선택
+    if (fmData.length > 0 && !currentFMId) {
+      const firstFM = fmData[0];
+      console.log('[FailureLinkTab] 첫 번째 FM 자동 선택:', firstFM.fmNo, firstFM.text);
+      setCurrentFMId(firstFM.id);
+      setSelectedProcess(firstFM.processName);
+      setViewMode('diagram');
+    }
+  }, [fmData, currentFMId]);
 
   // ========== SVG 연결선 ==========
   const { svgPaths, drawLines } = useSVGLines(
