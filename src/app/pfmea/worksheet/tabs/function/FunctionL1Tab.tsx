@@ -491,7 +491,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                 <SelectableCell value="" placeholder="기능 선택" bgColor={COLORS.function.light} onClick={() => handleCellClick({ type: 'l1Function', id: '', title: '완제품 기능 선택', itemCode: 'C2' })} />
               </td>
               <td className="border border-[#ccc] p-0">
-                <SelectableCell value="" placeholder="요구사항 선택" bgColor={COLORS.function.light} onClick={() => handleCellClick({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
+                <SelectableCell value="" placeholder="요구사항 선택" bgColor={COLORS.failure.light} textColor={COLORS.failure.text} onClick={() => handleCellClick({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
               </td>
             </tr>
           ) : (() => {
@@ -513,7 +513,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                     <SelectableCell value="" placeholder="기능 선택" bgColor={COLORS.function.light} onClick={() => handleCellClick({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} />
                   </td>
                   <td className="border border-[#ccc] p-0">
-                    <SelectableCell value="" placeholder="요구사항 선택" bgColor={COLORS.function.light} onClick={() => handleCellClick({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
+                    <SelectableCell value="" placeholder="요구사항 선택" bgColor={COLORS.failure.light} textColor={COLORS.failure.text} onClick={() => handleCellClick({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
                   </td>
                 </tr>
               ) : t.functions.map((f, fIdx) => {
@@ -536,7 +536,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                       <SelectableCell value={f.name} placeholder="기능" bgColor={COLORS.function.light} textColor="#000000" onClick={() => handleCellClick({ type: 'l1Function', id: t.id, funcId: f.id, title: '완제품 기능 선택', itemCode: 'C2' })} onDoubleClickEdit={(newValue) => handleInlineEditFunction(t.id, f.id, newValue)} />
                     </td>
                     <td className="border border-[#ccc] p-0">
-                      <SelectableCell value="" placeholder="요구사항 선택" bgColor={COLORS.function.zebra} textColor={COLORS.function.text} onClick={() => handleCellClick({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} />
+                      <SelectableCell value="" placeholder="요구사항 선택" bgColor={COLORS.failure.zebra} textColor={COLORS.failure.text} onClick={() => handleCellClick({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} />
                     </td>
                   </tr>
                 ) : f.requirements.map((r, rIdx) => (
@@ -561,8 +561,8 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                       <SelectableCell 
                         value={r.name} 
                         placeholder="요구사항" 
-                        bgColor={COLORS.function.zebra} 
-                        textColor={COLORS.function.text} 
+                        bgColor={COLORS.failure.zebra} 
+                        textColor={COLORS.failure.text} 
                         onClick={() => handleCellClick({ type: 'l1Requirement', id: f.id, reqId: r.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} 
                         onDoubleClickEdit={(newValue) => handleInlineEditRequirement(t.id, f.id, r.id, newValue)}
                       />

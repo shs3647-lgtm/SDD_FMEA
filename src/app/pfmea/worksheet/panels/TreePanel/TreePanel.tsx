@@ -151,7 +151,7 @@ export default function TreePanel({ state }: TreePanelProps) {
                       <div 
                         key={r.id} 
                         className={`ml-4 ${tw.textXxs} font-medium py-0.5 px-1 rounded-sm mt-0.5`}
-                        style={{ color: typeColor.text }}
+                        style={{ backgroundColor: '#fff3e0', color: '#e65100' }}
                       >
                         • {r.name}
                       </div>
