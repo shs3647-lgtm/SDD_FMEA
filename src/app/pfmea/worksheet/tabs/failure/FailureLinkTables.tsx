@@ -185,12 +185,10 @@ export default function FailureLinkTables({
                   const noBg = isLinked ? COLORS.function.dark : (isMissing ? '#f44336' : '#f57c00');
                   const cellBg = isSelected ? '#fff8e1' : (idx % 2 === 1 ? '#ffe0b2' : '#fff3e0');
                   
-                  // 체크표시: 확정된 FM은 녹색, 현재 선택된 FM은 파란색
+                  // 체크표시: 현재 선택된 FM만 파란색 체크표시, 확정된 FM은 녹색 텍스트만
                   let checkMark = '';
-                  if (isLinked) {
-                    checkMark = <span className="text-green-600 font-bold mr-1">✓</span>; // 확정됨 - 녹색
-                  } else if (isSelected) {
-                    checkMark = <span className="text-blue-600 font-bold mr-1">✓</span>; // 현재 선택됨 - 파란색
+                  if (isSelected && !isLinked) {
+                    checkMark = <span className="text-blue-600 font-bold mr-1">✓</span>; // 현재 선택됨 - 파란색 체크
                   }
                   
                   let statusIcon = '';
@@ -203,12 +201,15 @@ export default function FailureLinkTables({
                     statusIcon = ` ⚠️ ${missing.join('/')} 누락`;
                   }
                   
+                  // 텍스트 색상: 확정된 FM은 녹색, 그 외는 기본 색상
+                  const textColor = isLinked ? '#2e7d32' : (isMissing ? '#d32f2f' : COLORS.failure.text);
+                  
                   return (
                     <tr key={fm.id} onClick={() => onSelectFM(fm.id)} className="cursor-pointer">
                       <td style={tdCenterStyle(noBg, BORDER_ORANGE, '#fff')}>{fm.fmNo}</td>
                       <td style={tdCenterStyle(cellBg, BORDER_ORANGE, COLORS.failure.text, { fontSize: FONT_SIZES.small, whiteSpace: 'nowrap', padding: '4px 6px' })}>{fm.processName}</td>
                       <td style={tdStyle(cellBg, BORDER_ORANGE, { 
-                        color: isMissing ? '#d32f2f' : COLORS.failure.text, 
+                        color: textColor, 
                         fontWeight: isMissing ? FONT_WEIGHTS.bold : FONT_WEIGHTS.normal, 
                         padding: '4px 6px' 
                       })}>
