@@ -206,34 +206,20 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
 
       if (type === 'l1Type') {
         const currentTypes = newState.l1.types;
-        const existingNames = new Set(currentTypes.map(t => t.name));
-        
-        // ✅ 수정: 선택된 모든 값을 각각 별도 type으로 저장
-        const newTypes = [...currentTypes];
-        
-        // 빈 타입이 있으면 첫 번째 선택값 할당
-        const emptyType = newTypes.find(t => !t.name || t.name === '' || t.name.includes('클릭하여'));
-        let startIdx = 0;
+        const emptyType = currentTypes.find(t => !t.name || t.name === '' || t.name.includes('클릭하여'));
         
         if (emptyType && selectedValues.length > 0) {
-          const emptyIdx = newTypes.findIndex(t => t.id === emptyType.id);
-          if (emptyIdx !== -1) {
-            newTypes[emptyIdx] = { ...emptyType, name: selectedValues[0] };
-            existingNames.add(selectedValues[0]);
-            startIdx = 1;
-          }
+          // 빈 타입이 있으면 첫 번째 선택값만 할당
+          newState.l1.types = currentTypes.map(t => 
+            t.id === emptyType.id 
+              ? { ...t, name: selectedValues[0] }
+              : t
+          );
+        } else if (selectedValues.length > 0) {
+          // ✅ 확정 상태에서도 새로 추가 가능 (확정됨 유지)
+          const newType = { id: uid(), name: selectedValues[0], functions: [] };
+          newState.l1.types = [...currentTypes, newType];
         }
-        
-        // 나머지 선택값들은 새로운 type으로 추가 (중복 제외)
-        for (let i = startIdx; i < selectedValues.length; i++) {
-          const value = selectedValues[i];
-          if (!existingNames.has(value)) {
-            newTypes.push({ id: uid(), name: value, functions: [] });
-            existingNames.add(value);
-          }
-        }
-        
-        newState.l1.types = newTypes;
       } 
       else if (type === 'l1Function') {
         const funcId = (modal as any).funcId;
