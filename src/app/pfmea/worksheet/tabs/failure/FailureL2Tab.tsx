@@ -362,13 +362,13 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
 
   return (
     <div className="p-0 overflow-auto h-full">
-      <table className="border-collapse table-fixed" style={{minWidth: '900px'}}>
+      <table className="w-full border-collapse table-fixed" style={{minWidth: '800px'}}>
         <colgroup>
-          <col className="w-[130px]" />
-          <col className="w-[180px]" />
-          <col className="w-[130px]" />
-          <col className="w-[50px]" />
-          <col className="w-[300px]" />
+          <col style={{ width: '15%', minWidth: '100px' }} />
+          <col style={{ width: '25%', minWidth: '150px' }} />
+          <col style={{ width: '18%', minWidth: '100px' }} />
+          <col style={{ width: '7%', minWidth: '50px' }} />
+          <col style={{ width: '35%', minWidth: '200px' }} />
         </colgroup>
         
         {/* 헤더 - 하단 2px 검은색 구분선 */}
