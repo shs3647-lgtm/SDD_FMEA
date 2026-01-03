@@ -418,7 +418,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
             <th className="bg-[#1976d2] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
               2. 메인 공정명
             </th>
-            <th className="bg-[#f57c00] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
+            <th className="bg-[#1976d2] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
               3. 작업 요소명
             </th>
             <th colSpan={2} className="bg-[#388e3c] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
@@ -480,34 +480,35 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
             </tr>
           ) : flatRows.map((row, idx) => {
             // ✅ CASCADE 구조: processChar가 직접 flatRows에 포함됨
-            const zebraBg = idx % 2 === 1 ? '#ffe0b2' : '#fff3e0';
-            const structureZebra = idx % 2 === 1 ? '#bbdefb' : '#e3f2fd';
-            const functionZebra = idx % 2 === 1 ? '#c8e6c9' : '#e8f5e9';
+            const zebraBg = idx % 2 === 1 ? '#ffe0b2' : '#fff3e0'; // 주황색 체크
+            const structureZebra = idx % 2 === 1 ? '#bbdefb' : '#e3f2fd'; // 파란색 체크
+            const functionZebra = idx % 2 === 1 ? '#c8e6c9' : '#e8f5e9'; // 녹색 체크
             
             return (
-              <tr key={`${row.proc.id}-${row.we?.id || 'empty'}-${row.processChar?.id || 'nochar'}-${row.cause?.id || idx}`} style={{ background: zebraBg }}>
-                {/* 공정 셀: showProc && procRowSpan > 0 */}
+              <tr key={`${row.proc.id}-${row.we?.id || 'empty'}-${row.processChar?.id || 'nochar'}-${row.cause?.id || idx}`}>
+                {/* 공정 셀: showProc && procRowSpan > 0 (파란색) */}
                 {row.showProc && row.procRowSpan > 0 && (
-                  <td rowSpan={row.procRowSpan} className={`border border-[#ccc] p-1.5 text-center ${structureZebra} font-semibold align-middle text-xs`}>
+                  <td rowSpan={row.procRowSpan} className="border border-[#ccc] p-1.5 text-center font-semibold align-middle text-xs" style={{ background: structureZebra }}>
                     {row.proc.no}. {row.proc.name}
                   </td>
                 )}
                 
-                {/* 작업요소 셀: showWe && weRowSpan > 0 */}
+                {/* 작업요소 셀: showWe && weRowSpan > 0 (파란색) */}
                 {row.showWe && row.weRowSpan > 0 && (
-                  <td rowSpan={row.weRowSpan} className={`border border-[#ccc] p-1.5 text-center ${structureZebra} align-middle text-xs`}>
+                  <td rowSpan={row.weRowSpan} className="border border-[#ccc] p-1.5 text-center align-middle text-xs" style={{ background: structureZebra }}>
                     {row.we?.name || '(작업요소 없음)'}
                   </td>
                 )}
                 
-                {/* ✅ 공정특성 셀: showChar && charRowSpan > 0 (각 공정특성별로 분리) */}
+                {/* ✅ 공정특성 셀: showChar && charRowSpan > 0 (녹색) */}
                 {row.showChar && row.charRowSpan > 0 && (
-                  <td rowSpan={row.charRowSpan} className={`border border-[#ccc] border-r-[2px] border-r-orange-500 p-1.5 text-center ${functionZebra} align-middle text-xs`}>
+                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-1.5 text-center align-middle text-xs" style={{ background: functionZebra }}>
                     {row.processChar?.name || '(기능분석에서 입력)'}
                   </td>
                 )}
+                {/* 특별특성 셀 (녹색) */}
                 {row.showChar && row.charRowSpan > 0 && (
-                  <td rowSpan={row.charRowSpan} className={`border border-[#ccc] p-1 text-center ${functionZebra} align-middle text-xs`}>
+                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] p-1 text-center align-middle text-xs" style={{ background: functionZebra }}>
                     {row.processChar?.specialChar ? (
                       <span className={`px-1.5 py-0.5 rounded text-white text-[10px] font-bold ${
                         row.processChar.specialChar === 'CC' ? 'bg-red-600' : 

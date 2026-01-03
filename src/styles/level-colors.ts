@@ -155,13 +155,23 @@ export const TREE_STRUCTURE = {
   border: '#546e7a',
 };
 
-// 기능분석 - 녹색 글씨
+// 기능분석 1L/2L - 녹색 글씨
 export const TREE_FUNCTION = {
   procBg: '#2e7d32',        // 공정명 배경 (녹색)
   procText: '#ffffff',      // 공정명 글씨 (흰색)
   itemBg: '#c8e6c9',        // 하위 아이템 배경 (연녹색)
   itemText: '#1b5e20',      // 하위 아이템 글씨 (진녹색)
   border: '#2e7d32',
+};
+
+// 기능분석 3L - 주황색 글씨 (공정특성/특별특성)
+export const TREE_FUNCTION_L3 = {
+  procBg: '#f57c00',        // 공정명 배경 (주황색)
+  procText: '#ffffff',      // 공정명 글씨 (흰색)
+  itemBg: '#fff3e0',        // 하위 아이템 배경 (연주황색)
+  itemBg2: '#ffe0b2',       // 홀수행 배경 (진한 주황색)
+  itemText: '#e65100',      // 하위 아이템 글씨 (주황색)
+  border: '#f57c00',
 };
 
 // 고장분석 - 주황색 글씨

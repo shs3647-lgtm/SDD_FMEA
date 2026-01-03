@@ -562,10 +562,11 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                 
                 // 작업요소에 기능이 없는 경우
                 if (funcs.length === 0) {
-                  const zebraBg = globalRowIdx++ % 2 === 1 ? '#c8e6c9' : '#e8f5e9';
-                  const structureZebra = globalRowIdx % 2 === 0 ? '#bbdefb' : '#e3f2fd';
+                  const structureZebra = globalRowIdx % 2 === 0 ? '#bbdefb' : '#e3f2fd'; // 파란색
+                  const functionZebra = globalRowIdx % 2 === 0 ? '#c8e6c9' : '#e8f5e9'; // 녹색
+                  const charZebra = globalRowIdx++ % 2 === 0 ? '#ffe0b2' : '#fff3e0'; // 주황색
                   const row = (
-                    <tr key={we.id} style={{ background: zebraBg }}>
+                    <tr key={we.id}>
                       {isFirstProcRow && (
                         <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: structureZebra }}>
                           {proc.no}. {proc.name}
@@ -577,13 +578,13 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                       <td rowSpan={weRowSpan} className="border border-[#ccc] p-2 font-semibold text-xs align-middle" style={{ background: structureZebra }}>
                         {we.name}
                       </td>
-                      <td className={cellP0}>
-                        <SelectableCell value="" placeholder="작업요소기능 선택" bgColor={'#e8f5e9'} onClick={() => handleCellClick({ type: 'l3Function', procId: proc.id, l3Id: we.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} />
+                      <td className={cellP0} style={{ background: functionZebra }}>
+                        <SelectableCell value="" placeholder="작업요소기능 선택" bgColor={functionZebra} onClick={() => handleCellClick({ type: 'l3Function', procId: proc.id, l3Id: we.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} />
                       </td>
-                      <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0">
-                        <SelectableCell value="" placeholder="공정특성 선택" bgColor={'#e8f5e9'} onClick={() => {}} />
+                      <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0" style={{ background: charZebra }}>
+                        <SelectableCell value="" placeholder="공정특성 선택" bgColor={charZebra} onClick={() => {}} />
                       </td>
-                      <td className="border border-[#ccc] border-l-0 p-1 text-center bg-[#fff3e0]">
+                      <td className="border border-[#ccc] border-l-0 p-1 text-center" style={{ background: charZebra }}>
                         <SpecialCharBadge value="" onClick={() => {}} />
                       </td>
                     </tr>
@@ -599,10 +600,11 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                   
                   // 기능에 공정특성이 없는 경우
                   if (chars.length === 0) {
-                    const zebraBg = globalRowIdx++ % 2 === 1 ? '#c8e6c9' : '#e8f5e9';
-                    const structureZebra = globalRowIdx % 2 === 0 ? '#bbdefb' : '#e3f2fd';
+                    const structureZebra = globalRowIdx % 2 === 0 ? '#bbdefb' : '#e3f2fd'; // 파란색
+                    const functionZebra = globalRowIdx % 2 === 0 ? '#c8e6c9' : '#e8f5e9'; // 녹색
+                    const charZebra = globalRowIdx++ % 2 === 0 ? '#ffe0b2' : '#fff3e0'; // 주황색
                     const row = (
-                      <tr key={f.id} style={{ background: zebraBg }}>
+                      <tr key={f.id}>
                         {isFirstProcRow && (
                           <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: structureZebra }}>
                             {proc.no}. {proc.name}
@@ -618,19 +620,19 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                             </td>
                           </>
                         )}
-                        <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle">
+                        <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle" style={{ background: functionZebra }}>
                           <SelectableCell 
                             value={f.name} 
                             placeholder="작업요소기능" 
-                            bgColor={'#e8f5e9'} 
+                            bgColor={functionZebra} 
                             onClick={() => handleCellClick({ type: 'l3Function', procId: proc.id, l3Id: we.id, funcId: f.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} 
                             onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, we.id, f.id, newValue)}
                           />
                         </td>
-                        <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0">
-                          <SelectableCell value="" placeholder="공정특성 선택" bgColor={'#c8e6c9'} onClick={() => handleCellClick({ type: 'l3ProcessChar', procId: proc.id, l3Id: we.id, funcId: f.id, title: '공정특성 선택', itemCode: 'B3', workElementName: we.name })} />
+                        <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0" style={{ background: charZebra }}>
+                          <SelectableCell value="" placeholder="공정특성 선택" bgColor={charZebra} onClick={() => handleCellClick({ type: 'l3ProcessChar', procId: proc.id, l3Id: we.id, funcId: f.id, title: '공정특성 선택', itemCode: 'B3', workElementName: we.name })} />
                         </td>
-                        <td className="border border-[#ccc] border-l-0 p-1 text-center bg-[#fff3e0]">
+                        <td className="border border-[#ccc] border-l-0 p-1 text-center" style={{ background: charZebra }}>
                           <SpecialCharBadge value="" onClick={() => {}} />
                         </td>
                       </tr>
@@ -641,10 +643,11 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                   
                   // 기능에 공정특성이 있는 경우
                   return chars.map((c, cIdx) => {
-                    const zebraBg = globalRowIdx++ % 2 === 1 ? '#c8e6c9' : '#e8f5e9';
-                    const structureZebra = globalRowIdx % 2 === 0 ? '#bbdefb' : '#e3f2fd';
+                    const structureZebra = globalRowIdx % 2 === 0 ? '#bbdefb' : '#e3f2fd'; // 파란색
+                    const functionZebra = globalRowIdx % 2 === 0 ? '#c8e6c9' : '#e8f5e9'; // 녹색
+                    const charZebra = globalRowIdx++ % 2 === 0 ? '#ffe0b2' : '#fff3e0'; // 주황색
                     const row = (
-                      <tr key={c.id} style={{ background: zebraBg }}>
+                      <tr key={c.id}>
                         {isFirstProcRow && (
                           <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: structureZebra }}>
                             {proc.no}. {proc.name}
@@ -661,26 +664,26 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                           </>
                         )}
                         {cIdx === 0 && (
-                          <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle">
+                          <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle" style={{ background: functionZebra }}>
                             <SelectableCell 
                               value={f.name} 
                               placeholder="작업요소기능" 
-                              bgColor={'#e8f5e9'} 
+                              bgColor={functionZebra} 
                               onClick={() => handleCellClick({ type: 'l3Function', procId: proc.id, l3Id: we.id, funcId: f.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} 
                               onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, we.id, f.id, newValue)}
                             />
                           </td>
                         )}
-                        <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0">
+                        <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0" style={{ background: charZebra }}>
                           <SelectableCell 
                             value={c.name} 
                             placeholder="공정특성" 
-                            bgColor={'#c8e6c9'} 
+                            bgColor={charZebra} 
                             onClick={() => handleCellClick({ type: 'l3ProcessChar', procId: proc.id, l3Id: we.id, funcId: f.id, charId: c.id, title: '공정특성 선택', itemCode: 'B3', workElementName: we.name })} 
                             onDoubleClickEdit={(newValue) => handleInlineEditProcessChar(proc.id, we.id, f.id, c.id, newValue)}
                           />
                         </td>
-                        <td className="border border-[#ccc] border-l-0 p-1 text-center bg-[#fff3e0]">
+                        <td className="border border-[#ccc] border-l-0 p-1 text-center" style={{ background: charZebra }}>
                           <SpecialCharBadge 
                             value={c.specialChar || ''} 
                             onClick={() => setSpecialCharModal({ procId: proc.id, l3Id: we.id, funcId: f.id, charId: c.id })} 

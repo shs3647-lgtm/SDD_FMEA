@@ -455,33 +455,33 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
               </td>
             </tr>
           ) : buildFlatRows.map((row, idx) => {
-            const zebraBg = idx % 2 === 1 ? '#ffe0b2' : '#fff3e0';
-            const structureZebra = idx % 2 === 1 ? '#bbdefb' : '#e3f2fd';
-            const functionZebra = idx % 2 === 1 ? '#c8e6c9' : '#e8f5e9';
+            const zebraBg = idx % 2 === 1 ? '#ffe0b2' : '#fff3e0'; // 주황색 체크 (고장분석용)
+            const structureZebra = idx % 2 === 1 ? '#bbdefb' : '#e3f2fd'; // 파란색 체크
+            const functionZebra = idx % 2 === 1 ? '#c8e6c9' : '#e8f5e9'; // 녹색 체크
             
             return (
-              <tr key={`row-${idx}`} style={{ background: zebraBg }}>
-                {/* 공정명 - rowSpan */}
+              <tr key={`row-${idx}`}>
+                {/* 공정명 - rowSpan (파란색) */}
                 {row.showProc && (
-                  <td rowSpan={row.procRowSpan} className={`border border-[#ccc] p-2 text-center ${structureZebra} font-semibold align-middle`}>
+                  <td rowSpan={row.procRowSpan} className="border border-[#ccc] p-2 text-center font-semibold align-middle" style={{ background: structureZebra }}>
                     {row.procNo}. {row.procName}
                   </td>
                 )}
-                {/* 기능명 - rowSpan */}
+                {/* 기능명 - rowSpan (녹색) */}
                 {row.showFunc && (
-                  <td rowSpan={row.funcRowSpan} className={`border border-[#ccc] p-2 text-left ${functionZebra} text-xs align-middle`}>
+                  <td rowSpan={row.funcRowSpan} className="border border-[#ccc] p-2 text-left text-xs align-middle" style={{ background: functionZebra }}>
                     {row.funcName || '(기능분석에서 입력)'}
                   </td>
                 )}
-                {/* 제품특성 - rowSpan */}
+                {/* 제품특성 - rowSpan (주황색) */}
                 {row.showChar && (
-                  <td rowSpan={row.charRowSpan} className={`border border-[#ccc] border-r-[2px] border-r-orange-500 p-2 text-center ${functionZebra} text-xs align-middle`}>
+                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-2 text-center text-xs align-middle" style={{ background: zebraBg }}>
                     {row.charName || ''}
                   </td>
                 )}
-                {/* 특별특성 - rowSpan (기능분석에서 입력한 값 표시) */}
+                {/* 특별특성 - rowSpan (주황색) */}
                 {row.showChar && (
-                  <td rowSpan={row.charRowSpan} className={`border border-[#ccc] p-1 text-center ${functionZebra} text-xs align-middle`}>
+                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] p-1 text-center text-xs align-middle" style={{ background: zebraBg }}>
                     {row.specialChar ? (
                       <span className={`px-1.5 py-0.5 rounded text-white text-[10px] font-bold ${
                         row.specialChar === 'CC' ? 'bg-red-600' : 
@@ -492,8 +492,8 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
                     ) : '-'}
                   </td>
                 )}
-                {/* 고장형태 - 각 행마다 */}
-                <td className={cellP0}>
+                {/* 고장형태 - 각 행마다 (주황색 줄무늬) */}
+                <td className={cellP0} style={{ background: zebraBg }}>
                   <SelectableCell 
                     value={row.modeName || ''} 
                     placeholder={row.charName ? "고장형태 선택" : ""} 
