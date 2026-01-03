@@ -457,6 +457,18 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
   }, [currentFMId, editMode, feData, savedLinks, setState, setDirty, saveToLocalStorage, drawLines]);
 
   // ========== FC 클릭 (연결 추가) ==========
+  // ========== 공정 순서 비교 함수 ==========
+  const getProcessOrder = useCallback((processName: string): number => {
+    const proc = state.l2.find((p: any) => p.name === processName);
+    if (proc) {
+      // no가 숫자 형태면 파싱, 아니면 order 또는 인덱스 사용
+      const noNum = parseInt(proc.no, 10);
+      if (!isNaN(noNum)) return noNum;
+      return proc.order || state.l2.indexOf(proc) * 10;
+    }
+    return 9999; // 못 찾으면 맨 뒤로
+  }, [state.l2]);
+
   const toggleFC = useCallback((id: string) => {
     const fc = fcData.find(f => f.id === id);
     if (!fc) return;
@@ -465,6 +477,18 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     if (!currentFMId) {
       alert('⚠️ 고장형태(FM)를 먼저 선택해주세요.\n\n하나의 고장원인(FC)은 여러 고장형태(FM)에 연결될 수 있습니다.');
       return;
+    }
+    
+    // ✅ 뒷공정 FC 연결 방지: FC 공정이 FM 공정보다 뒤면 연결 불가
+    if (currentFM) {
+      const fmOrder = getProcessOrder(currentFM.processName);
+      const fcOrder = getProcessOrder(fc.processName);
+      
+      if (fcOrder > fmOrder) {
+        alert(`⚠️ 뒷공정 원인 연결 불가!\n\n고장형태(FM): ${currentFM.processName} (순서: ${fmOrder})\n고장원인(FC): ${fc.processName} (순서: ${fcOrder})\n\n💡 고장원인(FC)은 고장형태(FM)와 같은 공정이거나 앞 공정에서만 연결할 수 있습니다.`);
+        console.log('[FC 연결 차단] 뒷공정 원인:', fc.processName, '>', currentFM.processName);
+        return;
+      }
     }
     
     // 이미 연결된 경우 - 안내 메시지 (ID 또는 텍스트 기반 매칭)
@@ -487,7 +511,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     }
     
     setTimeout(drawLines, 50);
-  }, [currentFMId, editMode, fcData, savedLinks, drawLines]);
+  }, [currentFMId, currentFM, editMode, fcData, savedLinks, drawLines, getProcessOrder]);
 
   // ========== FC 더블클릭 (연결 해제) ==========
   const unlinkFC = useCallback((id: string) => {
