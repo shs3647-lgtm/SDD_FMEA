@@ -56,8 +56,26 @@ const INITIAL_FMEA: FMEAInfo = {
 
 function generateFMEAId(): string {
   const year = new Date().getFullYear().toString().slice(-2);
-  const seq = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-  return `PFM${year}-${seq}`;
+  
+  // ✅ 기존 프로젝트에서 최대 ID 찾아서 순차 증가
+  try {
+    const stored = localStorage.getItem('pfmea-projects');
+    if (stored) {
+      const projects = JSON.parse(stored);
+      const currentYearIds = projects
+        .filter((p: { id: string }) => p.id?.startsWith(`PFM${year}-`))
+        .map((p: { id: string }) => parseInt(p.id.split('-')[1]) || 0);
+      
+      if (currentYearIds.length > 0) {
+        const maxSeq = Math.max(...currentYearIds);
+        return `PFM${year}-${(maxSeq + 1).toString().padStart(3, '0')}`;
+      }
+    }
+  } catch (e) {
+    console.error('ID 생성 중 오류:', e);
+  }
+  
+  return `PFM${year}-001`;
 }
 
 // =====================================================
@@ -105,25 +123,53 @@ function PFMEARegisterPageContent() {
         }
       }
     } else {
-      // 신규 등록 모드
-      setFmeaId(generateFMEAId());
-    }
-    
-    // 저장된 CFT 데이터 불러오기 (신규 등록 시에만)
-    if (!isEditMode) {
-      const savedCft = localStorage.getItem('pfmea-cft-data');
-      if (savedCft) {
+      // 신규 등록 모드: 마지막 저장된 데이터 또는 임시 저장된 데이터 불러오기
+      const lastDraft = localStorage.getItem('pfmea-register-draft');
+      if (lastDraft) {
         try {
-          const parsed = JSON.parse(savedCft);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setCftMembers(parsed);
+          const draft = JSON.parse(lastDraft);
+          if (draft.fmeaInfo) {
+            setFmeaInfo(draft.fmeaInfo);
+          }
+          if (draft.cftMembers && draft.cftMembers.length > 0) {
+            setCftMembers(draft.cftMembers);
+          }
+          // ✅ 저장된 ID가 있으면 유지, 없으면 새로 생성
+          if (draft.fmeaId) {
+            setFmeaId(draft.fmeaId);
+          } else {
+            setFmeaId(generateFMEAId());
           }
         } catch (e) {
-          console.error('CFT 데이터 로드 실패:', e);
+          console.error('임시 저장 데이터 로드 실패:', e);
+          setFmeaId(generateFMEAId());
+        }
+      } else {
+        setFmeaId(generateFMEAId());
+        
+        // 저장된 CFT 데이터 불러오기
+        const savedCft = localStorage.getItem('pfmea-cft-data');
+        if (savedCft) {
+          try {
+            const parsed = JSON.parse(savedCft);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setCftMembers(parsed);
+            }
+          } catch (e) {
+            console.error('CFT 데이터 로드 실패:', e);
+          }
         }
       }
     }
   }, [isEditMode, editId]);
+
+  // ✅ 자동 임시 저장 (신규 등록 모드에서만, 데이터 변경 시)
+  useEffect(() => {
+    if (!isEditMode && fmeaId) {
+      const draft = { fmeaId, fmeaInfo, cftMembers };
+      localStorage.setItem('pfmea-register-draft', JSON.stringify(draft));
+    }
+  }, [isEditMode, fmeaId, fmeaInfo, cftMembers]);
 
   // 필드 업데이트
   const updateField = (field: keyof FMEAInfo, value: string) => {
@@ -246,6 +292,9 @@ function PFMEARegisterPageContent() {
       };
       existing.unshift(data);
       localStorage.setItem('pfmea-projects', JSON.stringify(existing));
+      
+      // ✅ 신규 등록 완료 후 임시 저장 삭제 + 다음 등록 준비
+      localStorage.removeItem('pfmea-register-draft');
     }
     
     setSaveStatus('saved');

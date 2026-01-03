@@ -54,8 +54,26 @@ const INITIAL_FMEA: FMEAInfo = {
 
 function generateFMEAId(): string {
   const year = new Date().getFullYear().toString().slice(-2);
-  const seq = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-  return `DFM${year}-${seq}`;
+  
+  // ✅ 기존 프로젝트에서 최대 ID 찾아서 순차 증가
+  try {
+    const stored = localStorage.getItem('dfmea-projects');
+    if (stored) {
+      const projects = JSON.parse(stored);
+      const currentYearIds = projects
+        .filter((p: { id: string }) => p.id?.startsWith(`DFM${year}-`))
+        .map((p: { id: string }) => parseInt(p.id.split('-')[1]) || 0);
+      
+      if (currentYearIds.length > 0) {
+        const maxSeq = Math.max(...currentYearIds);
+        return `DFM${year}-${(maxSeq + 1).toString().padStart(3, '0')}`;
+      }
+    }
+  } catch (e) {
+    console.error('ID 생성 중 오류:', e);
+  }
+  
+  return `DFM${year}-001`;
 }
 
 // =====================================================
@@ -76,30 +94,59 @@ export default function DFMEARegisterPage() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved'>('idle');
   const [cftSaveStatus, setCftSaveStatus] = useState<'idle' | 'saved'>('idle');
 
-  // 초기화
+  // 초기화: 마지막 저장된 데이터 또는 임시 저장 데이터 불러오기
   useEffect(() => {
-    setFmeaId(generateFMEAId());
-    
-    // 저장된 CFT 데이터 불러오기
-    const savedCft = localStorage.getItem('dfmea-cft-data');
-    if (savedCft) {
+    const lastDraft = localStorage.getItem('dfmea-register-draft');
+    if (lastDraft) {
       try {
-        const parsed = JSON.parse(savedCft);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setCftMembers(parsed);
+        const draft = JSON.parse(lastDraft);
+        if (draft.fmeaInfo) {
+          setFmeaInfo(draft.fmeaInfo);
+        }
+        if (draft.cftMembers && draft.cftMembers.length > 0) {
+          setCftMembers(draft.cftMembers);
+        }
+        // ✅ 저장된 ID가 있으면 유지, 없으면 새로 생성
+        if (draft.fmeaId) {
+          setFmeaId(draft.fmeaId);
+        } else {
+          setFmeaId(generateFMEAId());
         }
       } catch (e) {
-        console.error('CFT 데이터 로드 실패:', e);
+        console.error('임시 저장 데이터 로드 실패:', e);
+        setFmeaId(generateFMEAId());
+      }
+    } else {
+      setFmeaId(generateFMEAId());
+      
+      // 저장된 CFT 데이터 불러오기
+      const savedCft = localStorage.getItem('dfmea-cft-data');
+      if (savedCft) {
+        try {
+          const parsed = JSON.parse(savedCft);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setCftMembers(parsed);
+          }
+        } catch (e) {
+          console.error('CFT 데이터 로드 실패:', e);
+        }
       }
     }
   }, []);
+
+  // ✅ 자동 임시 저장 (데이터 변경 시)
+  useEffect(() => {
+    if (fmeaId) {
+      const draft = { fmeaId, fmeaInfo, cftMembers };
+      localStorage.setItem('dfmea-register-draft', JSON.stringify(draft));
+    }
+  }, [fmeaId, fmeaInfo, cftMembers]);
 
   // 필드 업데이트
   const updateField = (field: keyof FMEAInfo, value: string) => {
     setFmeaInfo(prev => ({ ...prev, [field]: value }));
   };
 
-  // 기초정보 선택
   // 기초정보 선택
   const handleBizInfoSelect = (info: BizInfoProject) => {
     setFmeaInfo(prev => ({
@@ -188,6 +235,9 @@ export default function DFMEARegisterPage() {
     const existing = JSON.parse(localStorage.getItem('dfmea-projects') || '[]');
     existing.unshift(data);
     localStorage.setItem('dfmea-projects', JSON.stringify(existing));
+    
+    // ✅ 저장 완료 후 임시 저장 삭제
+    localStorage.removeItem('dfmea-register-draft');
     
     setSaveStatus('saved');
     setTimeout(() => {
