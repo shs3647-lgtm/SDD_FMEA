@@ -144,7 +144,7 @@ export default function FailureLinkTables({
                   return (
                     <tr key={fe.id} onClick={() => onToggleFE(fe.id)} className={currentFMId ? 'cursor-pointer' : ''}>
                       <td style={tdCenterStyle(noBg, BORDER_BLUE, '#fff')}>{fe.feNo}</td>
-                      <td style={tdStyle(cellBg, BORDER_BLUE, { color: COLORS.structure.text })}>{fe.text}{isLinkedInSaved ? ' ✓' : ''}</td>
+                      <td style={tdStyle(cellBg, BORDER_BLUE, { color: COLORS.structure.text })}>{fe.text}</td>
                       <td style={tdCenterStyle(cellBg, BORDER_BLUE, severityColor)}>{fe.severity || '-'}</td>
                     </tr>
                   );
@@ -257,7 +257,7 @@ export default function FailureLinkTables({
                         onClick={() => onToggleFC(fc.id)}
                         title="클릭: 연결 추가"
                       >
-                        {fc.text}{isLinkedInSaved ? ' ✓' : ''}
+                        {fc.text}
                       </td>
                     </tr>
                   );
