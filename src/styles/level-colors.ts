@@ -6,29 +6,33 @@
  */
 
 // ============ 1L 구분(Type) 색상 - Your Plant / Ship to Plant / User ============
-export const L1_TYPE_COLORS: Record<string, { bg: string; light: string; text: string; border: string }> = {
+// 약어: YP, SP, User
+export const L1_TYPE_COLORS: Record<string, { bg: string; light: string; text: string; border: string; short: string }> = {
   'Your Plant': { 
     bg: '#7b1fa2',      // 보라색
     light: '#e1bee7', 
     text: '#4a148c',
-    border: '#7b1fa2'
+    border: '#7b1fa2',
+    short: 'YP'
   },
   'Ship to Plant': { 
     bg: '#f57c00',      // 주황색
     light: '#ffe0b2', 
     text: '#e65100',
-    border: '#f57c00'
+    border: '#f57c00',
+    short: 'SP'
   },
   'User': { 
     bg: '#388e3c',      // 녹색
     light: '#c8e6c9', 
     text: '#1b5e20',
-    border: '#388e3c'
+    border: '#388e3c',
+    short: 'User'
   },
 };
 
 export const getL1TypeColor = (typeName: string) => 
-  L1_TYPE_COLORS[typeName] || { bg: '#1976d2', light: '#bbdefb', text: '#0d47a1', border: '#1976d2' };
+  L1_TYPE_COLORS[typeName] || { bg: '#1976d2', light: '#bbdefb', text: '#0d47a1', border: '#1976d2', short: typeName };
 
 // ============ 레벨별 헤더/배경 색상 ============
 

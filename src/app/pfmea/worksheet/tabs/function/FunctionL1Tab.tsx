@@ -410,9 +410,9 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
   return (
     <div className="p-0 overflow-auto h-full">
       <table className="w-full border-collapse table-fixed">
-        {/* 컬럼 너비: 완제품공정명 140px, 구분 100px(Ship to Plant), 완제품기능 auto(넓게), 요구사항 150px */}
+        {/* 컬럼 너비: 완제품공정명 120px, 구분 50px(YP/SP/User), 완제품기능 auto(넓게+줄바꿈), 요구사항 140px */}
         <colgroup>
-          <col className="w-[140px]" /><col className="w-[100px]" /><col /><col className="w-[150px]" />
+          <col className="w-[120px]" /><col className="w-[50px]" /><col /><col className="w-[140px]" />
         </colgroup>
         
         {/* 3행 헤더 구조 - 하단 2px 검은색 구분선 */}
@@ -500,8 +500,8 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                   <td rowSpan={typeRowSpan} className="border border-[#ccc] p-2.5 text-center bg-[#e3f2fd] font-semibold align-middle">
                     {state.l1.name || '(구조분석에서 입력)'}
                   </td>
-                  <td rowSpan={typeRowSpan} className={`border border-[#ccc] p-0 align-middle`} style={{ background: getTypeColor(t.name).light }}>
-                    <SelectableCell value={t.name} placeholder="구분" bgColor={getTypeColor(t.name).light} textColor={getTypeColor(t.name).text} textAlign="center" onClick={() => handleCellClick({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
+                  <td rowSpan={typeRowSpan} className={`border border-[#ccc] p-1 align-middle text-center font-bold text-xs cursor-pointer hover:bg-opacity-80`} style={{ background: getTypeColor(t.name).light, color: getTypeColor(t.name).text }} onClick={() => handleCellClick({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })}>
+                    {getTypeColor(t.name).short || t.name}
                   </td>
                   <td className="border border-[#ccc] p-0">
                     <SelectableCell value="" placeholder="기능 선택" bgColor={COLORS.function.light} onClick={() => handleCellClick({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} />
