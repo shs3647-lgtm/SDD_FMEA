@@ -138,7 +138,8 @@ function PFMEARegisterPageContent() {
       customerName: info.customerName || '',
       modelYear: info.modelYear || '',
       fmeaProjectName: info.program || '',
-      subject: info.productName || '',
+      // ✅ FMEA명(subject)은 기존 값이 있으면 유지, 없으면 기초정보에서 가져옴
+      subject: prev.subject?.trim() ? prev.subject : (info.productName || ''),
     }));
     setBizInfoModalOpen(false);
   };
