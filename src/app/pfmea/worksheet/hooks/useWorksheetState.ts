@@ -539,6 +539,8 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       console.log('   - 트리뷰 = 테이블:', treeViewCauses.length === tableInputCauses.length ? '✅ 일치' : '❌ 불일치');
       console.log('   - 트리뷰 = 원자성DB:', isConsistent ? '✅ 일치' : '❌ 불일치');
       
+      // 복구가 필요한 경우 legacy를 업데이트
+      let finalLegacy = legacy;
       if (!isConsistent) {
         console.warn('⚠️ [일관성 불일치 감지]');
         if (missingInAtomicDB.length > 0) {
@@ -590,19 +592,10 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         console.log('✅ [복구 완료] 원자성 DB가 트리뷰 데이터로 복구되었습니다.');
         console.log('   - 복구된 failureCauses:', recoveredCauses.length, '개');
         
-        // 레거시 형식도 다시 변환하여 state 업데이트
-        const recoveredLegacy = convertToLegacyFormat({
-          ...loadedDB,
-          l1: legacy.l1,
-          l2: legacy.l2,
-        } as any);
+        // 레거시 형식도 다시 변환 (복구된 데이터 반영)
+        finalLegacy = convertToLegacyFormat(loadedDB);
         
-        setState(prev => ({
-          ...prev,
-          l2: recoveredLegacy.l2 as any,
-        }));
-        
-        console.log('✅ [복구 완료] state도 트리뷰 데이터로 업데이트되었습니다.');
+        console.log('✅ [복구 완료] legacy 데이터가 트리뷰 데이터로 업데이트되었습니다.');
       } else {
         console.log('✅ [일관성 검증 성공] 모든 데이터 소스가 일치합니다.');
       }
@@ -624,9 +617,9 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         
         return { 
           ...prev, 
-          l1: legacy.l1 as any, 
-          l2: legacy.l2 as any,
-          failureLinks: legacy.failureLinks || [],
+          l1: finalLegacy.l1 as any, 
+          l2: finalLegacy.l2 as any,
+          failureLinks: finalLegacy.failureLinks || [],
           // ✅ 기존 값이 있으면 유지, 없으면 레거시에서 복원
           riskData: hasExistingRiskData ? prev.riskData : legacyRiskData,
           tab: hasExistingTab ? prev.tab : (legacyTab !== 'structure' ? legacyTab : prev.tab),
@@ -735,7 +728,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
             return trimmed === '' || trimmed === '-';
           };
           
-          const migratedL2 = parsed.l2
+          let migratedL2 = parsed.l2
             .filter((p: any) => {
               const hasName = !isEmptyValue(p.name);
               const hasL3 = (p.l3 || []).length > 0;
@@ -867,6 +860,12 @@ export function useWorksheetState(): UseWorksheetStateReturn {
             
             console.log('✅ [복구 완료] 원자성 DB가 트리뷰 데이터로 복구되었습니다.');
             console.log('   - 복구된 failureCauses:', recoveredCauses.length, '개');
+            
+            // 복구된 원자성 DB를 레거시 형식으로 변환하여 migratedL2 업데이트
+            const recoveredLegacy = convertToLegacyFormat(atomicData);
+            migratedL2 = recoveredLegacy.l2 as any;
+            
+            console.log('✅ [복구 완료] migratedL2도 트리뷰 데이터로 업데이트되었습니다.');
           }
 
           // ✅ 기존 state의 tab/riskData가 있으면 유지
