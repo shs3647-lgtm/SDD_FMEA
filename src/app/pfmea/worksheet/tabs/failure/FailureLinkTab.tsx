@@ -377,16 +377,24 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     
     savedLinks.filter(l => l.fmId === currentFMId).forEach(link => {
       // FE 로드 (ID 기반 → 텍스트 기반 폴백)
+      let feItem: FEItem | undefined;
       if (link.feId && link.feId.trim() !== '') {
-        const feItem = feData.find(f => f.id === link.feId) || feData.find(f => f.text === link.feText);
-        if (feItem) newFEs.set(feItem.id, feItem);
+        feItem = feData.find(f => f.id === link.feId);
       }
+      if (!feItem && link.feText && link.feText.trim() !== '') {
+        feItem = feData.find(f => f.text === link.feText);
+      }
+      if (feItem) newFEs.set(feItem.id, feItem);
       
       // FC 로드 (ID 기반 → 텍스트 기반 폴백)
+      let fcItem: FCItem | undefined;
       if (link.fcId && link.fcId.trim() !== '') {
-        const fcItem = fcData.find(f => f.id === link.fcId) || fcData.find(f => f.text === link.fcText);
-        if (fcItem) newFCs.set(fcItem.id, fcItem);
+        fcItem = fcData.find(f => f.id === link.fcId);
       }
+      if (!fcItem && link.fcText && link.fcText.trim() !== '') {
+        fcItem = fcData.find(f => f.text === link.fcText);
+      }
+      if (fcItem) newFCs.set(fcItem.id, fcItem);
     });
     
     setLinkedFEs(newFEs);
