@@ -83,6 +83,9 @@ export default function DataSelectModal({
   // 더블클릭 편집 상태
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState('');
+  
+  // ✅ 초기화 완료 플래그 (items 변경 시 재초기화 방지)
+  const [initialized, setInitialized] = useState(false);
 
   const itemInfo = ITEM_CODE_LABELS[itemCode] || { label: itemCode, category: 'A', level: 'L1' };
   const hasBelongsToFilter = ['C1', 'C2', 'C3', 'FE1', 'FE2'].includes(itemCode);
@@ -91,6 +94,7 @@ export default function DataSelectModal({
   // 데이터 로드
   useEffect(() => {
     if (!isOpen) return;
+    console.log('[DataSelectModal] 모달 열림', { singleSelect, itemCode, title });
 
     let allItems: DataItem[] = [];
     
@@ -141,19 +145,27 @@ export default function DataSelectModal({
     setCategoryFilter('All');
   }, [isOpen, itemCode, processNo, currentValues]);
 
-  // 선택 상태 초기화
+  // ✅ 모달이 닫힐 때 초기화 플래그 리셋
   useEffect(() => {
-    if (items.length > 0 && currentValues.length > 0) {
-      const newSelectedIds = new Set<string>();
-      currentValues.forEach(val => {
-        const found = items.find(item => item.value === val);
-        if (found) newSelectedIds.add(found.id);
-      });
-      setSelectedIds(newSelectedIds);
-    } else {
-      setSelectedIds(new Set());
+    if (!isOpen) {
+      setInitialized(false);
     }
-  }, [items, currentValues]);
+  }, [isOpen]);
+
+  // ✅ 선택 상태 초기화 - 최초 1회만 수행 (items 변경 시 재초기화 방지)
+  useEffect(() => {
+    if (initialized) return; // 이미 초기화됨
+    if (items.length === 0) return; // 아직 items 로드 안됨
+    
+    const newSelectedIds = new Set<string>();
+    currentValues.forEach(val => {
+      const found = items.find(item => item.value === val);
+      if (found) newSelectedIds.add(found.id);
+    });
+    setSelectedIds(newSelectedIds);
+    setInitialized(true);
+    console.log('[DataSelectModal] 선택 상태 초기화 완료', { currentValues, selectedCount: newSelectedIds.size });
+  }, [items, currentValues, initialized]);
 
   // 필터링
   const filteredItems = useMemo(() => {
@@ -176,12 +188,19 @@ export default function DataSelectModal({
   }, [items, categoryFilter, search, parentCategory, hasBelongsToFilter]);
 
   const toggleSelect = useCallback((id: string) => {
+    console.log('[DataSelectModal] toggleSelect 호출', { id, singleSelect });
     setSelectedIds(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(id)) newSet.delete(id);
-      else {
-        if (singleSelect) newSet.clear();
+      if (newSet.has(id)) {
+        newSet.delete(id);
+        console.log('[DataSelectModal] 선택 해제', { id, 남은개수: newSet.size });
+      } else {
+        if (singleSelect) {
+          console.log('[DataSelectModal] 단일선택 모드 - 기존 선택 초기화');
+          newSet.clear();
+        }
         newSet.add(id);
+        console.log('[DataSelectModal] 선택 추가', { id, 총개수: newSet.size });
       }
       return newSet;
     });
@@ -245,6 +264,11 @@ export default function DataSelectModal({
 
   const handleApply = () => {
     const selectedValues = items.filter(item => selectedIds.has(item.id)).map(item => item.value);
+    console.log('[DataSelectModal] handleApply 호출', { 
+      selectedIds: Array.from(selectedIds), 
+      selectedValues,
+      singleSelect 
+    });
     onSave(selectedValues);
     onClose();
   };
