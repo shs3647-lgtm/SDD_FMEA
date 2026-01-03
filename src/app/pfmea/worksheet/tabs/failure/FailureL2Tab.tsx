@@ -362,13 +362,13 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
 
   return (
     <div className="p-0 overflow-auto h-full">
-      <table className="w-full border-collapse table-fixed">
+      <table className="border-collapse table-fixed" style={{minWidth: '900px'}}>
         <colgroup>
-          <col className="w-[150px]" />
-          <col className="w-[200px]" />
-          <col className="w-[150px]" />
+          <col className="w-[130px]" />
+          <col className="w-[180px]" />
+          <col className="w-[130px]" />
           <col className="w-[50px]" />
-          <col className="w-[250px]" />
+          <col className="w-[300px]" />
         </colgroup>
         
         {/* 헤더 - 하단 2px 검은색 구분선 */}
@@ -382,8 +382,8 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
               기능분석(3단계)
             </th>
             <th className="bg-[#e65100] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center">
-              <div className="flex items-center justify-center gap-1.5">
-                <span>고장분석(4단계)</span>
+              <div className="flex items-center justify-center gap-2 whitespace-nowrap">
+                <span className="font-bold">고장분석(4단계)</span>
                 <div className="flex gap-1">
                   {isConfirmed ? (
                     <span className={badgeConfirmed}>✓ 확정됨({state.l2.reduce((sum, p) => sum + (p.failureModes?.length || 0), 0)})</span>

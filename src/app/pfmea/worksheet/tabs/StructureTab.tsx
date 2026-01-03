@@ -343,15 +343,16 @@ export function StructureRow({
   row, idx, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown, handleSelect, setIsProcessModalOpen, setIsWorkElementModalOpen, setTargetL2Id, saveToLocalStorage, zebraBg, isConfirmed,
 }: StructureTabProps & { row: FlatRow; idx: number; zebraBg: string; isConfirmed?: boolean }) {
   // 완제품 공정명과 메인 공정명이 1:1로 병합되도록 l2Spans 사용
-  const spanCount = l2Spans[idx] || 1; // ✅ 기본값 1로 설정
-  const showMergedCells = spanCount > 0 || idx === 0; // ✅ 첫 번째 행은 항상 표시
+  // ✅ 수정: l2Spans[idx]가 0이면 병합된 행이므로 표시 안함
+  const spanCount = l2Spans[idx];
+  const showMergedCells = spanCount !== undefined && spanCount > 0;
   
   return (
     <>
       {/* 완제품 공정명: 메인 공정명과 동일하게 l2Spans 기준 병합 (1:1 매칭) */}
       {showMergedCells && (
         <td 
-          rowSpan={spanCount} 
+          rowSpan={spanCount || 1} 
           className={`text-center text-xs border border-[#ccc] p-1 align-middle break-words ${zebraBg}`}
         >
           <input
@@ -376,7 +377,7 @@ export function StructureRow({
           setIsProcessModalOpen={setIsProcessModalOpen}
           saveToLocalStorage={saveToLocalStorage}
           zebraBg={zebraBg}
-          rowSpan={spanCount}
+          rowSpan={spanCount || 1}
           isConfirmed={isConfirmed}
         />
       )}
