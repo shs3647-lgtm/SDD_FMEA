@@ -467,8 +467,10 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       return;
     }
     
-    // 이미 연결된 경우 - 안내 메시지
-    const existingLink = savedLinks.find(l => l.fmId === currentFMId && l.fcId === id);
+    // 이미 연결된 경우 - 안내 메시지 (ID 또는 텍스트 기반 매칭)
+    const existingLink = savedLinks.find(l => 
+      l.fmId === currentFMId && (l.fcId === id || l.fcText === fc.text)
+    );
     if (existingLink) {
       console.log('[FC 이미 연결됨] 더블클릭으로 해제하세요:', fc.text);
       return; // 이미 연결된 경우 클릭으로는 해제 안함
@@ -498,12 +500,16 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       return;
     }
     
-    // 현재 FM과의 연결 확인
-    const existingLink = savedLinks.find(l => l.fmId === currentFMId && l.fcId === id);
+    // 현재 FM과의 연결 확인 (ID 또는 텍스트 기반 매칭)
+    const existingLink = savedLinks.find(l => 
+      l.fmId === currentFMId && (l.fcId === id || l.fcText === fc.text)
+    );
     
     if (existingLink) {
-      // 연결 해제
-      const filtered = savedLinks.filter(l => !(l.fmId === currentFMId && l.fcId === id));
+      // 연결 해제 (ID 또는 텍스트 기반)
+      const filtered = savedLinks.filter(l => 
+        !(l.fmId === currentFMId && (l.fcId === id || l.fcText === fc.text))
+      );
       
       console.log('[FC 연결 해제 (더블클릭)]', fc.text, 'from FM:', currentFMId);
       
