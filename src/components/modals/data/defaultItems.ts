@@ -40,10 +40,10 @@ export const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
   '워크시트': { bg: '#ffebee', text: '#c62828' },
 };
 
-// C1: 구분 (Your Plant / Ship to Plant / User)
+// C1: 구분 (YP / SP / User) - 약어로 통일
 const C1_ITEMS: DataItem[] = [
-  { id: 'C1_1', value: 'Your Plant', category: '기본', belongsTo: 'Your Plant' },
-  { id: 'C1_2', value: 'Ship to Plant', category: '기본', belongsTo: 'Ship to Plant' },
+  { id: 'C1_1', value: 'YP', category: '기본', belongsTo: 'Your Plant' },
+  { id: 'C1_2', value: 'SP', category: '기본', belongsTo: 'Ship to Plant' },
   { id: 'C1_3', value: 'User', category: '기본', belongsTo: 'User' },
 ];
 
@@ -76,10 +76,10 @@ const SP_ITEMS: DataItem[] = [
   { id: 'SP_4', value: '-', category: '기본' },
 ];
 
-// FE1: FE 구분
+// FE1: FE 구분 (YP / SP / User) - 약어로 통일
 const FE1_ITEMS: DataItem[] = [
-  { id: 'FE1_1', value: 'Your Plant', category: '기본', belongsTo: 'Your Plant' },
-  { id: 'FE1_2', value: 'Ship to Plant', category: '기본', belongsTo: 'Ship to Plant' },
+  { id: 'FE1_1', value: 'YP', category: '기본', belongsTo: 'Your Plant' },
+  { id: 'FE1_2', value: 'SP', category: '기본', belongsTo: 'Ship to Plant' },
   { id: 'FE1_3', value: 'User', category: '기본', belongsTo: 'User' },
 ];
 
