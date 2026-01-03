@@ -167,7 +167,11 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       });
     });
     
-    console.log('[FE 데이터]', items.length, '개 (확정됨 + 중복 제거됨):', items.map(f => `${f.feNo}:${f.text.substring(0, 20)}`));
+    // ✅ 정렬: Your Plant → Ship to Plant → User 순서
+    const scopeOrder: Record<string, number> = { 'Your Plant': 0, 'YP': 0, 'Ship to Plant': 1, 'SP': 1, 'User': 2 };
+    items.sort((a, b) => (scopeOrder[a.scope] ?? 9) - (scopeOrder[b.scope] ?? 9));
+    
+    console.log('[FE 데이터]', items.length, '개 (확정됨 + 중복 제거됨 + 정렬됨):', items.map(f => `${f.feNo}:${f.text.substring(0, 20)}`));
     return items;
   }, [state.l1, isL1Confirmed]);
 
