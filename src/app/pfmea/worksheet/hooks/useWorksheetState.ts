@@ -485,6 +485,129 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         console.log('[로드 검증 성공] failureCauses 개수 일치:', legacyFailureCausesCount, '개');
       }
       
+      // ========== 트리뷰/테이블/원자성DB 일관성 검증 및 복구 ==========
+      // 1. 트리뷰 데이터 추출 (state.l2의 proc.failureCauses - 화면에 표시되는 것)
+      const treeViewCauses = legacy.l2.flatMap((proc: any) => {
+        return (proc.failureCauses || []).map((fc: any) => ({
+          procId: proc.id,
+          procName: proc.name || proc.no,
+          causeId: fc.id,
+          causeName: fc.name,
+          processCharId: fc.processCharId || '',
+          occurrence: fc.occurrence
+        }));
+      });
+      
+      // 2. 테이블 입력 데이터 (동일 - state.l2의 proc.failureCauses)
+      const tableInputCauses = treeViewCauses; // 동일한 소스
+      
+      // 3. 원자성 DB 데이터 추출
+      const atomicDBCauses = loadedDB.failureCauses.map(fc => {
+        const l2Struct = loadedDB.l2Structures.find(s => s.id === fc.l2StructId);
+        const l3Func = loadedDB.l3Functions.find(f => f.id === fc.l3FuncId);
+        return {
+          procId: fc.l2StructId,
+          procName: l2Struct?.name || l2Struct?.no || '',
+          causeId: fc.id,
+          causeName: fc.cause,
+          processCharId: fc.l3FuncId || '', // l3FuncId가 processCharId
+          occurrence: fc.occurrence
+        };
+      });
+      
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('🔍 [일관성 검증] 트리뷰 vs 테이블 vs 원자성DB');
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('📊 데이터 소스별 개수:');
+      console.log('   - 트리뷰 데이터:', treeViewCauses.length, '개');
+      console.log('   - 테이블 입력 데이터:', tableInputCauses.length, '개');
+      console.log('   - 원자성 DB 데이터:', atomicDBCauses.length, '개');
+      
+      // 일관성 검증
+      const treeViewKey = (fc: any) => `${fc.procId}_${fc.processCharId}_${fc.causeName}`;
+      const atomicDBKey = (fc: any) => `${fc.procId}_${fc.processCharId}_${fc.causeName}`;
+      
+      const treeViewKeys = new Set(treeViewCauses.map(treeViewKey));
+      const atomicDBKeys = new Set(atomicDBCauses.map(atomicDBKey));
+      
+      const missingInAtomicDB = treeViewCauses.filter(fc => !atomicDBKeys.has(treeViewKey(fc)));
+      const extraInAtomicDB = atomicDBCauses.filter(fc => !treeViewKeys.has(atomicDBKey(fc)));
+      
+      const isConsistent = missingInAtomicDB.length === 0 && extraInAtomicDB.length === 0;
+      
+      console.log('✅ 일관성 검증 결과:');
+      console.log('   - 트리뷰 = 테이블:', treeViewCauses.length === tableInputCauses.length ? '✅ 일치' : '❌ 불일치');
+      console.log('   - 트리뷰 = 원자성DB:', isConsistent ? '✅ 일치' : '❌ 불일치');
+      
+      if (!isConsistent) {
+        console.warn('⚠️ [일관성 불일치 감지]');
+        if (missingInAtomicDB.length > 0) {
+          console.warn('   - 원자성 DB에 없는 항목 (트리뷰에만 있음):', missingInAtomicDB.length, '개');
+          missingInAtomicDB.forEach(fc => {
+            console.warn(`     • [${fc.procName}] ${fc.causeName} (processCharId: ${fc.processCharId})`);
+          });
+        }
+        if (extraInAtomicDB.length > 0) {
+          console.warn('   - 트리뷰에 없는 항목 (원자성 DB에만 있음):', extraInAtomicDB.length, '개');
+          extraInAtomicDB.forEach(fc => {
+            console.warn(`     • [${fc.procName}] ${fc.causeName} (processCharId: ${fc.processCharId})`);
+          });
+        }
+        
+        // ========== 복구 로직: 트리뷰 데이터를 기준으로 원자성 DB 복구 ==========
+        console.log('🔧 [복구 시작] 트리뷰 데이터를 기준으로 원자성 DB 복구');
+        
+        // 트리뷰 데이터를 원자성 DB 형식으로 변환
+        const recoveredCauses = treeViewCauses.map(fc => {
+          // l3FuncId 찾기 (processCharId로)
+          const l3Func = loadedDB.l3Functions.find(f => f.id === fc.processCharId);
+          if (!l3Func) {
+            console.warn(`[복구] processCharId ${fc.processCharId}에 해당하는 L3Function을 찾을 수 없음`);
+            return null;
+          }
+          
+          // 기존 FC 찾기 (ID로)
+          const existingFC = loadedDB.failureCauses.find(c => c.id === fc.causeId);
+          
+          return {
+            id: fc.causeId || uid(),
+            fmeaId: loadedDB.fmeaId,
+            l3FuncId: l3Func.id,
+            l3StructId: l3Func.l3StructId,
+            l2StructId: l3Func.l2StructId,
+            cause: fc.causeName,
+            occurrence: fc.occurrence || existingFC?.occurrence,
+          };
+        }).filter((fc): fc is NonNullable<typeof fc> => fc !== null);
+        
+        // 원자성 DB 업데이트
+        loadedDB.failureCauses = recoveredCauses;
+        
+        // 복구된 DB 저장
+        saveWorksheetDB(loadedDB);
+        setAtomicDB(loadedDB);
+        
+        console.log('✅ [복구 완료] 원자성 DB가 트리뷰 데이터로 복구되었습니다.');
+        console.log('   - 복구된 failureCauses:', recoveredCauses.length, '개');
+        
+        // 레거시 형식도 다시 변환하여 state 업데이트
+        const recoveredLegacy = convertToLegacyFormat({
+          ...loadedDB,
+          l1: legacy.l1,
+          l2: legacy.l2,
+        } as any);
+        
+        setState(prev => ({
+          ...prev,
+          l2: recoveredLegacy.l2 as any,
+        }));
+        
+        console.log('✅ [복구 완료] state도 트리뷰 데이터로 업데이트되었습니다.');
+      } else {
+        console.log('✅ [일관성 검증 성공] 모든 데이터 소스가 일치합니다.');
+      }
+      console.log('═══════════════════════════════════════════════════════');
+      
       // ✅ 기존 state의 tab/riskData가 있으면 유지 (초기화 함수에서 이미 설정됨)
       setState(prev => {
         const hasExistingRiskData = Object.keys(prev.riskData || {}).length > 0;
@@ -674,6 +797,77 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           });
           setAtomicDB(atomicData);
           saveWorksheetDB(atomicData);
+          
+          // ========== 레거시 마이그레이션 후 일관성 검증 및 복구 ==========
+          // 트리뷰 데이터 추출 (migratedL2의 proc.failureCauses)
+          const treeViewCauses = migratedL2.flatMap((proc: any) => {
+            return (proc.failureCauses || []).map((fc: any) => ({
+              procId: proc.id,
+              procName: proc.name || proc.no,
+              causeId: fc.id,
+              causeName: fc.name,
+              processCharId: fc.processCharId || '',
+              occurrence: fc.occurrence
+            }));
+          });
+          
+          // 원자성 DB 데이터 추출
+          const atomicDBCauses = atomicData.failureCauses.map(fc => {
+            const l2Struct = atomicData.l2Structures.find(s => s.id === fc.l2StructId);
+            const l3Func = atomicData.l3Functions.find(f => f.id === fc.l3FuncId);
+            return {
+              procId: fc.l2StructId,
+              procName: l2Struct?.name || l2Struct?.no || '',
+              causeId: fc.id,
+              causeName: fc.cause,
+              processCharId: fc.l3FuncId || '',
+              occurrence: fc.occurrence
+            };
+          });
+          
+          const treeViewKey = (fc: any) => `${fc.procId}_${fc.processCharId}_${fc.causeName}`;
+          const atomicDBKey = (fc: any) => `${fc.procId}_${fc.processCharId}_${fc.causeName}`;
+          
+          const treeViewKeys = new Set(treeViewCauses.map(treeViewKey));
+          const atomicDBKeys = new Set(atomicDBCauses.map(atomicDBKey));
+          
+          const missingInAtomicDB = treeViewCauses.filter(fc => !atomicDBKeys.has(treeViewKey(fc)));
+          const isConsistent = missingInAtomicDB.length === 0;
+          
+          if (!isConsistent) {
+            console.warn('⚠️ [레거시 마이그레이션 후 일관성 불일치 감지]');
+            console.warn('   - 원자성 DB에 없는 항목 (트리뷰에만 있음):', missingInAtomicDB.length, '개');
+            
+            // 트리뷰 데이터를 기준으로 원자성 DB 복구
+            console.log('🔧 [복구 시작] 트리뷰 데이터를 기준으로 원자성 DB 복구');
+            
+            const recoveredCauses = treeViewCauses.map(fc => {
+              const l3Func = atomicData.l3Functions.find(f => f.id === fc.processCharId);
+              if (!l3Func) {
+                console.warn(`[복구] processCharId ${fc.processCharId}에 해당하는 L3Function을 찾을 수 없음`);
+                return null;
+              }
+              
+              const existingFC = atomicData.failureCauses.find(c => c.id === fc.causeId);
+              
+              return {
+                id: fc.causeId || uid(),
+                fmeaId: atomicData.fmeaId,
+                l3FuncId: l3Func.id,
+                l3StructId: l3Func.l3StructId,
+                l2StructId: l3Func.l2StructId,
+                cause: fc.causeName,
+                occurrence: fc.occurrence || existingFC?.occurrence,
+              };
+            }).filter((fc): fc is NonNullable<typeof fc> => fc !== null);
+            
+            atomicData.failureCauses = recoveredCauses;
+            saveWorksheetDB(atomicData);
+            setAtomicDB(atomicData);
+            
+            console.log('✅ [복구 완료] 원자성 DB가 트리뷰 데이터로 복구되었습니다.');
+            console.log('   - 복구된 failureCauses:', recoveredCauses.length, '개');
+          }
 
           // ✅ 기존 state의 tab/riskData가 있으면 유지
           setState(prev => {
