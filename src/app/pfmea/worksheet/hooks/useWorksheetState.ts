@@ -197,6 +197,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         failureL1Confirmed: (currentState as any).failureL1Confirmed || false,
         failureL2Confirmed: (currentState as any).failureL2Confirmed || false,
         failureL3Confirmed: (currentState as any).failureL3Confirmed || false,
+        failureLinkConfirmed: (currentState as any).failureLinkConfirmed || false,  // ✅ 고장연결 확정 상태
         failureLinks: (currentState as any).failureLinks || [],
         riskData: currentState.riskData || {},  // ✅ 최신 riskData 저장
         savedAt: new Date().toISOString(),
@@ -426,6 +427,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           failureL1Confirmed: legacy.failureL1Confirmed || false,
           failureL2Confirmed: legacy.failureL2Confirmed || false,
           failureL3Confirmed: legacy.failureL3Confirmed || false,
+          failureLinkConfirmed: legacy.failureLinkConfirmed || false,  // ✅ 고장연결 확정 상태 복원
           visibleSteps: prev.visibleSteps || [2, 3, 4, 5, 6],  // 기존 토글 상태 유지
         };
       });
@@ -607,6 +609,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
               failureL1Confirmed: parsed.failureL1Confirmed || false,
               failureL2Confirmed: parsed.failureL2Confirmed || false,
               failureL3Confirmed: parsed.failureL3Confirmed || false,
+              failureLinkConfirmed: parsed.failureLinkConfirmed || false,  // ✅ 고장연결 확정 상태 복원
               visibleSteps: prev.visibleSteps || [2, 3, 4, 5, 6],  // 기존 토글 상태 유지
             };
           });

@@ -47,19 +47,19 @@ export const modeButtonStyle = (isActive: boolean): CSSProperties => ({
   color: isActive ? '#fff' : '#1976d2',
 });
 
-/** 분석결과 버튼 (유동적 너비) */
+/** 분석결과 버튼 (유동적 너비) - 활성 시 어두운 배경으로 카운트 색상 가시성 확보 */
 export const resultButtonStyle = (isActive: boolean): CSSProperties => ({
   flex: 1,
   padding: '4px 8px',
   fontSize: FONT_SIZES.header2,
   fontWeight: FONT_WEIGHTS.semibold,
-  border: '1px solid #1976d2',
+  border: '1px solid #0d47a1',
   borderRadius: '3px',
   cursor: 'pointer',
   whiteSpace: 'nowrap',
   minWidth: 0,
-  background: isActive ? '#1976d2' : '#fff',
-  color: isActive ? '#fff' : '#1976d2',
+  background: isActive ? '#0d47a1' : '#fff',  // 어두운 네이비 배경
+  color: isActive ? '#fff' : '#0d47a1',
 });
 
 /** FMEA 이름 표시 영역 */

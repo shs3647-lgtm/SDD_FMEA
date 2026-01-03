@@ -5,7 +5,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useRef, useCallback } from 'react';
 import { COLORS, FONT_SIZES, FONT_WEIGHTS } from '../../constants';
 import { panelStyle, panelHeaderStyle, thStyle, tdStyle, tdCenterStyle, flexContainerStyle, headerStyle, panelStyleWithFlex, scrollAreaStyle, tableFullStyle } from './FailureLinkStyles';
 
@@ -50,17 +50,53 @@ export default function FailureLinkTables({
   feData,
   fmData,
   fcData,
-  currentFMId,
-  linkStats,
-  selectedProcess,
-  fcLinkScope,
-  onSelectFM,
-  onToggleFE,
-  onToggleFC,
-  onUnlinkFC,
-  onProcessChange,
-  onFcScopeChange,
+  // 클릭 타이머 관리 (더블클릭과 싱글클릭 구분)
+  ...restProps
 }: FailureLinkTablesProps) {
+  const clickTimerRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  
+  // FC 싱글클릭 핸들러 (200ms 딜레이)
+  const handleFCClick = useCallback((id: string, onToggle: (id: string) => void) => {
+    // 기존 타이머가 있으면 취소
+    const existingTimer = clickTimerRef.current.get(id);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+    
+    // 200ms 후에 싱글클릭으로 처리
+    const timer = setTimeout(() => {
+      onToggle(id);
+      clickTimerRef.current.delete(id);
+    }, 200);
+    
+    clickTimerRef.current.set(id, timer);
+  }, []);
+  
+  // FC 더블클릭 핸들러 (타이머 취소 후 즉시 해제)
+  const handleFCDoubleClick = useCallback((id: string, onUnlink: (id: string) => void) => {
+    // 싱글클릭 타이머 취소
+    const existingTimer = clickTimerRef.current.get(id);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      clickTimerRef.current.delete(id);
+    }
+    
+    // 즉시 연결 해제
+    onUnlink(id);
+  }, []);
+
+  const {
+    currentFMId,
+    linkStats,
+    selectedProcess,
+    fcLinkScope,
+    onSelectFM,
+    onToggleFE,
+    onToggleFC,
+    onUnlinkFC,
+    onProcessChange,
+    onFcScopeChange,
+  } = restProps;
   const filteredFmData = selectedProcess === 'all' ? fmData : fmData.filter(fm => fm.processName === selectedProcess);
   const filteredFcData = fcLinkScope === 'all' ? fcData : (selectedProcess === 'all' ? fcData : fcData.filter(fc => fc.processName === selectedProcess));
 
@@ -205,8 +241,8 @@ export default function FailureLinkTables({
                   return (
                     <tr 
                       key={fc.id} 
-                      onClick={() => onToggleFC(fc.id)} 
-                      onDoubleClick={() => onUnlinkFC(fc.id)}
+                      onClick={() => handleFCClick(fc.id, onToggleFC)} 
+                      onDoubleClick={() => handleFCDoubleClick(fc.id, onUnlinkFC)}
                       className="cursor-pointer"
                       title="클릭: 연결 | 더블클릭: 연결 해제"
                     >

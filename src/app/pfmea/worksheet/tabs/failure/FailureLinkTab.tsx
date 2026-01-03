@@ -492,51 +492,58 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
   // ========== FC 더블클릭 (연결 해제) ==========
   const unlinkFC = useCallback((id: string) => {
     const fc = fcData.find(f => f.id === id);
-    if (!fc) return;
-    
-    // FM이 선택되지 않은 경우
-    if (!currentFMId) {
-      alert('⚠️ 고장형태(FM)를 먼저 선택해주세요.');
+    if (!fc) {
+      console.log('[unlinkFC] FC를 찾을 수 없음:', id);
       return;
     }
     
-    // 현재 FM과의 연결 확인 (ID 또는 텍스트 기반 매칭)
-    const existingLink = savedLinks.find(l => 
-      l.fmId === currentFMId && (l.fcId === id || l.fcText === fc.text)
-    );
+    console.log('[unlinkFC 시작]', { fcId: id, fcText: fc.text, currentFMId });
     
-    if (existingLink) {
-      // 연결 해제 (ID 또는 텍스트 기반)
-      const filtered = savedLinks.filter(l => 
-        !(l.fmId === currentFMId && (l.fcId === id || l.fcText === fc.text))
-      );
-      
-      console.log('[FC 연결 해제 (더블클릭)]', fc.text, 'from FM:', currentFMId);
-      
-      setSavedLinks(filtered);
-      setState((prev: any) => ({ ...prev, failureLinks: filtered }));
-      setDirty(true);
-      requestAnimationFrame(() => saveToLocalStorage?.());
-      
-      setLinkedFCs(prev => {
+    // 1. 먼저 linkedFCs (미저장 상태)에서 제거 시도
+    let removedFromLinked = false;
+    setLinkedFCs(prev => {
+      if (prev.has(id)) {
         const next = new Map(prev);
         next.delete(id);
+        console.log('[FC 선택 해제] linkedFCs에서 제거:', fc.text);
+        removedFromLinked = true;
         return next;
-      });
+      }
+      return prev;
+    });
+    
+    // 2. savedLinks에서 해당 FC와 관련된 연결 모두 찾기 (현재 FM 기준)
+    if (currentFMId) {
+      const existingLinks = savedLinks.filter(l => 
+        l.fmId === currentFMId && (l.fcId === id || l.fcText === fc.text)
+      );
       
-      setTimeout(drawLines, 50);
+      console.log('[unlinkFC] 기존 연결 검색:', existingLinks.length, '개 발견');
+      
+      if (existingLinks.length > 0) {
+        // 연결 해제 (ID 또는 텍스트 기반)
+        const filtered = savedLinks.filter(l => 
+          !(l.fmId === currentFMId && (l.fcId === id || l.fcText === fc.text))
+        );
+        
+        console.log('[FC 연결 해제 (더블클릭)]', fc.text, 'from FM:', currentFMId, '| 제거:', existingLinks.length, '개');
+        
+        setSavedLinks(filtered);
+        setState((prev: any) => ({ ...prev, failureLinks: filtered }));
+        setDirty(true);
+        requestAnimationFrame(() => saveToLocalStorage?.());
+        
+        alert(`✅ "${fc.text}" 연결이 해제되었습니다.`);
+      } else if (!removedFromLinked) {
+        console.log('[unlinkFC] 현재 FM과 연결 없음');
+      }
     } else {
-      // 연결되지 않은 경우 - linkedFCs에서만 제거 (아직 저장 안된 상태)
-      setLinkedFCs(prev => {
-        const next = new Map(prev);
-        if (next.has(id)) {
-          next.delete(id);
-          console.log('[FC 선택 해제 (더블클릭)]', fc.text);
-        }
-        return next;
-      });
-      setTimeout(drawLines, 50);
+      if (!removedFromLinked) {
+        alert('⚠️ 고장형태(FM)를 먼저 선택해주세요.');
+      }
     }
+    
+    setTimeout(drawLines, 50);
   }, [currentFMId, fcData, savedLinks, setState, setDirty, saveToLocalStorage, drawLines]);
 
   // ========== 연결 확정 ==========
@@ -775,7 +782,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
           
           <div className="flex-1 flex gap-1 min-w-0">
             <button onClick={() => setViewMode('result')} style={resultButtonStyle(viewMode === 'result')}>
-              분석결과(<span style={{color:'#1976d2',fontWeight:700}}>FE:{linkStats.feLinkedCount}</span>,<span style={{color:'#e65100',fontWeight:700}}>FM:{linkStats.fmLinkedCount}</span>,<span style={{color:'#388e3c',fontWeight:700}}>FC:{linkStats.fcLinkedCount}</span>)
+              분석결과(<span style={{color: viewMode === 'result' ? '#90caf9' : '#1976d2',fontWeight:700}}>FE:{linkStats.feLinkedCount}</span>,<span style={{color: viewMode === 'result' ? '#ffab91' : '#e65100',fontWeight:700}}>FM:{linkStats.fmLinkedCount}</span>,<span style={{color: viewMode === 'result' ? '#a5d6a7' : '#388e3c',fontWeight:700}}>FC:{linkStats.fcLinkedCount}</span>)
             </button>
             {/* 확정 상태 배지 */}
             {isConfirmed && (
