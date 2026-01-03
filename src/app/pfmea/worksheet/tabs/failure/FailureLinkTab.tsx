@@ -103,14 +103,17 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
   const fcColRef = useRef<HTMLDivElement>(null);
   const isInitialLoad = useRef(true);
 
-  // ========== 초기 데이터 로드 ==========
+  // ========== 초기 데이터 로드 (화면 전환 시에도 항상 복원) ==========
   useEffect(() => {
     const stateLinks = (state as any).failureLinks || [];
-    if (isInitialLoad.current && stateLinks.length > 0) {
-      console.log('[FailureLinkTab] 초기 로드: state.failureLinks →', stateLinks.length, '개');
+    // ✅ 수정: isInitialLoad 조건 제거 - state.failureLinks가 있으면 항상 복원
+    if (stateLinks.length > 0) {
+      console.log('[FailureLinkTab] 데이터 복원: state.failureLinks →', stateLinks.length, '개');
       setSavedLinks(stateLinks);
-      setViewMode('result');
-      isInitialLoad.current = false;
+      if (isInitialLoad.current) {
+        setViewMode('result');
+        isInitialLoad.current = false;
+      }
     }
   }, [(state as any).failureLinks]);
 
@@ -229,21 +232,32 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     (state.l2 || []).forEach((proc: any) => {
       if (!proc.name || proc.name.includes('클릭')) return;
       
-      (proc.l3 || []).forEach((we: any) => {
-        if (!we.name || we.name.includes('클릭') || we.name.includes('추가')) return;
-        
-        const m4 = we.m4 || we.fourM || 'MN';
-        
-        (we.failureCauses || []).forEach((fc: any) => {
+      // ✅ 수정: proc.failureCauses (공정 레벨에 저장됨) 우선 확인
+      // CASCADE 구조: 고장원인은 공정 레벨에 저장되고, processCharId로 공정특성과 연결됨
+      const procFailureCauses = proc.failureCauses || [];
+      
+      if (procFailureCauses.length > 0) {
+        // proc.failureCauses 사용 (새로운 CASCADE 구조)
+        procFailureCauses.forEach((fc: any) => {
           if (!fc.name || fc.name.includes('클릭') || fc.name.includes('추가')) return;
-          if (!fc.id) fc.id = uid(); // ID 보장
+          if (!fc.id) fc.id = uid();
           
-          // 중복 체크: 동일 공정 + 동일 작업요소 + 동일 고장원인은 하나로 통합
-          const key = `${proc.name}|${we.name}|${fc.name}`;
-          if (seen.has(key)) {
-            console.log('[FC 중복 제거]', proc.name, '-', we.name, '-', fc.name);
-            return; // 중복이면 스킵
-          }
+          // 작업요소 정보 찾기
+          let weName = '';
+          let m4 = 'MN';
+          (proc.l3 || []).forEach((we: any) => {
+            (we.functions || []).forEach((fn: any) => {
+              (fn.processChars || []).forEach((pc: any) => {
+                if (pc.id === fc.processCharId) {
+                  weName = we.name || '';
+                  m4 = we.m4 || we.fourM || 'MN';
+                }
+              });
+            });
+          });
+          
+          const key = `${proc.name}|${weName}|${fc.name}`;
+          if (seen.has(key)) return;
           seen.add(key);
           
           items.push({ 
@@ -251,12 +265,38 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
             fcNo: `C${counter}`, 
             processName: proc.name, 
             m4, 
-            workElem: we.name, 
+            workElem: weName, 
             text: fc.name 
           });
           counter++;
         });
-      });
+      } else {
+        // 하위호환: we.failureCauses 사용 (기존 구조)
+        (proc.l3 || []).forEach((we: any) => {
+          if (!we.name || we.name.includes('클릭') || we.name.includes('추가')) return;
+          
+          const m4 = we.m4 || we.fourM || 'MN';
+          
+          (we.failureCauses || []).forEach((fc: any) => {
+            if (!fc.name || fc.name.includes('클릭') || fc.name.includes('추가')) return;
+            if (!fc.id) fc.id = uid();
+            
+            const key = `${proc.name}|${we.name}|${fc.name}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            
+            items.push({ 
+              id: fc.id, 
+              fcNo: `C${counter}`, 
+              processName: proc.name, 
+              m4, 
+              workElem: we.name, 
+              text: fc.name 
+            });
+            counter++;
+          });
+        });
+      }
     });
     
     console.log('[FC 데이터]', items.length, '개 (확정됨 + 중복 제거됨):', items.map(f => `${f.fcNo}:${f.text.substring(0, 20)}`));
