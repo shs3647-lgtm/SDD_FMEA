@@ -356,25 +356,28 @@ export function migrateToAtomicDB(oldData: OldWorksheetData): FMEAWorksheetDB {
     });
     
     // ✅ 하위 호환: we.failureCauses도 확인 (기존 데이터 마이그레이션용)
-    l3s.forEach(l3 => {
-      const we = proc.l3.find((w: any) => w.id === l3.id);
-      if (we && we.failureCauses && we.failureCauses.length > 0) {
+    l3Data.forEach(we => {
+      if (we.failureCauses && we.failureCauses.length > 0) {
         console.warn('[마이그레이션] 하위 호환: we.failureCauses 발견, proc.failureCauses로 마이그레이션:', we.failureCauses.length, '개');
-        we.failureCauses.forEach((fc: any) => {
-          // 가장 최근 L3Function을 상위로 연결
-          const relatedL3Func = db.l3Functions.find(f => f.l3StructId === l3.id);
-          if (relatedL3Func) {
-            db.failureCauses.push({
-              id: fc.id || uid(),
-              fmeaId: oldData.fmeaId,
-              l3FuncId: relatedL3Func.id,
-              l3StructId: l3.id,
-              l2StructId: l2.id,
-              cause: fc.name,
-              occurrence: fc.occurrence,
-            });
-          }
-        });
+        // l3Struct 찾기
+        const l3Struct = db.l3Structures.find(s => s.id === we.id);
+        if (l3Struct) {
+          we.failureCauses.forEach((fc: any) => {
+            // 가장 최근 L3Function을 상위로 연결
+            const relatedL3Func = db.l3Functions.find(f => f.l3StructId === l3Struct.id);
+            if (relatedL3Func) {
+              db.failureCauses.push({
+                id: fc.id || uid(),
+                fmeaId: oldData.fmeaId,
+                l3FuncId: relatedL3Func.id,
+                l3StructId: relatedL3Func.l3StructId,
+                l2StructId: relatedL3Func.l2StructId,
+                cause: fc.name,
+                occurrence: fc.occurrence,
+              });
+            }
+          });
+        }
       }
     });
   });
