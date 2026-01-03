@@ -1,15 +1,15 @@
 /**
- * TreePanel - 트리 뷰 패널
- * 구조분석, 기능분석, 고장분석 트리를 표시
- * 
- * @description 인라인 스타일 제거, Tailwind CSS 적용
- * @version 2.0.0
+ * @file TreePanel.tsx
+ * @description FMEA 워크시트 트리 패널 (BaseTreePanel 기반 리팩토링)
+ * @version 3.0.0 - 표준화/모듈화
+ * @updated 2026-01-03
  */
 
 'use client';
 
 import React from 'react';
-import { L1_TYPE_COLORS, getL1TypeColor, TREE_FUNCTION, TREE_FAILURE, TREE_STRUCTURE } from '@/styles/level-colors';
+import BaseTreePanel, { TreeItem, TreeBranch, TreeLeaf, TreeEmpty, TreeBadge, tw } from './BaseTreePanel';
+import { getL1TypeColor, TREE_FUNCTION, TREE_FAILURE } from '@/styles/level-colors';
 
 interface TreePanelProps {
   state: any;
@@ -17,414 +17,284 @@ interface TreePanelProps {
   setCollapsedIds?: (ids: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
 }
 
-/** 4M별 배경색 클래스 */
-const M4_BG: Record<string, string> = {
-  'MN': 'bg-blue-50',
-  'MC': 'bg-orange-50',
-  'IM': 'bg-green-50',
-  'EN': 'bg-orange-50',
-};
-
-/** 공통 스타일 클래스 */
-const tw = {
-  // 패널 헤더
-  header: 'shrink-0 text-white px-3 py-2 text-xs font-bold',
-  headerBlue: 'bg-[#1976d2]',
-  headerGreen1: 'bg-[#1b5e20]',
-  headerGreen2: 'bg-[#2e7d32]',
-  headerGreen3: 'bg-[#388e3c]',
-  headerNavy: 'bg-[#1a237e]',
-  
-  // 컨테이너
-  container: 'flex flex-col h-full',
-  content: 'flex-1 overflow-auto p-2',
-  contentGreen: 'bg-green-50',
-  contentNavy: 'bg-[#f5f6fc]',
-  
-  // 푸터
-  footer: 'shrink-0 py-1.5 px-2.5 border-t border-gray-300 bg-gray-200 text-[10px] text-gray-600',
-  footerNavy: 'shrink-0 py-1.5 px-2.5 border-t border-indigo-100 bg-indigo-50 text-[10px] text-[#1a237e]',
-  
-  // 트리 아이템
-  treeItem: 'flex items-center gap-1.5 p-1 rounded',
-  treeBranch: 'mb-1.5 ml-2 border-l-2 border-blue-300 pl-2',
-  treeBranchGreen: 'mb-2.5 border-l-2 border-green-500 pl-2',
-  
-  // 배지
-  countBadge: 'text-[9px] text-gray-500 ml-auto bg-white px-1.5 py-0.5 rounded-full',
-  m4Badge: 'text-[8px] font-bold px-1 rounded-sm',
-  severityBadge: 'text-[8px] font-bold px-1 rounded-sm',
-  
-  // 텍스트
-  textXs: 'text-[10px]',
-  textXxs: 'text-[9px]',
-  text11: 'text-[11px]',
-  fontBold: 'font-bold',
-  fontSemibold: 'font-semibold',
-  
-  // 상태
-  empty: 'text-[11px] text-gray-500 p-4 text-center bg-gray-100 rounded',
-  emptySmall: 'text-[9px] text-gray-400 italic ml-3',
+// 4M 색상
+const M4_COLORS: Record<string, { bg: string; text: string }> = {
+  MN: { bg: '#ffebee', text: '#d32f2f' },
+  MC: { bg: '#e3f2fd', text: '#1565c0' },
+  IM: { bg: '#e8f5e9', text: '#2e7d32' },
+  EN: { bg: '#fff3e0', text: '#f57c00' },
 };
 
 export default function TreePanel({ state }: TreePanelProps) {
   const tab = state.tab;
 
-  // ========== 구조 트리 (structure) ==========
+  // ========== 구조 트리 ==========
   if (tab === 'structure') {
-    // ✅ S COUNT 계산
     const s2Count = state.l2.filter((p: any) => p.name && !p.name.includes('클릭')).length;
     const s3Count = state.l2.reduce((sum: number, p: any) => 
       sum + (p.l3 || []).filter((w: any) => w.name && !w.name.includes('추가') && !w.name.includes('클릭')).length, 0);
     
     return (
-      <div className={tw.container}>
-        <div className={`${tw.header} ${tw.headerBlue}`}>
-          🌳 구조트리 <span className="text-[10px] font-normal">완제품(1) 메인공정({s2Count}) 작업요소({s3Count})</span>
-        </div>
-        <div className="shrink-0 bg-blue-50 py-1.5 px-2.5 border-b border-blue-200">
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm">📦</span>
-            <span className="text-xs font-bold">{state.l1.name || '(완제품명 입력)'}</span>
-          </div>
-        </div>
-        <div className={`${tw.content} bg-slate-50`}>
-          {state.l2.filter((p: any) => !p.name.includes('클릭')).map((proc: any) => (
-            <div key={proc.id} className={tw.treeBranch}>
-              <div className={`${tw.treeItem} bg-green-100`}>
-                <span>📁</span>
-                <span className={`${tw.text11} ${tw.fontSemibold}`}>{proc.no}-{proc.name}</span>
-                <span className={tw.countBadge}>{(proc.l3 || []).filter((w: any) => !w.name.includes('추가')).length}</span>
-              </div>
-              <div className="ml-4">
-                {(proc.l3 || []).filter((w: any) => !w.name.includes('추가') && !w.name.includes('클릭')).map((w: any) => (
-                  <div key={w.id} className={`flex items-center gap-1 py-0.5 px-1 ${tw.textXs}`}>
-                    <span className={`${tw.m4Badge} ${M4_BG[w.m4] || 'bg-gray-200'}`}>{w.m4}</span>
-                    <span>{w.name}</span>
-                  </div>
-                ))}
-              </div>
+      <BaseTreePanel config={{
+        icon: '🌳',
+        title: '구조트리',
+        counts: [{ label: '완제품', value: 1 }, { label: '메인공정', value: s2Count }, { label: '작업요소', value: s3Count }],
+        theme: 'structure',
+        subHeader: { icon: '📦', label: state.l1.name || '(완제품명 입력)', bgColor: '#e3f2fd' },
+      }}>
+        {state.l2.filter((p: any) => !p.name.includes('클릭')).map((proc: any) => (
+          <TreeBranch key={proc.id} borderColor="#93c5fd">
+            <TreeItem icon="📁" label={`${proc.no}-${proc.name}`} count={(proc.l3 || []).filter((w: any) => !w.name.includes('추가')).length} bgColor="#dcfce7" />
+            <div className="ml-4">
+              {(proc.l3 || []).filter((w: any) => !w.name.includes('추가') && !w.name.includes('클릭')).map((w: any) => (
+                <TreeLeaf key={w.id} icon="" label={w.name} indent={0} badge={<TreeBadge label={w.m4} bgColor={M4_COLORS[w.m4]?.bg} textColor={M4_COLORS[w.m4]?.text} />} />
+              ))}
             </div>
-          ))}
-        </div>
-        <div className={tw.footer}>
-          <span className="font-bold">완제품(1) 메인공정({s2Count}) 작업요소({s3Count})</span>
-        </div>
-      </div>
+          </TreeBranch>
+        ))}
+      </BaseTreePanel>
     );
   }
 
-  // ========== 1L 기능트리 (완제품 기능분석) ==========
+  // ========== 1L 기능트리 ==========
   if (tab === 'function-l1') {
     const funcCount = state.l1.types.reduce((s: number, t: any) => s + (t.functions || []).length, 0);
     const reqCount = state.l1.types.reduce((s: number, t: any) => s + (t.functions || []).reduce((a: number, f: any) => a + (f.requirements || []).length, 0), 0);
+    
     return (
-      <div className={tw.container}>
-        <div className={`${tw.header} ${tw.headerGreen1}`}>🎯 1L 기능트리 <span className="text-[10px] font-normal">완제품(1) 기능({funcCount}) 요구사항({reqCount})</span></div>
-        <div className={`${tw.content} ${tw.contentGreen}`}>
-          <div className="flex items-center gap-1.5 p-1.5 bg-green-200 rounded mb-2">
-            <span className="text-sm">📦</span>
-            <span className="text-xs font-bold">{state.l1.name || '(완제품명)'}</span>
-          </div>
-          {state.l1.types.length === 0 ? (
-            <div className={tw.empty}>구분/기능/요구사항을 정의하세요</div>
-          ) : state.l1.types.map((t: any) => {
-            // 구분별 색상 적용 (Your Plant=보라, Ship to Plant=주황, User=녹색)
-            const typeColor = getL1TypeColor(t.name);
-            return (
-              <div key={t.id} className="ml-3 mb-2 pl-2" style={{ borderLeft: `2px solid ${typeColor.bg}` }}>
-                <div 
-                  className={`${tw.text11} ${tw.fontBold} text-white py-1 px-2 rounded-sm mb-1`}
-                  style={{ backgroundColor: typeColor.bg }}
-                >
-                  📋 {t.name}
+      <BaseTreePanel config={{
+        icon: '🎯',
+        title: '1L 기능트리',
+        counts: [{ label: '완제품', value: 1 }, { label: '기능', value: funcCount }, { label: '요구사항', value: reqCount }],
+        theme: 'function-l1',
+      }}>
+        <TreeItem icon="📦" label={state.l1.name || '(완제품명)'} bgColor="#bbf7d0" textColor="#166534" className="mb-2" />
+        {state.l1.types.length === 0 ? (
+          <TreeEmpty message="구분/기능/요구사항을 정의하세요" />
+        ) : state.l1.types.map((t: any) => {
+          const typeColor = getL1TypeColor(t.name);
+          return (
+            <TreeBranch key={t.id} borderColor={typeColor.bg}>
+              <TreeItem icon="📋" label={t.name} bgColor={typeColor.bg} textColor="#fff" />
+              {t.functions.map((f: any) => (
+                <div key={f.id} className="ml-3 mb-1">
+                  <TreeLeaf icon="⚙️" label={f.name} bgColor={typeColor.light} textColor={typeColor.text} indent={0} />
+                  {f.requirements.map((r: any) => (
+                    <TreeLeaf key={r.id} icon="•" label={r.name} bgColor="#fff3e0" textColor="#e65100" indent={4} />
+                  ))}
                 </div>
-                {t.functions.map((f: any) => (
-                  <div key={f.id} className="ml-3 mb-1">
-                    <div 
-                      className={`${tw.textXs} font-semibold py-0.5 px-1.5 rounded-sm`}
-                      style={{ backgroundColor: typeColor.light, color: typeColor.text }}
-                    >
-                      ⚙️ {f.name}
-                    </div>
-                    {f.requirements.map((r: any) => (
-                      <div 
-                        key={r.id} 
-                        className={`ml-4 ${tw.textXxs} font-medium py-0.5 px-1 rounded-sm mt-0.5`}
-                        style={{ backgroundColor: '#fff3e0', color: '#e65100' }}
-                      >
-                        • {r.name}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            );
-          })}
-        </div>
-        <div className={tw.footer}>
-          <span className="font-bold">완제품(1) 기능({funcCount}) 요구사항({reqCount})</span>
-        </div>
-      </div>
+              ))}
+            </TreeBranch>
+          );
+        })}
+      </BaseTreePanel>
     );
   }
 
-  // ========== 2L 기능트리 (메인공정 기능분석) ==========
+  // ========== 2L 기능트리 ==========
   if (tab === 'function-l2') {
     const procCount = state.l2.filter((p: any) => p.name && !p.name.includes('클릭')).length;
     const funcCount = state.l2.reduce((s: number, p: any) => s + (p.functions || []).length, 0);
     const charCount = state.l2.reduce((s: number, p: any) => s + (p.functions || []).reduce((a: number, f: any) => a + (f.productChars || []).length, 0), 0);
+    
     return (
-      <div className={tw.container}>
-        <div className={`${tw.header} ${tw.headerGreen2}`}>🔧 2L 기능트리 <span className="text-[10px] font-normal">공정({procCount}) 기능({funcCount}) 제품특성({charCount})</span></div>
-        <div className={`${tw.content} ${tw.contentGreen}`}>
-          {state.l2.length === 0 ? (
-            <div className={tw.empty}>구조분석에서 공정을 추가하세요</div>
-          ) : state.l2.map((proc: any) => (
-            <div key={proc.id} className={tw.treeBranchGreen}>
-              <div 
-                className={`${tw.text11} font-semibold py-1 px-2 rounded-sm mb-1`}
-                style={{ backgroundColor: TREE_FUNCTION.procBg, color: TREE_FUNCTION.procText, borderLeft: `3px solid ${TREE_FUNCTION.border}` }}
-              >
-                🏭 {proc.no}. {proc.name}
+      <BaseTreePanel config={{
+        icon: '🔧',
+        title: '2L 기능트리',
+        counts: [{ label: '공정', value: procCount }, { label: '기능', value: funcCount }, { label: '제품특성', value: charCount }],
+        theme: 'function-l2',
+      }}>
+        {state.l2.length === 0 ? (
+          <TreeEmpty message="구조분석에서 공정을 추가하세요" />
+        ) : state.l2.map((proc: any) => (
+          <TreeBranch key={proc.id} borderColor={TREE_FUNCTION.border}>
+            <TreeItem icon="🏭" label={`${proc.no}. ${proc.name}`} bgColor={TREE_FUNCTION.procBg} textColor={TREE_FUNCTION.procText} />
+            {(proc.functions || []).length === 0 ? (
+              <TreeEmpty message="기능 미정의" small />
+            ) : (proc.functions || []).map((f: any) => (
+              <div key={f.id} className="ml-3 mb-1">
+                <TreeLeaf icon="⚙️" label={f.name} bgColor={TREE_FUNCTION.itemBg} textColor={TREE_FUNCTION.itemText} indent={0} />
+                {(f.productChars || []).map((c: any) => (
+                  <TreeLeaf 
+                    key={c.id} 
+                    icon="📐" 
+                    label={c.name} 
+                    bgColor={c.specialChar ? '#fed7aa' : '#fff7ed'} 
+                    textColor="#e65100" 
+                    indent={4}
+                    badge={c.specialChar && <TreeBadge label={c.specialChar} bgColor="#f97316" textColor="#fff" />}
+                  />
+                ))}
               </div>
-              {(proc.functions || []).length === 0 ? (
-                <div className={tw.emptySmall}>기능 미정의</div>
-              ) : (proc.functions || []).map((f: any) => (
-                <div key={f.id} className="ml-3 mb-1">
-                  <div 
-                    className={`${tw.textXs} py-0.5 px-1.5 rounded-sm`}
-                    style={{ backgroundColor: TREE_FUNCTION.itemBg, color: TREE_FUNCTION.itemText }}
-                  >
-                    ⚙️ {f.name}
-                  </div>
-                  {(f.productChars || []).map((c: any) => (
-                    <div key={c.id} className={`ml-4 ${tw.textXxs} py-0.5 px-1 flex items-center gap-1 rounded ${c.specialChar ? 'bg-orange-200 font-bold' : 'bg-orange-50'}`} style={{ color: '#e65100' }}>
-                      📐 {c.name}
-                      {c.specialChar && <span className="bg-orange-500 text-white px-1 rounded text-[7px] font-bold">{c.specialChar}</span>}
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-        <div className={tw.footer}>
-          <span className="font-bold">공정({procCount}) 기능({funcCount}) 제품특성({charCount})</span>
-        </div>
-      </div>
+            ))}
+          </TreeBranch>
+        ))}
+      </BaseTreePanel>
     );
   }
 
-  // ========== 3L 기능트리 (작업요소 기능분석) ==========
+  // ========== 3L 기능트리 ==========
   if (tab === 'function-l3') {
     const weCount = state.l2.reduce((s: number, p: any) => s + (p.l3 || []).filter((w: any) => w.name && !w.name.includes('클릭')).length, 0);
     const funcCount = state.l2.reduce((s: number, p: any) => s + (p.l3 || []).reduce((a: number, w: any) => a + (w.functions || []).length, 0), 0);
     const charCount = state.l2.reduce((s: number, p: any) => s + (p.l3 || []).reduce((a: number, w: any) => a + (w.functions || []).reduce((b: number, f: any) => b + (f.processChars || []).length, 0), 0), 0);
+    
     return (
-      <div className={tw.container}>
-        <div className={`${tw.header} ${tw.headerGreen3}`}>🛠️ 3L 기능트리 <span className="text-[10px] font-normal">작업요소({weCount}) 기능({funcCount}) 공정특성({charCount})</span></div>
-        <div className={`${tw.content} ${tw.contentGreen}`}>
-          {state.l2.every((p: any) => (p.l3 || []).length === 0) ? (
-            <div className={tw.empty}>구조분석에서 작업요소를 추가하세요</div>
-          ) : state.l2.filter((p: any) => (p.l3 || []).length > 0).map((proc: any) => (
-            <div key={proc.id} className={tw.treeBranchGreen}>
-              <div 
-                className={`${tw.text11} font-semibold py-1 px-2 rounded-sm mb-1`}
-                style={{ backgroundColor: TREE_FUNCTION.procBg, color: TREE_FUNCTION.procText, borderLeft: `3px solid ${TREE_FUNCTION.border}` }}
-              >
-                🏭 {proc.no}. {proc.name}
-              </div>
-              {(proc.l3 || []).map((we: any) => (
-                <div key={we.id} className="ml-3 mb-1.5">
-                  <div 
-                    className={`${tw.textXs} font-semibold py-0.5 px-1.5 rounded-sm mb-0.5`}
-                    style={{ backgroundColor: TREE_FUNCTION.itemBg, color: TREE_FUNCTION.itemText }}
-                  >
-                    [{we.m4}] {we.name}
-                  </div>
-                  {(we.functions || []).length === 0 ? (
-                    <div className={tw.emptySmall}>기능 미정의</div>
-                  ) : (we.functions || []).map((f: any) => (
-                    <div key={f.id} className="ml-3">
-                      <div className={`${tw.textXxs} py-0.5 px-1`} style={{ color: TREE_FUNCTION.itemText }}>⚙️ {f.name}</div>
-                      {(f.processChars || []).map((c: any) => (
-                        <div key={c.id} className={`ml-3 text-[8px] py-0.5 px-1 flex items-center gap-1 ${c.specialChar ? 'bg-blue-100 rounded font-bold' : ''}`} style={{ color: c.specialChar ? '#1565c0' : TREE_FUNCTION.itemText }}>
-                          📏 {c.name}
-                          {c.specialChar && <span className="bg-blue-600 text-white px-1 rounded text-[7px] font-bold">{c.specialChar}</span>}
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-        <div className={tw.footer}>
-          <span className="font-bold">작업요소({weCount}) 기능({funcCount}) 공정특성({charCount})</span>
-        </div>
-      </div>
-    );
-  }
-
-  // ========== 1L 고장영향 트리 (FE) ==========
-  if (tab === 'failure-l1') {
-    const reqCount = (state.l1.types || []).reduce((s: number, t: any) => s + (t.functions || []).reduce((a: number, f: any) => a + (f.requirements || []).length, 0), 0);
-    const feCount = (state.l1.failureScopes || []).filter((s: any) => s.effect).length;
-    return (
-      <div className={tw.container}>
-        <div className={`${tw.header} ${tw.headerNavy} whitespace-nowrap`}>⚠️ 1L 고장영향 <span className="text-[10px] font-normal">요구사항({reqCount}) 고장영향({feCount})</span></div>
-        <div className={`${tw.content} ${tw.contentNavy}`}>
-          <div className="font-bold text-xs mb-2 text-[#1a237e] p-1 px-2 bg-indigo-100 rounded border-l-[3px] border-[#1a237e]">
-            📦 {state.l1.name || '(완제품 공정명)'}
-          </div>
-          
-          {(state.l1.types || []).map((type: any) => {
-            // 구분별 색상 적용 (Your Plant=보라, Ship to Plant=주황, User=녹색)
-            const typeColor = getL1TypeColor(type.name);
-            return (
-              <div key={type.id} className="ml-2 mb-2">
-                <div 
-                  className={`${tw.text11} font-bold py-0.5 px-1.5 rounded-sm mb-1`}
-                  style={{ backgroundColor: typeColor.bg, color: '#fff', borderLeft: `2px solid ${typeColor.border}` }}
-                >
-                  🏷️ {type.name}
-                </div>
-                
-                {(type.functions || []).length === 0 ? (
-                  <div className={tw.emptySmall}>(기능 미입력)</div>
-                ) : (type.functions || []).map((func: any) => (
-                  <div key={func.id} className="ml-3 mb-1.5">
-                    <div 
-                      className={`${tw.textXs} font-semibold py-0.5 px-1.5 rounded-sm mb-0.5`}
-                      style={{ backgroundColor: typeColor.light, color: typeColor.text }}
-                    >
-                      ⚙️ {func.name}
-                    </div>
-                    {(func.requirements || []).length === 0 ? (
-                      <div className={tw.emptySmall}>(요구사항 미입력)</div>
-                    ) : (func.requirements || []).map((req: any) => {
-                      const effects = (state.l1.failureScopes || []).filter((s: any) => s.reqId === req.id);
-                      return (
-                        <div key={req.id} className="ml-3 mb-1">
-                          <div 
-                            className={`${tw.textXs} font-semibold py-0.5 px-1 rounded-sm`}
-                            style={{ color: typeColor.text }}
-                          >
-                            📋 {req.name}
-                          </div>
-                          {effects.length === 0 ? (
-                            <div className={tw.emptySmall}>(고장영향 미입력)</div>
-                          ) : effects.map((eff: any) => (
-                            <div key={eff.id} className={`ml-3 ${tw.textXxs} flex gap-1.5 items-center`} style={{ color: typeColor.text }}>
-                              <span>⚡ {eff.effect || '(미입력)'}</span>
-                              {eff.severity && (
-                                <span className={`${tw.severityBadge} ${eff.severity >= 8 ? 'bg-orange-200 text-orange-800' : 'bg-indigo-100 text-indigo-700'}`}>
-                                  S:{eff.severity}
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })}
+      <BaseTreePanel config={{
+        icon: '🛠️',
+        title: '3L 기능트리',
+        counts: [{ label: '작업요소', value: weCount }, { label: '기능', value: funcCount }, { label: '공정특성', value: charCount }],
+        theme: 'function-l3',
+      }}>
+        {state.l2.every((p: any) => (p.l3 || []).length === 0) ? (
+          <TreeEmpty message="구조분석에서 작업요소를 추가하세요" />
+        ) : state.l2.filter((p: any) => (p.l3 || []).length > 0).map((proc: any) => (
+          <TreeBranch key={proc.id} borderColor={TREE_FUNCTION.border}>
+            <TreeItem icon="🏭" label={`${proc.no}. ${proc.name}`} bgColor={TREE_FUNCTION.procBg} textColor={TREE_FUNCTION.procText} />
+            {(proc.l3 || []).map((we: any) => (
+              <div key={we.id} className="ml-3 mb-1.5">
+                <TreeLeaf icon="" label={`[${we.m4}] ${we.name}`} bgColor={TREE_FUNCTION.itemBg} textColor={TREE_FUNCTION.itemText} indent={0} />
+                {(we.functions || []).length === 0 ? (
+                  <TreeEmpty message="기능 미정의" small />
+                ) : (we.functions || []).map((f: any) => (
+                  <div key={f.id} className="ml-3">
+                    <TreeLeaf icon="⚙️" label={f.name} textColor={TREE_FUNCTION.itemText} indent={0} />
+                    {(f.processChars || []).map((c: any) => (
+                      <TreeLeaf 
+                        key={c.id} 
+                        icon="📏" 
+                        label={c.name} 
+                        bgColor={c.specialChar ? '#dbeafe' : undefined}
+                        textColor={c.specialChar ? '#1565c0' : TREE_FUNCTION.itemText}
+                        indent={3}
+                        badge={c.specialChar && <TreeBadge label={c.specialChar} bgColor="#2563eb" textColor="#fff" />}
+                      />
+                    ))}
                   </div>
                 ))}
               </div>
-            );
-          })}
-          
-          {(state.l1.types || []).length === 0 && (
-            <div className="text-center text-gray-500 text-[10px] p-5">
-              기능분석(L1)에서 구분을 먼저 입력해주세요.
-            </div>
-          )}
-        </div>
-        <div className={tw.footerNavy}>
-          <span className="font-bold">요구사항({reqCount}) 고장영향({feCount})</span>
-        </div>
-      </div>
+            ))}
+          </TreeBranch>
+        ))}
+      </BaseTreePanel>
     );
   }
 
-  // ========== 2L 고장형태 트리 (FM) - 확정된 것만 표시 ==========
+  // ========== 1L 고장영향 트리 ==========
+  if (tab === 'failure-l1') {
+    const reqCount = (state.l1.types || []).reduce((s: number, t: any) => s + (t.functions || []).reduce((a: number, f: any) => a + (f.requirements || []).length, 0), 0);
+    const feCount = (state.l1.failureScopes || []).filter((s: any) => s.effect).length;
+    
+    return (
+      <BaseTreePanel config={{
+        icon: '⚠️',
+        title: '1L 고장영향',
+        counts: [{ label: '요구사항', value: reqCount }, { label: '고장영향', value: feCount }],
+        theme: 'failure-l1',
+      }}>
+        <TreeItem icon="📦" label={state.l1.name || '(완제품 공정명)'} bgColor="#e0e7ff" textColor="#3730a3" className="mb-2 border-l-[3px] border-[#1a237e]" />
+        {(state.l1.types || []).length === 0 ? (
+          <div className="text-center text-gray-500 text-[10px] p-5">기능분석(L1)에서 구분을 먼저 입력해주세요.</div>
+        ) : (state.l1.types || []).map((type: any) => {
+          const typeColor = getL1TypeColor(type.name);
+          return (
+            <div key={type.id} className="ml-2 mb-2">
+              <TreeItem icon="🏷️" label={type.name} bgColor={typeColor.bg} textColor="#fff" />
+              {(type.functions || []).length === 0 ? (
+                <TreeEmpty message="(기능 미입력)" small />
+              ) : (type.functions || []).map((func: any) => (
+                <div key={func.id} className="ml-3 mb-1.5">
+                  <TreeLeaf icon="⚙️" label={func.name} bgColor={typeColor.light} textColor={typeColor.text} indent={0} />
+                  {(func.requirements || []).length === 0 ? (
+                    <TreeEmpty message="(요구사항 미입력)" small />
+                  ) : (func.requirements || []).map((req: any) => {
+                    const effects = (state.l1.failureScopes || []).filter((s: any) => s.reqId === req.id);
+                    return (
+                      <div key={req.id} className="ml-3 mb-1">
+                        <TreeLeaf icon="📋" label={req.name} textColor={typeColor.text} indent={0} />
+                        {effects.length === 0 ? (
+                          <TreeEmpty message="(고장영향 미입력)" small />
+                        ) : effects.map((eff: any) => (
+                          <TreeLeaf 
+                            key={eff.id} 
+                            icon="⚡" 
+                            label={eff.effect || '(미입력)'} 
+                            textColor={typeColor.text} 
+                            indent={3}
+                            badge={eff.severity && <TreeBadge label={`S:${eff.severity}`} bgColor={eff.severity >= 8 ? '#fed7aa' : '#e0e7ff'} textColor={eff.severity >= 8 ? '#9a3412' : '#4338ca'} />}
+                          />
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </BaseTreePanel>
+    );
+  }
+
+  // ========== 2L 고장형태 트리 ==========
   if (tab === 'failure-l2') {
     const isL2Confirmed = state.failureL2Confirmed || false;
     const charCount = state.l2.reduce((s: number, p: any) => s + (p.functions || []).reduce((a: number, f: any) => a + (f.productChars || []).length, 0), 0);
     const fmCount = state.l2.reduce((s: number, p: any) => s + (p.failureModes || []).length, 0);
     
     return (
-      <div className={tw.container}>
-        <div className={`${tw.header} ${tw.headerNavy}`}>
-          🔥 2L 고장형태 <span className="text-[10px] font-normal">제품특성({charCount}) 고장형태({fmCount})</span>
-          {!isL2Confirmed && <span className="ml-1 text-yellow-300 text-[9px]">(미확정)</span>}
-        </div>
-        <div className={`${tw.content} ${tw.contentNavy}`}>
-          {/* ✅ 확정되지 않으면 안내 메시지 표시 */}
-          {!isL2Confirmed && (
-            <div className="text-center py-8 text-gray-500 text-xs">
-              ⚠️ 2L 고장형태 분석을 완료하고 확정해주세요
-            </div>
-          )}
-          
-          {/* ✅ 확정된 경우에만 데이터 표시 */}
-          {isL2Confirmed && state.l2.filter((p: any) => p.name && !p.name.includes('클릭')).map((proc: any) => {
-            const functions = proc.functions || [];
-            const confirmedModes = proc.failureModes || [];
-            return (
-              <div key={proc.id} className="mb-2.5">
-                <div 
-                  className={`${tw.textXs} font-bold py-0.5 px-1.5 rounded-sm`}
-                  style={{ backgroundColor: TREE_FAILURE.procBg, color: TREE_FAILURE.procText, borderLeft: `3px solid ${TREE_FAILURE.border}` }}
-                >
-                  🔧 {proc.no}. {proc.name}
-                </div>
-                {functions.length > 0 ? functions.map((f: any) => {
-                  const productChars = f.productChars || [];
-                  return (
-                    <div key={f.id} className="ml-3 mb-1">
-                      <div className={`${tw.textXxs} font-semibold`} style={{ color: TREE_FUNCTION.itemText }}>📋 {f.name}</div>
-                      {productChars.length > 0 ? productChars.map((pc: any) => (
-                        <div key={pc.id} className="ml-3 mb-0.5">
-                          <div className={`${tw.textXxs} flex items-center gap-1 ${pc.specialChar ? 'bg-orange-100 rounded px-1 font-bold' : ''}`} style={{ color: pc.specialChar ? '#e65100' : TREE_FAILURE.itemText }}>
-                            🏷️ {pc.name}
-                            {pc.specialChar && <span className="bg-orange-500 text-white px-1 rounded text-[7px] font-bold">{pc.specialChar}</span>}
-                          </div>
-                          {confirmedModes.filter((m: any) => !pc.name || m.productCharId === pc.id || !m.productCharId).slice(0, 3).map((m: any) => (
-                            <div key={m.id} className={`ml-3 ${tw.textXxs} flex gap-1.5`} style={{ color: TREE_FAILURE.itemText }}>
-                              <span>└ ⚠️ {m.name}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )) : (
-                        <div className={tw.emptySmall}>└ (제품특성 미입력)</div>
-                      )}
-                    </div>
-                  );
-                }) : (
-                  <div className={tw.emptySmall}>└ (메인공정기능 미입력)</div>
-                )}
-                {functions.length === 0 && confirmedModes.map((m: any) => (
-                  <div key={m.id} className={`ml-4 ${tw.textXxs} flex gap-1.5`} style={{ color: TREE_FAILURE.itemText }}>
-                    <span>└ ⚠️ {m.name}</span>
+      <BaseTreePanel config={{
+        icon: '🔥',
+        title: '2L 고장형태',
+        counts: [{ label: '제품특성', value: charCount }, { label: '고장형태', value: fmCount }],
+        theme: 'failure-l2',
+        extra: !isL2Confirmed && <span className="ml-1 text-yellow-300 text-[9px]">(미확정)</span>,
+      }}>
+        {!isL2Confirmed ? (
+          <div className="text-center py-8 text-gray-500 text-xs">⚠️ 2L 고장형태 분석을 완료하고 확정해주세요</div>
+        ) : state.l2.filter((p: any) => p.name && !p.name.includes('클릭')).map((proc: any) => {
+          const functions = proc.functions || [];
+          const confirmedModes = proc.failureModes || [];
+          return (
+            <div key={proc.id} className="mb-2.5">
+              <TreeItem icon="🔧" label={`${proc.no}. ${proc.name}`} bgColor={TREE_FAILURE.procBg} textColor={TREE_FAILURE.procText} className="border-l-[3px] border-[#3949ab]" />
+              {functions.length > 0 ? functions.map((f: any) => {
+                const productChars = f.productChars || [];
+                return (
+                  <div key={f.id} className="ml-3 mb-1">
+                    <TreeLeaf icon="📋" label={f.name} textColor={TREE_FUNCTION.itemText} indent={0} />
+                    {productChars.length > 0 ? productChars.map((pc: any) => (
+                      <div key={pc.id} className="ml-3 mb-0.5">
+                        <TreeLeaf 
+                          icon="🏷️" 
+                          label={pc.name} 
+                          bgColor={pc.specialChar ? '#fed7aa' : undefined}
+                          textColor={pc.specialChar ? '#e65100' : TREE_FAILURE.itemText}
+                          indent={0}
+                          badge={pc.specialChar && <TreeBadge label={pc.specialChar} bgColor="#f97316" textColor="#fff" />}
+                        />
+                        {confirmedModes.filter((m: any) => !pc.name || m.productCharId === pc.id || !m.productCharId).slice(0, 3).map((m: any) => (
+                          <TreeLeaf key={m.id} icon="└ ⚠️" label={m.name} textColor={TREE_FAILURE.itemText} indent={3} />
+                        ))}
+                      </div>
+                    )) : <TreeEmpty message="└ (제품특성 미입력)" small />}
                   </div>
-                ))}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+                );
+              }) : <TreeEmpty message="└ (메인공정기능 미입력)" small />}
+              {functions.length === 0 && confirmedModes.map((m: any) => (
+                <TreeLeaf key={m.id} icon="└ ⚠️" label={m.name} textColor={TREE_FAILURE.itemText} indent={4} />
+              ))}
+            </div>
+          );
+        })}
+      </BaseTreePanel>
     );
   }
 
-  // ========== 3L 고장원인 트리 (FC) - 확정된 것만 표시 ==========
+  // ========== 3L 고장원인 트리 ==========
   if (tab === 'failure-l3') {
     const isL3Confirmed = state.failureL3Confirmed || false;
-    
-    // COUNT 계산: 공정특성 수, 고장원인 수
-    let processCharCount = 0;
-    let failureCauseCount = 0;
+    let processCharCount = 0, failureCauseCount = 0;
     state.l2.forEach((proc: any) => {
       (proc.l3 || []).forEach((we: any) => {
         (we.functions || []).forEach((f: any) => {
@@ -435,97 +305,73 @@ export default function TreePanel({ state }: TreePanelProps) {
     });
     
     return (
-      <div className={tw.container}>
-        <div className={`${tw.header} ${tw.headerNavy}`}>
-          ⚡ 3L 고장원인 트리 (FC)
-          {!isL3Confirmed && <span className="ml-2 text-yellow-300 text-[9px]">(미확정)</span>}
-        </div>
-        <div className={`${tw.content} ${tw.contentNavy}`}>
-          {/* ✅ 확정되지 않으면 안내 메시지 표시 */}
-          {!isL3Confirmed && (
-            <div className="text-center py-8 text-gray-500 text-xs">
-              ⚠️ 3L 고장원인 분석을 완료하고 확정해주세요
+      <BaseTreePanel config={{
+        icon: '⚡',
+        title: '3L 고장원인 트리 (FC)',
+        counts: [{ label: '공정특성', value: processCharCount }, { label: '고장원인', value: failureCauseCount }],
+        theme: 'failure-l3',
+        extra: !isL3Confirmed && <span className="ml-2 text-yellow-300 text-[9px]">(미확정)</span>,
+      }}>
+        {!isL3Confirmed ? (
+          <div className="text-center py-8 text-gray-500 text-xs">⚠️ 3L 고장원인 분석을 완료하고 확정해주세요</div>
+        ) : state.l2.filter((p: any) => p.name && !p.name.includes('클릭')).map((proc: any) => {
+          const allCauses = proc.failureCauses || [];
+          return (
+            <div key={proc.id} className="mb-2">
+              <TreeItem icon="🔧" label={`${proc.no}. ${proc.name}`} bgColor={TREE_FAILURE.procBg} textColor={TREE_FAILURE.procText} className="border-l-[3px] border-[#3949ab]" />
+              {(proc.l3 || []).filter((w: any) => w.name && !w.name.includes('클릭')).map((we: any) => {
+                const processChars: any[] = [];
+                (we.functions || []).forEach((f: any) => {
+                  (f.processChars || []).forEach((pc: any) => { if (pc.name) processChars.push(pc); });
+                });
+                return (
+                  <div key={we.id} className="ml-3 mb-1">
+                    <TreeLeaf icon="" label={`[${we.m4}] ${we.name}`} bgColor={TREE_FAILURE.itemBg} textColor={TREE_FAILURE.itemText} indent={0} />
+                    {processChars.map((pc: any) => {
+                      const linkedCauses = allCauses.filter((c: any) => c.processCharId === pc.id);
+                      return (
+                        <div key={pc.id} className="ml-2">
+                          <TreeLeaf 
+                            icon="└" 
+                            label={pc.name} 
+                            textColor="#1565c0" 
+                            indent={0}
+                            badge={pc.specialChar && <TreeBadge label={pc.specialChar} bgColor="#2563eb" textColor="#fff" />}
+                          />
+                          {linkedCauses.map((c: any) => (
+                            <TreeLeaf 
+                              key={c.id} 
+                              icon="└" 
+                              label={c.name} 
+                              textColor={TREE_FAILURE.itemText} 
+                              indent={4}
+                              badge={c.occurrence && <TreeBadge label={`O:${c.occurrence}`} bgColor={c.occurrence >= 7 ? '#fed7aa' : '#ffedd5'} textColor={c.occurrence >= 7 ? '#9a3412' : '#c2410c'} />}
+                            />
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
             </div>
-          )}
-          
-          {/* ✅ 확정된 경우에만 데이터 표시 */}
-          {isL3Confirmed && state.l2.filter((p: any) => p.name && !p.name.includes('클릭')).map((proc: any) => {
-            // 해당 공정의 모든 고장원인 (공정 레벨에 저장됨)
-            const allCauses = proc.failureCauses || [];
-            
-            return (
-              <div key={proc.id} className="mb-2">
-                <div 
-                  className={`${tw.textXs} font-bold py-0.5 px-1.5 rounded-sm`}
-                  style={{ backgroundColor: TREE_FAILURE.procBg, color: TREE_FAILURE.procText, borderLeft: `3px solid ${TREE_FAILURE.border}` }}
-                >
-                  🔧 {proc.no}. {proc.name}
-                </div>
-                {(proc.l3 || []).filter((w: any) => w.name && !w.name.includes('클릭')).map((we: any) => {
-                  // 작업요소의 공정특성 수집
-                  const processChars: any[] = [];
-                  (we.functions || []).forEach((f: any) => {
-                    (f.processChars || []).forEach((pc: any) => {
-                      if (pc.name) processChars.push(pc);
-                    });
-                  });
-                  
-                  return (
-                    <div key={we.id} className="ml-3 mb-1">
-                      <div 
-                        className={`${tw.textXxs} font-semibold py-0.5 px-1 rounded-sm`}
-                        style={{ backgroundColor: TREE_FAILURE.itemBg, color: TREE_FAILURE.itemText }}
-                      >
-                        [{we.m4}] {we.name}
-                      </div>
-                      {/* 공정특성별로 고장원인 표시 */}
-                      {processChars.map((pc: any) => {
-                        const linkedCauses = allCauses.filter((c: any) => c.processCharId === pc.id);
-                        return (
-                          <div key={pc.id} className="ml-2">
-                            <div className={`${tw.textXxs} font-medium`} style={{ color: '#1565c0' }}>
-                              └ {pc.name}
-                              {pc.specialChar && (
-                                <span className="ml-1 px-1 py-0.5 rounded text-[9px] font-bold text-white bg-blue-600">
-                                  {pc.specialChar}
-                                </span>
-                              )}
-                            </div>
-                            {linkedCauses.map((c: any) => (
-                              <div key={c.id} className={`ml-4 ${tw.textXxs} flex gap-2`} style={{ color: TREE_FAILURE.itemText }}>
-                                <span>└ {c.name}</span>
-                                {c.occurrence && (
-                                  <span className={`${tw.severityBadge} ${c.occurrence >= 7 ? 'bg-orange-200 text-orange-800' : 'bg-orange-100 text-orange-700'}`}>
-                                    O:{c.occurrence}
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </div>
-        {/* 푸터: COUNT 표시 */}
-        <div className={tw.footerNavy}>
-          <span className="font-bold">공정특성({processCharCount}) 고장원인({failureCauseCount})</span>
-        </div>
-      </div>
+          );
+        })}
+      </BaseTreePanel>
     );
   }
 
   // ========== 기본 폴백 ==========
   return (
-    <div className={`${tw.container} bg-slate-50`}>
-      <div className={`${tw.header} ${tw.headerBlue}`}>🌳 트리</div>
+    <BaseTreePanel config={{
+      icon: '🌳',
+      title: '트리',
+      counts: [],
+      theme: 'structure',
+    }}>
       <div className="flex-1 flex justify-center items-center text-[11px] text-gray-500">
         해당 탭에서는 트리가 표시되지 않습니다
       </div>
-    </div>
+    </BaseTreePanel>
   );
 }
