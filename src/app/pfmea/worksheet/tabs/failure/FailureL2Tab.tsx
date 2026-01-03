@@ -506,7 +506,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
                         type: 'l2FailureMode', 
                         processId: row.procId, 
                         productCharId: row.charId,
-                        modeId: row.modeId || undefined,  // ✅ 기존 항목 수정 시 modeId 전달
+                        // modeId 제거 → 항상 다중선택 모드 (productCharId 기준으로 전체 관리)
                         title: `${row.procNo}. ${row.procName} 고장형태`, 
                         itemCode: 'FM1',
                         parentProductChar: row.charName,
