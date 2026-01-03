@@ -361,6 +361,124 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     };
   }, [state.l2, saveToLocalStorage, selectedFmeaId, currentFmea?.id]);
 
+  // ========== 트리뷰 데이터 기준 복구 로직 (로드 후 state 업데이트 시) ==========
+  const treeViewRecoveryRef = useRef<boolean>(false);
+  const lastFmeaIdRef = useRef<string>('');
+  
+  // FMEA ID 변경 시 복구 플래그 초기화
+  useEffect(() => {
+    const currentFmeaId = selectedFmeaId || currentFmea?.id || '';
+    if (currentFmeaId !== lastFmeaIdRef.current) {
+      treeViewRecoveryRef.current = false;
+      lastFmeaIdRef.current = currentFmeaId;
+      console.log('[트리뷰 복구] FMEA ID 변경, 복구 플래그 초기화:', currentFmeaId);
+    }
+  }, [selectedFmeaId, currentFmea?.id]);
+  
+  useEffect(() => {
+    // 원자성 DB가 로드되어 있고, 아직 복구하지 않았을 때만 실행
+    if (!atomicDB || treeViewRecoveryRef.current) return;
+    
+    const targetId = selectedFmeaId || currentFmea?.id;
+    if (!targetId) return;
+    
+    // 트리뷰 데이터 추출 (현재 state.l2의 proc.failureCauses - 화면에 표시되는 것)
+    const treeViewCauses = state.l2.flatMap((proc: any) => {
+      return (proc.failureCauses || []).map((fc: any) => ({
+        procId: proc.id,
+        procName: proc.name || proc.no,
+        causeId: fc.id,
+        causeName: fc.name,
+        processCharId: fc.processCharId || '',
+        occurrence: fc.occurrence
+      }));
+    });
+    
+    // 원자성 DB 데이터 추출
+    const atomicDBCauses = atomicDB.failureCauses.map(fc => {
+      const l2Struct = atomicDB.l2Structures.find(s => s.id === fc.l2StructId);
+      const l3Func = atomicDB.l3Functions.find(f => f.id === fc.l3FuncId);
+      return {
+        procId: fc.l2StructId,
+        procName: l2Struct?.name || l2Struct?.no || '',
+        causeId: fc.id,
+        causeName: fc.cause,
+        processCharId: fc.l3FuncId || '',
+        occurrence: fc.occurrence
+      };
+    });
+    
+    const treeViewKey = (fc: any) => `${fc.procId}_${fc.processCharId}_${fc.causeName}`;
+    const atomicDBKey = (fc: any) => `${fc.procId}_${fc.processCharId}_${fc.causeName}`;
+    
+    const treeViewKeys = new Set(treeViewCauses.map(treeViewKey));
+    const atomicDBKeys = new Set(atomicDBCauses.map(atomicDBKey));
+    
+    const missingInAtomicDB = treeViewCauses.filter(fc => !atomicDBKeys.has(treeViewKey(fc)));
+    const isConsistent = missingInAtomicDB.length === 0 && treeViewCauses.length === atomicDBCauses.length;
+    
+    if (!isConsistent && treeViewCauses.length > 0) {
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('🔍 [트리뷰 기준 복구] 트리뷰 데이터 vs 원자성DB');
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('📊 데이터 소스별 개수:');
+      console.log('   - 트리뷰 데이터 (현재 state):', treeViewCauses.length, '개');
+      console.log('   - 원자성 DB 데이터:', atomicDBCauses.length, '개');
+      
+      if (missingInAtomicDB.length > 0) {
+        console.warn('⚠️ [트리뷰 기준 복구] 원자성 DB에 없는 항목 (트리뷰에만 있음):', missingInAtomicDB.length, '개');
+        missingInAtomicDB.forEach(fc => {
+          console.warn(`     • [${fc.procName}] ${fc.causeName} (processCharId: ${fc.processCharId})`);
+        });
+      }
+      
+      // 트리뷰 데이터를 기준으로 원자성 DB 복구
+      console.log('🔧 [트리뷰 기준 복구 시작] 트리뷰 데이터를 기준으로 원자성 DB 복구');
+      
+      const recoveredCauses = treeViewCauses.map(fc => {
+        const l3Func = atomicDB.l3Functions.find(f => f.id === fc.processCharId);
+        if (!l3Func) {
+          console.warn(`[트리뷰 복구] processCharId ${fc.processCharId}에 해당하는 L3Function을 찾을 수 없음`);
+          return null;
+        }
+        
+        const existingFC = atomicDB.failureCauses.find(c => c.id === fc.causeId);
+        
+        return {
+          id: fc.causeId || uid(),
+          fmeaId: atomicDB.fmeaId,
+          l3FuncId: l3Func.id,
+          l3StructId: l3Func.l3StructId,
+          l2StructId: l3Func.l2StructId,
+          cause: fc.causeName,
+          occurrence: fc.occurrence || existingFC?.occurrence,
+        };
+      }).filter((fc): fc is NonNullable<typeof fc> => fc !== null);
+      
+      // 원자성 DB 업데이트
+      const recoveredDB = {
+        ...atomicDB,
+        failureCauses: recoveredCauses
+      };
+      
+      // 복구된 DB 저장
+      saveWorksheetDB(recoveredDB);
+      setAtomicDB(recoveredDB);
+      
+      console.log('✅ [트리뷰 기준 복구 완료] 원자성 DB가 트리뷰 데이터로 복구되었습니다.');
+      console.log('   - 복구된 failureCauses:', recoveredCauses.length, '개');
+      console.log('═══════════════════════════════════════════════════════');
+      
+      treeViewRecoveryRef.current = true; // 복구 완료 표시
+    } else if (treeViewCauses.length === 0 && atomicDBCauses.length > 0) {
+      // 트리뷰에 데이터가 없고 원자성 DB에만 있는 경우는 복구하지 않음 (사용자가 삭제했을 수 있음)
+      console.log('[트리뷰 기준 복구] 트리뷰에 데이터가 없어 복구하지 않음');
+    } else {
+      console.log('[트리뷰 기준 복구] 트리뷰와 원자성DB가 일치합니다.');
+      treeViewRecoveryRef.current = true; // 일치하므로 복구 불필요
+    }
+  }, [state.l2, atomicDB, selectedFmeaId, currentFmea?.id]);
+
   // ✅ riskData 변경 시 별도 키로 즉시 저장 (확실한 저장)
   const riskDataRef = useRef<any>({});
   useEffect(() => {
