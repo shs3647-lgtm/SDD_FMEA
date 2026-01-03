@@ -797,41 +797,17 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
               연결확정
             </button>
             
-            {/* 전체 확정/수정 버튼 */}
-            {!isConfirmed ? (
-              <button 
-                onClick={handleConfirmAll} 
-                disabled={savedLinks.length === 0}
-                style={actionButtonStyle({ 
-                  bg: '#4caf50', color: '#fff', 
-                  opacity: savedLinks.length === 0 ? 0.5 : 1,
-                  fontWeight: 700
-                })}
-              >
-                ✅ 전체확정
-              </button>
-            ) : (
+            {/* 수정 버튼 (확정 상태에서만 표시) */}
+            {isConfirmed && (
               <button 
                 onClick={handleEditMode}
                 style={actionButtonStyle({ 
-                  bg: '#ff9800', color: '#fff',
-                  fontWeight: 700
+                  bg: '#ff9800', color: '#fff'
                 })}
               >
                 ✏️ 수정
               </button>
             )}
-            
-            <button onClick={handleReverseGenerate} disabled={savedLinks.length === 0}
-              style={actionButtonStyle({ bg: '#fff8e1', color: '#e65100', border: '1px solid #e65100', opacity: savedLinks.length === 0 ? 0.5 : 1 })}
-            >
-              🔄 역전개
-            </button>
-            <button onClick={handleClearAll} disabled={isConfirmed || savedLinks.length === 0}
-              style={actionButtonStyle({ bg: '#ffebee', color: '#f57c00', border: '1px solid #f57c00', opacity: (isConfirmed || savedLinks.length === 0) ? 0.5 : 1 })}
-            >
-              🗑️ 초기화
-            </button>
           </div>
         </div>
         
