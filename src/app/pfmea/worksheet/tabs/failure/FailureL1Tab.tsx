@@ -278,22 +278,51 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
       // ✅ effectId가 없으면 빈 셀 클릭 → 새 항목 추가
       // 해당 요구사항의 기존 고장영향 보존하면서 새 항목 추가
       if (selectedValues.length > 0) {
-        // ✅ 중복 체크: 같은 reqId + 같은 effect가 이미 있으면 추가하지 않음
-        const existingEffects = newState.l1.failureScopes
-          .filter((s: any) => s.reqId === modal.reqId)
-          .map((s: any) => s.effect);
-        const existingSet = new Set(existingEffects);
         const newValue = selectedValues[0];
-        if (existingSet.has(newValue)) {
+        const currentReqName = modal.parentReqName;
+        
+        // ✅ 동일한 요구사항 이름을 가진 모든 reqId 찾기
+        const allRequirements: { reqId: string; reqName: string }[] = [];
+        (newState.l1.types || []).forEach((t: any) => {
+          (t.functions || []).forEach((f: any) => {
+            (f.requirements || []).forEach((r: any) => {
+              allRequirements.push({ reqId: r.id, reqName: r.name });
+            });
+          });
+        });
+        
+        // 동일한 이름의 요구사항들 찾기
+        const sameNameReqIds = allRequirements
+          .filter(r => r.reqName === currentReqName)
+          .map(r => r.reqId);
+        
+        console.log('[FailureL1Tab] 동일 요구사항 자동 선택:', currentReqName, '→', sameNameReqIds.length, '개');
+        
+        // 각 동일 이름 요구사항에 고장영향 추가 (중복 제외)
+        let addedCount = 0;
+        sameNameReqIds.forEach(reqId => {
+          const existingEffects = newState.l1.failureScopes
+            .filter((s: any) => s.reqId === reqId)
+            .map((s: any) => s.effect);
+          const existingSet = new Set(existingEffects);
+          
+          if (!existingSet.has(newValue)) {
+            newState.l1.failureScopes.push({
+              id: uid(),
+              reqId: reqId,
+              effect: newValue,
+              severity: undefined
+            });
+            addedCount++;
+          }
+        });
+        
+        if (addedCount === 0) {
           alert(`⚠️ 중복 항목: "${newValue}"는 이미 등록되어 있습니다.`);
           return prev;
         }
-        newState.l1.failureScopes.push({
-          id: uid(),
-          reqId: modal.reqId,
-          effect: newValue,
-          severity: undefined
-        });
+        
+        console.log('[FailureL1Tab] 자동 추가 완료:', addedCount, '개');
       }
       
       console.log('[FailureL1Tab] 상태 업데이트 완료, 최종 failureScopes:', newState.l1.failureScopes.length, '개');
