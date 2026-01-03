@@ -476,10 +476,10 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
       )}
 
       <table className="w-full border-collapse table-fixed">
-        {/* 컬럼: 완제품공정명 100px, 구분 45px, 완제품기능 auto, 요구사항 80px, 고장영향 200px, S 30px */}
+        {/* 컬럼: 완제품공정명 100px, 구분 70px, 완제품기능 auto, 요구사항 80px, 고장영향 200px, S 30px */}
         <colgroup>
           <col className="w-[100px]" />
-          <col className="w-[45px]" />
+          <col className="w-[70px]" />
           <col />
           <col className="w-[80px]" />
           <col className="w-[200px]" />
