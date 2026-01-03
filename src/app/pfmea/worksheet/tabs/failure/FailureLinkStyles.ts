@@ -49,16 +49,17 @@ export const modeButtonStyle = (isActive: boolean): CSSProperties => ({
 
 /** 분석결과 버튼 (유동적 너비) - 활성 시 어두운 배경으로 카운트 색상 가시성 확보 */
 export const resultButtonStyle = (isActive: boolean): CSSProperties => ({
-  flex: 1,
-  padding: '4px 8px',
-  fontSize: FONT_SIZES.header2,
+  flex: 2,  // 더 넓게
+  padding: '4px 6px',
+  fontSize: '11px',  // 글자 크기 축소
   fontWeight: FONT_WEIGHTS.semibold,
   border: '1px solid #0d47a1',
   borderRadius: '3px',
   cursor: 'pointer',
   whiteSpace: 'nowrap',
-  minWidth: 0,
-  background: isActive ? '#0d47a1' : '#fff',  // 어두운 네이비 배경
+  overflow: 'visible',
+  minWidth: 'fit-content',  // 내용에 맞게 최소 너비
+  background: isActive ? '#0d47a1' : '#fff',
   color: isActive ? '#fff' : '#0d47a1',
 });
 

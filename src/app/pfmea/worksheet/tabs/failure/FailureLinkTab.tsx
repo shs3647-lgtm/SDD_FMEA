@@ -878,7 +878,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
           
           <div className="flex-1 flex gap-1 min-w-0">
             <button onClick={() => setViewMode('result')} style={resultButtonStyle(viewMode === 'result')}>
-              분석결과(<span style={{color: viewMode === 'result' ? '#90caf9' : '#1976d2',fontWeight:700}}>FE:{linkStats.feLinkedCount}</span>,<span style={{color: viewMode === 'result' ? '#ffab91' : '#e65100',fontWeight:700}}>FM:{linkStats.fmLinkedCount}</span>,<span style={{color: viewMode === 'result' ? '#a5d6a7' : '#388e3c',fontWeight:700}}>FC:{linkStats.fcLinkedCount}</span>,<span style={{color: viewMode === 'result' ? '#ff8a80' : '#d32f2f',fontWeight:700}}>누락:{linkStats.fmMissingCount}</span>)
+              분석결과(<span style={{color: viewMode === 'result' ? '#90caf9' : '#1976d2',fontWeight:700}}>FE:{linkStats.feLinkedCount}</span>,<span style={{color: viewMode === 'result' ? '#ffab91' : '#e65100',fontWeight:700}}>FM:{linkStats.fmLinkedCount}</span>,<span style={{color: viewMode === 'result' ? '#a5d6a7' : '#388e3c',fontWeight:700}}>FC:{linkStats.fcLinkedCount}</span>{linkStats.fmMissingCount > 0 && <span style={{color: viewMode === 'result' ? '#ff8a80' : '#d32f2f',fontWeight:700}}>,누락:{linkStats.fmMissingCount}</span>})
             </button>
             {/* 확정 상태 배지 */}
             {isConfirmed && (
