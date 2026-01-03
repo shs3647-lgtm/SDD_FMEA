@@ -345,13 +345,25 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       if (link.feId && link.feId.trim() !== '') feLinkedIds.add(link.feId);
       if (link.fcId && link.fcId.trim() !== '') fcLinkedIds.add(link.fcId);
       
-      // FM별 연결 카운트
+      // FM별 연결 카운트 (ID, 번호, 텍스트 모두 확인)
       if (!fmLinkCounts.has(link.fmId)) {
         fmLinkCounts.set(link.fmId, { feCount: 0, fcCount: 0 });
       }
       const counts = fmLinkCounts.get(link.fmId)!;
-      if (link.feId && link.feId.trim() !== '') counts.feCount++;
-      if (link.fcId && link.fcId.trim() !== '') counts.fcCount++;
+      
+      // FE 카운트: feId, feNo, feText 중 하나라도 있으면 카운트
+      if ((link.feId && link.feId.trim() !== '') || 
+          (link.feNo && link.feNo.trim() !== '') || 
+          (link.feText && link.feText.trim() !== '')) {
+        counts.feCount++;
+      }
+      
+      // FC 카운트: fcId, fcNo, fcText 중 하나라도 있으면 카운트
+      if ((link.fcId && link.fcId.trim() !== '') || 
+          (link.fcNo && link.fcNo.trim() !== '') || 
+          (link.fcText && link.fcText.trim() !== '')) {
+        counts.fcCount++;
+      }
     });
     
     // 하위호환: 텍스트 기반 매칭 (trim 처리)
@@ -413,60 +425,82 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     console.log('[FM 선택] 연결된 links:', fmLinks.length, '개', fmLinks.map(l => ({ feId: l.feId, feText: l.feText, fcId: l.fcId, fcText: l.fcText })));
     
     fmLinks.forEach(link => {
-      // FE 로드 (ID 기반 → 텍스트 기반 폴백 → 번호 기반 폴백)
+      // FE 로드 (ID → 번호 → 텍스트 순서로 매칭 시도)
+      let feItem: FEItem | undefined;
+      
+      // 1단계: ID로 찾기
       if (link.feId && link.feId.trim() !== '') {
-        const feItem = feData.find(f => f.id === link.feId);
+        feItem = feData.find(f => f.id === link.feId);
         if (feItem) {
-          newFEs.set(feItem.id, feItem);
-          console.log('[FE 로드] ID 매칭:', link.feId, '→', feItem.text);
-        } else {
-          console.warn('[FE 로드 실패] ID 매칭 실패:', link.feId);
-        }
-      } else if (link.feText && link.feText.trim() !== '') {
-        const trimmedText = link.feText.trim();
-        const feItem = feData.find(f => f.text.trim() === trimmedText);
-        if (feItem) {
-          newFEs.set(feItem.id, feItem);
-          console.log('[FE 로드] 텍스트 매칭:', trimmedText, '→', feItem.id);
-        } else {
-          // 번호로도 시도
-          const feNo = link.feNo || '';
-          const feItemByNo = feData.find(f => f.feNo === feNo);
-          if (feItemByNo) {
-            newFEs.set(feItemByNo.id, feItemByNo);
-            console.log('[FE 로드] 번호 매칭:', feNo, '→', feItemByNo.id);
-          } else {
-            console.warn('[FE 로드 실패] 텍스트/번호 매칭 실패:', trimmedText, feNo);
-          }
+          console.log('[FE 로드] ID 매칭 성공:', link.feId, '→', feItem.text);
         }
       }
       
-      // FC 로드 (ID 기반 → 텍스트 기반 폴백 → 번호 기반 폴백)
+      // 2단계: ID 매칭 실패 시 번호로 찾기 (번호는 변경되지 않으므로 더 안정적)
+      if (!feItem && link.feNo && link.feNo.trim() !== '') {
+        feItem = feData.find(f => f.feNo === link.feNo.trim());
+        if (feItem) {
+          console.log('[FE 로드] 번호 매칭 성공:', link.feNo, '→', feItem.id, feItem.text);
+        }
+      }
+      
+      // 3단계: 번호 매칭 실패 시 텍스트로 찾기
+      if (!feItem && link.feText && link.feText.trim() !== '') {
+        const trimmedText = link.feText.trim();
+        feItem = feData.find(f => f.text.trim() === trimmedText);
+        if (feItem) {
+          console.log('[FE 로드] 텍스트 매칭 성공:', trimmedText, '→', feItem.id);
+        }
+      }
+      
+      if (feItem) {
+        newFEs.set(feItem.id, feItem);
+      } else {
+        console.error('[FE 로드 실패] 모든 매칭 실패:', {
+          feId: link.feId,
+          feNo: link.feNo,
+          feText: link.feText,
+          availableFEs: feData.map(f => ({ id: f.id, no: f.feNo, text: f.text }))
+        });
+      }
+      
+      // FC 로드 (ID → 번호 → 텍스트 순서로 매칭 시도)
+      let fcItem: FCItem | undefined;
+      
+      // 1단계: ID로 찾기
       if (link.fcId && link.fcId.trim() !== '') {
-        const fcItem = fcData.find(f => f.id === link.fcId);
+        fcItem = fcData.find(f => f.id === link.fcId);
         if (fcItem) {
-          newFCs.set(fcItem.id, fcItem);
-          console.log('[FC 로드] ID 매칭:', link.fcId, '→', fcItem.text);
-        } else {
-          console.warn('[FC 로드 실패] ID 매칭 실패:', link.fcId);
+          console.log('[FC 로드] ID 매칭 성공:', link.fcId, '→', fcItem.text);
         }
-      } else if (link.fcText && link.fcText.trim() !== '') {
+      }
+      
+      // 2단계: ID 매칭 실패 시 번호로 찾기 (번호는 변경되지 않으므로 더 안정적)
+      if (!fcItem && link.fcNo && link.fcNo.trim() !== '') {
+        fcItem = fcData.find(f => f.fcNo === link.fcNo.trim());
+        if (fcItem) {
+          console.log('[FC 로드] 번호 매칭 성공:', link.fcNo, '→', fcItem.id, fcItem.text);
+        }
+      }
+      
+      // 3단계: 번호 매칭 실패 시 텍스트로 찾기
+      if (!fcItem && link.fcText && link.fcText.trim() !== '') {
         const trimmedText = link.fcText.trim();
-        const fcItem = fcData.find(f => f.text.trim() === trimmedText);
+        fcItem = fcData.find(f => f.text.trim() === trimmedText);
         if (fcItem) {
-          newFCs.set(fcItem.id, fcItem);
-          console.log('[FC 로드] 텍스트 매칭:', trimmedText, '→', fcItem.id);
-        } else {
-          // 번호로도 시도
-          const fcNo = link.fcNo || '';
-          const fcItemByNo = fcData.find(f => f.fcNo === fcNo);
-          if (fcItemByNo) {
-            newFCs.set(fcItemByNo.id, fcItemByNo);
-            console.log('[FC 로드] 번호 매칭:', fcNo, '→', fcItemByNo.id);
-          } else {
-            console.warn('[FC 로드 실패] 텍스트/번호 매칭 실패:', trimmedText, fcNo);
-          }
+          console.log('[FC 로드] 텍스트 매칭 성공:', trimmedText, '→', fcItem.id);
         }
+      }
+      
+      if (fcItem) {
+        newFCs.set(fcItem.id, fcItem);
+      } else {
+        console.error('[FC 로드 실패] 모든 매칭 실패:', {
+          fcId: link.fcId,
+          fcNo: link.fcNo,
+          fcText: link.fcText,
+          availableFCs: fcData.map(f => ({ id: f.id, no: f.fcNo, text: f.text }))
+        });
       }
     });
     
