@@ -452,8 +452,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     setTimeout(drawLines, 50);
   }, [currentFMId, editMode, feData, savedLinks, setState, setDirty, saveToLocalStorage, drawLines]);
 
-  // ========== FC 토글 (연결/해제) - N:M 관계 지원 ==========
-  // 하나의 FC는 여러 FM에 연결될 수 있음
+  // ========== FC 클릭 (연결 추가) ==========
   const toggleFC = useCallback((id: string) => {
     const fc = fcData.find(f => f.id === id);
     if (!fc) return;
@@ -464,14 +463,45 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       return;
     }
     
-    // 현재 FM과의 연결만 확인 (다른 FM과의 연결은 유지)
+    // 이미 연결된 경우 - 안내 메시지
+    const existingLink = savedLinks.find(l => l.fmId === currentFMId && l.fcId === id);
+    if (existingLink) {
+      console.log('[FC 이미 연결됨] 더블클릭으로 해제하세요:', fc.text);
+      return; // 이미 연결된 경우 클릭으로는 해제 안함
+    }
+    
+    // 편집 모드에서만 연결 추가
+    if (editMode === 'edit') {
+      setLinkedFCs(prev => {
+        const next = new Map(prev);
+        next.set(id, fc);
+        return next;
+      });
+      console.log('[FC 선택 → 연결]', fc.text, 'to FM:', currentFMId);
+    }
+    
+    setTimeout(drawLines, 50);
+  }, [currentFMId, editMode, fcData, savedLinks, drawLines]);
+
+  // ========== FC 더블클릭 (연결 해제) ==========
+  const unlinkFC = useCallback((id: string) => {
+    const fc = fcData.find(f => f.id === id);
+    if (!fc) return;
+    
+    // FM이 선택되지 않은 경우
+    if (!currentFMId) {
+      alert('⚠️ 고장형태(FM)를 먼저 선택해주세요.');
+      return;
+    }
+    
+    // 현재 FM과의 연결 확인
     const existingLink = savedLinks.find(l => l.fmId === currentFMId && l.fcId === id);
     
     if (existingLink) {
-      // 현재 FM과의 연결만 해제 (다른 FM과의 연결은 유지됨)
+      // 연결 해제
       const filtered = savedLinks.filter(l => !(l.fmId === currentFMId && l.fcId === id));
       
-      console.log('[FC 연결 해제]', fc.text, 'from FM:', currentFMId, '(다른 FM 연결 유지)');
+      console.log('[FC 연결 해제 (더블클릭)]', fc.text, 'from FM:', currentFMId);
       
       setSavedLinks(filtered);
       setState((prev: any) => ({ ...prev, failureLinks: filtered }));
@@ -483,18 +513,21 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
         next.delete(id);
         return next;
       });
-    } else if (editMode === 'edit') {
-      // 새 연결 추가 (기존 다른 FM과의 연결과 별개로 추가됨)
+      
+      setTimeout(drawLines, 50);
+    } else {
+      // 연결되지 않은 경우 - linkedFCs에서만 제거 (아직 저장 안된 상태)
       setLinkedFCs(prev => {
         const next = new Map(prev);
-        next.set(id, fc);
+        if (next.has(id)) {
+          next.delete(id);
+          console.log('[FC 선택 해제 (더블클릭)]', fc.text);
+        }
         return next;
       });
-      console.log('[FC 선택]', fc.text, 'to FM:', currentFMId, '(연결확정으로 저장)');
+      setTimeout(drawLines, 50);
     }
-    
-    setTimeout(drawLines, 50);
-  }, [currentFMId, editMode, fcData, savedLinks, setState, setDirty, saveToLocalStorage, drawLines]);
+  }, [currentFMId, fcData, savedLinks, setState, setDirty, saveToLocalStorage, drawLines]);
 
   // ========== 연결 확정 ==========
   const confirmLink = useCallback(() => {
@@ -717,6 +750,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
         onSelectFM={selectFM}
         onToggleFE={toggleFE}
         onToggleFC={toggleFC}
+        onUnlinkFC={unlinkFC}
         onProcessChange={setSelectedProcess}
         onFcScopeChange={setFcLinkScope}
       />

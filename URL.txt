@@ -1,31 +1,30 @@
-http://localhost:3000/pfmea/worksheet?id=PFM25-310&v=color-std-20260103
+http://localhost:3000/pfmea/worksheet?id=PFM25-310&v=zebra-refactor-20260103
 
 === VERSION INFO ===
-Version: Color Standardization v1.0
-Commit: edad0c3
-Tag: codefreeze-20260103-color-standardization
+Version: Zebra Refactoring v1.0
+Commit: 122f980
+Tag: codefreeze-20260103-zebra-refactoring
 Last Updated: 2026-01-03
 Status: CODEFREEZE
 
-=== COLOR STANDARDIZATION ===
-구조분석: #1976d2 (파란색)
-기능분석: #2e7d32 (녹색)  
-고장분석: #e65100 (주황색)
+=== 리팩토링 완료 ===
+getZebraColors(idx) 함수로 줄무늬 색상 표준화
 
-=== 적용 범위 ===
-1. 워크시트 테이블 줄무늬
-   - 구조분석: 파란색 줄무늬
-   - 기능분석: 녹색 줄무늬
-   - 고장분석: 주황색 줄무늬
+=== 사용법 ===
+import { getZebraColors } from '@/styles/level-colors';
+const zebra = getZebraColors(idx);
+// zebra.structure - 파란색 (#bbdefb / #e3f2fd)
+// zebra.function  - 녹색   (#c8e6c9 / #e8f5e9)
+// zebra.failure   - 주황색 (#ffe0b2 / #fff3e0)
 
-2. 트리뷰 색상
-   - 구조 트리: 파란색
-   - 기능 트리: 녹색 (3L은 공정:파란색, 기능:녹색, 공정특성:주황색)
-   - 고장 트리: 공정:파란색, 기능:녹색, 고장:주황색
+=== 코드 감소 효과 ===
+이전: 3줄 x 4파일 x 3블록 = 36줄 중복
+이후: 1줄 x 4파일 x 3블록 = 12줄 + 함수정의 5줄 = 17줄
+감소: 약 53%
 
-=== MODIFIED FILES ===
-- src/app/pfmea/worksheet/panels/TreePanel/TreePanel.tsx
-- src/app/pfmea/worksheet/tabs/function/FunctionL3Tab.tsx
-- src/app/pfmea/worksheet/tabs/failure/FailureL2Tab.tsx
-- src/app/pfmea/worksheet/tabs/failure/FailureL3Tab.tsx
-- src/styles/level-colors.ts
+=== CODEFROZEN FILES ===
+1. src/styles/level-colors.ts (ZEBRA_COLORS, getZebraColors, getZebra)
+2. src/app/pfmea/worksheet/tabs/function/FunctionL3Tab.tsx
+3. src/app/pfmea/worksheet/tabs/failure/FailureL1Tab.tsx
+4. src/app/pfmea/worksheet/tabs/failure/FailureL2Tab.tsx
+5. src/app/pfmea/worksheet/tabs/failure/FailureL3Tab.tsx

@@ -37,6 +37,7 @@ interface FailureLinkTablesProps {
   onSelectFM: (id: string) => void;
   onToggleFE: (id: string) => void;
   onToggleFC: (id: string) => void;
+  onUnlinkFC: (id: string) => void;  // 더블클릭 연결 해제
   onProcessChange: (process: string) => void;
   onFcScopeChange: (scope: 'current' | 'all') => void;
 }
@@ -56,6 +57,7 @@ export default function FailureLinkTables({
   onSelectFM,
   onToggleFE,
   onToggleFC,
+  onUnlinkFC,
   onProcessChange,
   onFcScopeChange,
 }: FailureLinkTablesProps) {
@@ -201,7 +203,13 @@ export default function FailureLinkTables({
                   const noBg = isLinkedInSaved ? COLORS.function.dark : '#f57c00';
                   const cellBg = isLinkedInSaved ? '#c8e6c9' : (idx % 2 === 1 ? '#c8e6c9' : '#e8f5e9');
                   return (
-                    <tr key={fc.id} onClick={() => onToggleFC(fc.id)} className="cursor-pointer">
+                    <tr 
+                      key={fc.id} 
+                      onClick={() => onToggleFC(fc.id)} 
+                      onDoubleClick={() => onUnlinkFC(fc.id)}
+                      className="cursor-pointer"
+                      title="클릭: 연결 | 더블클릭: 연결 해제"
+                    >
                       <td style={tdCenterStyle(noBg, BORDER_GREEN, '#fff')}>{fc.fcNo}</td>
                       <td style={tdCenterStyle(cellBg, BORDER_GREEN, COLORS.function.text, { fontSize: FONT_SIZES.small, whiteSpace: 'nowrap' })}>{fc.processName}</td>
                       <td style={tdCenterStyle(cellBg, BORDER_GREEN, COLORS.function.text)}>{fc.m4}</td>
