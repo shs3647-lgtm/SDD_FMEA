@@ -131,7 +131,7 @@ export default function FailureEffectSelectModal({
   const handleAddSave = () => {
     if (!newValue.trim()) return;
     const newItem = { id: `new_${Date.now()}`, value: newValue.trim(), category: '추가', group: parentType };
-    setItems(prev => [...prev, newItem]);
+    setItems(prev => [newItem, ...prev]); // 맨 위에 추가
     setSelectedIds(prev => new Set([...prev, newItem.id]));
     setNewValue('');
   };
