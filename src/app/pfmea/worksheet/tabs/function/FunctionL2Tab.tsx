@@ -446,7 +446,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
   const totalRows = getTotalRows();
 
   return (
-    <div className="p-0 overflow-auto h-full">
+    <div className="p-0 overflow-auto h-full" style={{ paddingBottom: '50px' }}>
       <table className="w-full border-collapse table-fixed">
         <colgroup>
           <col className="w-[140px]" />

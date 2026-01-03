@@ -362,8 +362,8 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
   }, [processes]);
 
   return (
-    <div className="p-0 overflow-auto h-full">
-      <table className="w-full border-collapse table-fixed" style={{minWidth: '800px'}}>
+    <div className="p-0 overflow-auto h-full" style={{ paddingBottom: '50px' }}>
+      <table className="w-full border-collapse table-fixed" style={{minWidth: '800px', marginBottom: '50px'}}>
         <colgroup>
           <col style={{ width: '15%', minWidth: '100px' }} />
           <col style={{ width: '25%', minWidth: '150px' }} />
@@ -410,8 +410,8 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
             <th className="bg-[#f57c00] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
               2. 메인공정 고장형태(FM)
               {missingCount > 0 && (
-                <span className="ml-2 bg-white text-orange-500 px-2 py-0.5 rounded-full text-xs">
-                  누락 {missingCount}건
+                <span className="ml-2 bg-yellow-400 text-red-700 px-3 py-1 rounded-md text-sm font-extrabold animate-pulse shadow-lg">
+                  ⚠️ 누락 {missingCount}건
                 </span>
               )}
             </th>

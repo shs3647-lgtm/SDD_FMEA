@@ -934,7 +934,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
         </div>
         
         {/* 콘텐츠 */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto" style={{ paddingBottom: '50px' }}>
           {viewMode === 'diagram' && (
             <FailureLinkDiagram
               currentFM={currentFM}

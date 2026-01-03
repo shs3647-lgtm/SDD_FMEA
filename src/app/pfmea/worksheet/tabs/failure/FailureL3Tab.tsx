@@ -376,8 +376,8 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
   }, [state.l2]);
 
   return (
-    <div className="p-0 overflow-auto h-full">
-      <table className="w-full border-collapse table-fixed">
+    <div className="p-0 overflow-auto h-full" style={{ paddingBottom: '50px' }}>
+      <table className="w-full border-collapse table-fixed" style={{ marginBottom: '50px' }}>
         <colgroup>
           <col className="w-[120px]" />
           <col className="w-[120px]" />
@@ -428,8 +428,8 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
             <th className="bg-[#e65100] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
               3. 고장원인(FC)
               {missingCount > 0 && (
-                <span className="ml-2 bg-orange-500 text-white px-2 py-0.5 rounded-full text-xs">
-                  누락 {missingCount}건
+                <span className="ml-2 bg-yellow-400 text-red-700 px-3 py-1 rounded-md text-sm font-extrabold animate-pulse shadow-lg">
+                  ⚠️ 누락 {missingCount}건
                 </span>
               )}
             </th>
@@ -452,8 +452,8 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
             <th className="bg-[#ffe0b2] border border-[#ccc] p-1.5 text-xs font-semibold text-center">
               고장원인(FC)
               {missingCounts.failureCauseCount > 0 && (
-                <span className="ml-1 bg-orange-500 text-white px-1.5 py-0.5 rounded-lg text-[11px]">
-                  {missingCounts.failureCauseCount}
+                <span className="ml-2 bg-red-600 text-white px-2.5 py-1 rounded-md text-sm font-extrabold animate-pulse shadow-lg ring-2 ring-red-300">
+                  누락 {missingCounts.failureCauseCount}건
                 </span>
               )}
             </th>

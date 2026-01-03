@@ -121,8 +121,8 @@ export const badgeConfirmed = 'bg-green-700 text-white px-2.5 py-0.5 rounded tex
 // ✅ 누락 0건 배지 (완료 상태) - 차분한 초록색
 export const badgeOk = 'bg-green-700 text-white px-2.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap';
 
-// 🔴 누락 N건 배지 (입력 필요 - 경고) - 빨간색 + 펄스 효과
-export const badgeMissing = 'bg-red-500 text-white px-2.5 py-0.5 rounded text-xs font-bold animate-pulse whitespace-nowrap';
+// 🔴 누락 N건 배지 (입력 필요 - 경고) - 빨간색 + 펄스 효과 + 더 눈에 띄게
+export const badgeMissing = 'bg-red-600 text-white px-3 py-1 rounded-md text-sm font-extrabold animate-pulse whitespace-nowrap shadow-lg ring-2 ring-red-300 ring-offset-1';
 
 // 🟠 개수 배지
 export const badgeCount = 'ml-1 bg-orange-500 text-white px-1.5 py-0.5 rounded-lg text-[11px]';

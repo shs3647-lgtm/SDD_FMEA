@@ -453,7 +453,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
   const hasAnyL3 = state.l2.some(p => (p.l3 || []).length > 0);
 
   return (
-    <div className="p-0 overflow-auto h-full">
+    <div className="p-0 overflow-auto h-full" style={{ paddingBottom: '50px' }}>
       <table className="w-full border-collapse table-fixed">
         <colgroup>
           <col className="w-[120px]" />

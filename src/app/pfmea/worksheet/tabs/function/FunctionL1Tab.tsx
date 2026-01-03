@@ -416,7 +416,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
   const totalRows = getTotalRows();
 
   return (
-    <div className="p-0 overflow-auto h-full">
+    <div className="p-0 overflow-auto h-full" style={{ paddingBottom: '50px' }}>
       <table className="w-full border-collapse table-fixed">
         {/* 컬럼 너비: 완제품공정명 120px, 구분 95px(구분선택 한줄표시), 완제품기능 auto(넓게+줄바꿈), 요구사항 140px */}
         <colgroup>

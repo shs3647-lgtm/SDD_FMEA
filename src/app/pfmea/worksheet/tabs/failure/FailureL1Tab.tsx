@@ -495,7 +495,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
   }, [typeGroups, getFeNo]);
 
   return (
-    <div className="p-0 overflow-auto h-full">
+    <div className="p-0 overflow-auto h-full" style={{ paddingBottom: '50px' }}>
       {/* 안내 메시지 */}
       {requirementsFromFunction.length === 0 && (
         <div className="p-5 bg-[#fff3e0] border-b border-[#ccc] text-center">
@@ -505,7 +505,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
         </div>
       )}
 
-      <table className="w-full border-collapse table-fixed" style={{ minWidth: '750px' }}>
+      <table className="w-full border-collapse table-fixed" style={{ minWidth: '750px', marginBottom: '50px' }}>
         {/* 컬럼: 완제품공정명 90px, 구분 55px, 완제품기능 auto, 요구사항 70px, 고장영향 280px, S 30px */}
         <colgroup>
           <col style={{ width: '90px', minWidth: '90px' }} />
