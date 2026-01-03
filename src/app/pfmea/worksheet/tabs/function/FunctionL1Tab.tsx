@@ -198,10 +198,11 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
     
-    const isConfirmed = state.l1Confirmed || false;
+    console.log('[FunctionL1Tab] handleSave 시작', { type: modal.type, id: modal.id, selectedValues });
     
     setState(prev => {
-      const newState = { ...prev };
+      // ✅ 깊은 복사 (FailureL2Tab 패턴)
+      const newState = JSON.parse(JSON.stringify(prev));
       const { type, id } = modal;
 
       if (type === 'l1Type') {
