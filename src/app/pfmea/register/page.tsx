@@ -17,6 +17,7 @@ import { BizInfoProject } from '@/types/bizinfo';
 import { UserInfo } from '@/types/user';
 import { CFTAccessLog } from '@/types/project-cft';
 import PFMEATopNav from '@/components/layout/PFMEATopNav';
+import { getAIStatus } from '@/lib/ai-recommendation';
 
 // =====================================================
 // 타입 정의
@@ -317,6 +318,16 @@ function PFMEARegisterPageContent() {
     { id: 3, projectId: fmeaId, userName: '박지민', loginTime: '2025-12-26 14:00', logoutTime: null, action: '수정', itemType: 'PFMEA', cellAddress: 'D10:F15', description: '고장형태 분석 업데이트' },
   ]);
 
+  // AI 상태 조회
+  const [aiStatus, setAiStatus] = useState<{ historyCount: number; isReady: boolean; stats: { uniqueModes: number; uniqueCauses: number; uniqueEffects: number } } | null>(null);
+  
+  useEffect(() => {
+    // 클라이언트에서만 AI 상태 조회
+    if (typeof window !== 'undefined') {
+      setAiStatus(getAIStatus());
+    }
+  }, []);
+
   // 테이블 셀 스타일
   const headerCell = "bg-[#00587a] text-white px-2 py-1.5 border border-white font-semibold text-xs text-center align-middle";
   const inputCell = "border border-gray-300 px-1 py-0.5";
@@ -485,6 +496,56 @@ function PFMEARegisterPageContent() {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      {/* ===== AI 기반 FMEA 예측 시스템 ===== */}
+      <div className="mb-3">
+        <table className="border-collapse text-xs table-auto">
+          <tbody>
+            <tr className="h-8">
+              <td className="bg-gradient-to-r from-purple-700 to-indigo-700 text-white px-3 py-1.5 border border-gray-400 font-bold text-center whitespace-nowrap">
+                🤖 AI 예측 FMEA
+              </td>
+              <td 
+                onClick={() => window.location.href = `/pfmea/worksheet?id=${fmeaId}&mode=ai`}
+                className={`px-3 py-1.5 border border-gray-400 text-center cursor-pointer whitespace-nowrap font-semibold ${
+                  aiStatus?.isReady 
+                    ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' 
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
+                title={aiStatus?.isReady ? 'AI 기반으로 고장모드/원인/영향을 자동 추천받습니다' : '학습 데이터가 부족합니다 (최소 10건 필요)'}
+              >
+                {aiStatus?.isReady ? '✨ AI 추천 시작' : '⏳ 학습 중...'}
+              </td>
+              <td className="px-3 py-1.5 border border-gray-400 text-center whitespace-nowrap bg-indigo-50">
+                <span className="text-indigo-700 font-semibold">
+                  📊 학습 데이터: {aiStatus?.historyCount || 0}건
+                </span>
+              </td>
+              <td className="px-3 py-1.5 border border-gray-400 text-center whitespace-nowrap bg-indigo-50">
+                <span className="text-indigo-600 text-[10px]">
+                  FM({aiStatus?.stats?.uniqueModes || 0}) | FC({aiStatus?.stats?.uniqueCauses || 0}) | FE({aiStatus?.stats?.uniqueEffects || 0})
+                </span>
+              </td>
+              <td 
+                onClick={() => {
+                  if (confirm('AI 학습 데이터를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) {
+                    localStorage.removeItem('fmea-ai-history');
+                    localStorage.removeItem('fmea-ai-rules');
+                    setAiStatus({ historyCount: 0, isReady: false, stats: { uniqueModes: 0, uniqueCauses: 0, uniqueEffects: 0 } });
+                    alert('AI 학습 데이터가 초기화되었습니다.');
+                  }
+                }}
+                className="px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-red-100 whitespace-nowrap font-semibold text-red-500 bg-red-50"
+              >
+                🗑️ 초기화
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p className="text-[10px] text-gray-500 mt-1 ml-1">
+          💡 AI 예측 시스템은 기존에 작성된 FMEA 데이터를 학습하여 새로운 FMEA 작성 시 고장모드, 원인, 영향을 자동으로 추천합니다.
+        </p>
       </div>
 
       {/* ===== CFT 등록 (표준 컴포넌트) ===== */}

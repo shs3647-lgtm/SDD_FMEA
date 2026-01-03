@@ -144,6 +144,75 @@ FMEA 관계형 데이터를 축적하여 AI가 자동으로 고장을 예측/추
 
 ---
 
+## 🛠️ AI 모델 기술 스택 (Phase 2 구현)
+
+### 프론트엔드 (JavaScript/TypeScript)
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  📦 Core Libraries                                                   │
+├─────────────────────────────────────────────────────────────────────┤
+│  • ml-matrix        : 행렬 연산, 유사도 계산                         │
+│  • simple-statistics: 통계 분석, 빈도 계산                           │
+│  • ml-cart          : Decision Tree 분류기                          │
+│  • apriori          : 연관 규칙 마이닝                               │
+│  • lodash           : 데이터 처리 유틸리티                           │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 자체 구현 모듈 (Phase 2)
+```typescript
+// src/lib/ai-recommendation.ts
+export interface AIRecommendationEngine {
+  // 1. 히스토리 관리
+  saveFailureRelation(relation: FailureRelation): void;
+  getHistory(): FailureRelation[];
+  
+  // 2. 빈도 기반 추천
+  getFrequentFailureModes(context: RecommendContext): RankedItem[];
+  getFrequentFailureCauses(context: RecommendContext): RankedItem[];
+  getFrequentFailureEffects(context: RecommendContext): RankedItem[];
+  
+  // 3. 연관 규칙 추천
+  getAssociatedItems(antecedent: string[], type: 'mode' | 'cause' | 'effect'): AssociationResult[];
+  
+  // 4. 컨텍스트 기반 추천
+  recommendByContext(context: FMEAContext): FullRecommendation;
+}
+
+// 추천 컨텍스트
+interface RecommendContext {
+  processType?: string;      // 공정 유형
+  workElement?: string;      // 작업요소
+  m4Category?: string;       // 4M
+  functionType?: string;     // 기능 유형
+  requirement?: string;      // 요구사항
+}
+
+// 추천 결과
+interface RankedItem {
+  value: string;
+  frequency: number;
+  confidence: number;
+  source: 'history' | 'rule' | 'similar';
+}
+```
+
+### 데이터 흐름
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   FMEA 작성     │────▶│   관계 저장     │────▶│   히스토리 DB   │
+│   (사용자)      │     │   (자동)        │     │   (localStorage)│
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+                                                        │
+                                                        ▼
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   추천 표시     │◀────│   AI 엔진       │◀────│   패턴 분석     │
+│   (모달/셀)     │     │   (실시간)      │     │   (빈도/연관)   │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+```
+
+---
+
 ## 📦 데이터 구조 설계
 
 ### 관계형 데이터 스키마
@@ -321,25 +390,145 @@ function getSimilarProjectFailures(processName: string): FailureRelation[] {
 
 ---
 
+## 🌳 Tree View 기반 AI 추천 UX (Phase 2 핵심)
+
+### 설계 방향
+
+기존 **모달 팝업** 방식 대신 **Tree View 인라인** 방식으로 AI 추천을 제공합니다.
+FMEA의 계층적 구조에 자연스럽게 녹아드는 직관적인 UX를 구현합니다.
+
+### 비교: 모달 vs Tree View
+
+| 구분 | 모달 방식 | Tree View 방식 (채택) |
+|------|----------|----------------------|
+| 작업 단계 | 셀 클릭 → 모달 열림 → 검색 → 선택 | Tree에서 TOP 3 바로 표시 → 클릭 |
+| 맥락 인식 | 현재 위치와 분리됨 | 계층 구조에서 자연스러운 흐름 |
+| 속도 | 느림 (팝업 대기) | 빠름 (즉시 표시) |
+| 수정 용이성 | 다시 모달 열어야 함 | 인라인에서 바로 수정 |
+
+### UI 플로우
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  🌳 FMEA 구조 트리                                       │
+├──────────────────────────────────────────────────────────┤
+│  📦 타이어제조공정 (완제품)                               │
+│  └─📁 C1 사출성형 (메인공정)                             │
+│     └─🔧 금형온도관리 (작업요소)                         │
+│        └─⚙️ MN (4M - 사람)                              │
+│           │                                              │
+│           ├─ 작업자 실수 ✓ (기존 입력)                   │
+│           │                                              │
+│           └─🤖 AI 추천 TOP 3:                            │
+│              ├─🥇 교육 미흡 (87%) [+]                    │
+│              ├─🥈 숙련도 부족 (72%) [+]                  │
+│              └─🥉 작업표준 미준수 (65%) [+]              │
+│              └─➕ 직접 입력...                           │
+└──────────────────────────────────────────────────────────┘
+```
+
+### 상호작용
+
+| 액션 | 동작 | 결과 |
+|------|------|------|
+| **[+] 클릭** | 추천 항목 수용 | Tree에 노드 추가 + AI 학습 저장 |
+| **더블클릭** | 인라인 편집 | 텍스트 수정 후 Enter로 확정 |
+| **➕ 직접 입력** | 새 항목 추가 | 추천에 없는 항목 입력 |
+
+### 추천 적용 위치
+
+| FMEA 단계 | Tree 위치 | 추천 대상 |
+|-----------|-----------|-----------|
+| 구조분석 | 메인공정 하위 | 작업요소 TOP 3 |
+| 기능분석 1L | 기능 하위 | 요구사항 TOP 3 |
+| 기능분석 2L | 요구사항 하위 | 제품특성 TOP 3 |
+| 고장분석 1L | 요구사항 하위 | 고장영향(FE) TOP 3 |
+| 고장분석 2L | 제품특성 하위 | 고장형태(FM) TOP 3 |
+| 고장분석 3L | 고장형태 하위 | 고장원인(FC) TOP 3 |
+
+### 컴포넌트 설계
+
+```typescript
+// TreeAIRecommend.tsx
+interface TreeAIRecommendProps {
+  context: {
+    processName?: string;
+    workElement?: string;
+    m4Category?: string;
+    parentItem?: string;
+  };
+  type: 'cause' | 'mode' | 'effect' | 'requirement' | 'workElement';
+  onAccept: (value: string) => void;
+  onModify: (original: string, modified: string) => void;
+  onAddNew: (value: string) => void;
+  maxItems?: number; // 기본값: 3
+}
+
+// 사용 예시
+<TreeAIRecommend
+  context={{ processName: '사출성형', m4Category: 'MN' }}
+  type="cause"
+  onAccept={(val) => addCauseToWorksheet(val)}
+/>
+```
+
+### Cold Start 해결
+
+```typescript
+// 초기 데이터가 없을 때 사용할 기본 규칙
+const DEFAULT_RULES = {
+  MN: ['작업자 실수', '교육 미흡', '숙련도 부족'],
+  MC: ['설비 마모', '설비 고장', '정비 미흡'],
+  IM: ['원자재 불량', '부자재 불량', '재료 혼입'],
+  EN: ['온도 부적합', '습도 부적합', '이물 혼입'],
+};
+
+// 가중치 공식
+최종점수 = (사내 데이터 × 0.7) + (산업 표준 × 0.3)
+→ 데이터 축적 시 사내 데이터 가중치 자동 상향 (최대 0.9)
+```
+
+---
+
+## ⚡ Phase 2 구현 체크리스트
+
+| No | 항목 | 예상 시간 | 상태 |
+|----|------|----------|------|
+| 1 | `TreeAIRecommend.tsx` 컴포넌트 | 2시간 | ⬜ |
+| 2 | TreePanel에 AI 섹션 통합 | 1시간 | ⬜ |
+| 3 | 추천 클릭 → 즉시 추가 | 1시간 | ⬜ |
+| 4 | 인라인 수정 기능 | 1시간 | ⬜ |
+| 5 | AI 학습 데이터 저장 | 30분 | ⬜ |
+| 6 | Default Rules 초기 데이터 | 30분 | ⬜ |
+| 7 | 신뢰도 시각화 | 30분 | ⬜ |
+| 8 | 테스트 및 커밋 | 30분 | ⬜ |
+
+**총 예상: 7-8시간**
+
+---
+
 ## 💡 결론
 
 ### 즉시 구현 (이미 완료)
 ✅ 동일 요구사항 → 동일 고장영향 자동 선택
+✅ AI 추천 엔진 코어 (`ai-recommendation.ts`)
+✅ 히스토리 저장 구조 (`FailureRelation`)
 
-### 단기 추천 (1-2주)
-1. **빈도 기반 추천**: 가장 많이 사용된 항목 상단 표시
-2. **히스토리 저장**: 선택 패턴 축적
+### Phase 2 (7시 이후 개발)
+1. **Tree View AI 추천**: TOP 3 인라인 표시
+2. **수용/수정 UX**: 클릭으로 즉시 추가, 더블클릭으로 수정
+3. **Cold Start 해결**: 기본 규칙 데이터 사전 로드
 
 ### 중기 추천 (1-3개월)
-3. **연관 규칙**: "함께 자주 선택되는 항목" 추천
-4. **텍스트 유사도**: 비슷한 이름의 항목 그룹화
+4. **연관 규칙 고도화**: Apriori 알고리즘 최적화
+5. **텍스트 유사도**: TF-IDF 기반 유사 항목 추천
 
 ### 장기 추천 (3-6개월)
-5. **ML 모델**: Random Forest 기반 예측
-6. **LLM 연동**: GPT/Claude로 시나리오 생성
+6. **ML 모델**: Random Forest 기반 예측
+7. **LLM 연동**: GPT/Claude로 시나리오 생성
 
 ---
 
 *작성일: 2026-01-03*
-*버전: 1.0.0*
+*버전: 2.0.0 - Tree View 기반 추천 UX 추가*
 

@@ -42,6 +42,8 @@ interface FailureModeSelectModalProps {
   currentModes: FailureMode[];
   processName?: string;
   functionName?: string;
+  workElement?: string;
+  m4Category?: string;
 }
 
 // ============ 컴포넌트 ============
@@ -52,6 +54,8 @@ export default function FailureModeSelectModal({
   parentName,
   processName,
   functionName,
+  workElement,
+  m4Category,
   currentModes,
 }: FailureModeSelectModalProps) {
   const [items, setItems] = useState<BaseItem[]>([]);
@@ -114,6 +118,14 @@ export default function FailureModeSelectModal({
     </div>
   );
 
+  // AI 추천 컨텍스트
+  const aiContext = {
+    processName,
+    workElement,
+    m4Category,
+    productChar: parentName,
+  };
+
   return (
     <BaseSelectModal
       isOpen={isOpen}
@@ -132,6 +144,8 @@ export default function FailureModeSelectModal({
       onDeleteAll={handleDeleteAll}
       renderParentInfo={renderParentInfo}
       currentValues={currentModes.map(m => m.name)}
+      aiRecommendType="mode"
+      aiRecommendContext={aiContext}
     />
   );
 }

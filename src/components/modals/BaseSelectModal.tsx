@@ -23,7 +23,8 @@
 
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { getAIRecommendations, getAIStatus, RankedItem } from '@/lib/ai-recommendation';
 
 // ============ 타입 정의 ============
 export interface BaseItem {
@@ -100,6 +101,18 @@ export const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
   '워크시트': { bg: '#e3f2fd', text: '#1565c0' },
 };
 
+// AI 추천 컨텍스트 타입
+export interface AIRecommendContext {
+  processType?: string;
+  processName?: string;
+  workElement?: string;
+  m4Category?: string;
+  categoryType?: string;
+  functionName?: string;
+  requirement?: string;
+  productChar?: string;
+}
+
 export interface BaseSelectModalProps {
   // 필수
   isOpen: boolean;
@@ -131,6 +144,10 @@ export interface BaseSelectModalProps {
   
   // 현재 선택된 항목 (초록색 표시용)
   currentValues?: string[];
+  
+  // AI 추천 옵션
+  aiRecommendType?: 'mode' | 'cause' | 'effect';
+  aiRecommendContext?: AIRecommendContext;
 }
 
 export default function BaseSelectModal({
@@ -153,9 +170,66 @@ export default function BaseSelectModal({
   renderParentInfo,
   renderExtraColumns,
   currentValues = [],
+  aiRecommendType,
+  aiRecommendContext,
 }: BaseSelectModalProps) {
   const [search, setSearch] = useState('');
   const [newValue, setNewValue] = useState('');
+  const [showAIPanel, setShowAIPanel] = useState(false);
+  const [aiRecommendations, setAiRecommendations] = useState<RankedItem[]>([]);
+  const [aiReady, setAiReady] = useState(false);
+
+  // AI 추천 로드
+  useEffect(() => {
+    if (!isOpen || !aiRecommendType || !aiRecommendContext) return;
+    
+    if (typeof window === 'undefined') return;
+    
+    const status = getAIStatus();
+    setAiReady(status.isReady);
+    
+    if (!status.isReady) return;
+    
+    const result = getAIRecommendations(aiRecommendContext);
+    let recs: RankedItem[] = [];
+    switch (aiRecommendType) {
+      case 'mode':
+        recs = result.failureModes;
+        break;
+      case 'cause':
+        recs = result.failureCauses;
+        break;
+      case 'effect':
+        recs = result.failureEffects;
+        break;
+    }
+    setAiRecommendations(recs);
+    
+    // AI 추천이 있으면 자동으로 패널 표시
+    if (recs.length > 0) {
+      setShowAIPanel(true);
+    }
+  }, [isOpen, aiRecommendType, aiRecommendContext]);
+
+  // AI 추천 항목 선택
+  const handleSelectAIRecommendation = useCallback((value: string) => {
+    // 해당 값이 이미 items에 있는지 확인
+    let existingItem = items.find(i => i.value === value);
+    
+    if (!existingItem) {
+      // 없으면 새로 추가
+      const newItem: BaseItem = { 
+        id: `ai_${Date.now()}`, 
+        value, 
+        category: 'AI추천' 
+      };
+      setItems(prev => [newItem, ...prev]);
+      existingItem = newItem;
+    }
+    
+    // 선택 상태에 추가
+    setSelectedIds(prev => new Set([...prev, existingItem!.id]));
+  }, [items, setItems, setSelectedIds]);
   
   // 테마 색상 결정
   const colors: ThemeColors = typeof theme === 'string' ? THEMES[theme] : theme;
@@ -271,7 +345,66 @@ export default function BaseSelectModal({
           {showDeleteAll && (
             <button onClick={handleDeleteAll} className="px-2 py-1 text-[10px] font-bold bg-red-500 text-white rounded hover:bg-red-600">삭제</button>
           )}
+          {/* AI 추천 토글 버튼 */}
+          {aiRecommendType && aiReady && aiRecommendations.length > 0 && (
+            <button 
+              onClick={() => setShowAIPanel(!showAIPanel)} 
+              className={`px-2 py-1 text-[10px] font-bold rounded ${
+                showAIPanel 
+                  ? 'bg-purple-600 text-white' 
+                  : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+              }`}
+              title="AI 추천 보기"
+            >
+              🤖 AI({aiRecommendations.length})
+            </button>
+          )}
         </div>
+        
+        {/* ===== AI 추천 패널 ===== */}
+        {showAIPanel && aiRecommendType && aiRecommendations.length > 0 && (
+          <div className="px-3 py-2 border-b bg-gradient-to-r from-purple-50 to-indigo-50">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">🤖</span>
+                <span className="text-[10px] font-bold text-purple-700">AI 추천</span>
+                <span className="text-[9px] px-1.5 py-0.5 bg-purple-100 text-purple-600 rounded">
+                  {aiRecommendations.length}건
+                </span>
+              </div>
+              <button 
+                onClick={() => setShowAIPanel(false)}
+                className="text-[9px] text-gray-400 hover:text-gray-600"
+              >
+                접기 ▲
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {aiRecommendations.slice(0, 8).map((rec, idx) => {
+                const isAlreadySelected = items.some(i => i.value === rec.value && selectedIds.has(i.id));
+                return (
+                  <button
+                    key={`${rec.value}-${idx}`}
+                    onClick={() => handleSelectAIRecommendation(rec.value)}
+                    className={`px-2 py-1 text-[10px] rounded border transition-all ${
+                      isAlreadySelected 
+                        ? 'bg-green-100 border-green-400 text-green-700' 
+                        : 'bg-white border-purple-300 text-purple-700 hover:bg-purple-100 hover:border-purple-400'
+                    }`}
+                    title={`신뢰도: ${Math.round(rec.confidence * 100)}% | 빈도: ${rec.frequency}회`}
+                  >
+                    {idx < 3 && <span className="mr-1">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}</span>}
+                    {rec.value}
+                    {isAlreadySelected && <span className="ml-1">✓</span>}
+                  </button>
+                );
+              })}
+              {aiRecommendations.length > 8 && (
+                <span className="px-2 py-1 text-[10px] text-purple-400">+{aiRecommendations.length - 8}개 더</span>
+              )}
+            </div>
+          </div>
+        )}
         
         {/* ===== 새 항목 입력 ===== */}
         <div className={`px-3 py-1.5 border-b bg-${colors.light} flex items-center gap-1`}>

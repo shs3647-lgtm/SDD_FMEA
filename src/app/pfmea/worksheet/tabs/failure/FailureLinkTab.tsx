@@ -39,6 +39,7 @@ import {
   containerStyle, rightPanelStyle, rightHeaderStyle, modeButtonStyle, 
   resultButtonStyle, fmeaNameStyle, actionButtonGroupStyle, actionButtonStyle
 } from './FailureLinkStyles';
+import { saveToAIHistory } from '@/lib/ai-recommendation';
 
 // 타입 정의
 interface FEItem { 
@@ -579,8 +580,30 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     setState((prev: any) => ({ ...prev, failureLinkConfirmed: true }));
     setDirty(true);
     saveToLocalStorage?.();
-    alert(`✅ 고장연결이 확정되었습니다!\n\nFM: ${fmData.length}개\nFE: ${linkStats.feLinkedCount}개\nFC: ${linkStats.fcLinkedCount}개`);
-  }, [fmData, linkStats, setState, setDirty, saveToLocalStorage]);
+    
+    // ===== AI 학습 데이터 저장 =====
+    // 확정된 고장연결 데이터를 AI 시스템에 저장하여 학습
+    try {
+      savedLinks.forEach(link => {
+        saveToAIHistory({
+          processName: link.fmProcess || '',
+          workElement: link.fcWorkElem || '',
+          m4Category: link.fcM4 || '',
+          categoryType: link.feScope || '',
+          failureEffect: link.feText || '',
+          failureMode: link.fmText || '',
+          failureCause: link.fcText || '',
+          severity: link.severity || 0,
+          projectId: state.l1?.name || '',
+        });
+      });
+      console.log(`[AI 학습] ${savedLinks.length}건의 고장연결 데이터가 AI 시스템에 저장되었습니다.`);
+    } catch (e) {
+      console.error('[AI 학습 오류]', e);
+    }
+    
+    alert(`✅ 고장연결이 확정되었습니다!\n\nFM: ${fmData.length}개\nFE: ${linkStats.feLinkedCount}개\nFC: ${linkStats.fcLinkedCount}개\n\n🤖 AI 학습 데이터 ${savedLinks.length}건 저장됨`);
+  }, [fmData, linkStats, savedLinks, state.l1, setState, setDirty, saveToLocalStorage]);
 
   // ========== 고장연결 수정 모드 ==========
   const handleEditMode = useCallback(() => {

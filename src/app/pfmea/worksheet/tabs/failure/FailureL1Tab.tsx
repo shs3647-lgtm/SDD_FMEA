@@ -504,38 +504,38 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
         </div>
       )}
 
-      <table className="w-full border-collapse table-fixed">
-        {/* 컬럼: 완제품공정명 100px, 구분 70px, 완제품기능 auto, 요구사항 80px, 고장영향 200px, S 30px */}
+      <table className="w-full border-collapse table-fixed" style={{ minWidth: '750px' }}>
+        {/* 컬럼: 완제품공정명 90px, 구분 55px, 완제품기능 auto, 요구사항 70px, 고장영향 280px, S 30px */}
         <colgroup>
-          <col className="w-[100px]" />
-          <col className="w-[70px]" />
+          <col style={{ width: '90px', minWidth: '90px' }} />
+          <col style={{ width: '55px', minWidth: '55px' }} />
           <col />
-          <col className="w-[80px]" />
-          <col className="w-[200px]" />
-          <col className="w-[30px]" />
+          <col style={{ width: '70px', minWidth: '70px' }} />
+          <col style={{ width: '280px', minWidth: '280px' }} />
+          <col style={{ width: '30px', minWidth: '30px' }} />
         </colgroup>
         
         {/* 3행 헤더 구조 - 하단 2px 검은색 구분선 */}
         <thead className="sticky top-0 z-20 bg-white border-b-2 border-black">
           <tr>
-            <th className="bg-[#1976d2] text-white border border-[#ccc] px-1.5 py-1 text-xs font-extrabold text-center whitespace-nowrap">
-              구조분석(2단계)
+            <th className="bg-[#1976d2] text-white border border-[#ccc] px-0.5 py-1 text-[11px] font-extrabold text-center whitespace-nowrap">
+              구조(2)
             </th>
-            <th colSpan={3} className="bg-[#388e3c] text-white border border-[#ccc] px-1.5 py-1 text-xs font-extrabold text-center whitespace-nowrap">
+            <th colSpan={3} className="bg-[#388e3c] text-white border border-[#ccc] px-0.5 py-1 text-[11px] font-extrabold text-center whitespace-nowrap">
               기능분석(3단계)
             </th>
-            <th colSpan={2} className="bg-[#e65100] text-white border border-[#ccc] px-1 py-1 text-xs font-extrabold text-center">
+            <th colSpan={2} className="bg-[#e65100] text-white border border-[#ccc] px-1 py-1 text-[11px] font-extrabold text-center" style={{ minWidth: '310px' }}>
               <div className="flex items-center justify-center gap-1 flex-nowrap whitespace-nowrap">
-                <span className="whitespace-nowrap">고장분석(4단계)</span>
-                <div className="flex gap-1 flex-nowrap">
+                <span className="whitespace-nowrap shrink-0">고장분석(4단계)</span>
+                <div className="flex gap-0.5 flex-nowrap shrink-0">
                   {isConfirmed ? (
-                    <span className={`${badgeConfirmed} whitespace-nowrap`}>✓ 확정됨({(state.l1?.failureScopes || []).filter((s: any) => s.effect).length})</span>
+                    <span className={`${badgeConfirmed} whitespace-nowrap text-[9px] px-1`}>✓ 확정({(state.l1?.failureScopes || []).filter((s: any) => s.effect).length})</span>
                   ) : (
-                    <button type="button" onClick={handleConfirm} className={`${btnConfirm} whitespace-nowrap`}>확정</button>
+                    <button type="button" onClick={handleConfirm} className={`${btnConfirm} whitespace-nowrap text-[9px] px-1`}>확정</button>
                   )}
-                  <span className={`${missingCount > 0 ? badgeMissing : badgeOk} whitespace-nowrap`}>누락 {missingCount}건</span>
+                  <span className={`${missingCount > 0 ? badgeMissing : badgeOk} whitespace-nowrap text-[9px] px-1`}>{missingCount}건</span>
                   {isConfirmed && (
-                    <button type="button" onClick={handleEdit} className={`${btnEdit} whitespace-nowrap`}>수정</button>
+                    <button type="button" onClick={handleEdit} className={`${btnEdit} whitespace-nowrap text-[9px] px-1`}>수정</button>
                   )}
                 </div>
               </div>
@@ -543,44 +543,39 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
           </tr>
           
           <tr>
-            <th className={`${S.h2} whitespace-nowrap`}>
-              1. 완제품 공정명
+            <th className={`${S.h2} whitespace-nowrap text-[10px] px-0.5`}>
+              완제품 공정명
             </th>
-            <th colSpan={3} className={`${F.h2} whitespace-nowrap`}>
-              1. 완제품 공정기능/요구사항
+            <th colSpan={3} className={`${F.h2} whitespace-nowrap text-[10px] px-0.5`}>
+              완제품 공정기능/요구사항
             </th>
-            <th colSpan={2} className={`${X.h2} whitespace-nowrap`}>
+            <th colSpan={2} className={`${X.h2} whitespace-nowrap text-[10px] px-0.5`} style={{ minWidth: '310px' }}>
               1. 고장영향(FE) / 심각도(S)
-              {missingCount > 0 && (
-                <span className="ml-2 bg-white text-orange-500 px-2 py-0.5 rounded-full text-xs font-semibold">
-                  누락 {missingCount}건
-                </span>
-              )}
             </th>
           </tr>
           
           <tr>
-            <th className={`${S.h3} text-center whitespace-nowrap`}>
-              완제품 공정명
+            <th className={`${S.h3} text-center whitespace-nowrap text-[10px] px-0.5`}>
+              공정명
             </th>
-            <th className={`${F.h3} text-center whitespace-nowrap`}>
+            <th className={`${F.h3} text-center whitespace-nowrap text-[10px] px-0.5`}>
               구분
             </th>
-            <th className={`${F.h3} text-center whitespace-nowrap`}>
+            <th className={`${F.h3} text-center whitespace-nowrap text-[10px] px-0.5`}>
               완제품기능
             </th>
-            <th className={`${F.h3} text-center whitespace-nowrap`}>
+            <th className={`${F.h3} text-center whitespace-nowrap text-[10px] px-0.5`}>
               요구사항
             </th>
-            <th className={`${X.h3} text-center whitespace-nowrap`} style={{ minWidth: '200px' }}>
+            <th className={`${X.h3} text-center whitespace-nowrap text-[10px] px-1`} style={{ minWidth: '250px' }}>
               고장영향(FE)
               {missingCounts.effectCount > 0 && (
-                <span className="ml-1 bg-white text-orange-500 px-1.5 py-0.5 rounded-lg text-[11px] font-semibold">
+                <span className="ml-1 bg-white text-orange-500 px-1 py-0.5 rounded text-[9px] font-semibold">
                   {missingCounts.effectCount}
                 </span>
               )}
             </th>
-            <th className={`${X.h3} text-center whitespace-nowrap`} style={{ width: '30px', minWidth: '30px', maxWidth: '30px' }}>
+            <th className={`${X.h3} text-center whitespace-nowrap text-[10px] px-0`} style={{ width: '30px', minWidth: '30px', maxWidth: '30px' }}>
               S
             </th>
           </tr>
