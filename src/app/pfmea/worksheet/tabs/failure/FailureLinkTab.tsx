@@ -645,10 +645,21 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       return counts.feCount === 0 || counts.fcCount === 0;
     });
     
+    // ✅ 누락이 있으면 경고 후 계속할지 확인
     if (unlinkedFMs.length > 0) {
       const unlinkedList = unlinkedFMs.slice(0, 5).map(fm => `  • ${fm.fmNo}: ${fm.text}`).join('\n');
-      alert(`⚠️ 고장연결 확정 불가\n\n연결이 완료되지 않은 FM이 ${unlinkedFMs.length}건 있습니다:\n\n${unlinkedList}${unlinkedFMs.length > 5 ? `\n  ... 외 ${unlinkedFMs.length - 5}건` : ''}\n\n모든 FM에 FE와 FC를 연결해주세요.`);
-      return;
+      const confirmProceed = window.confirm(
+        `⚠️ 고장연결 누락 경고!\n\n` +
+        `연결이 완료되지 않은 FM이 ${unlinkedFMs.length}건 있습니다:\n\n` +
+        `${unlinkedList}${unlinkedFMs.length > 5 ? `\n  ... 외 ${unlinkedFMs.length - 5}건` : ''}\n\n` +
+        `💡 누락된 항목은 ALL(전체보기) 화면에서 수동으로 입력할 수 있습니다.\n\n` +
+        `그래도 확정하시겠습니까?`
+      );
+      
+      if (!confirmProceed) {
+        return; // 취소하면 확정하지 않음
+      }
+      // 계속 진행하면 아래로 흘러감
     }
     
     setState((prev: any) => ({ ...prev, failureLinkConfirmed: true }));
@@ -676,7 +687,11 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       console.error('[AI 학습 오류]', e);
     }
     
-    alert(`✅ 고장연결이 확정되었습니다!\n\nFM: ${fmData.length}개\nFE: ${linkStats.feLinkedCount}개\nFC: ${linkStats.fcLinkedCount}개\n\n🤖 AI 학습 데이터 ${savedLinks.length}건 저장됨`);
+    const missingCount = linkStats.fmMissingCount;
+    const missingMsg = missingCount > 0 
+      ? `\n\n⚠️ 누락: ${missingCount}개\n💡 ALL(전체보기) 화면에서 수동 입력 가능` 
+      : '';
+    alert(`✅ 고장연결이 확정되었습니다!\n\nFM: ${fmData.length}개\nFE: ${linkStats.feLinkedCount}개\nFC: ${linkStats.fcLinkedCount}개${missingMsg}\n\n🤖 AI 학습 데이터 ${savedLinks.length}건 저장됨`);
   }, [fmData, linkStats, savedLinks, state.l1, setState, setDirty, saveToLocalStorage]);
 
   // ========== 고장연결 수정 모드 ==========
@@ -806,7 +821,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
           
           <div className="flex-1 flex gap-1 min-w-0">
             <button onClick={() => setViewMode('result')} style={resultButtonStyle(viewMode === 'result')}>
-              분석결과(<span style={{color: viewMode === 'result' ? '#90caf9' : '#1976d2',fontWeight:700}}>FE:{linkStats.feLinkedCount}</span>,<span style={{color: viewMode === 'result' ? '#ffab91' : '#e65100',fontWeight:700}}>FM:{linkStats.fmLinkedCount}</span>,<span style={{color: viewMode === 'result' ? '#a5d6a7' : '#388e3c',fontWeight:700}}>FC:{linkStats.fcLinkedCount}</span>)
+              분석결과(<span style={{color: viewMode === 'result' ? '#90caf9' : '#1976d2',fontWeight:700}}>FE:{linkStats.feLinkedCount}</span>,<span style={{color: viewMode === 'result' ? '#ffab91' : '#e65100',fontWeight:700}}>FM:{linkStats.fmLinkedCount}</span>,<span style={{color: viewMode === 'result' ? '#a5d6a7' : '#388e3c',fontWeight:700}}>FC:{linkStats.fcLinkedCount}</span>,<span style={{color: viewMode === 'result' ? '#ff8a80' : '#d32f2f',fontWeight:700}}>누락:{linkStats.fmMissingCount}</span>)
             </button>
             {/* 확정 상태 배지 */}
             {isConfirmed && (
