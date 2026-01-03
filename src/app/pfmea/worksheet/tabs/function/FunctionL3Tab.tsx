@@ -9,6 +9,7 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { FunctionTabProps } from './types';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
 import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
+import { getZebraColors } from '@/styles/level-colors';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 import SpecialCharSelectModal, { SPECIAL_CHAR_DATA } from '@/components/modals/SpecialCharSelectModal';
@@ -562,29 +563,27 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                 
                 // 작업요소에 기능이 없는 경우
                 if (funcs.length === 0) {
-                  const structureZebra = globalRowIdx % 2 === 0 ? '#bbdefb' : '#e3f2fd'; // 파란색
-                  const functionZebra = globalRowIdx % 2 === 0 ? '#c8e6c9' : '#e8f5e9'; // 녹색
-                  const charZebra = globalRowIdx++ % 2 === 0 ? '#ffe0b2' : '#fff3e0'; // 주황색
+                  const zebra = getZebraColors(globalRowIdx++); // 표준화된 색상
                   const row = (
                     <tr key={we.id}>
                       {isFirstProcRow && (
-                        <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: structureZebra }}>
+                        <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: zebra.structure }}>
                           {proc.no}. {proc.name}
                         </td>
                       )}
-                      <td rowSpan={weRowSpan} className="border border-[#ccc] p-1 text-center text-xs font-medium align-middle" style={{ background: structureZebra }}>
+                      <td rowSpan={weRowSpan} className="border border-[#ccc] p-1 text-center text-xs font-medium align-middle" style={{ background: zebra.structure }}>
                         {we.m4}
                       </td>
-                      <td rowSpan={weRowSpan} className="border border-[#ccc] p-2 font-semibold text-xs align-middle" style={{ background: structureZebra }}>
+                      <td rowSpan={weRowSpan} className="border border-[#ccc] p-2 font-semibold text-xs align-middle" style={{ background: zebra.structure }}>
                         {we.name}
                       </td>
-                      <td className={cellP0} style={{ background: functionZebra }}>
-                        <SelectableCell value="" placeholder="작업요소기능 선택" bgColor={functionZebra} onClick={() => handleCellClick({ type: 'l3Function', procId: proc.id, l3Id: we.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} />
+                      <td className={cellP0} style={{ background: zebra.function }}>
+                        <SelectableCell value="" placeholder="작업요소기능 선택" bgColor={zebra.function} onClick={() => handleCellClick({ type: 'l3Function', procId: proc.id, l3Id: we.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} />
                       </td>
-                      <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0" style={{ background: charZebra }}>
-                        <SelectableCell value="" placeholder="공정특성 선택" bgColor={charZebra} onClick={() => {}} />
+                      <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0" style={{ background: zebra.failure }}>
+                        <SelectableCell value="" placeholder="공정특성 선택" bgColor={zebra.failure} onClick={() => {}} />
                       </td>
-                      <td className="border border-[#ccc] border-l-0 p-1 text-center" style={{ background: charZebra }}>
+                      <td className="border border-[#ccc] border-l-0 p-1 text-center" style={{ background: zebra.failure }}>
                         <SpecialCharBadge value="" onClick={() => {}} />
                       </td>
                     </tr>
@@ -600,39 +599,37 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                   
                   // 기능에 공정특성이 없는 경우
                   if (chars.length === 0) {
-                    const structureZebra = globalRowIdx % 2 === 0 ? '#bbdefb' : '#e3f2fd'; // 파란색
-                    const functionZebra = globalRowIdx % 2 === 0 ? '#c8e6c9' : '#e8f5e9'; // 녹색
-                    const charZebra = globalRowIdx++ % 2 === 0 ? '#ffe0b2' : '#fff3e0'; // 주황색
+                    const zebra = getZebraColors(globalRowIdx++); // 표준화된 색상
                     const row = (
                       <tr key={f.id}>
                         {isFirstProcRow && (
-                          <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: structureZebra }}>
+                          <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: zebra.structure }}>
                             {proc.no}. {proc.name}
                           </td>
                         )}
                         {fIdx === 0 && (
                           <>
-                            <td rowSpan={weRowSpan} className="border border-[#ccc] p-1 text-center text-xs font-medium align-middle" style={{ background: structureZebra }}>
+                            <td rowSpan={weRowSpan} className="border border-[#ccc] p-1 text-center text-xs font-medium align-middle" style={{ background: zebra.structure }}>
                               {we.m4}
                             </td>
-                            <td rowSpan={weRowSpan} className="border border-[#ccc] p-2 font-semibold text-xs align-middle" style={{ background: structureZebra }}>
+                            <td rowSpan={weRowSpan} className="border border-[#ccc] p-2 font-semibold text-xs align-middle" style={{ background: zebra.structure }}>
                               {we.name}
                             </td>
                           </>
                         )}
-                        <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle" style={{ background: functionZebra }}>
+                        <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle" style={{ background: zebra.function }}>
                           <SelectableCell 
                             value={f.name} 
                             placeholder="작업요소기능" 
-                            bgColor={functionZebra} 
+                            bgColor={zebra.function} 
                             onClick={() => handleCellClick({ type: 'l3Function', procId: proc.id, l3Id: we.id, funcId: f.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} 
                             onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, we.id, f.id, newValue)}
                           />
                         </td>
-                        <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0" style={{ background: charZebra }}>
-                          <SelectableCell value="" placeholder="공정특성 선택" bgColor={charZebra} onClick={() => handleCellClick({ type: 'l3ProcessChar', procId: proc.id, l3Id: we.id, funcId: f.id, title: '공정특성 선택', itemCode: 'B3', workElementName: we.name })} />
+                        <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0" style={{ background: zebra.failure }}>
+                          <SelectableCell value="" placeholder="공정특성 선택" bgColor={zebra.failure} onClick={() => handleCellClick({ type: 'l3ProcessChar', procId: proc.id, l3Id: we.id, funcId: f.id, title: '공정특성 선택', itemCode: 'B3', workElementName: we.name })} />
                         </td>
-                        <td className="border border-[#ccc] border-l-0 p-1 text-center" style={{ background: charZebra }}>
+                        <td className="border border-[#ccc] border-l-0 p-1 text-center" style={{ background: zebra.failure }}>
                           <SpecialCharBadge value="" onClick={() => {}} />
                         </td>
                       </tr>
@@ -643,47 +640,45 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                   
                   // 기능에 공정특성이 있는 경우
                   return chars.map((c, cIdx) => {
-                    const structureZebra = globalRowIdx % 2 === 0 ? '#bbdefb' : '#e3f2fd'; // 파란색
-                    const functionZebra = globalRowIdx % 2 === 0 ? '#c8e6c9' : '#e8f5e9'; // 녹색
-                    const charZebra = globalRowIdx++ % 2 === 0 ? '#ffe0b2' : '#fff3e0'; // 주황색
+                    const zebra = getZebraColors(globalRowIdx++); // 표준화된 색상
                     const row = (
                       <tr key={c.id}>
                         {isFirstProcRow && (
-                          <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: structureZebra }}>
+                          <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: zebra.structure }}>
                             {proc.no}. {proc.name}
                           </td>
                         )}
                         {fIdx === 0 && cIdx === 0 && (
                           <>
-                            <td rowSpan={weRowSpan} className="border border-[#ccc] p-1 text-center text-xs font-medium align-middle" style={{ background: structureZebra }}>
+                            <td rowSpan={weRowSpan} className="border border-[#ccc] p-1 text-center text-xs font-medium align-middle" style={{ background: zebra.structure }}>
                               {we.m4}
                             </td>
-                            <td rowSpan={weRowSpan} className="border border-[#ccc] p-2 font-semibold text-xs align-middle" style={{ background: structureZebra }}>
+                            <td rowSpan={weRowSpan} className="border border-[#ccc] p-2 font-semibold text-xs align-middle" style={{ background: zebra.structure }}>
                               {we.name}
                             </td>
                           </>
                         )}
                         {cIdx === 0 && (
-                          <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle" style={{ background: functionZebra }}>
+                          <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle" style={{ background: zebra.function }}>
                             <SelectableCell 
                               value={f.name} 
                               placeholder="작업요소기능" 
-                              bgColor={functionZebra} 
+                              bgColor={zebra.function} 
                               onClick={() => handleCellClick({ type: 'l3Function', procId: proc.id, l3Id: we.id, funcId: f.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} 
                               onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, we.id, f.id, newValue)}
                             />
                           </td>
                         )}
-                        <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0" style={{ background: charZebra }}>
+                        <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0" style={{ background: zebra.failure }}>
                           <SelectableCell 
                             value={c.name} 
                             placeholder="공정특성" 
-                            bgColor={charZebra} 
+                            bgColor={zebra.failure} 
                             onClick={() => handleCellClick({ type: 'l3ProcessChar', procId: proc.id, l3Id: we.id, funcId: f.id, charId: c.id, title: '공정특성 선택', itemCode: 'B3', workElementName: we.name })} 
                             onDoubleClickEdit={(newValue) => handleInlineEditProcessChar(proc.id, we.id, f.id, c.id, newValue)}
                           />
                         </td>
-                        <td className="border border-[#ccc] border-l-0 p-1 text-center" style={{ background: charZebra }}>
+                        <td className="border border-[#ccc] border-l-0 p-1 text-center" style={{ background: zebra.failure }}>
                           <SpecialCharBadge 
                             value={c.specialChar || ''} 
                             onClick={() => setSpecialCharModal({ procId: proc.id, l3Id: we.id, funcId: f.id, charId: c.id })} 

@@ -183,3 +183,22 @@ export const TREE_FAILURE = {
   border: '#e65100',
 };
 
+// ========== 줄무늬 색상 표준화 함수 (codefreeze-20260103) ==========
+// 테이블 줄무늬용 색상을 한 곳에서 관리
+export const ZEBRA_COLORS = {
+  structure: { light: '#e3f2fd', dark: '#bbdefb' },  // 파란색 줄무늬
+  function: { light: '#e8f5e9', dark: '#c8e6c9' },   // 녹색 줄무늬
+  failure: { light: '#fff3e0', dark: '#ffe0b2' },    // 주황색 줄무늬
+} as const;
+
+// 인덱스 기반 줄무늬 색상 반환 함수
+export const getZebraColors = (idx: number) => ({
+  structure: idx % 2 === 0 ? ZEBRA_COLORS.structure.dark : ZEBRA_COLORS.structure.light,
+  function: idx % 2 === 0 ? ZEBRA_COLORS.function.dark : ZEBRA_COLORS.function.light,
+  failure: idx % 2 === 0 ? ZEBRA_COLORS.failure.dark : ZEBRA_COLORS.failure.light,
+});
+
+// 특정 타입의 줄무늬 색상만 반환
+export const getZebra = (type: 'structure' | 'function' | 'failure', idx: number) => 
+  idx % 2 === 0 ? ZEBRA_COLORS[type].dark : ZEBRA_COLORS[type].light;
+

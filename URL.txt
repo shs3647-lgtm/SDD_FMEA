@@ -1,42 +1,31 @@
-http://localhost:3000/pfmea/worksheet?id=PFM25-310&v=2.2.0-20260103-requirement-orange
+http://localhost:3000/pfmea/worksheet?id=PFM25-310&v=color-std-20260103
 
 === VERSION INFO ===
-Version: 2.2.0
+Version: Color Standardization v1.0
+Commit: edad0c3
+Tag: codefreeze-20260103-color-standardization
 Last Updated: 2026-01-03
-Changes: 
-  - 요구사항 주황색 표준화 (트리뷰/입력셀)
-  - YP/SP/User 색상 표준화 (옵션2)
-  - 다중선택 기능 수정 완료 (1L/2L)
-  - FMEA ID 자동 순차 부여 기능
-Status: 색상 표준화 완료
-Cache Busting: v=2.2.0-20260103-requirement-orange
+Status: CODEFREEZE
 
-=== LAST COMMIT ===
-Commit: 58223ca
-Tag: codefreeze-20260103-requirement-orange
-Summary: 요구사항 주황색 표준화 (트리뷰/입력셀)
+=== COLOR STANDARDIZATION ===
+구조분석: #1976d2 (파란색)
+기능분석: #2e7d32 (녹색)  
+고장분석: #e65100 (주황색)
 
-=== 모듈 구조 ===
-welcomeboard/
-├── page.tsx (메인 페이지)
-├── layout.tsx (레이아웃)
-├── types.ts (타입 정의)
-├── mock-data.ts (샘플 데이터)
-├── utils.ts (유틸리티)
-├── components/
-│   ├── index.ts
-│   ├── Header.tsx
-│   ├── HeroSection.tsx
-│   ├── ProjectStatsSection.tsx
-│   ├── QuickLinksSection.tsx
-│   └── APSummaryTable.tsx
-└── ap-improvement/
-    ├── page.tsx
-    ├── APModal.tsx
-    ├── types.ts
-    ├── mock-data.ts
-    └── utils.ts
+=== 적용 범위 ===
+1. 워크시트 테이블 줄무늬
+   - 구조분석: 파란색 줄무늬
+   - 기능분석: 녹색 줄무늬
+   - 고장분석: 주황색 줄무늬
 
-=== 이전 버전 ===
-v1.0.62: PFMEA worksheet fix-reference
-v1.0.34: COUNT 표시 표준화
+2. 트리뷰 색상
+   - 구조 트리: 파란색
+   - 기능 트리: 녹색 (3L은 공정:파란색, 기능:녹색, 공정특성:주황색)
+   - 고장 트리: 공정:파란색, 기능:녹색, 고장:주황색
+
+=== MODIFIED FILES ===
+- src/app/pfmea/worksheet/panels/TreePanel/TreePanel.tsx
+- src/app/pfmea/worksheet/tabs/function/FunctionL3Tab.tsx
+- src/app/pfmea/worksheet/tabs/failure/FailureL2Tab.tsx
+- src/app/pfmea/worksheet/tabs/failure/FailureL3Tab.tsx
+- src/styles/level-colors.ts

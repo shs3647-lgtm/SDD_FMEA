@@ -18,6 +18,7 @@ import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS } from '../../constants';
 import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
+import { getZebraColors } from '@/styles/level-colors';
 
 const FAIL_COLORS = {
   header1: '#1a237e', header2: '#3949ab', header3: '#5c6bc0', cell: '#f5f6fc', cellAlt: '#e8eaf6',
@@ -455,33 +456,31 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
               </td>
             </tr>
           ) : buildFlatRows.map((row, idx) => {
-            const zebraBg = idx % 2 === 1 ? '#ffe0b2' : '#fff3e0'; // 주황색 체크 (고장분석용)
-            const structureZebra = idx % 2 === 1 ? '#bbdefb' : '#e3f2fd'; // 파란색 체크
-            const functionZebra = idx % 2 === 1 ? '#c8e6c9' : '#e8f5e9'; // 녹색 체크
+            const zebra = getZebraColors(idx); // 표준화된 색상
             
             return (
               <tr key={`row-${idx}`}>
                 {/* 공정명 - rowSpan (파란색) */}
                 {row.showProc && (
-                  <td rowSpan={row.procRowSpan} className="border border-[#ccc] p-2 text-center font-semibold align-middle" style={{ background: structureZebra }}>
+                  <td rowSpan={row.procRowSpan} className="border border-[#ccc] p-2 text-center font-semibold align-middle" style={{ background: zebra.structure }}>
                     {row.procNo}. {row.procName}
                   </td>
                 )}
                 {/* 기능명 - rowSpan (녹색) */}
                 {row.showFunc && (
-                  <td rowSpan={row.funcRowSpan} className="border border-[#ccc] p-2 text-left text-xs align-middle" style={{ background: functionZebra }}>
+                  <td rowSpan={row.funcRowSpan} className="border border-[#ccc] p-2 text-left text-xs align-middle" style={{ background: zebra.function }}>
                     {row.funcName || '(기능분석에서 입력)'}
                   </td>
                 )}
                 {/* 제품특성 - rowSpan (주황색) */}
                 {row.showChar && (
-                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-2 text-center text-xs align-middle" style={{ background: zebraBg }}>
+                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-2 text-center text-xs align-middle" style={{ background: zebra.failure }}>
                     {row.charName || ''}
                   </td>
                 )}
                 {/* 특별특성 - rowSpan (주황색) */}
                 {row.showChar && (
-                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] p-1 text-center text-xs align-middle" style={{ background: zebraBg }}>
+                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] p-1 text-center text-xs align-middle" style={{ background: zebra.failure }}>
                     {row.specialChar ? (
                       <span className={`px-1.5 py-0.5 rounded text-white text-[10px] font-bold ${
                         row.specialChar === 'CC' ? 'bg-red-600' : 
@@ -493,11 +492,11 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
                   </td>
                 )}
                 {/* 고장형태 - 각 행마다 (주황색 줄무늬) */}
-                <td className={cellP0} style={{ background: zebraBg }}>
+                <td className={cellP0} style={{ background: zebra.failure }}>
                   <SelectableCell 
                     value={row.modeName || ''} 
                     placeholder={row.charName ? "고장형태 선택" : ""} 
-                    bgColor={zebraBg} 
+                    bgColor={zebra.failure} 
                     onClick={() => {
                       if (!row.charId || !row.charName) {
                         alert('⚠️ 상위 항목(제품특성)이 없습니다.\n\n고장형태를 추가하려면 먼저 기능분석에서 제품특성을 입력해주세요.\n\n[기능분석 2L(메인공정) → 제품특성 입력]');

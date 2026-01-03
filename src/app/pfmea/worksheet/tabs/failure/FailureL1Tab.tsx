@@ -14,7 +14,7 @@ import DataSelectModal from '@/components/modals/DataSelectModal';
 import SODSelectModal from '@/components/modals/SODSelectModal';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
 import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
-import { L1_TYPE_COLORS, getL1TypeColor } from '@/styles/level-colors';
+import { L1_TYPE_COLORS, getL1TypeColor, getZebraColors } from '@/styles/level-colors';
 
 // 색상 정의
 const STEP_COLORS = {
@@ -590,11 +590,9 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
             </tr>
           ) : (
             renderRows.map((row, idx) => {
-              const zebraBg = idx % 2 === 1 ? '#ffe0b2' : '#fff3e0';
-              const structureZebra = idx % 2 === 1 ? '#bbdefb' : '#e3f2fd';
-              const functionZebra = idx % 2 === 1 ? '#c8e6c9' : '#e8f5e9';
+              const zebra = getZebraColors(idx); // 표준화된 색상
               return (
-              <tr key={row.key} style={{ background: zebraBg }}>
+              <tr key={row.key}>
                 {/* 완제품 공정명 */}
                 {row.showProduct && (
                   <td 
@@ -603,7 +601,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                       border: `1px solid #ccc`, 
                       padding: '2px 4px', 
                       textAlign: 'center', 
-                      background: structureZebra, 
+                      background: zebra.structure, 
                       fontWeight: FONT_WEIGHTS.semibold, 
                       verticalAlign: 'middle',
                       fontSize: FONT_SIZES.cell
@@ -640,7 +638,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                       border: `1px solid #ccc`, 
                       padding: '2px 4px', 
                       textAlign: 'left', 
-                      background: functionZebra, 
+                      background: zebra.function, 
                       fontSize: FONT_SIZES.cell,
                       verticalAlign: 'middle',
                       whiteSpace: 'nowrap',
@@ -660,7 +658,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                     style={{ 
                       border: `1px solid #ccc`, 
                       padding: '2px 4px', 
-                      background: functionZebra, 
+                      background: zebra.function, 
                       verticalAlign: 'middle',
                       textAlign: 'center',
                       fontSize: FONT_SIZES.cell
@@ -675,7 +673,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                   <SelectableCell 
                     value={row.effect} 
                     placeholder="고장영향 선택" 
-                    bgColor={zebraBg} 
+                    bgColor={zebra.failure} 
                     onClick={() => handleCellClick({ 
                       type: 'effect', 
                       effectId: row.effectId || undefined,
@@ -699,7 +697,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                     width: '30px',
                     minWidth: '30px',
                     maxWidth: '30px',
-                    background: row.severity && row.severity >= 8 ? '#ffe0b2' : row.severity && row.severity >= 5 ? '#fff9c4' : zebraBg,
+                    background: row.severity && row.severity >= 8 ? '#ffe0b2' : row.severity && row.severity >= 5 ? '#fff9c4' : zebra.failure,
                     cursor: row.effectId ? 'pointer' : 'default'
                   }}
                   onClick={() => row.effectId && setSODModal({ 

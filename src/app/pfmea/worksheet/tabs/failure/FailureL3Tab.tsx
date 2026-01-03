@@ -11,6 +11,7 @@ import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
 import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
+import { getZebraColors } from '@/styles/level-colors';
 
 // 색상 정의
 const FAIL_COLORS = {
@@ -480,35 +481,33 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
             </tr>
           ) : flatRows.map((row, idx) => {
             // ✅ CASCADE 구조: processChar가 직접 flatRows에 포함됨
-            const zebraBg = idx % 2 === 1 ? '#ffe0b2' : '#fff3e0'; // 주황색 체크
-            const structureZebra = idx % 2 === 1 ? '#bbdefb' : '#e3f2fd'; // 파란색 체크
-            const functionZebra = idx % 2 === 1 ? '#c8e6c9' : '#e8f5e9'; // 녹색 체크
+            const zebra = getZebraColors(idx); // 표준화된 색상
             
             return (
               <tr key={`${row.proc.id}-${row.we?.id || 'empty'}-${row.processChar?.id || 'nochar'}-${row.cause?.id || idx}`}>
                 {/* 공정 셀: showProc && procRowSpan > 0 (파란색) */}
                 {row.showProc && row.procRowSpan > 0 && (
-                  <td rowSpan={row.procRowSpan} className="border border-[#ccc] p-1.5 text-center font-semibold align-middle text-xs" style={{ background: structureZebra }}>
+                  <td rowSpan={row.procRowSpan} className="border border-[#ccc] p-1.5 text-center font-semibold align-middle text-xs" style={{ background: zebra.structure }}>
                     {row.proc.no}. {row.proc.name}
                   </td>
                 )}
                 
                 {/* 작업요소 셀: showWe && weRowSpan > 0 (파란색) */}
                 {row.showWe && row.weRowSpan > 0 && (
-                  <td rowSpan={row.weRowSpan} className="border border-[#ccc] p-1.5 text-center align-middle text-xs" style={{ background: structureZebra }}>
+                  <td rowSpan={row.weRowSpan} className="border border-[#ccc] p-1.5 text-center align-middle text-xs" style={{ background: zebra.structure }}>
                     {row.we?.name || '(작업요소 없음)'}
                   </td>
                 )}
                 
                 {/* ✅ 공정특성 셀: showChar && charRowSpan > 0 (녹색) */}
                 {row.showChar && row.charRowSpan > 0 && (
-                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-1.5 text-center align-middle text-xs" style={{ background: functionZebra }}>
+                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-1.5 text-center align-middle text-xs" style={{ background: zebra.function }}>
                     {row.processChar?.name || '(기능분석에서 입력)'}
                   </td>
                 )}
                 {/* 특별특성 셀 (녹색) */}
                 {row.showChar && row.charRowSpan > 0 && (
-                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] p-1 text-center align-middle text-xs" style={{ background: functionZebra }}>
+                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] p-1 text-center align-middle text-xs" style={{ background: zebra.function }}>
                     {row.processChar?.specialChar ? (
                       <span className={`px-1.5 py-0.5 rounded text-white text-[10px] font-bold ${
                         row.processChar.specialChar === 'CC' ? 'bg-red-600' : 
@@ -521,12 +520,12 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
                 )}
                 
                 {/* 고장원인 셀 */}
-                <td className={cellP0} style={{ backgroundColor: zebraBg }}>
+                <td className={cellP0} style={{ backgroundColor: zebra.failure }}>
                   {row.we && row.processChar ? (
                     <SelectableCell 
                       value={row.cause?.name || ''} 
                       placeholder="고장원인 선택" 
-                      bgColor={zebraBg} 
+                      bgColor={zebra.failure} 
                       onClick={() => {
                         handleCellClick({ 
                           type: 'l3FailureCause', 
