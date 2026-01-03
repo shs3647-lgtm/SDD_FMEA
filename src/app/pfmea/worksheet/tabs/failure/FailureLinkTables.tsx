@@ -185,9 +185,17 @@ export default function FailureLinkTables({
                   const noBg = isLinked ? COLORS.function.dark : (isMissing ? '#f44336' : '#f57c00');
                   const cellBg = isSelected ? '#fff8e1' : (idx % 2 === 1 ? '#ffe0b2' : '#fff3e0');
                   
+                  // 체크표시: 확정된 FM은 녹색, 현재 선택된 FM은 파란색
+                  let checkMark = '';
+                  if (isLinked) {
+                    checkMark = <span className="text-green-600 font-bold mr-1">✓</span>; // 확정됨 - 녹색
+                  } else if (isSelected) {
+                    checkMark = <span className="text-blue-600 font-bold mr-1">✓</span>; // 현재 선택됨 - 파란색
+                  }
+                  
                   let statusIcon = '';
                   if (isLinked) {
-                    statusIcon = ` ✓ (FE:${counts.feCount} FC:${counts.fcCount})`;
+                    statusIcon = ` (FE:${counts.feCount} FC:${counts.fcCount})`;
                   } else if (counts.feCount > 0 || counts.fcCount > 0) {
                     const missing = [];
                     if (counts.feCount === 0) missing.push('FE');
@@ -204,6 +212,7 @@ export default function FailureLinkTables({
                         fontWeight: isMissing ? FONT_WEIGHTS.bold : FONT_WEIGHTS.normal, 
                         padding: '4px 6px' 
                       })}>
+                        {checkMark}
                         {fm.text}
                         <span className={`text-[11px] ${isLinked ? 'text-green-700' : 'text-orange-600'}`}>{statusIcon}</span>
                       </td>
