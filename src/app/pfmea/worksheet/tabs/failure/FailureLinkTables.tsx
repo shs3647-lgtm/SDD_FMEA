@@ -86,7 +86,7 @@ export default function FailureLinkTables({
         {/* FE 테이블 */}
         <div style={panelStyle(COLORS.structure.dark)}>
           <div style={panelHeaderStyle(COLORS.structure.dark)}>
-            FE(고장영향:{feData.length})
+            FE(고장영향:<span style={{ color: '#ffeb3b', fontWeight: 700 }}>{feData.length}</span>)
           </div>
           <div className="flex-1 overflow-y-auto">
             <table className="w-full border-collapse text-xs">
@@ -119,7 +119,7 @@ export default function FailureLinkTables({
         {/* FM 테이블 */}
         <div style={panelStyleWithFlex('0 0 28%', COLORS.failure.dark)}>
           <div style={panelHeaderStyle(COLORS.failure.dark)}>
-            FM(고장형태:{fmData.length})
+            FM(고장형태:<span style={{ color: '#ffeb3b', fontWeight: 700 }}>{fmData.length}</span>)
           </div>
           <div style={scrollAreaStyle}>
             <table style={tableFullStyle(FONT_SIZES.cell)}>
@@ -173,7 +173,7 @@ export default function FailureLinkTables({
         <div style={panelStyleWithFlex('1 1 47%', COLORS.function.dark)}>
           <div className="flex justify-between items-center" style={panelHeaderStyle(COLORS.function.dark)}>
             <span className="flex-1 text-center">
-              FC(고장원인:{fcData.length})
+              FC(고장원인:<span style={{ color: '#ffeb3b', fontWeight: 700 }}>{fcData.length}</span>)
             </span>
             <select
               value={fcLinkScope}
