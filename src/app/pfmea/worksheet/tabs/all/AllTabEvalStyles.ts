@@ -11,6 +11,7 @@ const BORDER = '1px solid #ccc';
 /** 평가 테이블 스타일 */
 export const evalTableStyle: CSSProperties = {
   width: '100%',
+  minWidth: '2400px', // 40열 테이블에 필요한 최소 너비 - 좌우 스크롤 활성화
   borderCollapse: 'collapse',
   fontSize: FONT_SIZES.cell,
 };

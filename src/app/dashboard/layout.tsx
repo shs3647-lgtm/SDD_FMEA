@@ -63,8 +63,8 @@ export default function DashboardLayout({
         </button>
       </div>
       
-      {/* 메인 콘텐츠 - TopNav(28px) + MainMenu(32px) = 60px */}
-      <main className="flex-1 ml-[60px] mt-[60px]">
+      {/* 메인 콘텐츠 - TopNav(28px) + MainMenu(32px) = 60px + 좌우 스크롤 */}
+      <main className="flex-1 ml-[60px] mt-[60px] overflow-x-auto">
         {children}
       </main>
     </div>

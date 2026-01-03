@@ -144,7 +144,7 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
   }
   
   return (
-    <div className={TW_CLASSES.container}>
+    <>
       <table className={`${TW_CLASSES.table} min-w-[2600px]`}>
         <thead className={TW_CLASSES.stickyHead}>
           {/* 1행: 단계 대분류 */}
@@ -409,7 +409,7 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
           currentValues={[(state.riskData || {})[`${controlModal.type}-${controlModal.rowIndex}`] || ''].filter(Boolean).map(String)}
         />
       )}
-    </div>
+    </>
   );
 }
 

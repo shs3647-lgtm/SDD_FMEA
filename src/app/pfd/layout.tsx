@@ -14,13 +14,14 @@ export default function PFDLayout({
   return (
     <div className="min-h-screen bg-[#f0f0f0]">
       <Sidebar />
-      <main className="ml-[50px] min-h-screen pb-6">
+      <main className="ml-[50px] min-h-screen pb-6 overflow-x-auto">
         {children}
       </main>
       <StatusBar />
     </div>
   );
 }
+
 
 
 

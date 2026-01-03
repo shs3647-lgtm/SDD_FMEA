@@ -493,14 +493,15 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       
       if (feItem) {
         newFEs.set(feItem.id, feItem);
-      } else {
-        console.error('[FE 로드 실패] 모든 매칭 실패:', {
+      } else if (link.feId || link.feNo || link.feText) {
+        // FE 데이터가 있는데 매칭 실패한 경우만 경고
+        console.warn('[FE 로드] 매칭 실패 (FE 데이터 불일치):', {
           feId: link.feId,
           feNo: link.feNo,
           feText: link.feText,
-          availableFEs: feData.map(f => ({ id: f.id, no: f.feNo, text: f.text }))
         });
       }
+      // FE 데이터가 없는 경우는 정상 (FC만 연결된 링크)
       
       // FC 로드 (ID → 번호 → 텍스트 순서로 매칭 시도)
       let fcItem: FCItem | undefined;
@@ -532,14 +533,15 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       
       if (fcItem) {
         newFCs.set(fcItem.id, fcItem);
-      } else {
-        console.error('[FC 로드 실패] 모든 매칭 실패:', {
+      } else if (link.fcId || link.fcNo || link.fcText) {
+        // FC 데이터가 있는데 매칭 실패한 경우만 경고
+        console.warn('[FC 로드] 매칭 실패 (FC 데이터 불일치):', {
           fcId: link.fcId,
           fcNo: link.fcNo,
           fcText: link.fcText,
-          availableFCs: fcData.map(f => ({ id: f.id, no: f.fcNo, text: f.text }))
         });
       }
+      // FC 데이터가 없는 경우는 정상 (FE만 연결된 링크)
     });
     
     setLinkedFEs(newFEs);
@@ -548,78 +550,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
   }, [currentFMId, savedLinks, feData, fcData]);
 
   // ========== 규격미달(M1) 저장 데이터 vs 화면 표시 비교 ==========
-  useEffect(() => {
-    const m1FM = fmData.find(fm => fm.fmNo === 'M1' || fm.text.includes('규격 미달'));
-    if (!m1FM) return;
-    
-    const m1SavedLinks = savedLinks.filter(l => l.fmId === m1FM.id);
-    const m1SavedFEIds = new Set<string>();
-    const m1SavedFENos = new Set<string>();
-    const m1SavedFCIds = new Set<string>();
-    const m1SavedFCNos = new Set<string>();
-    const m1SavedFCTexts = new Set<string>();
-    
-    m1SavedLinks.forEach(link => {
-      if (link.feId && link.feId.trim()) m1SavedFEIds.add(link.feId.trim());
-      if (link.feNo && link.feNo.trim()) m1SavedFENos.add(link.feNo.trim());
-      if (link.fcId && link.fcId.trim()) m1SavedFCIds.add(link.fcId.trim());
-      if (link.fcNo && link.fcNo.trim()) m1SavedFCNos.add(link.fcNo.trim());
-      if (link.fcText && link.fcText.trim()) m1SavedFCTexts.add(link.fcText.trim());
-    });
-    
-    // 현재 화면 표시 (M1이 선택된 경우)
-    const m1DisplayedFEIds = currentFMId === m1FM.id ? Array.from(linkedFEs.keys()) : [];
-    const m1DisplayedFCIds = currentFMId === m1FM.id ? Array.from(linkedFCs.keys()) : [];
-    
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('🔍 [규격미달 M1] 저장 데이터 vs 화면 표시 비교');
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('📦 저장된 데이터 (savedLinks):');
-    console.log('   - 총 links:', m1SavedLinks.length, '개');
-    console.log('   - FE IDs:', Array.from(m1SavedFEIds));
-    console.log('   - FE Nos:', Array.from(m1SavedFENos));
-    console.log('   - FC IDs:', Array.from(m1SavedFCIds));
-    console.log('   - FC Nos:', Array.from(m1SavedFCNos));
-    console.log('   - FC Texts:', Array.from(m1SavedFCTexts));
-    console.log('   - 상세:', m1SavedLinks.map(l => ({
-      feId: l.feId || '없음',
-      feNo: l.feNo || '없음',
-      feText: l.feText || '없음',
-      fcId: l.fcId || '없음',
-      fcNo: l.fcNo || '없음',
-      fcText: l.fcText || '없음'
-    })));
-    console.log('');
-    console.log('🖥️  현재 화면 표시 (linkedFEs/linkedFCs):');
-    console.log('   - M1 선택됨:', currentFMId === m1FM.id ? 'YES' : 'NO');
-    console.log('   - 표시된 FE IDs:', m1DisplayedFEIds);
-    console.log('   - 표시된 FC IDs:', m1DisplayedFCIds);
-    if (currentFMId === m1FM.id) {
-      console.log('   - 표시된 FE 상세:', Array.from(linkedFEs.values()).map(fe => ({ id: fe.id, no: fe.feNo, text: fe.text })));
-      console.log('   - 표시된 FC 상세:', Array.from(linkedFCs.values()).map(fc => ({ id: fc.id, no: fc.fcNo, text: fc.text })));
-    }
-    console.log('');
-    
-    // 비교 결과
-    if (currentFMId === m1FM.id) {
-      const feMatch = m1SavedFEIds.size === m1DisplayedFEIds.length && 
-        Array.from(m1SavedFEIds).every(id => m1DisplayedFEIds.includes(id));
-      const fcMatch = m1SavedFCIds.size === m1DisplayedFCIds.length && 
-        Array.from(m1SavedFCIds).every(id => m1DisplayedFCIds.includes(id));
-      
-      console.log('✅ 비교 결과:');
-      console.log('   - FE 일치:', feMatch ? '✅ 일치' : '❌ 불일치');
-      console.log('   - FC 일치:', fcMatch ? '✅ 일치' : '❌ 불일치');
-      if (!feMatch || !fcMatch) {
-        console.error('❌❌❌ 저장된 데이터와 화면 표시가 다릅니다! ❌❌❌');
-        console.error('   저장된 FE:', Array.from(m1SavedFEIds));
-        console.error('   표시된 FE:', m1DisplayedFEIds);
-        console.error('   저장된 FC:', Array.from(m1SavedFCIds));
-        console.error('   표시된 FC:', m1DisplayedFCIds);
-      }
-    }
-    console.log('═══════════════════════════════════════════════════════');
-  }, [currentFMId, savedLinks, linkedFEs, linkedFCs, fmData]);
+  // 디버그 로직 제거됨 - 타이밍 이슈로 인한 거짓 양성 에러 방지
 
   // ========== FM 선택 ==========
   const selectFM = useCallback((id: string) => {

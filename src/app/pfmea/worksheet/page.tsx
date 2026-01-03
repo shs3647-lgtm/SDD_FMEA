@@ -473,18 +473,48 @@ function FMEAWorksheetPageContent() {
           
           {/* ===== 좌측: 워크시트 영역 ===== */}
           <div 
-            className={`flex-1 flex flex-col min-w-0 bg-white ${state.tab === 'all' ? 'overflow-auto' : 'overflow-hidden'}`}
+            className="flex-1 flex flex-col min-w-0 bg-white overflow-hidden"
           >
 
             {/* 구조분석 제목 바는 StructureTab 내부 헤더로 이동됨 (표준화 완료) */}
 
             {/* 테이블 스크롤 영역 - 상하좌우 스크롤 가능, 헤더 sticky */}
+            {/* ✅ 유일한 스크롤 컨테이너 - all 탭에서 좌우 스크롤 항상 표시 */}
             <div 
+              id="worksheet-scroll-container"
+              className={state.tab === 'all' ? 'all-tab-scroll-container' : ''}
               style={{ 
                 flex: 1,
-                overflow: 'auto',
+                overflowX: 'scroll',
+                overflowY: 'auto',
                 background: '#fff',
                 position: 'relative',
+                paddingBottom: state.tab === 'all' ? '20px' : '0', // 스크롤바 공간 확보
+              }}
+              onWheel={(e) => {
+                // All 탭에서 마우스 휠로 좌우 스크롤 (Shift 없이도 가능)
+                if (state.tab === 'all' && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                  const container = e.currentTarget;
+                  // 세로 스크롤을 가로 스크롤로 변환
+                  container.scrollLeft += e.deltaY;
+                  // 위치 표시기 업데이트
+                  const indicator = document.getElementById('scroll-position-indicator');
+                  if (indicator) {
+                    const scrollPercent = (container.scrollLeft / (container.scrollWidth - container.clientWidth)) * 100;
+                    indicator.style.left = `${Math.min(scrollPercent, 95)}%`;
+                  }
+                }
+              }}
+              onScroll={(e) => {
+                // All 탭에서 스크롤 위치 표시기 업데이트
+                if (state.tab === 'all') {
+                  const target = e.currentTarget;
+                  const indicator = document.getElementById('scroll-position-indicator');
+                  if (indicator) {
+                    const scrollPercent = (target.scrollLeft / (target.scrollWidth - target.clientWidth)) * 100;
+                    indicator.style.left = `${Math.min(scrollPercent, 95)}%`;
+                  }
+                }
               }}
             >
               {/* 기초정보 없으면 안내 메시지 */}
@@ -544,6 +574,59 @@ function FMEAWorksheetPageContent() {
                   {state.tab === 'structure' && <StructureTabFull {...tabProps} />}
                   {state.tab === 'doc' && <DocTabFull {...tabProps} />}
                 </table>
+              )}
+              
+              {/* All 탭 스크롤 위치 표시기 */}
+              {state.tab === 'all' && (
+                <div 
+                  style={{
+                    position: 'sticky',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: '18px',
+                    background: 'linear-gradient(to right, #e0e0e0, #f5f5f5, #e0e0e0)',
+                    borderTop: '1px solid #ccc',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '0 10px',
+                    zIndex: 50,
+                  }}
+                >
+                  <div 
+                    style={{
+                      position: 'relative',
+                      flex: 1,
+                      height: '8px',
+                      background: '#ddd',
+                      borderRadius: '4px',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <div 
+                      id="scroll-position-indicator"
+                      style={{
+                        position: 'absolute',
+                        width: '60px',
+                        height: '100%',
+                        background: 'linear-gradient(90deg, #1a237e, #3f51b5)',
+                        borderRadius: '4px',
+                        left: '0%',
+                        transition: 'left 0.1s ease-out',
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => {
+                        const container = document.getElementById('worksheet-scroll-container');
+                        if (container) {
+                          container.scrollLeft += 200;
+                        }
+                      }}
+                    />
+                  </div>
+                  <span style={{ marginLeft: '10px', fontSize: '10px', color: '#666' }}>
+                    ← → 드래그하여 스크롤
+                  </span>
+                </div>
               )}
             </div>
           </div>

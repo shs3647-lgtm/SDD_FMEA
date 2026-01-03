@@ -440,7 +440,7 @@ export default function PFDWorksheetPage() {
         </div>
 
         {/* 메인 레이아웃 */}
-        <div className="fixed top-[100px] left-[50px] right-0 bottom-0 flex flex-row overflow-hidden">
+        <div className="fixed top-[100px] left-[50px] right-0 bottom-0 flex flex-row overflow-x-auto overflow-y-hidden">
           
           {/* 좌측: 워크시트 영역 */}
           <div className="flex-1 flex flex-col min-w-0 bg-white overflow-auto">

@@ -407,7 +407,7 @@ export function StructureRow({
 }
 
 export default function StructureTab(props: StructureTabProps) {
-  const { rows, setIsProcessModalOpen, state, setState, setDirty, saveToLocalStorage } = props;
+  const { rows, setIsProcessModalOpen, state, setState, setDirty, saveToLocalStorage, handleInputBlur, handleInputKeyDown } = props;
   
   // ✅ 확정 상태 (고장분석 패턴 적용)
   const isConfirmed = (state as any).structureConfirmed || false;

@@ -39,8 +39,8 @@ export default function ControlPlanLayout({
       <div 
         className="flex-1 flex flex-col p-0 m-0 ml-[50px]"
       >
-        {/* 콘텐츠 - 패딩 없이 꽉 채움 (바둑판 정렬) */}
-        <main className="flex-1 overflow-hidden p-0 m-0">
+        {/* 콘텐츠 - 패딩 없이 꽉 채움 (바둑판 정렬) + 좌우 스크롤 */}
+        <main className="flex-1 overflow-x-auto overflow-y-hidden p-0 m-0">
           {children}
         </main>
 
@@ -50,6 +50,7 @@ export default function ControlPlanLayout({
     </div>
   );
 }
+
 
 
 

@@ -599,11 +599,34 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     
     console.log('[워크시트] 데이터 로드 시작:', selectedFmeaId);
     
+    // ✅ 프로젝트 정보에서 L1 이름 미리 가져오기 (빈 데이터 복구용)
+    let projectL1Name = '';
+    try {
+      const projectsData = localStorage.getItem('pfmea-projects');
+      if (projectsData) {
+        const projects = JSON.parse(projectsData);
+        const currentProject = projects.find((p: any) => p.id === selectedFmeaId);
+        if (currentProject) {
+          projectL1Name = currentProject.fmeaInfo?.subject || currentProject.project?.productName || '';
+          console.log('[기초정보] FMEA명 발견:', projectL1Name);
+        }
+      }
+    } catch (e) {
+      console.error('[기초정보] 로드 오류:', e);
+    }
+    
     // 원자성 DB 로드 시도
     const loadedDB = loadWorksheetDB(selectedFmeaId);
     
-    // 원자성 DB가 있고 (l1Structure 또는 failureEffects가 있으면 유효한 DB)
-    if (loadedDB && (loadedDB.l1Structure || (loadedDB.failureEffects && loadedDB.failureEffects.length > 0) || loadedDB.l2Structures.length > 0)) {
+    // ✅ 원자성 DB에 실제 데이터가 있는지 확인 (빈 DB 객체 구분)
+    const hasValidData = loadedDB && (
+      (loadedDB.l1Structure && loadedDB.l1Structure.name) || 
+      (loadedDB.failureEffects && loadedDB.failureEffects.length > 0) || 
+      loadedDB.l2Structures.length > 0
+    );
+    
+    // 원자성 DB가 있고 실제 데이터가 있는 경우
+    if (hasValidData) {
       console.log('[워크시트] 원자성 DB 발견:', loadedDB);
       console.log('[워크시트] 원자성 DB 상태:', {
         l1Structure: !!loadedDB.l1Structure,
@@ -905,14 +928,20 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           }
         }
         
-        if (parsed.l1 && parsed.l2) {
+        // ✅ l1과 l2가 존재하고 실제 데이터가 있는지 확인
+        const hasValidL1 = parsed.l1 && (parsed.l1.name || (parsed.l1.types && parsed.l1.types.length > 0));
+        const hasValidL2 = parsed.l2 && parsed.l2.length > 0 && parsed.l2.some((p: any) => p.name && !p.name.includes('클릭'));
+        
+        if (parsed.l1 && parsed.l2 && (hasValidL1 || hasValidL2)) {
           // 마이그레이션 및 방어 코드 - failureScopes 명시적 포함
           const migratedL1 = {
             ...parsed.l1,
+            name: parsed.l1.name || projectL1Name, // ✅ 빈 이름이면 프로젝트 정보에서 가져오기
             types: parsed.l1.types || [],
             failureScopes: parsed.l1.failureScopes || [] // 고장영향 데이터 보존
           };
           
+          console.log('[데이터 로드] L1 이름:', migratedL1.name, '(원본:', parsed.l1.name, ', 프로젝트:', projectL1Name, ')');
           console.log('[데이터 로드] failureScopes:', (parsed.l1.failureScopes || []).length, '개');
           console.log('[데이터 로드] riskData:', Object.keys(parsed.riskData || {}).length, '개', parsed.riskData);
           
@@ -1106,6 +1135,25 @@ export function useWorksheetState(): UseWorksheetStateReturn {
               visibleSteps: prev.visibleSteps || [2, 3, 4, 5, 6],  // 기존 토글 상태 유지
             };
           });
+          setDirty(false);
+        } else {
+          // ✅ 저장된 데이터가 있지만 비어있는 경우 - 프로젝트 정보로 초기화
+          console.log('[워크시트] 저장된 데이터가 있지만 비어있음, 프로젝트 정보로 초기화');
+          console.log('[워크시트] 프로젝트 L1 이름:', projectL1Name);
+          
+          const emptyDB = createEmptyDB(selectedFmeaId);
+          setAtomicDB(emptyDB);
+          
+          setState(prev => ({
+            ...prev,
+            l1: { id: uid(), name: projectL1Name, types: [], failureScopes: [] },
+            l2: [{
+              id: uid(), no: '', name: '(클릭하여 공정 선택)', order: 10, functions: [], productChars: [],
+              l3: [{ id: uid(), m4: '', name: '(공정 선택 후 작업요소 추가)', order: 10, functions: [], processChars: [] }]
+            }],
+            failureLinks: [],
+            structureConfirmed: false
+          }));
           setDirty(false);
         }
       } catch (e) {

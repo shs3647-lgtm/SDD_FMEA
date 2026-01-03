@@ -16,3 +16,4 @@ test('3L원인 누락건 스크린샷', async ({ page }) => {
   console.log('✅ 3L원인 스크린샷 저장 완료');
 });
 
+

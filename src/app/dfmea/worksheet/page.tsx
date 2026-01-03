@@ -450,7 +450,7 @@ function FMEAWorksheetPageContent() {
         />
 
         {/* ========== 메인 레이아웃 ========== */}
-        <div className="flex flex-col h-[calc(100vh-60px)] overflow-hidden border-2 border-[#00587a]">
+        <div className="flex flex-col h-[calc(100vh-60px)] overflow-x-auto overflow-y-hidden border-2 border-[#00587a]">
           {/* ===== 상단: 탭 메뉴 + 패널 선택 (고정 영역) ===== */}
           <div 
             className="h-[37px] flex flex-col shrink-0 bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-900 z-[98]"
@@ -490,7 +490,7 @@ function FMEAWorksheetPageContent() {
           </div>
           
           {/* ===== 콘텐츠 영역 (좌측:워크시트 / 우측:패널) ===== */}
-          <div className="flex-1 flex flex-row overflow-hidden">
+          <div className="flex-1 flex flex-row overflow-x-auto overflow-y-hidden">
             {/* ===== 좌측: 워크시트 영역 ===== */}
             <div 
               className={`flex-1 flex flex-col min-w-0 ${state.tab === 'all' || state.tab === 'failure-link' ? '' : 'border-r-4 border-[#00587a]'}`}

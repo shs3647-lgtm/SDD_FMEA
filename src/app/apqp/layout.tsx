@@ -9,12 +9,13 @@ export default function APQPLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="flex h-screen">
       <Sidebar />
-      <main className="flex-1 ml-[50px] overflow-auto">
+      <main className="flex-1 ml-[50px] overflow-x-auto overflow-y-auto">
         {children}
       </main>
     </div>
   );
 }
+
 
 
 

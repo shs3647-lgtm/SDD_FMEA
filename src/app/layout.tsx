@@ -66,6 +66,7 @@ export default function RootLayout({
             ::-webkit-scrollbar-thumb:hover {
               background: #5ba9ff;
             }
+            /* All 탭 스크롤바 스타일은 globals.css에서 관리 */
           `
         }} />
       </head>

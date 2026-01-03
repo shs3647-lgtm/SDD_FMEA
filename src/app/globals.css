@@ -476,3 +476,52 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;  /* Chrome, Safari and Opera */
 }
+
+/* ===== All 탭 스크롤바 강제 표시 ===== */
+/* Windows 오버레이 스크롤바 문제 해결 */
+.all-tab-scroll-container {
+  /* 스크롤바 공간 확보 */
+  scrollbar-gutter: stable;
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #1a237e #e0e0e0;
+}
+
+.all-tab-scroll-container::-webkit-scrollbar {
+  height: 16px !important;
+  display: block !important;
+  background: #e0e0e0;
+}
+
+.all-tab-scroll-container::-webkit-scrollbar-track {
+  background: linear-gradient(to bottom, #f0f0f0, #e0e0e0, #f0f0f0) !important;
+  border-radius: 8px;
+  margin: 0 10px;
+}
+
+.all-tab-scroll-container::-webkit-scrollbar-thumb {
+  background: linear-gradient(to right, #1a237e, #3f51b5, #1a237e) !important;
+  border-radius: 8px;
+  border: 3px solid #e0e0e0;
+  min-width: 80px;
+}
+
+.all-tab-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to right, #0d1757, #303f9f, #0d1757) !important;
+}
+
+.all-tab-scroll-container::-webkit-scrollbar-button:single-button {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background-color: #c0c0c0;
+  border-radius: 4px;
+}
+
+.all-tab-scroll-container::-webkit-scrollbar-button:single-button:horizontal:decrement {
+  background: #d0d0d0 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath fill='%23333' d='M5 1L1 4l4 3V1z'/%3E%3C/svg%3E") center center no-repeat;
+}
+
+.all-tab-scroll-container::-webkit-scrollbar-button:single-button:horizontal:increment {
+  background: #d0d0d0 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath fill='%23333' d='M3 1v6l4-3-4-3z'/%3E%3C/svg%3E") center center no-repeat;
+}
