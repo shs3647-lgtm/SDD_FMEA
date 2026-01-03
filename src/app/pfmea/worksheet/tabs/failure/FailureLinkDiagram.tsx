@@ -34,6 +34,10 @@ interface FailureLinkDiagramProps {
   fmNodeRef: React.RefObject<HTMLDivElement | null>;
   feColRef: React.RefObject<HTMLDivElement | null>;
   fcColRef: React.RefObject<HTMLDivElement | null>;
+  onPrevFM?: () => void;
+  onNextFM?: () => void;
+  hasPrevFM?: boolean;
+  hasNextFM?: boolean;
 }
 
 export default function FailureLinkDiagram({
@@ -44,7 +48,11 @@ export default function FailureLinkDiagram({
   chainAreaRef,
   fmNodeRef,
   feColRef,
-  fcColRef
+  fcColRef,
+  onPrevFM,
+  onNextFM,
+  hasPrevFM = false,
+  hasNextFM = false
 }: FailureLinkDiagramProps) {
   return (
     <div ref={chainAreaRef} style={diagramAreaStyle}>
@@ -100,12 +108,59 @@ export default function FailureLinkDiagram({
             {/* 왼쪽 간격 (화살표 영역) */}
             <div className="flex items-center justify-center"></div>
 
-            {/* FM 열 - 주황색 */}
-            <div style={diagramColumnStyle('center')}>
+            {/* FM 열 - 주황색 + 이동 화살표 */}
+            <div style={{ ...diagramColumnStyle('center'), flexDirection: 'column', gap: '4px' }}>
+              {/* 위로 이동 화살표 */}
+              <button
+                onClick={onPrevFM}
+                disabled={!hasPrevFM}
+                style={{
+                  width: '100%',
+                  padding: '4px 8px',
+                  backgroundColor: hasPrevFM ? '#f57c00' : '#e0e0e0',
+                  color: hasPrevFM ? '#fff' : '#999',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: hasPrevFM ? 'pointer' : 'not-allowed',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px'
+                }}
+              >
+                ▲ 이전 FM
+              </button>
+              
+              {/* FM 카드 */}
               <div ref={fmNodeRef} style={diagramCardStyle('110px', 'FM')}>
                 <div style={cardHeaderStyle('FM')}>{currentFM.fmNo}</div>
                 <div style={cardBodyStyle({ fontWeight: 600 })}>{currentFM.text}</div>
               </div>
+              
+              {/* 아래로 이동 화살표 */}
+              <button
+                onClick={onNextFM}
+                disabled={!hasNextFM}
+                style={{
+                  width: '100%',
+                  padding: '4px 8px',
+                  backgroundColor: hasNextFM ? '#f57c00' : '#e0e0e0',
+                  color: hasNextFM ? '#fff' : '#999',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: hasNextFM ? 'pointer' : 'not-allowed',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px'
+                }}
+              >
+                ▼ 다음 FM
+              </button>
             </div>
 
             {/* 오른쪽 간격 (화살표 영역) */}

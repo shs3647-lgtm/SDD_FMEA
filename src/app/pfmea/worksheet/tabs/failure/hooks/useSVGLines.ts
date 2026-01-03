@@ -65,14 +65,29 @@ export function useSVGLines(
     const timer1 = setTimeout(drawLines, 50);
     const timer2 = setTimeout(drawLines, 150);
     const timer3 = setTimeout(drawLines, 300);
+    const timer4 = setTimeout(drawLines, 500);
+    const timer5 = setTimeout(drawLines, 1000);
     window.addEventListener('resize', drawLines);
+    
+    // MutationObserver로 DOM 변경 감지
+    const observer = new MutationObserver(() => {
+      setTimeout(drawLines, 50);
+    });
+    
+    if (chainAreaRef.current) {
+      observer.observe(chainAreaRef.current, { childList: true, subtree: true });
+    }
+    
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
       clearTimeout(timer3);
+      clearTimeout(timer4);
+      clearTimeout(timer5);
       window.removeEventListener('resize', drawLines);
+      observer.disconnect();
     };
-  }, [drawLines, linkedFEs, linkedFCs, currentFM]);
+  }, [drawLines, linkedFEs, linkedFCs, currentFM, chainAreaRef]);
 
   return { svgPaths, drawLines };
 }

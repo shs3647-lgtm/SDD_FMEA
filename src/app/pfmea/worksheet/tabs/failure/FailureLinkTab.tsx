@@ -601,6 +601,31 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     setTimeout(drawLines, 50);
   }, [currentFMId, fmData, drawLines]);
 
+  // ========== 이전/다음 FM 이동 ==========
+  const currentFMIndex = useMemo(() => {
+    if (!currentFMId) return -1;
+    return fmData.findIndex(f => f.id === currentFMId);
+  }, [currentFMId, fmData]);
+
+  const hasPrevFM = currentFMIndex > 0;
+  const hasNextFM = currentFMIndex >= 0 && currentFMIndex < fmData.length - 1;
+
+  const goToPrevFM = useCallback(() => {
+    if (hasPrevFM) {
+      const prevFM = fmData[currentFMIndex - 1];
+      setCurrentFMId(prevFM.id);
+      setTimeout(drawLines, 50);
+    }
+  }, [currentFMIndex, fmData, hasPrevFM, drawLines]);
+
+  const goToNextFM = useCallback(() => {
+    if (hasNextFM) {
+      const nextFM = fmData[currentFMIndex + 1];
+      setCurrentFMId(nextFM.id);
+      setTimeout(drawLines, 50);
+    }
+  }, [currentFMIndex, fmData, hasNextFM, drawLines]);
+
   // ========== FE 토글 (연결/해제) - N:M 관계 지원 ==========
   // 하나의 FE는 여러 FM에 연결될 수 있음
   const toggleFE = useCallback((id: string) => {
@@ -1168,6 +1193,10 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
               fmNodeRef={fmNodeRef}
               feColRef={feColRef}
               fcColRef={fcColRef}
+              onPrevFM={goToPrevFM}
+              onNextFM={goToNextFM}
+              hasPrevFM={hasPrevFM}
+              hasNextFM={hasNextFM}
             />
           )}
           {viewMode === 'result' && (
