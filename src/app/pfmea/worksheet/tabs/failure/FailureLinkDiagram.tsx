@@ -51,12 +51,12 @@ export default function FailureLinkDiagram({
       {/* SVG 곡선 + 화살표 */}
       <svg style={svgCanvasStyle}>
         <defs>
-          <marker id="arrowhead" markerWidth="5" markerHeight="4" refX="5" refY="2" orient="auto" markerUnits="strokeWidth">
-            <path d="M0,0 L5,2 L0,4" fill="none" stroke="#888" strokeWidth="0.8" />
+          <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L8,3 L0,6 Z" fill="#555" stroke="none" />
           </marker>
         </defs>
         {svgPaths.map((d, idx) => (
-          <path key={idx} d={d} fill="none" stroke="#888" strokeWidth="1.2" markerEnd="url(#arrowhead)" />
+          <path key={idx} d={d} fill="none" stroke="#555" strokeWidth="2" markerEnd="url(#arrowhead)" />
         ))}
       </svg>
 

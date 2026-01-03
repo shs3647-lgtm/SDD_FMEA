@@ -61,10 +61,15 @@ export function useSVGLines(
   }, [chainAreaRef, fmNodeRef, feColRef, fcColRef]);
 
   useEffect(() => {
-    const timer = setTimeout(drawLines, 100);
+    // 여러 타이밍에 drawLines 호출 (카드 렌더링 후 확실히 그리기)
+    const timer1 = setTimeout(drawLines, 50);
+    const timer2 = setTimeout(drawLines, 150);
+    const timer3 = setTimeout(drawLines, 300);
     window.addEventListener('resize', drawLines);
     return () => {
-      clearTimeout(timer);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
       window.removeEventListener('resize', drawLines);
     };
   }, [drawLines, linkedFEs, linkedFCs, currentFM]);
