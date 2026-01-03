@@ -699,8 +699,20 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
           <div className="flex-1 flex gap-1 min-w-0">
             <div style={fmeaNameStyle}>{state.l1?.name || 'FMEA'}</div>
             <button onClick={() => setViewMode('result')} style={resultButtonStyle(viewMode === 'result')}>
-              분석결과 (FE:{linkStats.feLinkedCount} FM:{linkStats.fmLinkedCount} FC:{linkStats.fcLinkedCount})
+              분석결과
             </button>
+            {/* FE/FM/FC 숫자 배지 */}
+            <div className="flex gap-1 items-center">
+              <span style={{ padding: '2px 6px', borderRadius: 4, background: '#1565c0', color: '#fff', fontSize: 11, fontWeight: 600 }}>
+                {feData.length}
+              </span>
+              <span style={{ padding: '2px 6px', borderRadius: 4, background: '#e65100', color: '#fff', fontSize: 11, fontWeight: 600 }}>
+                {fmData.length}
+              </span>
+              <span style={{ padding: '2px 6px', borderRadius: 4, background: '#388e3c', color: '#fff', fontSize: 11, fontWeight: 600 }}>
+                {fcData.length}
+              </span>
+            </div>
             {/* 확정 상태 배지 */}
             {isConfirmed && (
               <span style={{ 
