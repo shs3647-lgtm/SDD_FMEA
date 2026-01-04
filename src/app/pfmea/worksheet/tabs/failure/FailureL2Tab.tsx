@@ -38,6 +38,7 @@ import DataSelectModal from '@/components/modals/DataSelectModal';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS } from '../../constants';
 import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
 import { getZebraColors } from '@/styles/level-colors';
+import { findLinkedFailureModesForProductChar, getAutoLinkMessage } from '../../utils/auto-link';
 import { handleEnterBlur } from '../../utils/keyboard';
 
 const FAIL_COLORS = {
@@ -253,6 +254,50 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
           failureModes: [...otherModes, ...newModes]
         };
       });
+      
+      // ✅ 자동연결: 동일한 제품특성 이름을 가진 다른 공정에도 동일한 고장형태 추가
+      const currentCharName = modal.parentCharName;
+      if (currentCharName && selectedValues.length > 0) {
+        let autoLinkedCount = 0;
+        
+        newState.l2 = newState.l2.map((proc: any) => {
+          // 현재 공정은 이미 처리됨
+          if (proc.id === processId) return proc;
+          
+          // 동일한 이름의 제품특성 찾기
+          const allChars = (proc.functions || []).flatMap((f: any) => f.productChars || []);
+          const matchingChars = allChars.filter((c: any) => c.name === currentCharName);
+          
+          if (matchingChars.length === 0) return proc;
+          
+          const currentModes = proc.failureModes || [];
+          const updatedModes = [...currentModes];
+          
+          matchingChars.forEach((charItem: any) => {
+            selectedValues.forEach(val => {
+              const exists = updatedModes.some((m: any) => 
+                m.productCharId === charItem.id && m.name === val
+              );
+              if (!exists) {
+                updatedModes.push({
+                  id: uid(),
+                  name: val,
+                  sc: false,
+                  productCharId: charItem.id
+                });
+                autoLinkedCount++;
+              }
+            });
+          });
+          
+          return { ...proc, failureModes: updatedModes };
+        });
+        
+        if (autoLinkedCount > 0) {
+          const message = getAutoLinkMessage(selectedValues, '고장형태');
+          console.log(`[FailureL2Tab] ${currentCharName}: ${message} (${autoLinkedCount}건 자동연결)`);
+        }
+      }
       
       console.log('[FailureL2Tab] 상태 업데이트 완료');
       return newState;

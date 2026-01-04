@@ -33,6 +33,7 @@ import DataSelectModal from '@/components/modals/DataSelectModal';
 import SODSelectModal from '@/components/modals/SODSelectModal';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
 import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
+import { findLinkedFailureEffectsForRequirement, getAutoLinkMessage } from '../../utils/auto-link';
 import { L1_TYPE_COLORS, getL1TypeColor, getZebraColors } from '@/styles/level-colors';
 import { handleEnterBlur } from '../../utils/keyboard';
 

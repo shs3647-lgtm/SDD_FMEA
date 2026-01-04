@@ -27,6 +27,7 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { FunctionTabProps } from './types';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
+import { findLinkedProductCharsForFunction, getAutoLinkItems, getAutoLinkMessage } from '../../utils/auto-link';
 import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
 import { handleEnterBlur } from '../../utils/keyboard';
 import SelectableCell from '@/components/worksheet/SelectableCell';
@@ -255,8 +256,18 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
           for (let i = startIdx; i < selectedValues.length; i++) {
             const val = selectedValues[i];
             if (!existingNames.has(val)) {
-              updatedFuncs.push({ id: uid(), name: val, productChars: [] });
+              // ✅ 자동연결: 다른 공정에서 동일 기능에 연결된 제품특성 찾기
+              const linkedChars = findLinkedProductCharsForFunction(prev, val);
+              const autoLinkedChars = linkedChars.map(name => ({ id: uid(), name, specialChar: null }));
+              
+              updatedFuncs.push({ id: uid(), name: val, productChars: autoLinkedChars });
               existingNames.add(val);
+              
+              // 자동연결 알림
+              if (autoLinkedChars.length > 0) {
+                const message = getAutoLinkMessage(linkedChars, '제품특성');
+                console.log(`[FunctionL2Tab] ${val}: ${message}`);
+              }
             }
           }
           

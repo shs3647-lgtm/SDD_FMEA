@@ -27,6 +27,7 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { FunctionTabProps } from './types';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
+import { findLinkedProcessCharsForFunction, getAutoLinkMessage } from '../../utils/auto-link';
 import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
 import { handleEnterBlur } from '../../utils/keyboard';
 import { getZebraColors } from '@/styles/level-colors';
@@ -306,8 +307,18 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
               for (let i = startIdx; i < selectedValues.length; i++) {
                 const val = selectedValues[i];
                 if (!existingNames.has(val)) {
-                  updatedFuncs.push({ id: uid(), name: val, processChars: [] });
+                  // ✅ 자동연결: 다른 작업요소에서 동일 기능에 연결된 공정특성 찾기
+                  const linkedChars = findLinkedProcessCharsForFunction(prev, val);
+                  const autoLinkedChars = linkedChars.map(name => ({ id: uid(), name, specialChar: null }));
+                  
+                  updatedFuncs.push({ id: uid(), name: val, processChars: autoLinkedChars });
                   existingNames.add(val);
+                  
+                  // 자동연결 알림
+                  if (autoLinkedChars.length > 0) {
+                    const message = getAutoLinkMessage(linkedChars, '공정특성');
+                    console.log(`[FunctionL3Tab] ${val}: ${message}`);
+                  }
                 }
               }
               

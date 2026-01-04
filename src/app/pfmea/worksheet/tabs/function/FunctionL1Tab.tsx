@@ -31,6 +31,7 @@ import DataSelectModal from '@/components/modals/DataSelectModal';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
 import { WS, btnConfirm, btnEdit, badgeConfirmed, badgeOk, badgeMissing } from '@/styles/worksheet';
 import { handleEnterBlur } from '../../utils/keyboard';
+import { findLinkedFunctionsForType, findLinkedRequirementsForFunction, getAutoLinkMessage } from '../../utils/auto-link';
 
 // 구분(Type)별 색상 정의 - 공통 색상 사용
 import { L1_TYPE_COLORS, getL1TypeColor } from '@/styles/level-colors';
@@ -266,8 +267,18 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
         for (let i = startIdx; i < selectedValues.length; i++) {
           const val = selectedValues[i];
           if (!existingNames.has(val)) {
-            currentTypes.push({ id: uid(), name: val, functions: [] });
+            // ✅ 자동연결: 다른 유형에서 동일 유형에 연결된 기능들 찾기
+            const linkedFunctions = findLinkedFunctionsForType(prev, val);
+            const autoLinkedFuncs = linkedFunctions.map(name => ({ id: uid(), name, requirements: [] }));
+            
+            currentTypes.push({ id: uid(), name: val, functions: autoLinkedFuncs });
             existingNames.add(val);
+            
+            // 자동연결 알림
+            if (autoLinkedFuncs.length > 0) {
+              const message = getAutoLinkMessage(linkedFunctions, '기능');
+              console.log(`[FunctionL1Tab] ${val}: ${message}`);
+            }
           }
         }
         
@@ -317,8 +328,18 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
           for (let i = startIdx; i < selectedValues.length; i++) {
             const val = selectedValues[i];
             if (!existingNames.has(val)) {
-              updatedFuncs.push({ id: uid(), name: val, requirements: [] });
+              // ✅ 자동연결: 다른 유형에서 동일 기능에 연결된 요구사항들 찾기
+              const linkedRequirements = findLinkedRequirementsForFunction(prev, val);
+              const autoLinkedReqs = linkedRequirements.map(name => ({ id: uid(), name }));
+              
+              updatedFuncs.push({ id: uid(), name: val, requirements: autoLinkedReqs });
               existingNames.add(val);
+              
+              // 자동연결 알림
+              if (autoLinkedReqs.length > 0) {
+                const message = getAutoLinkMessage(linkedRequirements, '요구사항');
+                console.log(`[FunctionL1Tab] ${val}: ${message}`);
+              }
             }
           }
           

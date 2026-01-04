@@ -32,6 +32,7 @@ import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants'
 import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
 import { getZebraColors } from '@/styles/level-colors';
 import { handleEnterBlur } from '../../utils/keyboard';
+import { findLinkedFailureCausesForProcessChar, getAutoLinkMessage } from '../../utils/auto-link';
 
 // 색상 정의
 const FAIL_COLORS = {
@@ -271,6 +272,52 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
             failureCauses: [...otherCauses, ...newCauses]
           };
         });
+        
+        // ✅ 자동연결: 동일한 공정특성 이름을 가진 다른 공정에도 동일한 고장원인 추가
+        const currentCharName = (modal as any).parentCharName;
+        if (currentCharName && selectedValues.length > 0) {
+          let autoLinkedCount = 0;
+          
+          newState.l2 = newState.l2.map((proc: any) => {
+            // 현재 공정은 이미 처리됨
+            if (proc.id === processId) return proc;
+            
+            // 동일한 이름의 공정특성 찾기
+            const allChars = (proc.l3 || []).flatMap((we: any) => 
+              (we.functions || []).flatMap((f: any) => f.processChars || [])
+            );
+            const matchingChars = allChars.filter((c: any) => c.name === currentCharName);
+            
+            if (matchingChars.length === 0) return proc;
+            
+            const currentCauses = proc.failureCauses || [];
+            const updatedCauses = [...currentCauses];
+            
+            matchingChars.forEach((charItem: any) => {
+              selectedValues.forEach(val => {
+                const exists = updatedCauses.some((c: any) => 
+                  c.processCharId === charItem.id && c.name === val
+                );
+                if (!exists) {
+                  updatedCauses.push({
+                    id: uid(),
+                    name: val,
+                    occurrence: undefined,
+                    processCharId: charItem.id
+                  });
+                  autoLinkedCount++;
+                }
+              });
+            });
+            
+            return { ...proc, failureCauses: updatedCauses };
+          });
+          
+          if (autoLinkedCount > 0) {
+            const message = getAutoLinkMessage(selectedValues, '고장원인');
+            console.log(`[FailureL3Tab] ${currentCharName}: ${message} (${autoLinkedCount}건 자동연결)`);
+          }
+        }
       }
       
       // ✅ CRUD Update: 확정 상태 해제
