@@ -79,48 +79,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
     return false;
   };
 
-  // ✅ 항목별 누락 건수 분리 계산 (필터링된 데이터만 카운트)
-  const missingCounts = React.useMemo(() => {
-    let functionCount = 0;   // 메인공정기능 누락
-    let charCount = 0;       // 제품특성 누락
-    
-    // ✅ 의미 있는 공정만 필터링
-    const meaningfulProcs = state.l2.filter((p: any) => {
-      const name = p.name || '';
-      return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
-    });
-    
-    meaningfulProcs.forEach(proc => {
-      // ✅ 의미 있는 기능만 필터링
-      const meaningfulFuncs = (proc.functions || []).filter((f: any) => {
-        const name = f.name || '';
-        return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
-      });
-      
-      // 공정기능 체크
-      if (meaningfulFuncs.length === 0) functionCount++;
-      meaningfulFuncs.forEach(f => {
-        if (isMissing(f.name)) functionCount++;
-        
-        // ✅ 의미 있는 기능이 있는 경우에만 제품특성 누락 체크
-        if (!isMissing(f.name)) {
-          // ✅ 의미 있는 제품특성만 필터링
-          const meaningfulChars = (f.productChars || []).filter((c: any) => {
-            const name = c.name || '';
-            return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && 
-                   !name.includes('추가') && !name.includes('입력') && !name.includes('필요');
-          });
-          
-          // 제품특성 체크: 의미 있는 기능이 있는데 제품특성이 없으면 누락
-          if (meaningfulChars.length === 0) charCount++;
-        }
-      });
-    });
-    return { functionCount, charCount, total: functionCount + charCount };
-  }, [state.l2]);
-  
-  // 총 누락 건수 (기존 호환성)
-  const missingCount = missingCounts.total;
+  // 누락건수 계산 제거 - 사용자 요청에 따라 삭제
 
   // ✅ 2L COUNT 계산 (메인공정, 메인공정기능, 제품특성)
   const processCount = useMemo(() => state.l2.filter(p => p.name && !p.name.includes('클릭')).length, [state.l2]);
@@ -144,12 +103,6 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
 
   // 확정 핸들러 (고장분석 패턴 적용)
   const handleConfirm = useCallback(() => {
-    console.log('[FunctionL2Tab] 확정 버튼 클릭, missingCount:', missingCount);
-    if (missingCount > 0) {
-      alert(`누락된 항목이 ${missingCount}건 있습니다.\n먼저 입력을 완료해주세요.`);
-      return;
-    }
-    
     // ✅ 현재 기능 통계 로그
     const funcCount = state.l2.flatMap((p: any) => p.functions || []).length;
     const charCount = state.l2.flatMap((p: any) => (p.functions || []).flatMap((f: any) => f.productChars || [])).length;
@@ -169,7 +122,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
     });
     
     alert('✅ 2L 메인공정 기능분석이 확정되었습니다.');
-  }, [missingCount, state.l2, setState, setDirty, saveToLocalStorage]);
+  }, [state.l2, setState, setDirty, saveToLocalStorage]);
 
   // 수정 핸들러 (고장분석 패턴 적용)
   const handleEdit = useCallback(() => {
@@ -509,7 +462,6 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                   ) : (
                     <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
                   )}
-                  <span className={missingCount > 0 ? badgeMissing : badgeOk}>누락 {missingCount}건</span>
                   {isConfirmed && (
                     <button type="button" onClick={handleEdit} className={btnEdit}>수정</button>
                   )}
@@ -525,11 +477,6 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
             </th>
             <th colSpan={3} className="bg-[#388e3c] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
               2. 메인공정 기능/제품특성
-              {missingCount > 0 && (
-                <span className="ml-2 bg-orange-500 text-white px-2 py-0.5 rounded-full text-xs">
-                  누락 {missingCount}건
-                </span>
-              )}
             </th>
           </tr>
           
