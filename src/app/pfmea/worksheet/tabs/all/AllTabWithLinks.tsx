@@ -263,18 +263,18 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
               <th style={colHeaderStyle('60px', COLORS.structure.l1.h3)}>제품명</th>
               <th style={colHeaderStyle('80px', COLORS.structure.l2.h3)}>NO+공정명</th>
               <th style={colHeaderStyleWithOptions('30px', COLORS.special.m4.h3, '#fff', { fontWeight: FONT_WEIGHTS.bold })}>4M</th>
-              <th style={colHeaderStyle('70px', COLORS.structure.l3.h3)}>부품</th>
+              <th style={colHeaderStyle('70px', COLORS.structure.l3.h3)}>작업요소</th>
             </>}
             {/* 기능분석 8열 */}
             {visibleSteps.includes(3) && <>
               <th style={colHeaderStyle('70px', COLORS.special.scope.h3, '#fff')}>구분</th>
               <th style={colHeaderStyle('120px', COLORS.function.l1.h3)}>제품 기능</th>
               <th style={colHeaderStyle('70px', COLORS.function.l1.h3)}>요구사항</th>
-              <th style={colHeaderStyle('160px', COLORS.function.l2.h3)}>초점요소 기능</th>
+              <th style={colHeaderStyle('160px', COLORS.function.l2.h3)}>공정기능</th>
               <th style={colHeaderStyleWithOptions('80px', COLORS.function.l2.h3, undefined, { whiteSpace: 'nowrap' })}>제품특성</th>
               <th style={colHeaderStyleWithOptions('30px', COLORS.special.m4.h3, '#fff', { fontWeight: FONT_WEIGHTS.bold })}>4M</th>
-              <th style={colHeaderStyle('140px', COLORS.function.l3.h3)}>부품 기능</th>
-              <th style={colHeaderStyleWithOptions('80px', COLORS.function.l3.h3, undefined, { whiteSpace: 'nowrap' })}>설계특성</th>
+              <th style={colHeaderStyle('140px', COLORS.function.l3.h3)}>작업요소기능</th>
+              <th style={colHeaderStyleWithOptions('80px', COLORS.function.l3.h3, undefined, { whiteSpace: 'nowrap' })}>공정특성</th>
             </>}
             {/* 고장분석 6열 */}
             {visibleSteps.includes(4) && <>
@@ -282,7 +282,7 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
               <th style={colHeaderStyleWithOptions('120px', COLORS.failure.l1.h3, undefined, { whiteSpace: 'nowrap' })}>고장영향</th>
               <th style={colHeaderStyleWithOptions('30px', COLORS.indicator.severity.bg, COLORS.indicator.severity.text, { fontWeight: FONT_WEIGHTS.bold })}>S</th>
               <th style={colHeaderStyleWithOptions('120px', COLORS.failure.l2.h3, undefined, { whiteSpace: 'nowrap' })}>고장형태</th>
-              <th style={colHeaderStyleWithOptions('100px', COLORS.failure.l3.h3, undefined, { whiteSpace: 'nowrap' })}>부품</th>
+              <th style={colHeaderStyleWithOptions('100px', COLORS.failure.l3.h3, undefined, { whiteSpace: 'nowrap' })}>작업요소</th>
               <th style={colHeaderStyleWithOptions('130px', COLORS.failure.l3.h3, undefined, { whiteSpace: 'nowrap' })}>고장원인</th>
             </>}
             {/* 리스크분석 8열 */}
