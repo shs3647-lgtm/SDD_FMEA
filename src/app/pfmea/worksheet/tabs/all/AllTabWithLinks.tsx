@@ -158,14 +158,14 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
           {/* 2행: 서브그룹 */}
           <tr>
             {visibleSteps.includes(2) && <>
-              <th style={subHeaderStyle(COLORS.structure.l1.h2)}>1.다음 상위수준</th>
-              <th style={subHeaderStyle(COLORS.structure.l2.h2)}>2.초점 요소</th>
-              <th colSpan={2} style={subHeaderStyle(COLORS.structure.l3.h2)}>3.다음 하위수준</th>
+              <th style={subHeaderStyle(COLORS.structure.l1.h2)}>1.완제품 공정명</th>
+              <th style={subHeaderStyle(COLORS.structure.l2.h2)}>2.메인공정</th>
+              <th colSpan={2} style={subHeaderStyle(COLORS.structure.l3.h2)}>3.작업요소</th>
             </>}
             {visibleSteps.includes(3) && <>
-              <th colSpan={3} style={subHeaderStyle(COLORS.function.l1.h2)}>1.다음상위수준 기능</th>
+              <th colSpan={3} style={subHeaderStyle(COLORS.function.l1.h2)}>1.완제품 기능</th>
               <th colSpan={2} style={subHeaderStyle(COLORS.function.l2.h2)}>2.공정기능/제품특성</th>
-              <th colSpan={3} style={subHeaderStyle(COLORS.function.l3.h2)}>3.다음하위수준/특성유형</th>
+              <th colSpan={3} style={subHeaderStyle(COLORS.function.l3.h2)}>3.작업요소기능/공정특성</th>
             </>}
             {visibleSteps.includes(4) && <>
               <th colSpan={3} style={subHeaderStyle(COLORS.failure.l1.h2)}>1.고장영향(FE)</th>
