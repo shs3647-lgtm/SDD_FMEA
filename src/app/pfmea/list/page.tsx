@@ -362,7 +362,7 @@ export default function FMEAListPage() {
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-left align-middle">
                   {p.project?.projectName ? (
-                    <a 
+                    <a
                       href={`/apqp/list`}
                       className="text-blue-600 hover:underline"
                       onClick={(e) => e.stopPropagation()}
@@ -370,16 +370,7 @@ export default function FMEAListPage() {
                       {p.project.projectName}
                     </a>
                   ) : (
-                    <span 
-                      className="text-red-500 italic cursor-pointer hover:underline font-semibold"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // APQP 리스트로 이동 (선택 모드), 없으면 등록화면으로 자동 이동
-                        window.location.href = `/apqp/list?mode=select&fmeaId=${p.id}`;
-                      }}
-                    >
-                      미입력
-                    </span>
+                    <span className="text-gray-400">-</span>
                   )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-left align-middle">
@@ -392,73 +383,38 @@ export default function FMEAListPage() {
                       {p.fmeaInfo?.subject || p.project?.productName}
                     </a>
                   ) : (
-                    <span 
-                      className="text-red-500 italic cursor-pointer hover:underline font-semibold"
-                      onClick={(e) => { e.stopPropagation(); window.location.href = `/pfmea/register?id=${p.id}`; }}
-                    >
-                      미입력
-                    </span>
+                    <span className="text-gray-400">-</span>
                   )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                  {p.project?.customer ? p.project.customer : (
-                    <span 
-                      className="text-red-500 italic cursor-pointer hover:underline font-semibold"
-                      onClick={(e) => { e.stopPropagation(); window.location.href = `/pfmea/register?id=${p.id}`; }}
-                    >
-                      미입력
-                    </span>
+                  {p.project?.customer ? p.project.customer : <span className="text-gray-400">-</span>}
+                </td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle">
+                  {p.fmeaInfo?.modelYear ? p.fmeaInfo.modelYear : <span className="text-gray-400">-</span>}
+                </td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle">
+                  {p.fmeaInfo?.designResponsibility || p.project?.department ? (
+                    p.fmeaInfo?.designResponsibility || p.project?.department
+                  ) : (
+                    <span className="text-gray-400">-</span>
                   )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                  {p.fmeaInfo?.modelYear ? p.fmeaInfo.modelYear : (
-                    <span 
-                      className="text-red-500 italic cursor-pointer hover:underline font-semibold"
-                      onClick={(e) => { e.stopPropagation(); window.location.href = `/pfmea/register?id=${p.id}`; }}
-                    >
-                      미입력
-                    </span>
+                  {p.fmeaInfo?.fmeaResponsibleName || p.project?.leader ? (
+                    p.fmeaInfo?.fmeaResponsibleName || p.project?.leader
+                  ) : (
+                    <span className="text-gray-400">-</span>
                   )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                  {p.fmeaInfo?.designResponsibility || p.project?.department ? (p.fmeaInfo?.designResponsibility || p.project?.department) : (
-                    <span 
-                      className="text-red-500 italic cursor-pointer hover:underline font-semibold"
-                      onClick={(e) => { e.stopPropagation(); window.location.href = `/pfmea/register?id=${p.id}`; }}
-                    >
-                      미입력
-                    </span>
+                  {p.fmeaInfo?.fmeaStartDate || p.project?.startDate ? (
+                    p.fmeaInfo?.fmeaStartDate || p.project?.startDate
+                  ) : (
+                    <span className="text-gray-400">-</span>
                   )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                  {p.fmeaInfo?.fmeaResponsibleName || p.project?.leader ? (p.fmeaInfo?.fmeaResponsibleName || p.project?.leader) : (
-                    <span 
-                      className="text-red-500 italic cursor-pointer hover:underline font-semibold"
-                      onClick={(e) => { e.stopPropagation(); window.location.href = `/pfmea/register?id=${p.id}`; }}
-                    >
-                      미입력
-                    </span>
-                  )}
-                </td>
-                <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                  {p.fmeaInfo?.fmeaStartDate || p.project?.startDate ? (p.fmeaInfo?.fmeaStartDate || p.project?.startDate) : (
-                    <span 
-                      className="text-red-500 italic cursor-pointer hover:underline font-semibold"
-                      onClick={(e) => { e.stopPropagation(); window.location.href = `/pfmea/register?id=${p.id}`; }}
-                    >
-                      미입력
-                    </span>
-                  )}
-                </td>
-                <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                  {p.fmeaInfo?.fmeaRevisionDate ? p.fmeaInfo.fmeaRevisionDate : (
-                    <span 
-                      className="text-red-500 italic cursor-pointer hover:underline font-semibold"
-                      onClick={(e) => { e.stopPropagation(); window.location.href = `/pfmea/register?id=${p.id}`; }}
-                    >
-                      미입력
-                    </span>
-                  )}
+                  {p.fmeaInfo?.fmeaRevisionDate ? p.fmeaInfo.fmeaRevisionDate : <span className="text-gray-400">-</span>}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">{p.revisionNo || 'Rev.00'}</td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
@@ -466,8 +422,8 @@ export default function FMEAListPage() {
                 </td>
               </tr>
             ))}
-            {/* 빈 행 */}
-            {Array.from({ length: Math.max(0, 10 - filteredProjects.length) }).map((_, idx) => (
+            {/* 빈 행: 1번 행만 유지 (검색 결과 0건 등) */}
+            {Array.from({ length: Math.max(0, 1 - filteredProjects.length) }).map((_, idx) => (
               <tr key={`empty-${idx}`} className={`${(filteredProjects.length + idx) % 2 === 0 ? 'bg-[#e3f2fd]' : 'bg-white'}`} style={{ height: '28px' }}>
                 <td className="border border-gray-400 px-1 py-0.5 text-center align-middle">
                   <input type="checkbox" disabled className="w-3.5 h-3.5 opacity-30" />

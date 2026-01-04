@@ -1,0 +1,16 @@
+{
+  "protectedPaths": [
+    "src/ui/menu/**",
+    "src/ui/wireframe/**",
+    "src/grid/worksheet-structure/**",
+    "scripts/code-freeze/**"
+  ],
+  "frozenFiles": [
+    "src/app/pfmea/register/page.tsx"
+  ],
+  "approvalToken": "APPROVED-BY-USER",
+  "overrideEnvVar": "FMEA_GUARD_OVERRIDE",
+  "overrideEnvValue": "APPROVED-BY-USER"
+}
+
+
