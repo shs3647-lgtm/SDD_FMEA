@@ -43,7 +43,7 @@ const cellBase: React.CSSProperties = { border: BORDER, padding: '4px 6px', font
 const headerStyle = (bg: string, color = '#fff'): React.CSSProperties => ({ ...cellBase, background: bg, color, fontWeight: FONT_WEIGHTS.bold, textAlign: 'center' });
 const dataCell = (bg: string): React.CSSProperties => ({ ...cellBase, background: bg });
 
-export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalStorage }: FunctionTabProps) {
+export default function FunctionL1Tab({ state, setState, setStateSynced, setDirty, saveToLocalStorage }: FunctionTabProps) {
   const [modal, setModal] = useState<{ type: string; id: string; title: string; itemCode: string; parentFunction?: string; parentCategory?: string } | null>(null);
   
   // 확정 상태는 state에서 관리 (localStorage에 저장됨)
@@ -52,11 +52,16 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
   // ✅ 셀 클릭 시 확정됨 상태면 자동으로 수정 모드로 전환
   const handleCellClick = useCallback((modalConfig: any) => {
     if (isConfirmed) {
-      setState(prev => ({ ...prev, l1Confirmed: false }));
+      const updateFn = (prev: any) => ({ ...prev, l1Confirmed: false });
+      if (setStateSynced) {
+        setStateSynced(updateFn);
+      } else {
+        setState(updateFn);
+      }
       setDirty(true);
     }
     setModal(modalConfig);
-  }, [isConfirmed, setState, setDirty]);
+  }, [isConfirmed, setState, setStateSynced, setDirty]);
 
   // 플레이스홀더 패턴 체크 함수
   const isMissing = (name: string | undefined) => {
@@ -152,7 +157,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
   }, [state.l1.types, saveToLocalStorage]);
 
 
-  // 확정 핸들러 (고장분석 패턴 적용)
+  // 확정 핸들러 (고장분석 패턴 적용) - ✅ setStateSynced 사용으로 저장 보장
   const handleConfirm = useCallback(() => {
     console.log('[FunctionL1Tab] 확정 버튼 클릭, missingCount:', missingCount);
     if (missingCount > 0) {
@@ -165,28 +170,42 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
     const reqCount = state.l1.types.flatMap(t => t.functions.flatMap(f => f.requirements || [])).length;
     console.log('[FunctionL1Tab] 확정 시 기능:', funcCount, '개, 요구사항:', reqCount, '개');
     
-    setState(prev => {
+    // ✅ setStateSynced 사용 (stateRef 동기 업데이트)
+    const updateFn = (prev: any) => {
       const newState = { ...prev, l1Confirmed: true };
       console.log('[FunctionL1Tab] 확정 상태 업데이트:', newState.l1Confirmed);
       return newState;
-    });
+    };
+    
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     setDirty(true);
     
-    // ✅ 즉시 저장 (requestAnimationFrame 사용)
+    // ✅ 저장 보장 (stateRef가 동기적으로 업데이트되었으므로 즉시 저장 가능)
     requestAnimationFrame(() => {
-      saveToLocalStorage?.();
-      console.log('[FunctionL1Tab] 확정 후 localStorage 저장 완료');
+      setTimeout(() => {
+        saveToLocalStorage?.();
+        console.log('[FunctionL1Tab] 확정 후 localStorage 저장 완료');
+      }, 50);
     });
     
     alert('✅ 1L 완제품 기능분석이 확정되었습니다.');
-  }, [missingCount, state.l1.types, setState, setDirty, saveToLocalStorage]);
+  }, [missingCount, state.l1.types, setState, setStateSynced, setDirty, saveToLocalStorage]);
 
-  // 수정 핸들러 (고장분석 패턴 적용)
+  // 수정 핸들러 (고장분석 패턴 적용) - ✅ setStateSynced 사용
   const handleEdit = useCallback(() => {
-    setState(prev => ({ ...prev, l1Confirmed: false }));
+    const updateFn = (prev: any) => ({ ...prev, l1Confirmed: false });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     setDirty(true);
-    requestAnimationFrame(() => saveToLocalStorage?.());
-  }, [setState, setDirty, saveToLocalStorage]);
+    requestAnimationFrame(() => setTimeout(() => saveToLocalStorage?.(), 50));
+  }, [setState, setStateSynced, setDirty, saveToLocalStorage]);
 
   // 인라인 편집 핸들러 - 요구사항 (더블클릭)
   const handleInlineEditRequirement = useCallback((typeId: string, funcId: string, reqId: string, newValue: string) => {
