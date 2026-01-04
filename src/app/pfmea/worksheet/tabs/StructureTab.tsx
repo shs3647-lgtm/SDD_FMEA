@@ -562,16 +562,17 @@ export default function StructureTab(props: StructureTabProps) {
     console.log('[StructureTab] setState 호출 후');
     setDirty(true);
     
-    // ✅ 즉시 저장 (requestAnimationFrame 사용)
-    requestAnimationFrame(() => {
-      console.log('[StructureTab] requestAnimationFrame 실행');
+    // ✅ 저장 보장 (stateRef 업데이트 대기 후 저장)
+    // useEffect에서 stateRef.current = state 가 실행된 후 저장되도록 setTimeout 사용
+    setTimeout(() => {
+      console.log('[StructureTab] setTimeout 실행 (200ms 후)');
       if (saveToLocalStorage) {
         saveToLocalStorage();
         console.log('[StructureTab] 확정 후 localStorage 저장 완료');
       } else {
         console.error('[StructureTab] saveToLocalStorage가 없습니다!');
       }
-    });
+    }, 200);
     
     alert('✅ 구조분석(2단계)이 확정되었습니다.\n\n이제 기능분석(3단계) 탭이 활성화되었습니다.');
     console.log('[StructureTab] ========== 확정 완료 ==========');
@@ -581,7 +582,8 @@ export default function StructureTab(props: StructureTabProps) {
   const handleEdit = useCallback(() => {
     setState((prev: any) => ({ ...prev, structureConfirmed: false }));
     setDirty(true);
-    requestAnimationFrame(() => saveToLocalStorage?.());
+    // ✅ 저장 보장 (stateRef 업데이트 대기 후 저장)
+    setTimeout(() => saveToLocalStorage?.(), 200);
   }, [setState, setDirty, saveToLocalStorage]);
   
   return (
