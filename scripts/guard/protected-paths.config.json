@@ -7,7 +7,8 @@
   ],
   "frozenFiles": [
     "src/app/pfmea/register/page.tsx",
-    "src/app/pfmea/worksheet/tabs/function/FunctionL2Tab.tsx"
+    "src/app/pfmea/worksheet/tabs/function/FunctionL2Tab.tsx",
+    "src/app/pfmea/worksheet/tabs/function/FunctionL3Tab.tsx"
   ],
   "approvalToken": "APPROVED-BY-USER",
   "overrideEnvVar": "FMEA_GUARD_OVERRIDE",
