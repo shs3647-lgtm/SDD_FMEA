@@ -481,22 +481,41 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
     requestAnimationFrame(() => saveToLocalStorage?.());
   }, [specialCharModal, setState, setDirty, saveToLocalStorage]);
 
+  // ✅ 의미 있는 기능인지 체크하는 헬퍼
+  const isMeaningfulFunc = (f: any) => {
+    const name = f.name || '';
+    return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && 
+           !name.includes('추가') && !name.includes('입력') && !name.includes('필요');
+  };
+  
+  // ✅ 의미 있는 공정특성 필터 + 중복 제거
+  const getMeaningfulChars = (chars: any[]) => {
+    return (chars || []).filter((c: any, idx: number, arr: any[]) => {
+      const name = c.name || '';
+      const isMeaningful = name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && 
+             !name.includes('추가') && !name.includes('입력') && !name.includes('필요');
+      // ✅ 중복 제거: 같은 이름의 공정특성 중 첫 번째만 유지
+      const isFirst = arr.findIndex((x: any) => x.name === c.name) === idx;
+      return isMeaningful && isFirst;
+    });
+  };
+
   // 공정의 총 행 수 계산
   const getProcRowSpan = (proc: any) => {
     const l3List = proc.l3 || [];
     if (l3List.length === 0) return 1;
     return l3List.reduce((acc: number, we: any) => {
-      const funcs = we.functions || [];
+      const funcs = (we.functions || []).filter(isMeaningfulFunc);
       if (funcs.length === 0) return acc + 1;
-      return acc + funcs.reduce((a: number, f: any) => a + Math.max(1, (f.processChars || []).length), 0);
+      return acc + funcs.reduce((a: number, f: any) => a + Math.max(1, getMeaningfulChars(f.processChars).length), 0);
     }, 0);
   };
 
   // 작업요소의 총 행 수 계산
   const getWeRowSpan = (we: any) => {
-    const funcs = we.functions || [];
+    const funcs = (we.functions || []).filter(isMeaningfulFunc);
     if (funcs.length === 0) return 1;
-    return funcs.reduce((a: number, f: any) => a + Math.max(1, (f.processChars || []).length), 0);
+    return funcs.reduce((a: number, f: any) => a + Math.max(1, getMeaningfulChars(f.processChars).length), 0);
   };
 
   const hasAnyL3 = state.l2.some(p => (p.l3 || []).length > 0);
@@ -602,7 +621,8 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
               let isFirstProcRow = true;
               
               return l3List.flatMap((we, weIdx) => {
-                const funcs = we.functions || [];
+                // ✅ 의미 있는 기능만 필터링
+                const funcs = (we.functions || []).filter(isMeaningfulFunc);
                 const weRowSpan = getWeRowSpan(we);
                 
                 // 작업요소에 기능이 없는 경우
@@ -638,7 +658,8 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                 
                 // 작업요소에 기능이 있는 경우
                 return funcs.flatMap((f, fIdx) => {
-                  const chars = f.processChars || [];
+                  // ✅ 의미 있는 공정특성만 필터링 + 중복 제거
+                  const chars = getMeaningfulChars(f.processChars);
                   const funcRowSpan = Math.max(1, chars.length);
                   
                   // 기능에 공정특성이 없는 경우
