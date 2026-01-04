@@ -8,21 +8,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import type { FMEAWorksheetDB } from '@/app/pfmea/worksheet/schema';
+import { getPrisma } from '@/lib/prisma';
 
-// ✅ Prisma Client 조건부 import (DATABASE_URL이 있을 때만)
-let prisma: any = null;
-try {
-  if (process.env.DATABASE_URL) {
-    const prismaModule = require('@/lib/prisma');
-    prisma = prismaModule.prisma;
-  } else {
-    console.log('[API] DATABASE_URL이 설정되지 않음, localStorage 폴백 사용');
-  }
-} catch (e: any) {
-  // Prisma Client 생성 실패 시 null로 설정 (localStorage 폴백 사용)
-  console.warn('[API] Prisma Client 로드 실패, localStorage 폴백 사용:', e?.message || e);
-  prisma = null;
-}
+// ✅ Prisma는 Node.js 런타임에서만 안정적으로 동작 (edge/browser 번들 방지)
+export const runtime = 'nodejs';
 
 // 트랜잭션 타임아웃 (30초)
 const TRANSACTION_TIMEOUT = 30000;
@@ -32,9 +21,10 @@ const TRANSACTION_TIMEOUT = 30000;
  */
 export async function POST(request: NextRequest) {
   try {
+    const prisma = getPrisma();
     // ✅ Prisma 연결 확인
-    if (!prisma || !process.env.DATABASE_URL) {
-      console.warn('[API] DATABASE_URL이 설정되지 않음, 저장 스킵 (localStorage 폴백 사용)');
+    if (!prisma) {
+      console.warn('[API] Prisma 미활성(null), 저장 스킵 (localStorage 폴백 사용)');
       return NextResponse.json(
         { message: 'DATABASE_URL not configured, using localStorage fallback', fmeaId: null },
         { status: 200 }
@@ -398,9 +388,10 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
+    const prisma = getPrisma();
     // ✅ Prisma 연결 확인
-    if (!prisma || !process.env.DATABASE_URL) {
-      console.warn('[API] DATABASE_URL이 설정되지 않음, null 반환 (localStorage 폴백 사용)');
+    if (!prisma) {
+      console.warn('[API] Prisma 미활성(null), null 반환 (localStorage 폴백 사용)');
       return NextResponse.json(null);
     }
 
