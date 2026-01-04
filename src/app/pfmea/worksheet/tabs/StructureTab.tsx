@@ -32,6 +32,7 @@ import { handleEnterBlur } from '../utils/keyboard';
 interface StructureTabProps {
   state: WorksheetState;
   setState: React.Dispatch<React.SetStateAction<WorksheetState>>;
+  setStateSynced?: (updater: React.SetStateAction<WorksheetState>) => void;  // ✅ stateRef 동기 업데이트 버전
   rows: FlatRow[];
   l1Spans: number[];
   l2Spans: number[];
@@ -412,7 +413,7 @@ export function StructureRow({
 }
 
 export default function StructureTab(props: StructureTabProps) {
-  const { rows, setIsProcessModalOpen, state, setState, setDirty, saveToLocalStorage, handleInputBlur, handleInputKeyDown } = props;
+  const { rows, setIsProcessModalOpen, state, setState, setStateSynced, setDirty, saveToLocalStorage, handleInputBlur, handleInputKeyDown } = props;
   
   // ✅ 확정 상태 (고장분석 패턴 적용)
   const isConfirmed = (state as any).structureConfirmed || false;
@@ -557,38 +558,54 @@ export default function StructureTab(props: StructureTabProps) {
     const weCount = state.l2.flatMap(p => p.l3).length;
     console.log('[StructureTab] 확정 시 공정:', procCount, '개, 작업요소:', weCount, '개');
     
-    console.log('[StructureTab] setState 호출 전');
-    setState((prev: any) => {
+    console.log('[StructureTab] setStateSynced/setState 호출 전');
+    
+    // ✅ 핵심 수정: setStateSynced 사용 (stateRef 동기 업데이트)
+    // 이렇게 하면 saveToLocalStorage 호출 시 항상 최신 state가 저장됨
+    const updateFn = (prev: any) => {
       const newState = { ...prev, structureConfirmed: true, structureConfirmedAt: new Date().toISOString() };
       console.log('[StructureTab] 확정 상태 업데이트:', newState.structureConfirmed);
       return newState;
-    });
-    console.log('[StructureTab] setState 호출 후');
+    };
+    
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
+    console.log('[StructureTab] setStateSynced/setState 호출 후');
     setDirty(true);
     
-    // ✅ 저장 보장 (stateRef 업데이트 대기 후 저장)
-    // useEffect에서 stateRef.current = state 가 실행된 후 저장되도록 setTimeout 사용
-    setTimeout(() => {
-      console.log('[StructureTab] setTimeout 실행 (200ms 후)');
-      if (saveToLocalStorage) {
-        saveToLocalStorage();
-        console.log('[StructureTab] 확정 후 localStorage 저장 완료');
-      } else {
-        console.error('[StructureTab] saveToLocalStorage가 없습니다!');
-      }
-    }, 200);
+    // ✅ 저장 보장 (stateRef가 동기적으로 업데이트되었으므로 즉시 저장 가능)
+    // 렌더링 완료 후 저장하도록 requestAnimationFrame + setTimeout 사용
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        console.log('[StructureTab] 저장 실행');
+        if (saveToLocalStorage) {
+          saveToLocalStorage();
+          console.log('[StructureTab] 확정 후 localStorage 저장 완료');
+        } else {
+          console.error('[StructureTab] saveToLocalStorage가 없습니다!');
+        }
+      }, 50); // 동기 업데이트로 인해 지연 시간 단축 가능
+    });
     
     alert('✅ 구조분석(2단계)이 확정되었습니다.\n\n이제 기능분석(3단계) 탭이 활성화되었습니다.');
     console.log('[StructureTab] ========== 확정 완료 ==========');
-  }, [missingCounts, isConfirmed, state.l2, setState, setDirty, saveToLocalStorage]);
+  }, [missingCounts, isConfirmed, state.l2, setState, setStateSynced, setDirty, saveToLocalStorage]);
 
   // ✅ 수정 핸들러 (고장분석 패턴 적용)
   const handleEdit = useCallback(() => {
-    setState((prev: any) => ({ ...prev, structureConfirmed: false }));
+    const updateFn = (prev: any) => ({ ...prev, structureConfirmed: false });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     setDirty(true);
-    // ✅ 저장 보장 (stateRef 업데이트 대기 후 저장)
-    setTimeout(() => saveToLocalStorage?.(), 200);
-  }, [setState, setDirty, saveToLocalStorage]);
+    // ✅ 저장 보장 (stateRef가 동기적으로 업데이트되었으므로 즉시 저장 가능)
+    requestAnimationFrame(() => setTimeout(() => saveToLocalStorage?.(), 50));
+  }, [setState, setStateSynced, setDirty, saveToLocalStorage]);
   
   return (
     <>

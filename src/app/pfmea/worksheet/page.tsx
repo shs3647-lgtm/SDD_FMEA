@@ -76,6 +76,7 @@ function FMEAWorksheetPageContent() {
   const {
     state,
     setState,
+    setStateSynced,  // ✅ stateRef 동기 업데이트 버전
     dirty,
     setDirty,
     isSaving,
@@ -377,6 +378,7 @@ function FMEAWorksheetPageContent() {
   const tabProps = {
     state,
     setState,
+    setStateSynced,  // ✅ stateRef 동기 업데이트 버전
     rows,
     l1Spans,
     l1TypeSpans,

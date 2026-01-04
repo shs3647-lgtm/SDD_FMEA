@@ -36,6 +36,7 @@ import {
 interface UseWorksheetStateReturn {
   state: WorksheetState;
   setState: React.Dispatch<React.SetStateAction<WorksheetState>>;
+  setStateSynced: (updater: React.SetStateAction<WorksheetState>) => void;  // ✅ stateRef 동기 업데이트 버전
   dirty: boolean;
   setDirty: React.Dispatch<React.SetStateAction<boolean>>;
   isSaving: boolean;
@@ -124,10 +125,28 @@ export function useWorksheetState(): UseWorksheetStateReturn {
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // ✅ state를 ref로 유지하여 saveToLocalStorage에서 항상 최신 값 사용
+  // ⚠️ 중요: useLayoutEffect를 사용하여 렌더 직후 동기적으로 업데이트
+  // useEffect는 비동기라서 setState 직후 saveToLocalStorage 호출 시 이전 값이 저장되는 문제 발생
   const stateRef = useRef(state);
-  useEffect(() => {
+  
+  // 방법 1: useLayoutEffect로 동기적 업데이트 (렌더 직후)
+  React.useLayoutEffect(() => {
     stateRef.current = state;
   }, [state]);
+  
+  // 방법 2: setState 래퍼 함수 - stateRef도 동시에 업데이트
+  const setStateSynced = useCallback((updater: React.SetStateAction<WorksheetState>) => {
+    if (typeof updater === 'function') {
+      setState(prev => {
+        const newState = updater(prev);
+        stateRef.current = newState; // 동기적으로 ref 업데이트
+        return newState;
+      });
+    } else {
+      stateRef.current = updater; // 동기적으로 ref 업데이트
+      setState(updater);
+    }
+  }, []);
 
   // 원자성 DB 저장
   const saveAtomicDB = useCallback(async () => {
@@ -1599,7 +1618,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
   const l2Spans = useMemo(() => calculateSpans(rows, 'l2Id'), [rows]);
 
   return {
-    state, setState, dirty, setDirty, isSaving, lastSaved, fmeaList, currentFmea, selectedFmeaId, handleFmeaChange,
+    state, setState, setStateSynced, dirty, setDirty, isSaving, lastSaved, fmeaList, currentFmea, selectedFmeaId, handleFmeaChange,
     rows, l1Spans, l1TypeSpans, l1FuncSpans, l2Spans,
     saveToLocalStorage, handleInputKeyDown, handleInputBlur, handleSelect, addL2, addL3, deleteL2, deleteL3, handleProcessSelect,
     // 원자성 DB
