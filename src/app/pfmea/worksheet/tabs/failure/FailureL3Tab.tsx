@@ -422,7 +422,9 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
         };
         
         const allProcessChars: any[] = [];
-        (we.functions || []).forEach((f: any) => {
+        const functions = we.functions || [];
+        
+        functions.forEach((f: any) => {
           // ✅ 의미 있는 기능만 처리
           if (!isMeaningful(f.name)) return;
           

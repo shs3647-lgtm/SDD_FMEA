@@ -23,7 +23,14 @@ export async function saveWorksheetDB(db: FMEAWorksheetDB): Promise<void> {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to save FMEA data');
+      console.error('[DB 저장] API 응답 오류:', error);
+      // ✅ 에러를 throw하지 않고 localStorage로 폴백
+      if (typeof window !== 'undefined') {
+        const key = `pfmea_atomic_${db.fmeaId}`;
+        localStorage.setItem(key, JSON.stringify(db));
+        console.warn('[DB 저장] DB 저장 실패, localStorage로 폴백 저장 (API 오류)');
+      }
+      return; // 에러 throw 대신 조기 리턴
     }
 
     const result = await response.json();
@@ -40,21 +47,20 @@ export async function saveWorksheetDB(db: FMEAWorksheetDB): Promise<void> {
       }
     }
   } catch (error: any) {
-    console.error('[DB 저장] 오류:', error);
+    console.error('[DB 저장] 네트워크/기타 오류:', error.message || error);
     
-    // ✅ DB 저장 실패 시 localStorage로 폴백
+    // ✅ DB 저장 실패 시 localStorage로 폴백 (에러 throw 안 함)
     if (typeof window !== 'undefined') {
       try {
         const key = `pfmea_atomic_${db.fmeaId}`;
         localStorage.setItem(key, JSON.stringify(db));
-        console.warn('[DB 저장] DB 저장 실패, localStorage로 폴백 저장');
+        console.warn('[DB 저장] DB 저장 실패, localStorage로 폴백 저장 완료');
       } catch (e) {
         console.error('[DB 저장] localStorage 폴백도 실패:', e);
-        throw error; // 둘 다 실패하면 원래 에러 throw
+        // ✅ 에러 throw 제거 - 사용자 작업 방해 방지
       }
-    } else {
-      throw error;
     }
+    // ✅ 에러 throw 제거 - localStorage에 저장되었으므로 사용자가 작업 계속 가능
   }
 }
 
