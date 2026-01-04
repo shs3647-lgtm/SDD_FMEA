@@ -13,7 +13,8 @@
     "src/app/pfmea/worksheet/tabs/function/FunctionL3Tab.tsx",
     "src/app/pfmea/worksheet/tabs/failure/FailureL1Tab.tsx",
     "src/app/pfmea/worksheet/tabs/failure/FailureL2Tab.tsx",
-    "src/app/pfmea/worksheet/tabs/failure/FailureL3Tab.tsx"
+    "src/app/pfmea/worksheet/tabs/failure/FailureL3Tab.tsx",
+    "src/app/pfmea/worksheet/utils/auto-link.ts"
   ],
   "approvalToken": "APPROVED-BY-USER",
   "overrideEnvVar": "FMEA_GUARD_OVERRIDE",
