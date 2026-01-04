@@ -50,58 +50,72 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
   // visibleSteps: props 우선, 없으면 state, 그래도 없으면 기본값
   const visibleSteps = propsVisibleSteps || (state.visibleSteps || [2, 3, 4, 5, 6]);
   
-  // 컬럼 폭 상태 관리
-  const [colWidths, setColWidths] = useState<Record<string, number>>(DEFAULT_COL_WIDTHS);
-  const resizingRef = useRef<{ colKey: string; startX: number; startWidth: number } | null>(null);
-
-  // 리사이즈 시작
-  const handleResizeStart = useCallback((e: React.MouseEvent, colKey: string) => {
+  // 테이블 ref
+  const tableRef = useRef<HTMLTableElement>(null);
+  
+  // ===== 컬럼 리사이즈 기능 (순수 DOM 조작) =====
+  const handleColumnResize = useCallback((e: React.MouseEvent<HTMLDivElement>, colIndex: number) => {
     e.preventDefault();
     e.stopPropagation();
-    resizingRef.current = {
-      colKey,
-      startX: e.clientX,
-      startWidth: colWidths[colKey] || 60,
-    };
+    
+    const table = tableRef.current;
+    if (!table) return;
+    
+    const startX = e.clientX;
+    const headerRow = table.querySelector('thead tr:last-child') as HTMLTableRowElement;
+    if (!headerRow) return;
+    
+    const th = headerRow.cells[colIndex] as HTMLTableCellElement;
+    if (!th) return;
+    
+    const startWidth = th.offsetWidth;
+    
+    // 드래그 중 커서 변경
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
     
     const handleMouseMove = (moveEvent: MouseEvent) => {
-      if (!resizingRef.current) return;
-      const delta = moveEvent.clientX - resizingRef.current.startX;
-      const newWidth = Math.max(30, resizingRef.current.startWidth + delta);
-      setColWidths(prev => ({ ...prev, [resizingRef.current!.colKey]: newWidth }));
+      const delta = moveEvent.clientX - startX;
+      const newWidth = Math.max(30, startWidth + delta);
+      th.style.width = `${newWidth}px`;
+      th.style.minWidth = `${newWidth}px`;
+      
+      // colgroup의 해당 col도 업데이트
+      const colgroup = table.querySelector('colgroup');
+      if (colgroup && colgroup.children[colIndex]) {
+        (colgroup.children[colIndex] as HTMLElement).style.width = `${newWidth}px`;
+      }
     };
     
     const handleMouseUp = () => {
-      resizingRef.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
     
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-  }, [colWidths]);
+  }, []);
 
-  // 리사이즈 핸들 스타일
-  const resizeHandleStyle: React.CSSProperties = {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: '4px',
-    cursor: 'col-resize',
-    background: 'transparent',
-    zIndex: 10,
-  };
-
-  // 리사이즈 가능한 헤더 셀
-  const ResizableHeader = ({ colKey, children, style }: { colKey: string; children: React.ReactNode; style: React.CSSProperties }) => (
-    <th style={{ ...style, position: 'relative', width: `${colWidths[colKey] || 60}px`, minWidth: '30px' }}>
-      {children}
-      <div 
-        style={resizeHandleStyle}
-        onMouseDown={(e) => handleResizeStart(e, colKey)}
-        onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(0,0,0,0.2)')}
-        onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+  // 리사이즈 핸들이 포함된 헤더 셀 생성
+  const createResizableTh = (colIndex: number, content: React.ReactNode, style: React.CSSProperties, key?: string) => (
+    <th key={key || `col-${colIndex}`} style={{ ...style, position: 'relative' }}>
+      {content}
+      <div
+        style={{
+          position: 'absolute',
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: '8px',
+          cursor: 'col-resize',
+          background: 'transparent',
+          zIndex: 100,
+        }}
+        onMouseDown={(e) => handleColumnResize(e, colIndex)}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(26,35,126,0.5)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
       />
     </th>
   );
@@ -231,45 +245,98 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
     'col_s2', 'col_o2', 'col_d2', 'col_sc2', 'col_ap2', 'col_rpn2', 'col_remark',
   ];
 
-  // 리사이즈 핸들이 있는 헤더 셀
-  const ResizableTh = ({ colKey, children, style, colSpan }: { colKey: string; children: React.ReactNode; style: React.CSSProperties; colSpan?: number }) => (
-    <th 
-      colSpan={colSpan}
-      style={{ 
-        ...style, 
-        position: 'relative', 
-        width: colSpan ? undefined : `${colWidths[colKey] || 60}px`,
-        minWidth: colSpan ? undefined : '30px',
-      }}
-    >
-      {children}
-      {!colSpan && (
-        <div 
-          style={{
-            position: 'absolute',
-            right: 0,
-            top: 0,
-            bottom: 0,
-            width: '6px',
-            cursor: 'col-resize',
-            background: 'transparent',
-            zIndex: 20,
-          }}
-          onMouseDown={(e) => handleResizeStart(e, colKey)}
-          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(0,0,255,0.3)')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-        />
-      )}
-    </th>
-  );
+  // 리사이즈 핸들이 있는 헤더 셀 (직접 DOM 조작)
+  const ResizableTh = ({ colKey, children, style, colSpan }: { colKey: string; children: React.ReactNode; style: React.CSSProperties; colSpan?: number }) => {
+    const thRef = useRef<HTMLTableCellElement>(null);
+    
+    const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const th = thRef.current;
+      if (!th) return;
+      
+      const startX = e.clientX;
+      const startWidth = th.offsetWidth;
+      
+      // 드래그 중 스타일
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        const delta = moveEvent.clientX - startX;
+        const newWidth = Math.max(30, startWidth + delta);
+        th.style.width = `${newWidth}px`;
+        th.style.minWidth = `${newWidth}px`;
+        
+        // colgroup의 해당 col도 업데이트
+        const table = th.closest('table');
+        if (table) {
+          const colgroup = table.querySelector('colgroup');
+          const colIndex = Array.from(th.parentElement?.children || []).indexOf(th);
+          if (colgroup && colgroup.children[colIndex]) {
+            (colgroup.children[colIndex] as HTMLElement).style.width = `${newWidth}px`;
+          }
+        }
+      };
+      
+      const handleMouseUp = () => {
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+      
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }, []);
+    
+    const initialWidth = DEFAULT_COL_WIDTHS[colKey] || 60;
+    
+    return (
+      <th 
+        ref={thRef}
+        colSpan={colSpan}
+        style={{ 
+          ...style, 
+          position: 'relative', 
+          width: colSpan ? undefined : `${initialWidth}px`,
+          minWidth: colSpan ? undefined : '30px',
+        }}
+      >
+        {children}
+        {!colSpan && (
+          <div 
+            style={{
+              position: 'absolute',
+              right: 0,
+              top: 0,
+              bottom: 0,
+              width: '8px',
+              cursor: 'col-resize',
+              background: 'transparent',
+              zIndex: 100,
+            }}
+            onMouseDown={handleMouseDown}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(26,35,126,0.6)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+          />
+        )}
+      </th>
+    );
+  };
 
   return (
     <div style={{ width: '100%', minWidth: '1800px', overflowX: 'visible' }}>
-      <table className={`${TW_CLASSES.table} w-full all-tab-table`} style={{ tableLayout: 'fixed', minWidth: '1800px' }}>
+      <table 
+        ref={tableRef}
+        className={`${TW_CLASSES.table} w-full all-tab-table`} 
+        style={{ tableLayout: 'fixed', minWidth: '1800px' }}
+      >
         {/* colgroup으로 컬럼 폭 제어 */}
         <colgroup>
-          {COL_KEYS.map((key) => (
-            <col key={key} style={{ width: `${colWidths[key] || DEFAULT_COL_WIDTHS[key] || 60}px` }} />
+          {COL_KEYS.map((key, idx) => (
+            <col key={key} data-col-index={idx} style={{ width: `${DEFAULT_COL_WIDTHS[key] || 60}px` }} />
           ))}
         </colgroup>
         <thead className={TW_CLASSES.stickyHead}>
