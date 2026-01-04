@@ -16,6 +16,8 @@ export interface UsePreviewHandlersProps {
   setIsSaved: React.Dispatch<React.SetStateAction<boolean>>;
   setIsSaving: React.Dispatch<React.SetStateAction<boolean>>;
   setDirty: React.Dispatch<React.SetStateAction<boolean>>;
+  /** optional: persist to DB master (keep localStorage as fallback) */
+  externalPersist?: (flatData: ImportedFlatData[]) => Promise<void> | void;
 }
 
 export function usePreviewHandlers(props: UsePreviewHandlersProps) {
@@ -30,6 +32,7 @@ export function usePreviewHandlers(props: UsePreviewHandlersProps) {
     setIsSaved,
     setIsSaving,
     setDirty,
+    externalPersist,
   } = props;
 
   /** 전체 삭제 */
@@ -106,6 +109,9 @@ export function usePreviewHandlers(props: UsePreviewHandlersProps) {
       setIsSaved(true);
       setDirty(false);
       console.log('✅ 데이터 저장 완료:', flatData.length, '건 (LocalStorage)');
+      if (externalPersist) {
+        await externalPersist(flatData);
+      }
       setTimeout(() => setIsSaved(false), 5000);
     } catch (error) {
       console.error('저장 오류:', error);

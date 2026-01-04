@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { FMEAWorksheetDB } from '@/app/pfmea/worksheet/schema';
 import { getPrisma } from '@/lib/prisma';
+import { upsertActiveMasterFromWorksheetTx } from '@/app/api/pfmea/master/sync';
 
 // ✅ Prisma는 Node.js 런타임에서만 안정적으로 동작 (edge/browser 번들 방지)
 export const runtime = 'nodejs';
@@ -351,6 +352,9 @@ export async function POST(request: NextRequest) {
           )
         );
       }
+
+      // ✅ PFMEA Master 자동 업데이트 (프로젝트 신규 데이터 추출 → 마스터 누적)
+      await upsertActiveMasterFromWorksheetTx(tx, db);
     }, {
       timeout: TRANSACTION_TIMEOUT,
     });

@@ -37,6 +37,7 @@ import {
   handleRelationDownload as utilRelationDownload,
   handleRelationImport as utilRelationImport,
 } from './utils';
+import { loadActiveMasterDataset, saveMasterDataset } from './utils/master-api';
 
 // FMEA 프로젝트 타입
 interface FMEAProject {
@@ -52,10 +53,13 @@ interface FMEAProject {
 function PFMEAImportPageContent() {
   const searchParams = useSearchParams();
   const idFromUrl = searchParams.get('id');
+  const mode = searchParams.get('mode'); // 'master' | 'new' | null
   
   // FMEA 선택 상태
   const [fmeaList, setFmeaList] = useState<FMEAProject[]>([]);
   const [selectedFmeaId, setSelectedFmeaId] = useState<string>(idFromUrl || '');
+  const [masterDatasetId, setMasterDatasetId] = useState<string | null>(null);
+  const [masterDatasetName, setMasterDatasetName] = useState<string>('MASTER');
   
   // 상태 관리 - 빈 배열로 초기화 (저장된 데이터 우선 로드)
   const [importType, setImportType] = useState<'full' | 'partial'>('full');
@@ -134,6 +138,24 @@ function PFMEAImportPageContent() {
     setIsSaved,
     setIsSaving,
     setDirty,
+    externalPersist:
+      mode === 'master'
+        ? async (data: ImportedFlatData[]) => {
+            const res = await saveMasterDataset({
+              datasetId: masterDatasetId,
+              name: masterDatasetName,
+              setActive: true,
+              replace: true,
+              relationData: null,
+              flatData: data,
+            });
+            if (!res.ok) {
+              console.warn('[PFMEA Import] DB master save failed (localStorage kept)');
+              return;
+            }
+            if (res.datasetId) setMasterDatasetId(res.datasetId);
+          }
+        : undefined,
   });
 
   // 관계형 핸들러 (훅에서 가져옴)
@@ -212,23 +234,53 @@ function PFMEAImportPageContent() {
       }
     }
     
-    // 저장된 데이터 불러오기
-    const savedData = localStorage.getItem('pfmea_master_data');
-    if (savedData) {
-      try {
-        const parsed = JSON.parse(savedData);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setFlatData(parsed);
-          const savedAt = localStorage.getItem('pfmea_saved_at');
-          setFileName(`저장된 데이터 (${savedAt ? new Date(savedAt).toLocaleString('ko-KR') : ''})`);
-          console.log('📂 저장된 데이터 불러옴:', parsed.length, '건', savedAt ? `(${savedAt})` : '');
-        }
-      } catch (e) {
-        console.error('저장된 데이터 파싱 오류:', e);
-      }
+    // ✅ mode=new: 자동 로드 금지 (빈 상태로 시작)
+    if (mode === 'new') {
+      setIsLoaded(true);
+      return;
     }
-    setIsLoaded(true);
-  }, [idFromUrl, selectedFmeaId]);
+
+    const load = async () => {
+      // ✅ mode=master: DB 마스터 우선 로드
+      if (mode === 'master') {
+        try {
+          const loaded = await loadActiveMasterDataset();
+          if (loaded.flatData.length > 0) {
+            setFlatData(loaded.flatData);
+            setMasterDatasetId(loaded.datasetId);
+            setMasterDatasetName(loaded.datasetName || 'MASTER');
+            setFileName(`DB Master: ${loaded.datasetName || 'MASTER'}`);
+            setIsLoaded(true);
+            return;
+          }
+        } catch (e) {
+          console.warn('[PFMEA Import] DB master load failed, fallback to localStorage:', e);
+        }
+      }
+
+      // localStorage 폴백 (기존 동작)
+      const savedData = localStorage.getItem('pfmea_master_data');
+      if (savedData) {
+        try {
+          const parsed = JSON.parse(savedData);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const normalized = parsed.map((d: any) => ({
+              ...d,
+              createdAt: d.createdAt ? new Date(d.createdAt) : new Date(),
+            }));
+            setFlatData(normalized);
+            const savedAt = localStorage.getItem('pfmea_saved_at');
+            setFileName(`저장된 데이터 (${savedAt ? new Date(savedAt).toLocaleString('ko-KR') : ''})`);
+          }
+        } catch (e) {
+          console.error('저장된 데이터 파싱 오류:', e);
+        }
+      }
+      setIsLoaded(true);
+    };
+
+    void load();
+  }, [idFromUrl, selectedFmeaId, mode]);
 
   // 파일 선택 및 Import 핸들러 (훅에서 가져옴)
   const { handleFileSelect, handleImport } = useImportFileHandlers({
