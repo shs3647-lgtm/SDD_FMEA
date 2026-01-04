@@ -1,25 +1,24 @@
 === PFMEA URL ===
-메인 워크시트: http://localhost:3000/pfmea/worksheet?id=PFM25-310&v=20260104-data-load-fix
-FMEA 리스트: http://localhost:3000/pfmea/list
-FMEA 등록: http://localhost:3000/pfmea/register
-FMEA 4판: http://localhost:3000/pfmea/fmea4?id=PFM25-310
+메인 워크시트: http://localhost:3001/pfmea/worksheet?id=PFM25-310&v=20260104-upstream-confirm-gating
+FMEA 리스트: http://localhost:3001/pfmea/list
+FMEA 등록: http://localhost:3001/pfmea/register
+FMEA 4판: http://localhost:3001/pfmea/fmea4?id=PFM25-310
 
 === DFMEA URL ===
-메인 워크시트: http://localhost:3000/dfmea/worksheet?id=DFM25-310
-FMEA 리스트: http://localhost:3000/dfmea/list
-FMEA 등록: http://localhost:3000/dfmea/register
+메인 워크시트: http://localhost:3001/dfmea/worksheet?id=DFM25-310
+FMEA 리스트: http://localhost:3001/dfmea/list
+FMEA 등록: http://localhost:3001/dfmea/register
 
 === VERSION INFO ===
-Version: 1.0.0-postgresql-sync
+Version: 1.0.1-upstream-confirm-gating
 Last Updated: 2026-01-04
 Changes: 
-  - PostgreSQL DB 연동 완료 (PFMEA + DFMEA)
-  - 구조분석부터 고장연결, All 화면까지 PFMEA → DFMEA 동기화 완료
-  - 확정 상태 관리 및 자동 저장 기능
-  - AI 히스토리 저장 기능
-  - visibleSteps prop 지원
+  - 상위 단계 확정 게이팅 구현 (하위 단계는 상위 확정 후 활성화)
+  - 확정 시 PostgreSQL DB 저장 명시적 호출 추가
+  - 플레이스홀더 요구사항 필터링으로 빈셀 폭증 방지
+  - Playwright 테스트 추가 (upstream-confirm-gating.spec.ts)
 Status: Ready for Testing
-Cache Busting: v=20260104-postgresql-sync
+Cache Busting: v=20260104-upstream-confirm-gating
 
 === 주요 기능 ===
 1. 구조분석 (StructureTab)
@@ -28,16 +27,27 @@ Cache Busting: v=20260104-postgresql-sync
    - EditableL2Cell (인라인 수정)
    - COUNT 표시 (S1/S2/S3)
 
-2. 고장연결 (FailureLinkTab)
+2. 고장분석 (FailureL1Tab/L2Tab/L3Tab)
+   - 상위 단계 확정 게이팅 (미확정 시 비활성화)
+   - 확정 시 PostgreSQL DB 저장
+   - 플레이스홀더 요구사항 필터링
+
+3. 고장연결 (FailureLinkTab)
    - 확정된 FE만 사용
    - AI 히스토리 저장
    - 중복 제거
 
-3. All 화면
+4. All 화면
    - visibleSteps prop 지원
    - 고장연결 데이터 기반 40열 테이블
 
 === PostgreSQL 연동 ===
 - API: /api/fmea (GET/POST)
 - DB 저장 실패 시 localStorage 폴백
+- 확정 시 saveAtomicDB 명시적 호출로 DB 저장 보장
 - 배치 처리 최적화
+
+=== 코드프리즈 ===
+- 태그: codefreeze-20260104-upstream-confirm-gating
+- 커밋: 7079e8f
+- 보호 파일: FailureL1Tab.tsx, FailureL2Tab.tsx, FailureL3Tab.tsx

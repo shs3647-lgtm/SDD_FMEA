@@ -390,11 +390,11 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
     setDirty(true);
     setModal(null);
     
-    // ✅ 즉시 저장 (requestAnimationFrame 사용)
-    requestAnimationFrame(() => {
+    // ✅ 저장 보장 (stateRef 업데이트 대기 후 저장)
+    setTimeout(() => {
       saveToLocalStorage?.();
       console.log('[FailureL1Tab] 저장 완료');
-    });
+    }, 200);
   }, [modal, state.failureL1Confirmed, setState, setDirty, saveToLocalStorage]);
 
   // 삭제 핸들러
@@ -427,7 +427,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
       return newState;
     });
     setDirty(true);
-    requestAnimationFrame(() => saveToLocalStorage?.());
+    setTimeout(() => saveToLocalStorage?.(), 200);
   }, [setState, setDirty, saveToLocalStorage]);
 
   // 현재 모달의 currentValues (해당 요구사항의 모든 고장영향)

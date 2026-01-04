@@ -261,11 +261,11 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
     setDirty(true);
     setModal(null);
     
-    // ✅ 즉시 저장 (requestAnimationFrame 사용)
-    requestAnimationFrame(() => {
+    // ✅ 저장 보장 (stateRef 업데이트 대기 후 저장)
+    setTimeout(() => {
       saveToLocalStorage?.();
       console.log('[FailureL2Tab] 저장 완료');
-    });
+    }, 200);
   }, [modal, state.failureL2Confirmed, setState, setDirty, saveToLocalStorage]);
 
   const handleDelete = useCallback((deletedValues: string[]) => {
@@ -293,7 +293,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
     });
     
     setDirty(true);
-    requestAnimationFrame(() => saveToLocalStorage?.());
+    setTimeout(() => saveToLocalStorage?.(), 200);
   }, [modal, setState, setDirty, saveToLocalStorage]);
 
   const processes = state.l2.filter(p => p.name && !p.name.includes('클릭'));

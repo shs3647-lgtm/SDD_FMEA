@@ -283,36 +283,12 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
     setDirty(true);
     setModal(null);
     
-    // ✅ 즉시 저장 (강화된 저장 로직)
-    // 1. requestAnimationFrame으로 상태 업데이트 완료 대기
-    requestAnimationFrame(() => {
-      // 2. 추가 대기 후 저장 (상태 반영 보장)
-      setTimeout(() => {
-        saveToLocalStorage?.();
-        console.log('[FailureL3Tab] 저장 완료');
-        
-        // 3. 저장 후 검증 (다음 프레임에서)
-        requestAnimationFrame(() => {
-          const savedKey = `pfmea_worksheet_${(state as any).fmeaId || 'current'}`;
-          const saved = localStorage.getItem(savedKey);
-          if (saved) {
-            try {
-              const parsed = JSON.parse(saved);
-              const savedCauses = parsed.l2?.flatMap((p: any) => p.failureCauses || []) || [];
-              const currentCauses = state.l2.flatMap((p: any) => p.failureCauses || []);
-              console.log('[FailureL3Tab] 저장 검증:', {
-                저장된개수: savedCauses.length,
-                현재개수: currentCauses.length,
-                일치: savedCauses.length === currentCauses.length
-              });
-            } catch (e) {
-              console.error('[FailureL3Tab] 저장 검증 오류:', e);
-            }
-          }
-        });
-      }, 100);
-    });
-  }, [modal, setState, setDirty, saveToLocalStorage, state]);
+    // ✅ 저장 보장 (stateRef 업데이트 대기 후 저장)
+    setTimeout(() => {
+      saveToLocalStorage?.();
+      console.log('[FailureL3Tab] 저장 완료');
+    }, 200);
+  }, [modal, setState, setDirty, saveToLocalStorage]);
 
   const handleDelete = useCallback((deletedValues: string[]) => {
     if (!modal) return;
@@ -343,7 +319,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
     });
     
     setDirty(true);
-    requestAnimationFrame(() => saveToLocalStorage?.());
+    setTimeout(() => saveToLocalStorage?.(), 200);
   }, [modal, setState, setDirty, saveToLocalStorage]);
 
   // ✅ 발생도 업데이트 - 공정 레벨에서 수정 (CASCADE)

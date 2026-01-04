@@ -115,11 +115,11 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
     });
     setDirty(true);
     
-    // ✅ 즉시 저장 (requestAnimationFrame 사용)
-    requestAnimationFrame(() => {
+    // ✅ 저장 보장 (stateRef 업데이트 대기 후 저장)
+    setTimeout(() => {
       saveToLocalStorage?.();
       console.log('[FunctionL2Tab] 확정 후 localStorage 저장 완료');
-    });
+    }, 200);
     
     alert('✅ 2L 메인공정 기능분석이 확정되었습니다.');
   }, [state.l2, setState, setDirty, saveToLocalStorage]);
@@ -128,7 +128,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
   const handleEdit = useCallback(() => {
     setState(prev => ({ ...prev, l2Confirmed: false }));
     setDirty(true);
-    requestAnimationFrame(() => saveToLocalStorage?.());
+    setTimeout(() => saveToLocalStorage?.(), 200);
   }, [setState, setDirty, saveToLocalStorage]);
 
   // 메인공정 기능 인라인 편집 핸들러 (더블클릭)
@@ -392,7 +392,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
     });
     
     setDirty(true);
-    requestAnimationFrame(() => saveToLocalStorage?.());
+    setTimeout(() => saveToLocalStorage?.(), 200);
   }, [modal, setState, setDirty, saveToLocalStorage]);
 
   // 특별특성 선택 핸들러
@@ -427,7 +427,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
     
     setDirty(true);
     setSpecialCharModal(null);
-    requestAnimationFrame(() => saveToLocalStorage?.());
+    setTimeout(() => saveToLocalStorage?.(), 200);
   }, [specialCharModal, setState, setDirty, saveToLocalStorage]);
 
   // 총 행 수 계산

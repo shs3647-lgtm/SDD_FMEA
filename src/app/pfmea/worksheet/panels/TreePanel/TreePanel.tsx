@@ -137,10 +137,17 @@ export default function TreePanel({ state, onAddAIItem }: TreePanelProps) {
   }
 
   // ========== 2L 기능트리 ==========
+  // ✅ 의미 있는 항목인지 체크하는 헬퍼 (placeholder 제외)
+  const isMeaningful = (name: string | undefined | null) => {
+    if (!name || name.trim() === '') return false;
+    const placeholders = ['클릭', '선택', '추가', '입력', '필요'];
+    return !placeholders.some(ph => name.includes(ph));
+  };
+
   if (tab === 'function-l2') {
-    const procCount = state.l2.filter((p: any) => p.name && !p.name.includes('클릭')).length;
-    const funcCount = state.l2.reduce((s: number, p: any) => s + (p.functions || []).length, 0);
-    const charCount = state.l2.reduce((s: number, p: any) => s + (p.functions || []).reduce((a: number, f: any) => a + (f.productChars || []).length, 0), 0);
+    const procCount = state.l2.filter((p: any) => isMeaningful(p.name)).length;
+    const funcCount = state.l2.reduce((s: number, p: any) => s + (p.functions || []).filter((f: any) => isMeaningful(f.name)).length, 0);
+    const charCount = state.l2.reduce((s: number, p: any) => s + (p.functions || []).reduce((a: number, f: any) => a + (f.productChars || []).filter((c: any) => isMeaningful(c.name)).length, 0), 0);
     
     return (
       <BaseTreePanel config={{
@@ -151,38 +158,44 @@ export default function TreePanel({ state, onAddAIItem }: TreePanelProps) {
       }}>
         {state.l2.length === 0 ? (
           <TreeEmpty message="구조분석에서 공정을 추가하세요" />
-        ) : state.l2.map((proc: any) => (
-          <TreeBranch key={proc.id} borderColor={TREE_FUNCTION.border}>
-            <TreeItem icon="🏭" label={`${proc.no}. ${proc.name}`} bgColor={TREE_FUNCTION.procBg} textColor={TREE_FUNCTION.procText} />
-            {(proc.functions || []).length === 0 ? (
-              <TreeEmpty message="기능 미정의" small />
-            ) : (proc.functions || []).map((f: any) => (
-              <div key={f.id} className="ml-3 mb-1">
-                <TreeLeaf icon="⚙️" label={f.name} bgColor={TREE_FUNCTION.itemBg} textColor={TREE_FUNCTION.itemText} indent={0} />
-                {(f.productChars || []).map((c: any) => (
-                  <TreeLeaf 
-                    key={c.id} 
-                    icon="📐" 
-                    label={c.name} 
-                    bgColor={c.specialChar ? '#fed7aa' : '#fff7ed'} 
-                    textColor="#e65100" 
-                    indent={4}
-                    badge={c.specialChar && <TreeBadge label={c.specialChar} bgColor="#f97316" textColor="#fff" />}
-                  />
-                ))}
-              </div>
-            ))}
-          </TreeBranch>
-        ))}
+        ) : state.l2.filter((p: any) => isMeaningful(p.name)).map((proc: any) => {
+          const meaningfulFuncs = (proc.functions || []).filter((f: any) => isMeaningful(f.name));
+          return (
+            <TreeBranch key={proc.id} borderColor={TREE_FUNCTION.border}>
+              <TreeItem icon="🏭" label={`${proc.no}. ${proc.name}`} bgColor={TREE_FUNCTION.procBg} textColor={TREE_FUNCTION.procText} />
+              {meaningfulFuncs.length === 0 ? (
+                <TreeEmpty message="기능 미정의" small />
+              ) : meaningfulFuncs.map((f: any) => {
+                const meaningfulChars = (f.productChars || []).filter((c: any) => isMeaningful(c.name));
+                return (
+                  <div key={f.id} className="ml-3 mb-1">
+                    <TreeLeaf icon="⚙️" label={f.name} bgColor={TREE_FUNCTION.itemBg} textColor={TREE_FUNCTION.itemText} indent={0} />
+                    {meaningfulChars.map((c: any) => (
+                      <TreeLeaf 
+                        key={c.id} 
+                        icon="📐" 
+                        label={c.name} 
+                        bgColor={c.specialChar ? '#fed7aa' : '#fff7ed'} 
+                        textColor="#e65100" 
+                        indent={4}
+                        badge={c.specialChar && <TreeBadge label={c.specialChar} bgColor="#f97316" textColor="#fff" />}
+                      />
+                    ))}
+                  </div>
+                );
+              })}
+            </TreeBranch>
+          );
+        })}
       </BaseTreePanel>
     );
   }
 
   // ========== 3L 기능트리 (공정:파란색, 기능:녹색, 공정특성:주황색) ==========
   if (tab === 'function-l3') {
-    const weCount = state.l2.reduce((s: number, p: any) => s + (p.l3 || []).filter((w: any) => w.name && !w.name.includes('클릭')).length, 0);
-    const funcCount = state.l2.reduce((s: number, p: any) => s + (p.l3 || []).reduce((a: number, w: any) => a + (w.functions || []).length, 0), 0);
-    const charCount = state.l2.reduce((s: number, p: any) => s + (p.l3 || []).reduce((a: number, w: any) => a + (w.functions || []).reduce((b: number, f: any) => b + (f.processChars || []).length, 0), 0), 0);
+    const weCount = state.l2.reduce((s: number, p: any) => s + (p.l3 || []).filter((w: any) => isMeaningful(w.name)).length, 0);
+    const funcCount = state.l2.reduce((s: number, p: any) => s + (p.l3 || []).reduce((a: number, w: any) => a + (w.functions || []).filter((f: any) => isMeaningful(f.name)).length, 0), 0);
+    const charCount = state.l2.reduce((s: number, p: any) => s + (p.l3 || []).reduce((a: number, w: any) => a + (w.functions || []).reduce((b: number, f: any) => b + (f.processChars || []).filter((c: any) => isMeaningful(c.name)).length, 0), 0), 0);
     
     return (
       <BaseTreePanel config={{
@@ -193,38 +206,47 @@ export default function TreePanel({ state, onAddAIItem }: TreePanelProps) {
       }}>
         {state.l2.every((p: any) => (p.l3 || []).length === 0) ? (
           <TreeEmpty message="구조분석에서 작업요소를 추가하세요" />
-        ) : state.l2.filter((p: any) => (p.l3 || []).length > 0).map((proc: any) => (
-          <TreeBranch key={proc.id} borderColor="#1976d2">
-            {/* 공정명: 파란색 */}
-            <TreeItem icon="🏭" label={`${proc.no}. ${proc.name}`} bgColor="#1976d2" textColor="#fff" />
-            {(proc.l3 || []).map((we: any, weIdx: number) => (
-              <div key={we.id} className="ml-3 mb-1.5">
-                {/* 작업요소: 파란색 */}
-                <TreeLeaf icon="" label={`[${we.m4}] ${we.name}`} bgColor={weIdx % 2 === 0 ? '#e3f2fd' : '#bbdefb'} textColor="#1565c0" indent={0} />
-                {(we.functions || []).length === 0 ? (
-                  <TreeEmpty message="기능 미정의" small />
-                ) : (we.functions || []).map((f: any, fIdx: number) => (
-                  <div key={f.id} className="ml-3">
-                    {/* 기능: 녹색 */}
-                    <TreeLeaf icon="⚙️" label={f.name} bgColor={fIdx % 2 === 0 ? '#e8f5e9' : '#c8e6c9'} textColor="#1b5e20" indent={0} />
-                    {(f.processChars || []).map((c: any, cIdx: number) => (
-                      // 공정특성: 주황색
-                      <TreeLeaf 
-                        key={c.id} 
-                        icon="📏" 
-                        label={c.name} 
-                        bgColor={cIdx % 2 === 0 ? '#fff3e0' : '#ffe0b2'}
-                        textColor="#e65100"
-                        indent={3}
-                        badge={c.specialChar && <TreeBadge label={c.specialChar} bgColor="#f57c00" textColor="#fff" />}
-                      />
-                    ))}
+        ) : state.l2.filter((p: any) => (p.l3 || []).some((w: any) => isMeaningful(w.name))).map((proc: any) => {
+          const meaningfulWEs = (proc.l3 || []).filter((w: any) => isMeaningful(w.name));
+          return (
+            <TreeBranch key={proc.id} borderColor="#1976d2">
+              {/* 공정명: 파란색 */}
+              <TreeItem icon="🏭" label={`${proc.no}. ${proc.name}`} bgColor="#1976d2" textColor="#fff" />
+              {meaningfulWEs.map((we: any, weIdx: number) => {
+                const meaningfulFuncs = (we.functions || []).filter((f: any) => isMeaningful(f.name));
+                return (
+                  <div key={we.id} className="ml-3 mb-1.5">
+                    {/* 작업요소: 파란색 */}
+                    <TreeLeaf icon="" label={`[${we.m4}] ${we.name}`} bgColor={weIdx % 2 === 0 ? '#e3f2fd' : '#bbdefb'} textColor="#1565c0" indent={0} />
+                    {meaningfulFuncs.length === 0 ? (
+                      <TreeEmpty message="기능 미정의" small />
+                    ) : meaningfulFuncs.map((f: any, fIdx: number) => {
+                      const meaningfulChars = (f.processChars || []).filter((c: any) => isMeaningful(c.name));
+                      return (
+                        <div key={f.id} className="ml-3">
+                          {/* 기능: 녹색 */}
+                          <TreeLeaf icon="⚙️" label={f.name} bgColor={fIdx % 2 === 0 ? '#e8f5e9' : '#c8e6c9'} textColor="#1b5e20" indent={0} />
+                          {meaningfulChars.map((c: any, cIdx: number) => (
+                            // 공정특성: 주황색
+                            <TreeLeaf 
+                              key={c.id} 
+                              icon="📏" 
+                              label={c.name} 
+                              bgColor={cIdx % 2 === 0 ? '#fff3e0' : '#ffe0b2'}
+                              textColor="#e65100"
+                              indent={3}
+                              badge={c.specialChar && <TreeBadge label={c.specialChar} bgColor="#f57c00" textColor="#fff" />}
+                            />
+                          ))}
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
-            ))}
-          </TreeBranch>
-        ))}
+                );
+              })}
+            </TreeBranch>
+          );
+        })}
       </BaseTreePanel>
     );
   }
@@ -293,8 +315,8 @@ export default function TreePanel({ state, onAddAIItem }: TreePanelProps) {
   // ========== 2L 고장형태 트리 (공정명:파란색, 기능:녹색, 제품특성/고장:주황색) ==========
   if (tab === 'failure-l2') {
     const isL2Confirmed = state.failureL2Confirmed || false;
-    const charCount = state.l2.reduce((s: number, p: any) => s + (p.functions || []).reduce((a: number, f: any) => a + (f.productChars || []).length, 0), 0);
-    const fmCount = state.l2.reduce((s: number, p: any) => s + (p.failureModes || []).length, 0);
+    const charCount = state.l2.reduce((s: number, p: any) => s + (p.functions || []).reduce((a: number, f: any) => a + (f.productChars || []).filter((c: any) => isMeaningful(c.name)).length, 0), 0);
+    const fmCount = state.l2.reduce((s: number, p: any) => s + (p.failureModes || []).filter((m: any) => isMeaningful(m.name)).length, 0);
     
     return (
       <BaseTreePanel config={{
@@ -304,22 +326,22 @@ export default function TreePanel({ state, onAddAIItem }: TreePanelProps) {
         theme: 'failure-l2',
         extra: !isL2Confirmed && <span className="ml-1 text-yellow-300 text-[9px]">(미확정)</span>,
       }}>
-        {state.l2.filter((p: any) => p.name && !p.name.includes('클릭')).length === 0 ? (
+        {state.l2.filter((p: any) => isMeaningful(p.name)).length === 0 ? (
           <div className="text-center py-8 text-gray-500 text-xs">📋 구조분석에서 메인공정을 입력해주세요</div>
-        ) : state.l2.filter((p: any) => p.name && !p.name.includes('클릭')).map((proc: any) => {
-          const functions = proc.functions || [];
-          const confirmedModes = proc.failureModes || [];
+        ) : state.l2.filter((p: any) => isMeaningful(p.name)).map((proc: any) => {
+          const meaningfulFuncs = (proc.functions || []).filter((f: any) => isMeaningful(f.name));
+          const confirmedModes = (proc.failureModes || []).filter((m: any) => isMeaningful(m.name));
           return (
             <div key={proc.id} className="mb-2.5">
               {/* 공정명: 파란색 */}
               <TreeItem icon="🔧" label={`${proc.no}. ${proc.name}`} bgColor="#1976d2" textColor="#fff" className="border-l-[3px] border-[#1565c0]" />
-              {functions.length > 0 ? functions.map((f: any) => {
-                const productChars = f.productChars || [];
+              {meaningfulFuncs.length > 0 ? meaningfulFuncs.map((f: any) => {
+                const meaningfulChars = (f.productChars || []).filter((c: any) => isMeaningful(c.name));
                 return (
                   <div key={f.id} className="ml-3 mb-1">
                     {/* 기능: 녹색 */}
                     <TreeLeaf icon="📋" label={f.name} bgColor={TREE_FUNCTION.itemBg} textColor={TREE_FUNCTION.itemText} indent={0} />
-                    {productChars.length > 0 ? productChars.map((pc: any) => (
+                    {meaningfulChars.length > 0 ? meaningfulChars.map((pc: any) => (
                       <div key={pc.id} className="ml-3 mb-0.5">
                         {/* 제품특성: 주황색 */}
                         <TreeLeaf 
@@ -352,7 +374,7 @@ export default function TreePanel({ state, onAddAIItem }: TreePanelProps) {
                   </div>
                 );
               }) : <TreeEmpty message="└ (메인공정기능 미입력)" small />}
-              {functions.length === 0 && confirmedModes.map((m: any) => (
+              {meaningfulFuncs.length === 0 && confirmedModes.map((m: any) => (
                 <TreeLeaf key={m.id} icon="└ ⚠️" label={m.name} bgColor="#ffe0b2" textColor="#e65100" indent={4} />
               ))}
             </div>
@@ -369,10 +391,10 @@ export default function TreePanel({ state, onAddAIItem }: TreePanelProps) {
     state.l2.forEach((proc: any) => {
       (proc.l3 || []).forEach((we: any) => {
         (we.functions || []).forEach((f: any) => {
-          processCharCount += (f.processChars || []).filter((c: any) => c.name).length;
+          processCharCount += (f.processChars || []).filter((c: any) => isMeaningful(c.name)).length;
         });
       });
-      failureCauseCount += (proc.failureCauses || []).filter((c: any) => c.name).length;
+      failureCauseCount += (proc.failureCauses || []).filter((c: any) => isMeaningful(c.name)).length;
     });
     
     return (
@@ -383,25 +405,26 @@ export default function TreePanel({ state, onAddAIItem }: TreePanelProps) {
         theme: 'failure-l3',
         extra: !isL3Confirmed && <span className="ml-2 text-yellow-300 text-[9px]">(미확정)</span>,
       }}>
-        {state.l2.filter((p: any) => p.name && !p.name.includes('클릭')).length === 0 ? (
+        {state.l2.filter((p: any) => isMeaningful(p.name)).length === 0 ? (
           <div className="text-center py-8 text-gray-500 text-xs">📋 구조분석에서 메인공정을 입력해주세요</div>
-        ) : state.l2.filter((p: any) => p.name && !p.name.includes('클릭')).map((proc: any) => {
-          const allCauses = proc.failureCauses || [];
+        ) : state.l2.filter((p: any) => isMeaningful(p.name)).map((proc: any) => {
+          const meaningfulCauses = (proc.failureCauses || []).filter((c: any) => isMeaningful(c.name));
+          const meaningfulWEs = (proc.l3 || []).filter((w: any) => isMeaningful(w.name));
           return (
             <div key={proc.id} className="mb-2">
               {/* 공정명: 파란색 */}
               <TreeItem icon="🔧" label={`${proc.no}. ${proc.name}`} bgColor="#1976d2" textColor="#fff" className="border-l-[3px] border-[#1565c0]" />
-              {(proc.l3 || []).filter((w: any) => w.name && !w.name.includes('클릭')).map((we: any) => {
+              {meaningfulWEs.map((we: any) => {
                 const processChars: any[] = [];
-                (we.functions || []).forEach((f: any) => {
-                  (f.processChars || []).forEach((pc: any) => { if (pc.name) processChars.push(pc); });
+                (we.functions || []).filter((f: any) => isMeaningful(f.name)).forEach((f: any) => {
+                  (f.processChars || []).filter((pc: any) => isMeaningful(pc.name)).forEach((pc: any) => { processChars.push(pc); });
                 });
                 return (
                   <div key={we.id} className="ml-3 mb-1">
                     {/* 작업요소: 파란색 */}
                     <TreeLeaf icon="" label={`[${we.m4}] ${we.name}`} bgColor="#bbdefb" textColor="#1565c0" indent={0} />
                     {processChars.map((pc: any) => {
-                      const linkedCauses = allCauses.filter((c: any) => c.processCharId === pc.id);
+                      const linkedCauses = meaningfulCauses.filter((c: any) => c.processCharId === pc.id);
                       return (
                         <div key={pc.id} className="ml-2">
                           {/* 공정특성: 녹색 */}
