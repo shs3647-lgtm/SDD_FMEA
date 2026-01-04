@@ -414,10 +414,21 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
       const procFirstRowIdx = rows.length;
       
       workElements.forEach((we: any, weIdx: number) => {
-        // 작업요소의 모든 공정특성 수집
+        // ✅ 작업요소의 의미 있는 공정특성만 수집 (placeholder 제외)
+        const isMeaningful = (name: string) => {
+          if (!name || name.trim() === '') return false;
+          const placeholders = ['클릭', '선택', '입력', '추가', '필요', '기능분석에서'];
+          return !placeholders.some(p => name.includes(p));
+        };
+        
         const allProcessChars: any[] = [];
         (we.functions || []).forEach((f: any) => {
+          // ✅ 의미 있는 기능만 처리
+          if (!isMeaningful(f.name)) return;
+          
           (f.processChars || []).forEach((c: any) => {
+            // ✅ 의미 있는 공정특성만 추가
+            if (!isMeaningful(c.name)) return;
             allProcessChars.push({ ...c, funcId: f.id, funcName: f.name });
           });
         });
