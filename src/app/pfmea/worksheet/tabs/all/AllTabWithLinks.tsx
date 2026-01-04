@@ -216,9 +216,62 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
     (window as any).__FMEA_STATUS__ = { totalFM, totalFE, totalFC, totalRows: allRows.length };
   }
   
+  // 컬럼 키 배열 (순서대로)
+  const COL_KEYS = [
+    // 구조분석 4열
+    'col_product', 'col_process', 'col_m4_1', 'col_part',
+    // 기능분석 8열
+    'col_scope1', 'col_prodFunc', 'col_req', 'col_focusFunc', 'col_prodChar', 'col_m4_2', 'col_partFunc', 'col_designChar',
+    // 고장분석 6열
+    'col_scope2', 'col_fe', 'col_s', 'col_fm', 'col_fcPart', 'col_fc',
+    // 리스크분석 8열
+    'col_prev', 'col_o', 'col_det', 'col_d', 'col_ap', 'col_rpn', 'col_sc', 'col_lesson',
+    // 최적화 14열
+    'col_action', 'col_detAction', 'col_resp', 'col_target', 'col_status', 'col_result', 'col_complete',
+    'col_s2', 'col_o2', 'col_d2', 'col_sc2', 'col_ap2', 'col_rpn2', 'col_remark',
+  ];
+
+  // 리사이즈 핸들이 있는 헤더 셀
+  const ResizableTh = ({ colKey, children, style, colSpan }: { colKey: string; children: React.ReactNode; style: React.CSSProperties; colSpan?: number }) => (
+    <th 
+      colSpan={colSpan}
+      style={{ 
+        ...style, 
+        position: 'relative', 
+        width: colSpan ? undefined : `${colWidths[colKey] || 60}px`,
+        minWidth: colSpan ? undefined : '30px',
+      }}
+    >
+      {children}
+      {!colSpan && (
+        <div 
+          style={{
+            position: 'absolute',
+            right: 0,
+            top: 0,
+            bottom: 0,
+            width: '6px',
+            cursor: 'col-resize',
+            background: 'transparent',
+            zIndex: 20,
+          }}
+          onMouseDown={(e) => handleResizeStart(e, colKey)}
+          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(0,0,255,0.3)')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+        />
+      )}
+    </th>
+  );
+
   return (
     <div style={{ width: '100%', minWidth: '1800px', overflowX: 'visible' }}>
-      <table className={`${TW_CLASSES.table} w-full all-tab-table`} style={{ tableLayout: 'auto', minWidth: '1800px' }}>
+      <table className={`${TW_CLASSES.table} w-full all-tab-table`} style={{ tableLayout: 'fixed', minWidth: '1800px' }}>
+        {/* colgroup으로 컬럼 폭 제어 */}
+        <colgroup>
+          {COL_KEYS.map((key) => (
+            <col key={key} style={{ width: `${colWidths[key] || DEFAULT_COL_WIDTHS[key] || 60}px` }} />
+          ))}
+        </colgroup>
         <thead className={TW_CLASSES.stickyHead}>
           {/* 1행: 단계 대분류 */}
           <tr>
@@ -256,62 +309,62 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
               <th colSpan={7} style={subHeaderStyle(COLORS.opt.effect.h2)}>효과평가</th>
             </>}
           </tr>
-          {/* 3행: 컬럼명 */}
+          {/* 3행: 컬럼명 (드래그 리사이즈 가능) */}
           <tr>
             {/* 구조분석 4열 */}
             {visibleSteps.includes(2) && <>
-              <th style={colHeaderStyle('60px', COLORS.structure.l1.h3)}>제품명</th>
-              <th style={colHeaderStyle('80px', COLORS.structure.l2.h3)}>NO+공정명</th>
-              <th style={colHeaderStyleWithOptions('30px', COLORS.special.m4.h3, '#fff', { fontWeight: FONT_WEIGHTS.bold })}>4M</th>
-              <th style={colHeaderStyle('70px', COLORS.structure.l3.h3)}>작업요소</th>
+              <ResizableTh colKey="col_product" style={colHeaderStyle('60px', COLORS.structure.l1.h3)}>제품명</ResizableTh>
+              <ResizableTh colKey="col_process" style={colHeaderStyle('80px', COLORS.structure.l2.h3)}>NO+공정명</ResizableTh>
+              <ResizableTh colKey="col_m4_1" style={colHeaderStyleWithOptions('30px', COLORS.special.m4.h3, '#fff', { fontWeight: FONT_WEIGHTS.bold })}>4M</ResizableTh>
+              <ResizableTh colKey="col_part" style={colHeaderStyle('70px', COLORS.structure.l3.h3)}>작업요소</ResizableTh>
             </>}
             {/* 기능분석 8열 */}
             {visibleSteps.includes(3) && <>
-              <th style={colHeaderStyle('70px', COLORS.special.scope.h3, '#fff')}>구분</th>
-              <th style={colHeaderStyle('120px', COLORS.function.l1.h3)}>제품 기능</th>
-              <th style={colHeaderStyle('70px', COLORS.function.l1.h3)}>요구사항</th>
-              <th style={colHeaderStyle('160px', COLORS.function.l2.h3)}>공정기능</th>
-              <th style={colHeaderStyleWithOptions('80px', COLORS.function.l2.h3, undefined, { whiteSpace: 'nowrap' })}>제품특성</th>
-              <th style={colHeaderStyleWithOptions('30px', COLORS.special.m4.h3, '#fff', { fontWeight: FONT_WEIGHTS.bold })}>4M</th>
-              <th style={colHeaderStyle('140px', COLORS.function.l3.h3)}>작업요소기능</th>
-              <th style={colHeaderStyleWithOptions('80px', COLORS.function.l3.h3, undefined, { whiteSpace: 'nowrap' })}>공정특성</th>
+              <ResizableTh colKey="col_scope1" style={colHeaderStyle('70px', COLORS.special.scope.h3, '#fff')}>구분</ResizableTh>
+              <ResizableTh colKey="col_prodFunc" style={colHeaderStyle('120px', COLORS.function.l1.h3)}>제품 기능</ResizableTh>
+              <ResizableTh colKey="col_req" style={colHeaderStyle('70px', COLORS.function.l1.h3)}>요구사항</ResizableTh>
+              <ResizableTh colKey="col_focusFunc" style={colHeaderStyle('160px', COLORS.function.l2.h3)}>공정기능</ResizableTh>
+              <ResizableTh colKey="col_prodChar" style={colHeaderStyleWithOptions('80px', COLORS.function.l2.h3, undefined, { whiteSpace: 'nowrap' })}>제품특성</ResizableTh>
+              <ResizableTh colKey="col_m4_2" style={colHeaderStyleWithOptions('30px', COLORS.special.m4.h3, '#fff', { fontWeight: FONT_WEIGHTS.bold })}>4M</ResizableTh>
+              <ResizableTh colKey="col_partFunc" style={colHeaderStyle('140px', COLORS.function.l3.h3)}>작업요소기능</ResizableTh>
+              <ResizableTh colKey="col_designChar" style={colHeaderStyleWithOptions('80px', COLORS.function.l3.h3, undefined, { whiteSpace: 'nowrap' })}>공정특성</ResizableTh>
             </>}
             {/* 고장분석 6열 */}
             {visibleSteps.includes(4) && <>
-              <th style={colHeaderStyleWithOptions('90px', COLORS.special.scope.h3, '#fff', { whiteSpace: 'nowrap' })}>구분</th>
-              <th style={colHeaderStyleWithOptions('120px', COLORS.failure.l1.h3, undefined, { whiteSpace: 'nowrap' })}>고장영향</th>
-              <th style={colHeaderStyleWithOptions('30px', COLORS.indicator.severity.bg, COLORS.indicator.severity.text, { fontWeight: FONT_WEIGHTS.bold })}>S</th>
-              <th style={colHeaderStyleWithOptions('120px', COLORS.failure.l2.h3, undefined, { whiteSpace: 'nowrap' })}>고장형태</th>
-              <th style={colHeaderStyleWithOptions('100px', COLORS.failure.l3.h3, undefined, { whiteSpace: 'nowrap' })}>작업요소</th>
-              <th style={colHeaderStyleWithOptions('130px', COLORS.failure.l3.h3, undefined, { whiteSpace: 'nowrap' })}>고장원인</th>
+              <ResizableTh colKey="col_scope2" style={colHeaderStyleWithOptions('90px', COLORS.special.scope.h3, '#fff', { whiteSpace: 'nowrap' })}>구분</ResizableTh>
+              <ResizableTh colKey="col_fe" style={colHeaderStyleWithOptions('120px', COLORS.failure.l1.h3, undefined, { whiteSpace: 'nowrap' })}>고장영향</ResizableTh>
+              <ResizableTh colKey="col_s" style={colHeaderStyleWithOptions('30px', COLORS.indicator.severity.bg, COLORS.indicator.severity.text, { fontWeight: FONT_WEIGHTS.bold })}>S</ResizableTh>
+              <ResizableTh colKey="col_fm" style={colHeaderStyleWithOptions('120px', COLORS.failure.l2.h3, undefined, { whiteSpace: 'nowrap' })}>고장형태</ResizableTh>
+              <ResizableTh colKey="col_fcPart" style={colHeaderStyleWithOptions('100px', COLORS.failure.l3.h3, undefined, { whiteSpace: 'nowrap' })}>작업요소</ResizableTh>
+              <ResizableTh colKey="col_fc" style={colHeaderStyleWithOptions('130px', COLORS.failure.l3.h3, undefined, { whiteSpace: 'nowrap' })}>고장원인</ResizableTh>
             </>}
             {/* 리스크분석 8열 */}
             {visibleSteps.includes(5) && <>
-              <th style={colHeaderStyleWithOptions('90px', COLORS.risk.prevention.h3, '#fff', { whiteSpace: 'nowrap' })}>예방관리</th>
-              <th style={colHeaderStyleWithOptions('30px', COLORS.indicator.occurrence.bg, COLORS.indicator.occurrence.text, { fontWeight: FONT_WEIGHTS.bold })}>O</th>
-              <th style={colHeaderStyleWithOptions('90px', COLORS.risk.detection.h3, '#fff', { whiteSpace: 'nowrap' })}>검출관리</th>
-              <th style={colHeaderStyleWithOptions('25px', COLORS.indicator.detection.bg, COLORS.indicator.detection.text, { fontWeight: FONT_WEIGHTS.bold })}>D</th>
-              <th style={colHeaderStyleWithOptions('25px', COLORS.indicator.ap.bg, COLORS.indicator.ap.text, { fontWeight: FONT_WEIGHTS.bold })}>AP</th>
-              <th style={colHeaderStyleWithOptions('30px', COLORS.indicator.rpn.bg, COLORS.indicator.rpn.text, { fontWeight: FONT_WEIGHTS.bold })}>RPN</th>
-              <th style={colHeaderStyleWithOptions('60px', COLORS.risk.evaluation.h3, undefined, { whiteSpace: 'nowrap' })}>특별특성</th>
-              <th style={colHeaderStyleWithOptions('80px', '#f97316', '#fff', { whiteSpace: 'nowrap' })}>습득교훈</th>
+              <ResizableTh colKey="col_prev" style={colHeaderStyleWithOptions('90px', COLORS.risk.prevention.h3, '#fff', { whiteSpace: 'nowrap' })}>예방관리</ResizableTh>
+              <ResizableTh colKey="col_o" style={colHeaderStyleWithOptions('30px', COLORS.indicator.occurrence.bg, COLORS.indicator.occurrence.text, { fontWeight: FONT_WEIGHTS.bold })}>O</ResizableTh>
+              <ResizableTh colKey="col_det" style={colHeaderStyleWithOptions('90px', COLORS.risk.detection.h3, '#fff', { whiteSpace: 'nowrap' })}>검출관리</ResizableTh>
+              <ResizableTh colKey="col_d" style={colHeaderStyleWithOptions('25px', COLORS.indicator.detection.bg, COLORS.indicator.detection.text, { fontWeight: FONT_WEIGHTS.bold })}>D</ResizableTh>
+              <ResizableTh colKey="col_ap" style={colHeaderStyleWithOptions('25px', COLORS.indicator.ap.bg, COLORS.indicator.ap.text, { fontWeight: FONT_WEIGHTS.bold })}>AP</ResizableTh>
+              <ResizableTh colKey="col_rpn" style={colHeaderStyleWithOptions('30px', COLORS.indicator.rpn.bg, COLORS.indicator.rpn.text, { fontWeight: FONT_WEIGHTS.bold })}>RPN</ResizableTh>
+              <ResizableTh colKey="col_sc" style={colHeaderStyleWithOptions('60px', COLORS.risk.evaluation.h3, undefined, { whiteSpace: 'nowrap' })}>특별특성</ResizableTh>
+              <ResizableTh colKey="col_lesson" style={colHeaderStyleWithOptions('80px', '#f97316', '#fff', { whiteSpace: 'nowrap' })}>습득교훈</ResizableTh>
             </>}
             {/* 최적화 14열 */}
             {visibleSteps.includes(6) && <>
-              <th style={colHeaderStyle('70px', COLORS.opt.plan.h3)}>예방개선</th>
-              <th style={colHeaderStyle('70px', COLORS.opt.plan.h3)}>검출개선</th>
-              <th style={colHeaderStyle('50px', COLORS.opt.plan.h3)}>책임자</th>
-              <th style={colHeaderStyle('50px', COLORS.opt.plan.h3)}>목표일</th>
-              <th style={colHeaderStyle('35px', COLORS.opt.monitor.h3)}>상태</th>
-              <th style={colHeaderStyle('60px', COLORS.opt.monitor.h3)}>개선근거</th>
-              <th style={colHeaderStyle('50px', COLORS.opt.monitor.h3)}>완료일</th>
-              <th style={colHeaderStyleWithOptions('25px', COLORS.indicator.severity.bg, COLORS.indicator.severity.text, { fontWeight: FONT_WEIGHTS.bold })}>S</th>
-              <th style={colHeaderStyleWithOptions('25px', COLORS.indicator.occurrence.bg, COLORS.indicator.occurrence.text, { fontWeight: FONT_WEIGHTS.bold })}>O</th>
-              <th style={colHeaderStyleWithOptions('25px', COLORS.indicator.detection.bg, COLORS.indicator.detection.text, { fontWeight: FONT_WEIGHTS.bold })}>D</th>
-              <th style={colHeaderStyle('40px', COLORS.opt.effect.h3)}>특별특성</th>
-              <th style={colHeaderStyleWithOptions('25px', COLORS.indicator.ap.bg, COLORS.indicator.ap.text, { fontWeight: FONT_WEIGHTS.bold })}>AP</th>
-              <th style={colHeaderStyleWithOptions('30px', COLORS.indicator.rpn.bg, COLORS.indicator.rpn.text, { fontWeight: FONT_WEIGHTS.bold })}>RPN</th>
-              <th style={colHeaderStyle('50px', COLORS.opt.effect.h3)}>비고</th>
+              <ResizableTh colKey="col_action" style={colHeaderStyle('70px', COLORS.opt.plan.h3)}>예방개선</ResizableTh>
+              <ResizableTh colKey="col_detAction" style={colHeaderStyle('70px', COLORS.opt.plan.h3)}>검출개선</ResizableTh>
+              <ResizableTh colKey="col_resp" style={colHeaderStyle('50px', COLORS.opt.plan.h3)}>책임자</ResizableTh>
+              <ResizableTh colKey="col_target" style={colHeaderStyle('50px', COLORS.opt.plan.h3)}>목표일</ResizableTh>
+              <ResizableTh colKey="col_status" style={colHeaderStyle('35px', COLORS.opt.monitor.h3)}>상태</ResizableTh>
+              <ResizableTh colKey="col_result" style={colHeaderStyle('60px', COLORS.opt.monitor.h3)}>개선근거</ResizableTh>
+              <ResizableTh colKey="col_complete" style={colHeaderStyle('50px', COLORS.opt.monitor.h3)}>완료일</ResizableTh>
+              <ResizableTh colKey="col_s2" style={colHeaderStyleWithOptions('25px', COLORS.indicator.severity.bg, COLORS.indicator.severity.text, { fontWeight: FONT_WEIGHTS.bold })}>S</ResizableTh>
+              <ResizableTh colKey="col_o2" style={colHeaderStyleWithOptions('25px', COLORS.indicator.occurrence.bg, COLORS.indicator.occurrence.text, { fontWeight: FONT_WEIGHTS.bold })}>O</ResizableTh>
+              <ResizableTh colKey="col_d2" style={colHeaderStyleWithOptions('25px', COLORS.indicator.detection.bg, COLORS.indicator.detection.text, { fontWeight: FONT_WEIGHTS.bold })}>D</ResizableTh>
+              <ResizableTh colKey="col_sc2" style={colHeaderStyle('40px', COLORS.opt.effect.h3)}>특별특성</ResizableTh>
+              <ResizableTh colKey="col_ap2" style={colHeaderStyleWithOptions('25px', COLORS.indicator.ap.bg, COLORS.indicator.ap.text, { fontWeight: FONT_WEIGHTS.bold })}>AP</ResizableTh>
+              <ResizableTh colKey="col_rpn2" style={colHeaderStyleWithOptions('30px', COLORS.indicator.rpn.bg, COLORS.indicator.rpn.text, { fontWeight: FONT_WEIGHTS.bold })}>RPN</ResizableTh>
+              <ResizableTh colKey="col_remark" style={colHeaderStyle('50px', COLORS.opt.effect.h3)}>비고</ResizableTh>
             </>}
           </tr>
         </thead>
