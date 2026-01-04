@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   WorksheetState, 
@@ -130,7 +130,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
   const stateRef = useRef(state);
   
   // 방법 1: useLayoutEffect로 동기적 업데이트 (렌더 직후)
-  React.useLayoutEffect(() => {
+  useLayoutEffect(() => {
     stateRef.current = state;
   }, [state]);
   
