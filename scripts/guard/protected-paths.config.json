@@ -6,7 +6,8 @@
     "scripts/code-freeze/**"
   ],
   "frozenFiles": [
-    "src/app/pfmea/register/page.tsx"
+    "src/app/pfmea/register/page.tsx",
+    "src/app/pfmea/worksheet/tabs/function/FunctionL2Tab.tsx"
   ],
   "approvalToken": "APPROVED-BY-USER",
   "overrideEnvVar": "FMEA_GUARD_OVERRIDE",
