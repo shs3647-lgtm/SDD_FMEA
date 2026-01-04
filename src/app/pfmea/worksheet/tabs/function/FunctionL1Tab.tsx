@@ -70,29 +70,51 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
     return false;
   };
 
-  // 항목별 누락 건수 분리 계산
+  // 항목별 누락 건수 분리 계산 (✅ 필터링된 데이터만 카운트)
   const missingCounts = React.useMemo(() => {
     let functionCount = 0;     // 완제품기능 누락
     let requirementCount = 0;  // 요구사항 누락
     
+    // ✅ 의미 있는 타입만 필터링 (빈 타입 제외)
+    const meaningfulTypes = state.l1.types.filter((t: any) => {
+      const name = t.name || '';
+      return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+    });
+    
     // 구분이 없으면 누락
-    if (state.l1.types.length === 0) {
+    if (meaningfulTypes.length === 0) {
       functionCount += 1;
     }
-    state.l1.types.forEach(t => {
+    
+    meaningfulTypes.forEach((t: any) => {
+      // ✅ 의미 있는 기능만 필터링
+      const meaningfulFunctions = (t.functions || []).filter((f: any) => {
+        const name = f.name || '';
+        return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+      });
+      
       // 기능이 없으면 누락
-      if (t.functions.length === 0) {
+      if (meaningfulFunctions.length === 0) {
         functionCount += 1;
       }
-      t.functions.forEach(f => {
-        // 기능 이름 체크
+      
+      meaningfulFunctions.forEach((f: any) => {
+        // 기능 이름 체크 (이미 필터링되었지만 이중 체크)
         if (isMissing(f.name)) functionCount++;
+        
+        // ✅ 의미 있는 요구사항만 필터링
+        const meaningfulReqs = (f.requirements || []).filter((r: any) => {
+          const name = r.name || '';
+          return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+        });
+        
         // 요구사항이 없으면 누락
-        if (!f.requirements || f.requirements.length === 0) {
+        if (meaningfulReqs.length === 0) {
           requirementCount += 1;
         }
-        // 요구사항 이름 체크
-        (f.requirements || []).forEach(r => {
+        
+        // 요구사항 이름 체크 (이미 필터링되었지만 이중 체크)
+        meaningfulReqs.forEach((r: any) => {
           if (isMissing(r.name)) requirementCount++;
         });
       });

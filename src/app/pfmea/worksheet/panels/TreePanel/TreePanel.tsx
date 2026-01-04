@@ -62,8 +62,33 @@ export default function TreePanel({ state, onAddAIItem }: TreePanelProps) {
 
   // ========== 1L 기능트리 ==========
   if (tab === 'function-l1') {
-    const funcCount = state.l1.types.reduce((s: number, t: any) => s + (t.functions || []).length, 0);
-    const reqCount = state.l1.types.reduce((s: number, t: any) => s + (t.functions || []).reduce((a: number, f: any) => a + (f.requirements || []).length, 0), 0);
+    // ✅ 의미 있는 데이터만 필터링
+    const meaningfulTypes = (state.l1.types || []).filter((t: any) => {
+      const name = t.name || '';
+      return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+    });
+    
+    const funcCount = meaningfulTypes.reduce((s: number, t: any) => {
+      const meaningfulFuncs = (t.functions || []).filter((f: any) => {
+        const name = f.name || '';
+        return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+      });
+      return s + meaningfulFuncs.length;
+    }, 0);
+    
+    const reqCount = meaningfulTypes.reduce((s: number, t: any) => {
+      const meaningfulFuncs = (t.functions || []).filter((f: any) => {
+        const name = f.name || '';
+        return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+      });
+      return s + meaningfulFuncs.reduce((a: number, f: any) => {
+        const meaningfulReqs = (f.requirements || []).filter((r: any) => {
+          const name = r.name || '';
+          return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+        });
+        return a + meaningfulReqs.length;
+      }, 0);
+    }, 0);
     
     return (
       <BaseTreePanel config={{
@@ -73,21 +98,37 @@ export default function TreePanel({ state, onAddAIItem }: TreePanelProps) {
         theme: 'function-l1',
       }}>
         <TreeItem icon="📦" label={state.l1.name || '(완제품명)'} bgColor="#bbf7d0" textColor="#166534" className="mb-2" />
-        {state.l1.types.length === 0 ? (
+        {meaningfulTypes.length === 0 ? (
           <TreeEmpty message="구분/기능/요구사항을 정의하세요" />
-        ) : state.l1.types.map((t: any) => {
+        ) : meaningfulTypes.map((t: any) => {
           const typeColor = getL1TypeColor(t.name);
+          // ✅ 의미 있는 기능만 필터링
+          const meaningfulFuncs = (t.functions || []).filter((f: any) => {
+            const name = f.name || '';
+            return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+          });
+          
           return (
             <TreeBranch key={t.id} borderColor={typeColor.bg}>
               <TreeItem icon="📋" label={t.name} bgColor={typeColor.bg} textColor="#fff" />
-              {t.functions.map((f: any) => (
-                <div key={f.id} className="ml-3 mb-1">
-                  <TreeLeaf icon="⚙️" label={f.name} bgColor={typeColor.light} textColor={typeColor.text} indent={0} />
-                  {f.requirements.map((r: any) => (
-                    <TreeLeaf key={r.id} icon="•" label={r.name} bgColor="#fff3e0" textColor="#e65100" indent={4} />
-                  ))}
-                </div>
-              ))}
+              {meaningfulFuncs.length === 0 ? (
+                <TreeEmpty message="(기능 미입력)" small />
+              ) : meaningfulFuncs.map((f: any) => {
+                // ✅ 의미 있는 요구사항만 필터링
+                const meaningfulReqs = (f.requirements || []).filter((r: any) => {
+                  const name = r.name || '';
+                  return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+                });
+                
+                return (
+                  <div key={f.id} className="ml-3 mb-1">
+                    <TreeLeaf icon="⚙️" label={f.name} bgColor={typeColor.light} textColor={typeColor.text} indent={0} />
+                    {meaningfulReqs.map((r: any) => (
+                      <TreeLeaf key={r.id} icon="•" label={r.name} bgColor="#fff3e0" textColor="#e65100" indent={4} />
+                    ))}
+                  </div>
+                );
+              })}
             </TreeBranch>
           );
         })}
