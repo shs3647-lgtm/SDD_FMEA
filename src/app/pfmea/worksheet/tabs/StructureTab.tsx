@@ -442,6 +442,7 @@ export default function StructureTab(props: StructureTabProps) {
   }, [isConfirmed, saveToLocalStorage]);
 
   // 누락 건수 계산 (rows 배열 기반 - 화면에 표시되는 것과 일치)
+  // ✅ 항목별 누락 건수 분리 계산 (필터링된 데이터만 카운트)
   const missingCounts = useMemo(() => {
     const isMissing = (name: string | undefined | null) => {
       if (name === null || name === undefined) return true;
@@ -464,26 +465,41 @@ export default function StructureTab(props: StructureTabProps) {
     // 완제품 공정명 체크
     if (isMissing(state.l1.name)) l1Count++;
     
+    // ✅ 의미 있는 공정만 필터링
+    const meaningfulProcs = state.l2.filter((p: any) => {
+      const name = p.name || '';
+      return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+    });
+    
     // 중복 제거를 위한 Set
     const checkedL2 = new Set<string>();
     
-    // rows 배열 기반으로 체크 (화면에 표시되는 것과 일치)
-    rows.forEach(row => {
+    meaningfulProcs.forEach(proc => {
       // 메인공정명 누락 체크 (중복 제거)
-      if (!checkedL2.has(row.l2Id) && isMissing(row.l2Name)) {
-        l2Count++;
-        checkedL2.add(row.l2Id);
+      if (!checkedL2.has(proc.id)) {
+        if (isMissing(proc.name)) {
+          l2Count++;
+          checkedL2.add(proc.id);
+        }
       }
       
-      // 작업요소명 누락 체크
-      if (isMissing(row.l3Name)) l3Count++;
+      // ✅ 의미 있는 작업요소만 필터링
+      const meaningfulL3 = (proc.l3 || []).filter((we: any) => {
+        const name = we.name || '';
+        return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('추가') && !name.includes('선택');
+      });
       
-      // 4M 누락 체크
-      if (isMissing(row.m4)) m4Count++;
+      meaningfulL3.forEach((we: any) => {
+        // 작업요소명 누락 체크
+        if (isMissing(we.name)) l3Count++;
+        
+        // 4M 누락 체크
+        if (isMissing(we.m4)) m4Count++;
+      });
     });
     
     return { l1Count, l2Count, l3Count: l3Count + m4Count, total: l1Count + l2Count + l3Count + m4Count };
-  }, [state.l1.name, rows]);
+  }, [state.l1.name, state.l2]);
 
   // ✅ 작업요소명 개수 계산
   const workElementCount = useMemo(() => {

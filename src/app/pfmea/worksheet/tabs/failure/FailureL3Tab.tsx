@@ -92,21 +92,42 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
     return false;
   };
 
-  // ✅ 항목별 누락 건수 분리 계산 - CASCADE 구조 (공정특성 기준)
+  // ✅ 항목별 누락 건수 분리 계산 - CASCADE 구조 (공정특성 기준, 필터링된 데이터만 카운트)
   const missingCounts = useMemo(() => {
     // ✅ 상위 단계 미확정이면 누락 계산 자체를 하지 않음 (확정 게이트)
     if (!isUpstreamConfirmed) return { failureCauseCount: 0, total: 0 };
     let failureCauseCount = 0;   // 고장원인 누락
     
-    state.l2.forEach(proc => {
+    // ✅ 의미 있는 공정만 필터링
+    const meaningfulProcs = state.l2.filter((p: any) => {
+      const name = p.name || '';
+      return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+    });
+    
+    meaningfulProcs.forEach(proc => {
       const allCauses = proc.failureCauses || [];  // 공정 레벨 고장원인
       
-      (proc.l3 || []).forEach(we => {
-        if (!we.name || isMissing(we.name)) return;
+      // ✅ 의미 있는 작업요소만 필터링
+      const meaningfulL3 = (proc.l3 || []).filter((we: any) => {
+        const name = we.name || '';
+        return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('추가') && !name.includes('선택');
+      });
+      
+      meaningfulL3.forEach(we => {
+        // ✅ 의미 있는 기능만 필터링
+        const meaningfulFuncs = (we.functions || []).filter((f: any) => {
+          const name = f.name || '';
+          return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+        });
         
-        // 작업요소의 모든 공정특성 수집
-        (we.functions || []).forEach((f: any) => {
-          (f.processChars || []).forEach((pc: any) => {
+        meaningfulFuncs.forEach((f: any) => {
+          // ✅ 의미 있는 공정특성만 필터링
+          const meaningfulChars = (f.processChars || []).filter((pc: any) => {
+            const name = pc.name || '';
+            return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+          });
+          
+          meaningfulChars.forEach((pc: any) => {
             // 이 공정특성에 연결된 고장원인들
             const linkedCauses = allCauses.filter((c: any) => c.processCharId === pc.id);
             if (linkedCauses.length === 0) {

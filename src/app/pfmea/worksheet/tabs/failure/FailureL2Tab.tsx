@@ -91,19 +91,35 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
     return false;
   };
 
-  // 누락 건수 계산
+  // ✅ 항목별 누락 건수 분리 계산 (필터링된 데이터만 카운트)
   const missingCounts = useMemo(() => {
     // ✅ 상위 단계 미확정이면 누락 계산 자체를 하지 않음 (확정 게이트)
     if (!isUpstreamConfirmed) return { failureModeCount: 0, total: 0 };
     let failureModeCount = 0;
     
-    state.l2.forEach(proc => {
-      if (isMissing(proc.name)) return;
+    // ✅ 의미 있는 공정만 필터링
+    const meaningfulProcs = state.l2.filter((p: any) => {
+      const name = p.name || '';
+      return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+    });
+    
+    meaningfulProcs.forEach(proc => {
       const allModes = proc.failureModes || [];
       
-      (proc.functions || []).forEach((f: any) => {
-        (f.productChars || []).forEach((pc: any) => {
-          if (!pc.name || isMissing(pc.name)) return;
+      // ✅ 의미 있는 기능만 필터링
+      const meaningfulFuncs = (proc.functions || []).filter((f: any) => {
+        const name = f.name || '';
+        return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+      });
+      
+      meaningfulFuncs.forEach((f: any) => {
+        // ✅ 의미 있는 제품특성만 필터링
+        const meaningfulChars = (f.productChars || []).filter((pc: any) => {
+          const name = pc.name || '';
+          return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+        });
+        
+        meaningfulChars.forEach((pc: any) => {
           const linkedModes = allModes.filter((m: any) => m.productCharId === pc.id);
           if (linkedModes.length === 0) {
             failureModeCount++;

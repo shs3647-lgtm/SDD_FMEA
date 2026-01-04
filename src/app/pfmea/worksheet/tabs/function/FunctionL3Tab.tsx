@@ -87,23 +87,45 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
     return false;
   };
 
-  // 항목별 누락 건수 분리 계산 (특별특성은 누락건 제외)
+  // ✅ 항목별 누락 건수 분리 계산 (필터링된 데이터만 카운트)
   const missingCounts = React.useMemo(() => {
     let functionCount = 0;  // 작업요소기능 누락
     let charCount = 0;      // 공정특성 누락
     
-    state.l2.forEach(proc => {
-      const l3List = proc.l3 || [];
-      l3List.forEach(we => {
+    // ✅ 의미 있는 공정만 필터링
+    const meaningfulProcs = state.l2.filter((p: any) => {
+      const name = p.name || '';
+      return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+    });
+    
+    meaningfulProcs.forEach(proc => {
+      // ✅ 의미 있는 작업요소만 필터링
+      const meaningfulL3 = (proc.l3 || []).filter((we: any) => {
+        const name = we.name || '';
+        return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('추가') && !name.includes('선택');
+      });
+      
+      meaningfulL3.forEach(we => {
+        // ✅ 의미 있는 기능만 필터링
+        const meaningfulFuncs = (we.functions || []).filter((f: any) => {
+          const name = f.name || '';
+          return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+        });
+        
         // 작업요소 기능 체크
-        const funcs = we.functions || [];
-        if (funcs.length === 0) functionCount++;
-        funcs.forEach(f => {
+        if (meaningfulFuncs.length === 0) functionCount++;
+        meaningfulFuncs.forEach(f => {
           if (isMissing(f.name)) functionCount++;
+          
+          // ✅ 의미 있는 공정특성만 필터링
+          const meaningfulChars = (f.processChars || []).filter((c: any) => {
+            const name = c.name || '';
+            return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+          });
+          
           // 공정특성 체크
-          const chars = f.processChars || [];
-          if (chars.length === 0) charCount++;
-          chars.forEach(c => {
+          if (meaningfulChars.length === 0) charCount++;
+          meaningfulChars.forEach(c => {
             if (isMissing(c.name)) charCount++;
           });
         });
