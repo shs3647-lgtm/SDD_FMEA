@@ -1296,9 +1296,11 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     if (e.key === 'Enter') { e.preventDefault(); saveToLocalStorage(); }
   }, [saveToLocalStorage]);
 
+  // ✅ 수정: dirty 체크 제거 - React state 비동기 업데이트로 인해 dirty가 false일 수 있음
+  // onChange에서 setDirty(true)를 호출해도 onBlur 시점에 아직 반영 안됨
   const handleInputBlur = useCallback(() => { 
-    if (dirty) saveToLocalStorage(); 
-  }, [dirty, saveToLocalStorage]);
+    saveToLocalStorage(); 
+  }, [saveToLocalStorage]);
 
   const handleFmeaChange = useCallback((fmeaId: string) => {
     if (fmeaId === '__NEW__') {
