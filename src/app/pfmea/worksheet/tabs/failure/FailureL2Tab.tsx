@@ -50,7 +50,7 @@ const cellBase: React.CSSProperties = { border: BORDER, padding: '4px 6px', font
 const headerStyle = (bg: string, color = '#fff'): React.CSSProperties => ({ ...cellBase, background: bg, color, fontWeight: FONT_WEIGHTS.bold, textAlign: 'center' });
 const dataCell = (bg: string): React.CSSProperties => ({ ...cellBase, background: bg });
 
-export default function FailureL2Tab({ state, setState, setDirty, saveToLocalStorage }: FailureTabProps) {
+export default function FailureL2Tab({ state, setState, setDirty, saveToLocalStorage, saveAtomicDB }: FailureTabProps) {
   const [modal, setModal] = useState<{ 
     type: string; 
     processId: string; 
@@ -67,15 +67,21 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
   );
 
   const isConfirmed = state.failureL2Confirmed || false;
+  // ✅ 상위 단계(기능분석 2L) 확정 여부 - 미확정이면 FM 입력/확정/표시를 막음
+  const isUpstreamConfirmed = state.l2Confirmed || false;
 
   // ✅ 셀 클릭 시 확정됨 상태면 자동으로 수정 모드로 전환
   const handleCellClick = useCallback((modalConfig: any) => {
+    if (!isUpstreamConfirmed) {
+      alert('⚠️ 기능분석(2L)을 먼저 확정해주세요.\n\n기능분석 확정 후 고장형태(FM)을 입력할 수 있습니다.');
+      return;
+    }
     if (isConfirmed) {
       setState(prev => ({ ...prev, failureL2Confirmed: false }));
       setDirty(true);
     }
     setModal(modalConfig);
-  }, [isConfirmed, setState, setDirty]);
+  }, [isUpstreamConfirmed, isConfirmed, setState, setDirty]);
 
   const isMissing = (name: string | undefined) => {
     if (!name) return true;
@@ -87,6 +93,8 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
 
   // 누락 건수 계산
   const missingCounts = useMemo(() => {
+    // ✅ 상위 단계 미확정이면 누락 계산 자체를 하지 않음 (확정 게이트)
+    if (!isUpstreamConfirmed) return { failureModeCount: 0, total: 0 };
     let failureModeCount = 0;
     
     state.l2.forEach(proc => {
@@ -108,12 +116,16 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
       });
     });
     return { failureModeCount, total: failureModeCount };
-  }, [state.l2]);
+  }, [isUpstreamConfirmed, state.l2]);
   
   const missingCount = missingCounts.total;
 
 
   const handleConfirm = useCallback(() => {
+    if (!isUpstreamConfirmed) {
+      alert('⚠️ 기능분석(2L)을 먼저 확정해주세요.\n\n기능분석 확정 후 고장형태(FM)을 확정할 수 있습니다.');
+      return;
+    }
     console.log('[FailureL2Tab] 확정 버튼 클릭, missingCount:', missingCount);
     if (missingCount > 0) {
       alert(`누락된 항목이 ${missingCount}건 있습니다.\n먼저 입력을 완료해주세요.`);
@@ -134,11 +146,15 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
     // ✅ 확정 상태 저장 - setTimeout으로 state 업데이트 대기
     setTimeout(() => {
       saveToLocalStorage?.();
-      console.log('[FailureL2Tab] 확정 후 localStorage 저장 완료');
+      // ✅ 확정 시 DB 저장 (명시적 호출)
+      if (saveAtomicDB) {
+        saveAtomicDB().catch(e => console.error('[FailureL2Tab] DB 저장 오류:', e));
+      }
+      console.log('[FailureL2Tab] 확정 후 localStorage 및 DB 저장 완료');
     }, 100);
     
     alert('2L 고장형태(FM) 분석이 확정되었습니다.');
-  }, [missingCount, state.l2, setState, setDirty, saveToLocalStorage]);
+  }, [isUpstreamConfirmed, missingCount, state.l2, setState, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   const handleEdit = useCallback(() => {
     setState(prev => ({ ...prev, failureL2Confirmed: false }));
@@ -273,6 +289,8 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
    * - 공정/기능도 적절히 rowSpan
    */
   const buildFlatRows = useMemo(() => {
+    // ✅ 상위 단계 미확정이면 표시 자체를 하지 않음
+    if (!isUpstreamConfirmed) return [];
     const rows: {
       procId: string;
       procNo: string;
@@ -380,7 +398,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
     });
 
     return rows;
-  }, [processes]);
+  }, [isUpstreamConfirmed, processes]);
 
   return (
     <div className="p-0 overflow-auto h-full" style={{ paddingBottom: '50px' }} onKeyDown={handleEnterBlur}>
@@ -461,13 +479,13 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
           {buildFlatRows.length === 0 ? (
             <tr>
               <td className="border border-[#ccc] p-2.5 text-center bg-[#e3f2fd] font-semibold">
-                (구조분석에서 공정 입력)
+                {!isUpstreamConfirmed ? '⚠️ 기능분석(2L) 확정 필요' : '(구조분석에서 공정 입력)'}
               </td>
               <td className="border border-[#ccc] p-2.5 text-center bg-[#c8e6c9]">
-                (기능분석에서 공정기능 입력)
+                {!isUpstreamConfirmed ? '하위 단계는 상위 단계 확정 후 활성화됩니다.' : '(기능분석에서 공정기능 입력)'}
               </td>
               <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-2.5 text-center bg-[#c8e6c9]">
-                (기능분석에서 제품특성 입력)
+                {!isUpstreamConfirmed ? '-' : '(기능분석에서 제품특성 입력)'}
               </td>
               <td className="border border-[#ccc] border-l-0 p-1 text-center bg-orange-100 text-xs">
                 -

@@ -66,7 +66,19 @@ interface FailureEffect {
   severity?: number; // 심각도
 }
 
-export default function FailureL1Tab({ state, setState, setDirty, saveToLocalStorage }: FailureTabProps) {
+// ✅ 기능분석 탭에서 생성되는 플레이스홀더/빈 요구사항은 고장영향 분석 대상에서 제외
+const isMeaningfulRequirementName = (name: unknown): name is string => {
+  if (typeof name !== 'string') return false;
+  const n = name.trim();
+  if (!n) return false;
+  // Function 탭에서 임시/플레이스홀더로 쓰는 문자열 패턴들
+  if (n.includes('클릭하여')) return false;
+  if (n === '요구사항 선택') return false;
+  if (n.startsWith('(기능분석에서')) return false;
+  return true;
+};
+
+export default function FailureL1Tab({ state, setState, setDirty, saveToLocalStorage, saveAtomicDB }: FailureTabProps) {
   const [modal, setModal] = useState<{ 
     type: string; 
     effectId?: string;
@@ -88,19 +100,27 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
 
   // 확정 상태
   const isConfirmed = state.failureL1Confirmed || false;
+  // ✅ 상위 단계(기능분석 1L) 확정 여부 - 미확정이면 FE 입력/확정/표시를 막음
+  const isUpstreamConfirmed = state.l1Confirmed || false;
 
   // ✅ 셀 클릭 시 확정됨 상태면 자동으로 수정 모드로 전환
   const handleCellClick = useCallback((modalConfig: any) => {
+    if (!isUpstreamConfirmed) {
+      alert('⚠️ 기능분석(1L)을 먼저 확정해주세요.\n\n기능분석 확정 후 고장영향(FE)을 입력할 수 있습니다.');
+      return;
+    }
     if (isConfirmed) {
       setState(prev => ({ ...prev, failureL1Confirmed: false }));
       setDirty(true);
     }
     setModal(modalConfig);
-  }, [isConfirmed, setState, setDirty]);
+  }, [isUpstreamConfirmed, isConfirmed, setState, setDirty]);
 
   // 누락 건수 계산 (state.l1.failureScopes 사용)
   // 항목별 누락 건수 분리 계산 - 심각도는 선택사항이므로 누락건에서 제외
   const missingCounts = useMemo(() => {
+    // ✅ 상위 단계 미확정이면 누락 계산 자체를 하지 않음 (확정 게이트)
+    if (!isUpstreamConfirmed) return { effectCount: 0, total: 0 };
     let effectCount = 0;    // 고장영향 누락 (필수)
     // 심각도는 필수 아님 - 누락건에서 제외
     
@@ -110,6 +130,8 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
     types.forEach((type: any) => {
       (type.functions || []).forEach((func: any) => {
         (func.requirements || []).forEach((req: any) => {
+          // ✅ 빈/플레이스홀더 요구사항은 고장영향 분석 대상에서 제외
+          if (!isMeaningfulRequirementName(req?.name)) return;
           const effect = effects.find((e: any) => e.reqId === req.id);
           // 고장영향 체크 (필수)
           if (!effect || !effect.effect) effectCount++;
@@ -118,7 +140,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
       });
     });
     return { effectCount, total: effectCount };
-  }, [state.l1?.types, state.l1?.failureScopes]);
+  }, [isUpstreamConfirmed, state.l1?.types, state.l1?.failureScopes]);
   
   // 총 누락 건수 (고장영향만 카운트)
   const missingCount = missingCounts.total;
@@ -141,6 +163,10 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
 
   // 확정 핸들러 (L2 패턴 적용)
   const handleConfirm = useCallback(() => {
+    if (!isUpstreamConfirmed) {
+      alert('⚠️ 기능분석(1L)을 먼저 확정해주세요.\n\n기능분석 확정 후 고장영향(FE)을 확정할 수 있습니다.');
+      return;
+    }
     console.log('[FailureL1Tab] 확정 버튼 클릭, missingCount:', missingCount);
     if (missingCount > 0) {
       alert(`누락된 항목이 ${missingCount}건 있습니다.\n먼저 입력을 완료해주세요.`);
@@ -161,11 +187,15 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
     // ✅ 확정 상태 저장 - setTimeout으로 state 업데이트 대기
     setTimeout(() => {
       saveToLocalStorage?.();
-      console.log('[FailureL1Tab] 확정 후 localStorage 저장 완료');
+      // ✅ 확정 시 DB 저장 (명시적 호출)
+      if (saveAtomicDB) {
+        saveAtomicDB().catch(e => console.error('[FailureL1Tab] DB 저장 오류:', e));
+      }
+      console.log('[FailureL1Tab] 확정 후 localStorage 및 DB 저장 완료');
     }, 100);
     
     alert('1L 고장영향(FE) 분석이 확정되었습니다.');
-  }, [missingCount, state.l1, setState, setDirty, saveToLocalStorage]);
+  }, [isUpstreamConfirmed, missingCount, state.l1, setState, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   // 수정 핸들러
   const handleEdit = useCallback(() => {
@@ -220,6 +250,13 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
     return reqs;
   }, [state.l1?.types]);
 
+  // ✅ 플레이스홀더/빈 요구사항 필터링 (FE 행 폭증/빈셀 폭증 방지)
+  const meaningfulRequirementsFromFunction = useMemo(() => {
+    // ✅ 상위 단계 미확정이면 FE 표시 자체를 하지 않음
+    if (!isUpstreamConfirmed) return [];
+    return requirementsFromFunction.filter(r => isMeaningfulRequirementName(r?.name));
+  }, [isUpstreamConfirmed, requirementsFromFunction]);
+
   // 고장영향 데이터 (localStorage에서)
   const failureEffects: FailureEffect[] = useMemo(() => {
     return (state.l1.failureScopes || []).map((s: any) => ({
@@ -241,12 +278,12 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
       totalRowSpan: number;
     }[] = [];
 
-    if (requirementsFromFunction.length === 0) {
+    if (meaningfulRequirementsFromFunction.length === 0) {
       // 기능분석 데이터 없음
       return [];
     }
 
-    requirementsFromFunction.forEach(req => {
+    meaningfulRequirementsFromFunction.forEach(req => {
       const effects = failureEffects.filter(e => e.reqId === req.id);
       rows.push({
         reqId: req.id,
@@ -259,7 +296,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
     });
 
     return rows;
-  }, [requirementsFromFunction, failureEffects]);
+  }, [meaningfulRequirementsFromFunction, failureEffects]);
 
   // 총 행 수
   const totalRows = flatRows.reduce((acc, row) => acc + row.totalRowSpan, 0) || 1;
@@ -517,10 +554,12 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
   return (
     <div className="p-0 overflow-auto h-full" style={{ paddingBottom: '50px' }} onKeyDown={handleEnterBlur}>
       {/* 안내 메시지 */}
-      {requirementsFromFunction.length === 0 && (
+      {meaningfulRequirementsFromFunction.length === 0 && (
         <div className="p-5 bg-[#fff3e0] border-b border-[#ccc] text-center">
           <span className="text-xs text-[#e65100] font-semibold">
-            ⚠️ 기능분석(L1)에서 요구사항을 먼저 입력해주세요. 입력된 요구사항이 여기에 자동으로 표시됩니다.
+            {!isUpstreamConfirmed
+              ? '⚠️ 기능분석(1L)을 먼저 확정해주세요. 확정된 요구사항만 고장영향(FE) 단계에 표시됩니다.'
+              : '⚠️ 기능분석(L1)에서 요구사항을 먼저 입력해주세요. 입력된 요구사항이 여기에 자동으로 표시됩니다.'}
           </span>
         </div>
       )}

@@ -10,6 +10,7 @@ export interface FailureTabProps {
   setState: React.Dispatch<React.SetStateAction<WorksheetState>>;
   setDirty: (dirty: boolean) => void;
   saveToLocalStorage: () => void;
+  saveAtomicDB?: () => void;
 }
 
 

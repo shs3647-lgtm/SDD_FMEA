@@ -389,6 +389,7 @@ function FMEAWorksheetPageContent() {
     setIsWorkElementModalOpen,
     setTargetL2Id,
     saveToLocalStorage,
+    saveAtomicDB,
     onAPClick: () => setShowAPModal(true),
   };
 
