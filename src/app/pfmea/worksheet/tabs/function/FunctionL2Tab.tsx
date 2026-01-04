@@ -43,7 +43,7 @@ const dataCell = (bg: string): React.CSSProperties => ({ ...cellBase, background
 // 특별특성 배지 - 공통 컴포넌트 사용
 import SpecialCharBadge from '@/components/common/SpecialCharBadge';
 
-export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalStorage }: FunctionTabProps) {
+export default function FunctionL2Tab({ state, setState, setStateSynced, setDirty, saveToLocalStorage }: FunctionTabProps) {
   const [modal, setModal] = useState<{ type: string; procId: string; funcId?: string; charId?: string; title: string; itemCode: string } | null>(null);
   
   // 특별특성 모달 상태
@@ -102,35 +102,49 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
   }, [state.l2, saveToLocalStorage]);
 
 
-  // 확정 핸들러 (고장분석 패턴 적용)
+  // 확정 핸들러 (고장분석 패턴 적용) - ✅ setStateSynced 사용으로 저장 보장
   const handleConfirm = useCallback(() => {
     // ✅ 현재 기능 통계 로그
     const funcCount = state.l2.flatMap((p: any) => p.functions || []).length;
     const charCount = state.l2.flatMap((p: any) => (p.functions || []).flatMap((f: any) => f.productChars || [])).length;
     console.log('[FunctionL2Tab] 확정 시 기능:', funcCount, '개, 제품특성:', charCount, '개');
     
-    setState(prev => {
+    // ✅ setStateSynced 사용 (stateRef 동기 업데이트)
+    const updateFn = (prev: any) => {
       const newState = { ...prev, l2Confirmed: true };
       console.log('[FunctionL2Tab] 확정 상태 업데이트:', newState.l2Confirmed);
       return newState;
-    });
+    };
+    
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     setDirty(true);
     
-    // ✅ 저장 보장 (stateRef 업데이트 대기 후 저장)
-    setTimeout(() => {
-      saveToLocalStorage?.();
-      console.log('[FunctionL2Tab] 확정 후 localStorage 저장 완료');
-    }, 200);
+    // ✅ 저장 보장 (stateRef가 동기적으로 업데이트되었으므로 즉시 저장 가능)
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        saveToLocalStorage?.();
+        console.log('[FunctionL2Tab] 확정 후 localStorage 저장 완료');
+      }, 50);
+    });
     
     alert('✅ 2L 메인공정 기능분석이 확정되었습니다.');
-  }, [state.l2, setState, setDirty, saveToLocalStorage]);
+  }, [state.l2, setState, setStateSynced, setDirty, saveToLocalStorage]);
 
-  // 수정 핸들러 (고장분석 패턴 적용)
+  // 수정 핸들러 (고장분석 패턴 적용) - ✅ setStateSynced 사용
   const handleEdit = useCallback(() => {
-    setState(prev => ({ ...prev, l2Confirmed: false }));
+    const updateFn = (prev: any) => ({ ...prev, l2Confirmed: false });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     setDirty(true);
-    setTimeout(() => saveToLocalStorage?.(), 200);
-  }, [setState, setDirty, saveToLocalStorage]);
+    requestAnimationFrame(() => setTimeout(() => saveToLocalStorage?.(), 50));
+  }, [setState, setStateSynced, setDirty, saveToLocalStorage]);
 
   // 메인공정 기능 인라인 편집 핸들러 (더블클릭)
   const handleInlineEditFunction = useCallback((procId: string, funcId: string, newValue: string) => {
