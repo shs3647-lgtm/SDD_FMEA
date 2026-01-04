@@ -371,39 +371,40 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
       modeName: string;
     }[] = [];
 
+    // ✅ 의미 있는 데이터만 필터링하는 헬퍼 함수
+    const isMeaningful = (name: string | undefined | null) => {
+      if (!name) return false;
+      const trimmed = String(name).trim();
+      if (trimmed === '') return false;
+      if (trimmed.includes('클릭')) return false;
+      if (trimmed.includes('선택')) return false;
+      if (trimmed.includes('입력')) return false;
+      if (trimmed.includes('필요')) return false;
+      if (trimmed.includes('추가')) return false;
+      return true;
+    };
+
     processes.forEach(proc => {
       const allModes = proc.failureModes || [];
-      const functions = proc.functions || [];
+      // ✅ 의미 있는 기능만 필터링
+      const functions = (proc.functions || []).filter((f: any) => isMeaningful(f.name));
       
       let procRowCount = 0;
       let procFirstRowIdx = rows.length;
       
       if (functions.length === 0) {
-        // 기능 없는 공정
-        rows.push({
-          procId: proc.id, procNo: proc.no, procName: proc.name,
-          procRowSpan: 1, showProc: true,
-          funcId: '', funcName: '', funcRowSpan: 1, showFunc: true,
-          charId: '', charName: '', charRowSpan: 1, showChar: true,
-          modeId: '', modeName: ''
-        });
-        procRowCount = 1;
+        // 의미 있는 기능이 없으면 이 공정은 건너뜀 (빈행 생성 안함)
+        return;
       } else {
         functions.forEach((f: any, fIdx: number) => {
-          const pChars = f.productChars || [];
+          // ✅ 의미 있는 제품특성만 필터링
+          const pChars = (f.productChars || []).filter((pc: any) => isMeaningful(pc.name));
           let funcRowCount = 0;
           const funcFirstRowIdx = rows.length;
           
           if (pChars.length === 0) {
-            // 제품특성 없는 기능
-            rows.push({
-              procId: proc.id, procNo: proc.no, procName: proc.name,
-              procRowSpan: 0, showProc: false,
-              funcId: f.id, funcName: f.name, funcRowSpan: 1, showFunc: true,
-              charId: '', charName: '', charRowSpan: 1, showChar: true,
-              modeId: '', modeName: ''
-            });
-            funcRowCount = 1;
+            // 의미 있는 제품특성이 없으면 이 기능은 건너뜀 (빈행 생성 안함)
+            return;
           } else {
             pChars.forEach((pc: any, pcIdx: number) => {
               const linkedModes = allModes.filter((m: any) => m.productCharId === pc.id);
