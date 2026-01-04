@@ -10,18 +10,13 @@ import { FONT_SIZES, FONT_WEIGHTS } from '@/app/dfmea/worksheet/constants';
 const BORDER = '1px solid #ccc';
 
 export const colHeaderStyle = (width: string, bg: string, color: string = 'inherit'): CSSProperties => ({
-  minWidth: width,
-  width: 'auto',
+  width,
   background: bg,
   color,
   border: BORDER,
   borderBottom: '2px solid #333',
   padding: '2px',
   fontSize: FONT_SIZES.small,
-  resize: 'horizontal',
-  overflow: 'hidden',
-  cursor: 'default',
-  position: 'relative',
 });
 
 export const colHeaderStyleWithOptions = (

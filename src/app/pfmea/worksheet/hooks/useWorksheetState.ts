@@ -31,9 +31,6 @@ import {
 import {
   loadWorksheetDB,
   saveWorksheetDB,
-  saveLegacyData,
-  loadLegacyData,
-  debugLocalStorageData,
 } from '../db-storage';
 
 interface UseWorksheetStateReturn {
@@ -215,8 +212,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         riskDataCount: Object.keys(worksheetData.riskData || {}).length,
         riskDataKeys: Object.keys(worksheetData.riskData || {}),
       });
-      // ✅ 새 함수 사용 (안정적인 localStorage 저장)
-      saveLegacyData(targetId, worksheetData);
+      localStorage.setItem(`pfmea_worksheet_${targetId}`, JSON.stringify(worksheetData));
       
       // 2. 원자성 DB로도 저장 (async)
       const newAtomicDB = migrateToAtomicDB(worksheetData);
@@ -663,9 +659,6 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     } catch (e) {
       console.error('[기초정보] 로드 오류:', e);
     }
-    
-    // ✅ 디버그: localStorage 데이터 확인
-    debugLocalStorageData(selectedFmeaId);
     
     // 원자성 DB 로드 시도 (async)
     (async () => {

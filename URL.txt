@@ -1,5 +1,5 @@
 === PFMEA URL ===
-메인 워크시트: http://localhost:3000/pfmea/worksheet?id=PFM25-310&v=20260104-ux-postgresql-codefreeze
+메인 워크시트: http://localhost:3000/pfmea/worksheet?id=PFM25-310&v=20260104-data-load-fix
 FMEA 리스트: http://localhost:3000/pfmea/list
 FMEA 등록: http://localhost:3000/pfmea/register
 FMEA 4판: http://localhost:3000/pfmea/fmea4?id=PFM25-310
@@ -9,46 +9,35 @@ FMEA 4판: http://localhost:3000/pfmea/fmea4?id=PFM25-310
 FMEA 리스트: http://localhost:3000/dfmea/list
 FMEA 등록: http://localhost:3000/dfmea/register
 
-=== CODEFREEZE INFO ===
-Tag: codefreeze-20260104-ux-postgresql
-Commit: b4ef038
-Branch: backup/20260104-ux-postgresql
-Date: 2026-01-04
-Files Changed: 81 files
-Lines: +2588 / -408
-
 === VERSION INFO ===
-Version: 1.1.0-codefreeze
+Version: 1.0.0-postgresql-sync
 Last Updated: 2026-01-04
-Status: CODEFREEZE - Production Ready
-Cache Busting: v=20260104-ux-postgresql-codefreeze
+Changes: 
+  - PostgreSQL DB 연동 완료 (PFMEA + DFMEA)
+  - 구조분석부터 고장연결, All 화면까지 PFMEA → DFMEA 동기화 완료
+  - 확정 상태 관리 및 자동 저장 기능
+  - AI 히스토리 저장 기능
+  - visibleSteps prop 지원
+Status: Ready for Testing
+Cache Busting: v=20260104-postgresql-sync
 
-=== 주요 변경사항 ===
-1. 좌우 스크롤바 개선
-   - 모든 탭 브라우저 하단 고정 스크롤바
-   - StatusBar 스크롤 컨트롤 통합 (화살표/드래그/클릭)
-   - 마우스 휠 좌우 스크롤 지원
+=== 주요 기능 ===
+1. 구조분석 (StructureTab)
+   - 확정 상태 관리
+   - 자동 저장
+   - EditableL2Cell (인라인 수정)
+   - COUNT 표시 (S1/S2/S3)
 
-2. 고장분석 개선
-   - 확정 상태 자동 저장 (useEffect 감지)
-   - 고장연결 완료 축하 메시지
-   - 전체확정 버튼 활성화 조건
-   - 요구사항 폭 2배 (70px → 140px)
-   - I/F → 4M 용어 변경
+2. 고장연결 (FailureLinkTab)
+   - 확정된 FE만 사용
+   - AI 히스토리 저장
+   - 중복 제거
 
-3. PostgreSQL 환경 구축
-   - Prisma ORM 스키마 (13개 모델)
-   - API 라우트 (/api/fmea)
-   - db-storage.ts 추상화 레이어
-   - localStorage 폴백
+3. All 화면
+   - visibleSteps prop 지원
+   - 고장연결 데이터 기반 40열 테이블
 
-4. DFMEA 동기화
-   - StructureTab, FailureLinkTab, AllTab 코드 동기화
-
-5. 버그 수정
-   - colgroup 하이드레이션 에러
-   - 확정 상태 저장 타이밍
-
-=== 롤백 명령어 ===
-git checkout codefreeze-20260104-ux-postgresql
-git checkout backup/20260104-ux-postgresql
+=== PostgreSQL 연동 ===
+- API: /api/fmea (GET/POST)
+- DB 저장 실패 시 localStorage 폴백
+- 배치 처리 최적화
