@@ -275,10 +275,22 @@ export default function TreeAIRecommend({
                     {item.value}
                   </span>
 
-                  {/* 신뢰도 */}
-                  <span className="text-[9px] text-gray-400">
-                    ({Math.round(item.confidence * 100)}%)
-                  </span>
+                  {/* 신뢰도 시각화 (진행바 + 퍼센트) */}
+                  <div className="flex items-center gap-1">
+                    <div className="w-[40px] h-[4px] bg-gray-200 rounded-sm overflow-hidden">
+                      <div 
+                        className={`h-full rounded-sm ${
+                          item.confidence >= 0.7 ? 'bg-green-500' :
+                          item.confidence >= 0.5 ? 'bg-yellow-500' :
+                          'bg-orange-400'
+                        }`}
+                        style={{ width: `${Math.round(item.confidence * 100)}%` }}
+                      />
+                    </div>
+                    <span className="text-[9px] text-gray-400">
+                      {Math.round(item.confidence * 100)}%
+                    </span>
+                  </div>
 
                   {/* 추가 버튼 */}
                   <button
@@ -412,9 +424,21 @@ export function TreeAIMini({ context, type, onSelect }: TreeAIMiniProps) {
                 {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}
               </span>
               <span>{item.value}</span>
-              <span className="text-[9px] text-gray-400 ml-auto">
-                {Math.round(item.confidence * 100)}%
-              </span>
+              <div className="flex items-center gap-1 ml-auto">
+                <div className="w-[30px] h-[3px] bg-gray-200 rounded-sm overflow-hidden">
+                  <div 
+                    className={`h-full rounded-sm ${
+                      item.confidence >= 0.7 ? 'bg-green-500' :
+                      item.confidence >= 0.5 ? 'bg-yellow-500' :
+                      'bg-orange-400'
+                    }`}
+                    style={{ width: `${Math.round(item.confidence * 100)}%` }}
+                  />
+                </div>
+                <span className="text-[9px] text-gray-400">
+                  {Math.round(item.confidence * 100)}%
+                </span>
+              </div>
             </div>
           ))}
         </div>
