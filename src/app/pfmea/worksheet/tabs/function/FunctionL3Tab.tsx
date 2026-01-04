@@ -117,17 +117,18 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
         meaningfulFuncs.forEach(f => {
           if (isMissing(f.name)) functionCount++;
           
-          // ✅ 의미 있는 공정특성만 필터링
-          const meaningfulChars = (f.processChars || []).filter((c: any) => {
-            const name = c.name || '';
-            return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
-          });
-          
-          // 공정특성 체크
-          if (meaningfulChars.length === 0) charCount++;
-          meaningfulChars.forEach(c => {
-            if (isMissing(c.name)) charCount++;
-          });
+          // ✅ 의미 있는 기능이 있는 경우에만 공정특성 누락 체크
+          if (!isMissing(f.name)) {
+            // ✅ 의미 있는 공정특성만 필터링
+            const meaningfulChars = (f.processChars || []).filter((c: any) => {
+              const name = c.name || '';
+              return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && 
+                     !name.includes('추가') && !name.includes('입력') && !name.includes('필요');
+            });
+            
+            // 공정특성 체크: 의미 있는 기능이 있는데 공정특성이 없으면 누락
+            if (meaningfulChars.length === 0) charCount++;
+          }
         });
       });
     });
