@@ -135,27 +135,35 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     
     setIsSaving(true);
     try {
+      // ✅ 항상 최신 state 사용 (클로저 문제 해결)
+      const currentState = stateRef.current;
+      
       // 현재 state를 원자성 DB로 마이그레이션
       const legacyData = {
         fmeaId: atomicDB.fmeaId,
-        l1: state.l1,
-        l2: state.l2,
-        failureLinks: (state as any).failureLinks || [],
-        structureConfirmed: (state as any).structureConfirmed || false,
-        l1Confirmed: (state as any).l1Confirmed || false,
-        l2Confirmed: (state as any).l2Confirmed || false,
-        l3Confirmed: (state as any).l3Confirmed || false,
-        failureL1Confirmed: (state as any).failureL1Confirmed || false,
-        failureL2Confirmed: (state as any).failureL2Confirmed || false,
-        failureL3Confirmed: (state as any).failureL3Confirmed || false,
+        l1: currentState.l1, // ✅ stateRef.current 사용
+        l2: currentState.l2, // ✅ stateRef.current 사용
+        failureLinks: (currentState as any).failureLinks || [],
+        structureConfirmed: (currentState as any).structureConfirmed || false,
+        l1Confirmed: (currentState as any).l1Confirmed || false,
+        l2Confirmed: (currentState as any).l2Confirmed || false,
+        l3Confirmed: (currentState as any).l3Confirmed || false,
+        failureL1Confirmed: (currentState as any).failureL1Confirmed || false,
+        failureL2Confirmed: (currentState as any).failureL2Confirmed || false,
+        failureL3Confirmed: (currentState as any).failureL3Confirmed || false,
       };
       
+      console.log('[원자성 DB 저장] l1.name:', legacyData.l1.name); // ✅ 디버깅 로그 추가
+      
       const newAtomicDB = migrateToAtomicDB(legacyData);
+      console.log('[원자성 DB 저장] l1Structure.name:', newAtomicDB.l1Structure?.name); // ✅ 디버깅 로그 추가
+      
       saveWorksheetDB(newAtomicDB).catch(e => console.error('[원자성 DB 저장] 오류:', e));
       setAtomicDB(newAtomicDB);
       
       console.log('[원자성 DB 저장] 완료:', {
         fmeaId: newAtomicDB.fmeaId,
+        l1Name: newAtomicDB.l1Structure?.name, // ✅ l1.name 로그 추가
         l2Structures: newAtomicDB.l2Structures.length,
         l3Structures: newAtomicDB.l3Structures.length,
         failureModes: newAtomicDB.failureModes.length,
@@ -169,7 +177,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     } finally {
       setIsSaving(false);
     }
-  }, [atomicDB, state]);
+  }, [atomicDB]); // ✅ state 의존성 제거, stateRef 사용
 
   // 기존 호환 저장 함수 (레거시 + 원자성 동시 저장) - ✅ stateRef 사용으로 항상 최신 상태 저장
   const saveToLocalStorage = useCallback(() => {
@@ -705,6 +713,18 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         }
       }
       
+      // ✅ l1.name 복원: 원자성 DB 또는 레거시 원본 데이터에서 가져오기
+      if (legacyOriginalData?.l1?.name) {
+        legacy.l1.name = legacyOriginalData.l1.name;
+        console.log('[로드] l1.name 레거시 원본에서 복원:', legacy.l1.name);
+      } else if (loadedDB.l1Structure?.name) {
+        legacy.l1.name = loadedDB.l1Structure.name;
+        console.log('[로드] l1.name 원자성 DB에서 복원:', legacy.l1.name);
+      } else if (projectL1Name) {
+        legacy.l1.name = projectL1Name;
+        console.log('[로드] l1.name 프로젝트 정보에서 복원:', legacy.l1.name);
+      }
+      
       // ========== 근본적인 해결: 레거시 원본 데이터에서 failureCauses 추출 ==========
       const legacyOriginalCauses = legacyOriginalData?.l2?.flatMap((proc: any) => {
         return (proc.failureCauses || []).map((fc: any) => ({
@@ -839,6 +859,12 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         
         // 레거시 형식도 다시 변환 (복구된 데이터 반영)
         finalLegacy = convertToLegacyFormat(loadedDB);
+        
+        // ✅ l1.name 복원 유지 (복구 후에도 유지)
+        if (legacy.l1.name) {
+          finalLegacy.l1.name = legacy.l1.name;
+          console.log('[복구] l1.name 유지:', finalLegacy.l1.name);
+        }
         
         console.log('✅ [복구 완료] legacy 데이터가 트리뷰 데이터로 업데이트되었습니다.');
       } else {
@@ -982,10 +1008,27 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           // 마이그레이션 및 방어 코드 - failureScopes 명시적 포함
           const migratedL1 = {
             ...parsed.l1,
-            name: parsed.l1.name || projectL1Name, // ✅ 빈 이름이면 프로젝트 정보에서 가져오기
+            name: parsed.l1.name || projectL1Name || '', // ✅ 빈 이름이면 프로젝트 정보에서 가져오기, 없으면 빈 문자열
             types: parsed.l1.types || [],
             failureScopes: parsed.l1.failureScopes || [] // 고장영향 데이터 보존
           };
+          
+          // ✅ l1.name이 비어있으면 원자성 DB에서 복원 시도
+          if (!migratedL1.name || migratedL1.name.trim() === '') {
+            const atomicKey = `pfmea_atomic_${selectedFmeaId}`;
+            const atomicData = localStorage.getItem(atomicKey);
+            if (atomicData) {
+              try {
+                const atomicParsed = JSON.parse(atomicData);
+                if (atomicParsed.l1Structure?.name) {
+                  migratedL1.name = atomicParsed.l1Structure.name;
+                  console.log('[데이터 로드] l1.name 원자성 DB에서 복원:', migratedL1.name);
+                }
+              } catch (e) {
+                console.warn('[데이터 로드] 원자성 DB 파싱 실패:', e);
+              }
+            }
+          }
           
           console.log('[데이터 로드] L1 이름:', migratedL1.name, '(원본:', parsed.l1.name, ', 프로젝트:', projectL1Name, ')');
           console.log('[데이터 로드] failureScopes:', (parsed.l1.failureScopes || []).length, '개');

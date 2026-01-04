@@ -518,11 +518,51 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
             </tr>
           ) : (() => {
             let globalRowIdx = 0;
-            return state.l1.types.map((t, tIdx) => {
-              // 각 구분(type)별 행 수 계산
-              const typeRowSpan = t.functions.length === 0 ? 1 : t.functions.reduce((a, f) => a + Math.max(1, f.requirements.length), 0);
+            // ✅ 빈 타입 필터링 (이름이 없거나 "클릭하여" 포함하는 타입 제외)
+            const meaningfulTypes = state.l1.types.filter((t: any) => {
+              const name = t.name || '';
+              return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+            });
+            
+            // 빈 타입이 없으면 첫 번째 빈 행만 표시
+            if (meaningfulTypes.length === 0 && state.l1.types.length > 0) {
+              const firstEmptyType = state.l1.types[0];
+              return (
+                <tr key={firstEmptyType.id} className="bg-[#e8f5e9]">
+                  <td className="border border-[#ccc] p-2.5 text-center bg-[#e3f2fd] font-semibold">
+                    {state.l1.name || '(구조분석에서 입력)'}
+                  </td>
+                  <td className="border border-[#ccc] p-0">
+                    <SelectableCell value="" placeholder="구분 선택" bgColor={COLORS.function.light} onClick={() => handleCellClick({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
+                  </td>
+                  <td className="border border-[#ccc] p-0">
+                    <SelectableCell value="" placeholder="기능 선택" bgColor={COLORS.function.light} onClick={() => handleCellClick({ type: 'l1Function', id: '', title: '완제품 기능 선택', itemCode: 'C2' })} />
+                  </td>
+                  <td className="border border-[#ccc] p-0">
+                    <SelectableCell value="" placeholder="요구사항 선택" bgColor={COLORS.failure.light} textColor={COLORS.failure.text} onClick={() => handleCellClick({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
+                  </td>
+                </tr>
+              );
+            }
+            
+            return meaningfulTypes.map((t, tIdx) => {
+              // ✅ 빈 기능 필터링
+              const meaningfulFunctions = (t.functions || []).filter((f: any) => {
+                const name = f.name || '';
+                return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+              });
               
-              return t.functions.length === 0 ? (
+              // 각 구분(type)별 행 수 계산 (의미 있는 기능만)
+              const typeRowSpan = meaningfulFunctions.length === 0 ? 1 : meaningfulFunctions.reduce((a: number, f: any) => {
+                // ✅ 빈 요구사항 필터링
+                const meaningfulReqs = (f.requirements || []).filter((r: any) => {
+                  const name = r.name || '';
+                  return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+                });
+                return a + Math.max(1, meaningfulReqs.length);
+              }, 0);
+              
+              return meaningfulFunctions.length === 0 ? (
                 <tr key={t.id} className={globalRowIdx++ % 2 === 1 ? "bg-[#c8e6c9]" : "bg-[#e8f5e9]"}>
                   {/* 완제품 공정명 - 각 구분과 1:1 매칭 */}
                   <td rowSpan={typeRowSpan} className="border border-[#ccc] p-2.5 text-center bg-[#e3f2fd] font-semibold align-middle">
@@ -538,10 +578,16 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                     <SelectableCell value="" placeholder="요구사항 선택" bgColor={COLORS.failure.light} textColor={COLORS.failure.text} onClick={() => handleCellClick({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
                   </td>
                 </tr>
-              ) : t.functions.map((f, fIdx) => {
-                const funcRowSpan = Math.max(1, f.requirements.length);
+              ) : meaningfulFunctions.map((f, fIdx) => {
+                // ✅ 빈 요구사항 필터링
+                const meaningfulReqs = (f.requirements || []).filter((r: any) => {
+                  const name = r.name || '';
+                  return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+                });
                 
-                return f.requirements.length === 0 ? (
+                const funcRowSpan = Math.max(1, meaningfulReqs.length);
+                
+                return meaningfulReqs.length === 0 ? (
                   <tr key={f.id} className={globalRowIdx++ % 2 === 1 ? "bg-[#c8e6c9]" : "bg-[#e8f5e9]"}>
                     {/* 완제품 공정명 - 각 구분의 첫 행에서만 표시 (1:1 매칭) */}
                     {fIdx === 0 && (
@@ -561,7 +607,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
                       <SelectableCell value="" placeholder="요구사항 선택" bgColor={COLORS.failure.zebra} textColor={COLORS.failure.text} onClick={() => handleCellClick({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} />
                     </td>
                   </tr>
-                ) : f.requirements.map((r, rIdx) => (
+                ) : meaningfulReqs.map((r, rIdx) => (
                   <tr key={r.id} className={globalRowIdx++ % 2 === 1 ? "bg-[#c8e6c9]" : "bg-[#e8f5e9]"}>
                     {/* 완제품 공정명 - 각 구분의 첫 행에서만 표시 (1:1 매칭) */}
                     {fIdx === 0 && rIdx === 0 && (

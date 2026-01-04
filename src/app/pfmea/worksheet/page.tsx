@@ -90,6 +90,7 @@ function FMEAWorksheetPageContent() {
     l1FuncSpans,
     l2Spans,
     saveToLocalStorage,
+    saveAtomicDB,
     handleInputKeyDown,
     handleInputBlur,
     handleSelect,
