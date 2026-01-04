@@ -377,7 +377,11 @@ export function StructureRow({
         >
           <input
             type="text" value={state.l1.name}
-            onChange={(e) => { setState(prev => ({ ...prev, l1: { ...prev.l1, name: e.target.value } })); setDirty(true); }}
+            onChange={(e) => { 
+              // ✅ 데이터 변경 시 확정 상태 해제 (수정하면 다시 확정 버튼 눌러야 함)
+              setState(prev => ({ ...prev, l1: { ...prev.l1, name: e.target.value }, structureConfirmed: false } as any)); 
+              setDirty(true); 
+            }}
             onBlur={handleInputBlur} onKeyDown={handleInputKeyDown} placeholder="완제품명 입력"
             className="w-full text-center border-0 outline-none text-xs font-semibold min-h-6 bg-white/95 rounded px-1"
           />
@@ -613,7 +617,8 @@ export default function StructureTab(props: StructureTabProps) {
                   type="text" 
                   value={state.l1.name || ''}
                   onChange={(e) => { 
-                    setState(prev => ({ ...prev, l1: { ...prev.l1, name: e.target.value } })); 
+                    // ✅ 데이터 변경 시 확정 상태 해제
+                    setState(prev => ({ ...prev, l1: { ...prev.l1, name: e.target.value }, structureConfirmed: false } as any)); 
                     setDirty(true); 
                   }}
                   onBlur={handleInputBlur} 
