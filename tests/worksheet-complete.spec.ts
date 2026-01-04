@@ -6,7 +6,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'http://localhost:3000/pfmea/worksheet';
+const BASE_URL = `${process.env.TEST_BASE_URL ?? 'http://localhost:3001'}/pfmea/worksheet`;
 
 // 탭 레이블 상수 (ANALYSIS_TABS에서 가져옴)
 const TAB_LABELS = {
