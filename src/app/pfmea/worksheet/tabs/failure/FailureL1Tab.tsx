@@ -565,16 +565,14 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
         </div>
       )}
 
-      <table className="w-full border-collapse table-fixed" style={{ minWidth: '750px', marginBottom: '50px' }}>
-        {/* 컬럼: 완제품공정명 90px, 구분 55px, 완제품기능 auto, 요구사항 70px, 고장영향 280px, S 30px */}
-        <colgroup><col style={{ width: '90px', minWidth: '90px' }} /><col style={{ width: '55px', minWidth: '55px' }} /><col /><col style={{ width: '140px', minWidth: '140px' }} /><col style={{ width: '280px', minWidth: '280px' }} /><col style={{ width: '30px', minWidth: '30px' }} /></colgroup>
+      <table className="w-full border-collapse table-fixed" style={{ minWidth: '650px', marginBottom: '50px' }}>
+        {/* ✅ 컬럼 수정: 완제품공정명 제거, 구분 55px, 완제품기능 auto, 요구사항 140px, 고장영향 280px, S 30px */}
+        <colgroup><col style={{ width: '55px', minWidth: '55px' }} /><col /><col style={{ width: '140px', minWidth: '140px' }} /><col style={{ width: '280px', minWidth: '280px' }} /><col style={{ width: '30px', minWidth: '30px' }} /></colgroup>
         
         {/* 3행 헤더 구조 - 하단 2px 검은색 구분선 */}
         <thead className="sticky top-0 z-20 bg-white border-b-2 border-black">
           <tr>
-            <th className="bg-[#1976d2] text-white border border-[#ccc] px-0.5 py-1 text-[11px] font-extrabold text-center whitespace-nowrap">
-              구조(2)
-            </th>
+            {/* ✅ 구조(2) 컬럼 제거 - 1L 기능과 요구사항만 표시 */}
             <th colSpan={3} className="bg-[#388e3c] text-white border border-[#ccc] px-0.5 py-1 text-[11px] font-extrabold text-center whitespace-nowrap">
               기능분석(3단계)
             </th>
@@ -597,9 +595,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
           </tr>
           
           <tr>
-            <th className={`${S.h2} whitespace-nowrap text-[10px] px-0.5`}>
-              완제품 공정명
-            </th>
+            {/* ✅ 완제품 공정명 컬럼 제거 */}
             <th colSpan={3} className={`${F.h2} whitespace-nowrap text-[10px] px-0.5`}>
               완제품 공정기능/요구사항
             </th>
@@ -609,9 +605,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
           </tr>
           
           <tr>
-            <th className={`${S.h3} text-center whitespace-nowrap text-[10px] px-0.5`}>
-              공정명
-            </th>
+            {/* ✅ 공정명 컬럼 제거 - 구분/완제품기능/요구사항만 표시 */}
             <th className={`${F.h3} text-center whitespace-nowrap text-[10px] px-0.5`}>
               구분
             </th>
@@ -638,7 +632,8 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
         <tbody>
           {renderRows.length === 0 ? (
             <tr>
-              <td colSpan={6} className="border border-[#ccc] p-8 text-center text-gray-400 text-xs">
+              {/* ✅ 컬럼 5개로 수정 (완제품 공정명 제거) */}
+              <td colSpan={5} className="border border-[#ccc] p-8 text-center text-gray-400 text-xs">
                 기능분석(L1)에서 요구사항을 입력하면 여기에 자동으로 표시됩니다.
               </td>
             </tr>
@@ -647,23 +642,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
               const zebra = getZebraColors(idx); // 표준화된 색상
               return (
               <tr key={row.key}>
-                {/* 완제품 공정명 */}
-                {row.showProduct && (
-                  <td 
-                    rowSpan={row.productRowSpan} 
-                    style={{ 
-                      border: `1px solid #ccc`, 
-                      padding: '2px 4px', 
-                      textAlign: 'center', 
-                      background: zebra.structure, 
-                      fontWeight: FONT_WEIGHTS.semibold, 
-                      verticalAlign: 'middle',
-                      fontSize: FONT_SIZES.cell
-                    }}
-                  >
-                    {state.l1.name || '(구조분석에서 입력)'}
-                  </td>
-                )}
+                {/* ✅ 완제품 공정명 컬럼 제거됨 */}
                 
                 {/* 구분 (자동) - 구분별 색상 적용 */}
                 {row.showType && (
