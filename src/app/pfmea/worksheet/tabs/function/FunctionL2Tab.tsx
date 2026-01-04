@@ -40,6 +40,9 @@ const cellBase: React.CSSProperties = { border: BORDER, padding: '4px 6px', font
 const headerStyle = (bg: string, color = '#fff'): React.CSSProperties => ({ ...cellBase, background: bg, color, fontWeight: FONT_WEIGHTS.bold, textAlign: 'center' });
 const dataCell = (bg: string): React.CSSProperties => ({ ...cellBase, background: bg });
 
+// ✅ 표준 줄무늬 색상 (codefreeze-20260103-zebra)
+import { getZebra } from '@/styles/level-colors';
+
 // 특별특성 배지 - 공통 컴포넌트 사용
 import SpecialCharBadge from '@/components/common/SpecialCharBadge';
 
@@ -568,9 +571,10 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
               
               // 공정에 기능이 없는 경우
               if (funcs.length === 0) {
+                const procZebraBg = getZebra('structure', pIdx); // ✅ 공정별 줄무늬
                 return (
                   <tr key={proc.id} className={globalRowIdx++ % 2 === 1 ? "bg-[#c8e6c9]" : "bg-[#e8f5e9]"}>
-                    <td rowSpan={procRowSpan} className="border border-[#ccc] p-2.5 text-center bg-[#e3f2fd] font-semibold align-middle">
+                    <td rowSpan={procRowSpan} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: procZebraBg }}>
                       {proc.no}. {proc.name}
                     </td>
                     <td className={cellP0}>
@@ -588,9 +592,10 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
               
               // 의미 있는 기능이 없으면 빈 행 표시
               if (meaningfulFuncs.length === 0) {
+                const procZebraBg = getZebra('structure', pIdx); // ✅ 공정별 줄무늬
                 return (
                   <tr key={proc.id} className={globalRowIdx++ % 2 === 1 ? "bg-[#c8e6c9]" : "bg-[#e8f5e9]"}>
-                    <td rowSpan={1} className="border border-[#ccc] p-2.5 text-center bg-[#e3f2fd] font-semibold align-middle">
+                    <td rowSpan={1} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: procZebraBg }}>
                       {proc.no}. {proc.name}
                     </td>
                     <td className={cellP0}>
@@ -605,6 +610,8 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
                   </tr>
                 );
               }
+              
+              const procZebraBg = getZebra('structure', pIdx); // ✅ 공정별 줄무늬 (map 바깥에서 한 번만 계산)
               
               return meaningfulFuncs.map((f, fIdx) => {
                 // ✅ 의미 있는 제품특성만 필터링 + 중복 제거
@@ -623,7 +630,7 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
                   return (
                     <tr key={f.id} className={globalRowIdx++ % 2 === 1 ? "bg-[#c8e6c9]" : "bg-[#e8f5e9]"}>
                       {fIdx === 0 && (
-                        <td rowSpan={procRowSpan} className="border border-[#ccc] p-2.5 text-center bg-[#e3f2fd] font-semibold align-middle">
+                        <td rowSpan={procRowSpan} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: procZebraBg }}>
                           {proc.no}. {proc.name}
                         </td>
                       )}
@@ -650,7 +657,7 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
                 return meaningfulChars.map((c, cIdx) => (
                   <tr key={c.id} className={globalRowIdx++ % 2 === 1 ? "bg-[#c8e6c9]" : "bg-[#e8f5e9]"}>
                     {fIdx === 0 && cIdx === 0 && (
-                      <td rowSpan={procRowSpan} className="border border-[#ccc] p-2.5 text-center bg-[#e3f2fd] font-semibold align-middle">
+                      <td rowSpan={procRowSpan} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: procZebraBg }}>
                         {proc.no}. {proc.name}
                       </td>
                     )}
