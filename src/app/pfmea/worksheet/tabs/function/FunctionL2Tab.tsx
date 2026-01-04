@@ -523,7 +523,20 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
             let globalRowIdx = 0;
             return state.l2.map((proc, pIdx) => {
               const funcs = proc.functions || [];
-              const procRowSpan = funcs.length === 0 ? 1 : funcs.reduce((a, f) => a + Math.max(1, (f.productChars || []).length), 0);
+              // ✅ 의미 있는 기능과 제품특성만 고려하여 rowSpan 계산
+              const meaningfulFuncs = funcs.filter((f: any) => {
+                const name = f.name || '';
+                return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && 
+                       !name.includes('추가') && !name.includes('입력') && !name.includes('필요');
+              });
+              const procRowSpan = meaningfulFuncs.length === 0 ? 1 : meaningfulFuncs.reduce((a, f) => {
+                const meaningfulChars = (f.productChars || []).filter((c: any) => {
+                  const name = c.name || '';
+                  return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && 
+                         !name.includes('추가') && !name.includes('입력') && !name.includes('필요');
+                });
+                return a + Math.max(1, meaningfulChars.length);
+              }, 0);
               
               // 공정에 기능이 없는 경우
               if (funcs.length === 0) {
@@ -545,13 +558,44 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                 );
               }
               
-              // 공정에 기능이 있는 경우
-              return funcs.map((f, fIdx) => {
-                const chars = f.productChars || [];
-                const funcRowSpan = Math.max(1, chars.length);
+              // 공정에 기능이 있는 경우 - ✅ 의미 있는 기능만 필터링
+              const meaningfulFuncs = funcs.filter((f: any) => {
+                const name = f.name || '';
+                return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && 
+                       !name.includes('추가') && !name.includes('입력') && !name.includes('필요');
+              });
+              
+              // 의미 있는 기능이 없으면 빈 행 표시
+              if (meaningfulFuncs.length === 0) {
+                return (
+                  <tr key={proc.id} className={globalRowIdx++ % 2 === 1 ? "bg-[#c8e6c9]" : "bg-[#e8f5e9]"}>
+                    <td rowSpan={1} className="border border-[#ccc] p-2.5 text-center bg-[#e3f2fd] font-semibold align-middle">
+                      {proc.no}. {proc.name}
+                    </td>
+                    <td className={cellP0}>
+                      <SelectableCell value="" placeholder="공정기능 선택" bgColor={'#e8f5e9'} onClick={() => handleCellClick({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
+                    </td>
+                    <td className={cellP0}>
+                      <SelectableCell value="" placeholder="제품특성 선택" bgColor={'#fff3e0'} textColor={'#e65100'} onClick={() => {}} />
+                    </td>
+                    <td className="border border-[#ccc] p-1 text-center bg-[#fff3e0] text-[#999] text-xs">
+                      -
+                    </td>
+                  </tr>
+                );
+              }
+              
+              return meaningfulFuncs.map((f, fIdx) => {
+                // ✅ 의미 있는 제품특성만 필터링
+                const meaningfulChars = (f.productChars || []).filter((c: any) => {
+                  const name = c.name || '';
+                  return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && 
+                         !name.includes('추가') && !name.includes('입력') && !name.includes('필요');
+                });
+                const funcRowSpan = Math.max(1, meaningfulChars.length);
                 
                 // 기능에 제품특성이 없는 경우
-                if (chars.length === 0) {
+                if (meaningfulChars.length === 0) {
                   return (
                     <tr key={f.id} className={globalRowIdx++ % 2 === 1 ? "bg-[#c8e6c9]" : "bg-[#e8f5e9]"}>
                       {fIdx === 0 && (
@@ -579,7 +623,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                 }
                 
                 // 기능에 제품특성이 있는 경우
-                return chars.map((c, cIdx) => (
+                return meaningfulChars.map((c, cIdx) => (
                   <tr key={c.id} className={globalRowIdx++ % 2 === 1 ? "bg-[#c8e6c9]" : "bg-[#e8f5e9]"}>
                     {fIdx === 0 && cIdx === 0 && (
                       <td rowSpan={procRowSpan} className="border border-[#ccc] p-2.5 text-center bg-[#e3f2fd] font-semibold align-middle">
