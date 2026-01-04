@@ -183,15 +183,56 @@ export const TREE_FAILURE = {
   border: '#e65100',
 };
 
-// ========== 줄무늬 색상 표준화 함수 (codefreeze-20260103) ==========
+// ========== 줄무늬 색상 표준화 시스템 (v2.0 - 2026-01-05) ==========
+/**
+ * 🎨 FMEA 워크시트 글로벌 줄무늬 규칙
+ * ==========================================
+ * 
+ * ✅ 적용 원칙:
+ * 1. 모든 워크시트 행은 인덱스 기준으로 줄무늬 자동 적용
+ * 2. 짝수 행(0,2,4...) = dark 색상 / 홀수 행(1,3,5...) = light 색상
+ * 3. rowSpan 병합 셀도 첫 행의 인덱스 기준으로 색상 결정
+ * 4. 셀 내부 input/select는 bg-transparent 사용하여 줄무늬 상속
+ * 
+ * ✅ 색상 타입 (열별 적용):
+ * - structure (파란색): 완제품공정명, 메인공정명, 4M, 작업요소
+ * - function (녹색): 기능, 공정기능, 작업요소기능
+ * - failure (주황색): 요구사항, 제품특성, 공정특성, 고장영향/형태/원인
+ * 
+ * ✅ 사용법:
+ * 1. 행 인덱스 캡처: const rowIdx = globalRowIdx++;
+ * 2. 줄무늬 색상 가져오기: const zebra = getZebraColors(rowIdx);
+ * 3. 행 스타일: <tr style={{ background: zebra.function }}>
+ * 4. 셀 스타일: style={{ background: zebra.structure }}
+ * 5. SelectableCell: bgColor={zebra.function}
+ * 6. input 태그: className="bg-transparent" (줄무늬 상속)
+ * 
+ * ✅ 필수 패턴 (각 탭에서 준수):
+ * ```tsx
+ * let globalRowIdx = 0;
+ * return items.map((item, idx) => {
+ *   const rowIdx = globalRowIdx++; // 행 인덱스 캡처
+ *   const zebra = getZebraColors(rowIdx);
+ *   return (
+ *     <tr key={item.id} style={{ background: zebra.function }}>
+ *       <td style={{ background: zebra.structure }}>...</td>
+ *       <SelectableCell bgColor={zebra.function} />
+ *     </tr>
+ *   );
+ * });
+ * ```
+ */
+
 // 테이블 줄무늬용 색상을 한 곳에서 관리
 export const ZEBRA_COLORS = {
-  structure: { light: '#e3f2fd', dark: '#bbdefb' },  // 파란색 줄무늬
-  function: { light: '#e8f5e9', dark: '#c8e6c9' },   // 녹색 줄무늬
-  failure: { light: '#fff3e0', dark: '#ffe0b2' },    // 주황색 줄무늬
+  structure: { light: '#e3f2fd', dark: '#bbdefb' },  // 파란색 줄무늬 (구조 관련)
+  function: { light: '#e8f5e9', dark: '#c8e6c9' },   // 녹색 줄무늬 (기능 관련)
+  failure: { light: '#fff3e0', dark: '#ffe0b2' },    // 주황색 줄무늬 (고장/특성 관련)
 } as const;
 
-// 인덱스 기반 줄무늬 색상 반환 함수
+export type ZebraType = keyof typeof ZEBRA_COLORS;
+
+// 인덱스 기반 줄무늬 색상 반환 함수 (모든 타입 한번에)
 export const getZebraColors = (idx: number) => ({
   structure: idx % 2 === 0 ? ZEBRA_COLORS.structure.dark : ZEBRA_COLORS.structure.light,
   function: idx % 2 === 0 ? ZEBRA_COLORS.function.dark : ZEBRA_COLORS.function.light,
@@ -199,6 +240,38 @@ export const getZebraColors = (idx: number) => ({
 });
 
 // 특정 타입의 줄무늬 색상만 반환
-export const getZebra = (type: 'structure' | 'function' | 'failure', idx: number) => 
+export const getZebra = (type: ZebraType, idx: number) => 
   idx % 2 === 0 ? ZEBRA_COLORS[type].dark : ZEBRA_COLORS[type].light;
+
+// Tailwind 클래스 버전 (CSS 클래스로 줄무늬 적용 시 사용)
+export const getZebraTw = (type: ZebraType, idx: number) => {
+  const map: Record<ZebraType, { even: string; odd: string }> = {
+    structure: { even: 'bg-blue-200', odd: 'bg-blue-50' },
+    function: { even: 'bg-green-200', odd: 'bg-green-50' },
+    failure: { even: 'bg-orange-200', odd: 'bg-orange-50' },
+  };
+  return idx % 2 === 0 ? map[type].even : map[type].odd;
+};
+
+// CSS 변수로 줄무늬 색상 정의 (globals.css에 추가 권장)
+export const ZEBRA_CSS_VARS = `
+  :root {
+    --zebra-structure-light: #e3f2fd;
+    --zebra-structure-dark: #bbdefb;
+    --zebra-function-light: #e8f5e9;
+    --zebra-function-dark: #c8e6c9;
+    --zebra-failure-light: #fff3e0;
+    --zebra-failure-dark: #ffe0b2;
+  }
+`;
+
+// 행 컴포넌트에서 사용할 줄무늬 스타일 객체 생성
+export const getZebraRowStyle = (idx: number, type: ZebraType = 'function'): React.CSSProperties => ({
+  background: getZebra(type, idx),
+});
+
+// 셀 컴포넌트에서 사용할 줄무늬 스타일 객체 생성
+export const getZebraCellStyle = (idx: number, type: ZebraType): React.CSSProperties => ({
+  background: getZebra(type, idx),
+});
 

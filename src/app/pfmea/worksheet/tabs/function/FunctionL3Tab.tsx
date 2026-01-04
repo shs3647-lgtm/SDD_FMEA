@@ -600,7 +600,7 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
           {/* 3행: 세부 컬럼 - COUNT 표시 표준: 항목명(숫자) */}
           <tr className="bg-[#e8f5e9]">
             <th className="bg-[#e3f2fd] border border-[#ccc] p-1.5 text-xs font-semibold">
-              소속 공정
+              메인공정명
             </th>
             <th className="bg-[#e3f2fd] border border-[#ccc] p-1.5 text-xs font-semibold">
               4M

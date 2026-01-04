@@ -55,7 +55,7 @@ const dataCell = (bg: string): React.CSSProperties => ({ ...cellBase, background
 // 4M 셀 - 읽기 전용 표시
 function M4Cell({ value, zebraBg }: { value: string; zebraBg: string }) {
   return (
-    <td className={`${cell} w-20 max-w-[80px] min-w-[80px] text-center font-bold text-blue-800 ${zebraBg}`}>
+    <td className={`${cell} w-20 max-w-[80px] min-w-[80px] text-center font-bold text-blue-800`} style={{ background: zebraBg }}>
       {value || <span className="text-red-600 font-semibold">-</span>}
     </td>
   );
@@ -134,7 +134,8 @@ function EditableL2Cell({
   return (
     <td 
       rowSpan={rowSpan}
-      className={`text-center cursor-pointer hover:bg-green-200 text-xs border border-[#ccc] p-1 align-middle break-words ${isPlaceholder ? 'bg-white' : zebraBg}`}
+      className="text-center cursor-pointer hover:bg-green-200 text-xs border border-[#ccc] p-1 align-middle break-words"
+      style={{ background: isPlaceholder ? 'white' : zebraBg }}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       title={isPlaceholder ? '클릭: 공정 선택' : '클릭: 모달 | 더블클릭: 텍스트 수정'}
@@ -222,13 +223,13 @@ function EditableL3Cell({
   }
 
   // 동적 배경 (줄무늬 패턴)
-  const bgStyle = isPlaceholder 
+  const bgStyle: React.CSSProperties = isPlaceholder 
     ? { background: `repeating-linear-gradient(45deg, ${zebraBg}, ${zebraBg} 4px, #fff3e0 4px, #fff3e0 8px)` }
-    : {};
+    : { background: zebraBg };
   
   return (
     <td 
-      className={`cursor-pointer hover:bg-orange-100 border border-[#ccc] p-0.5 px-1 break-words text-xs ${!isPlaceholder ? zebraBg : ''}`}
+      className="cursor-pointer hover:bg-orange-100 border border-[#ccc] p-0.5 px-1 break-words text-xs"
       style={bgStyle}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
@@ -374,7 +375,8 @@ export function StructureRow({
       {showMergedCells && (
         <td 
           rowSpan={spanCount || 1} 
-          className={`text-center text-xs border border-[#ccc] p-1 align-middle break-words ${zebraBg}`}
+          className="text-center text-xs border border-[#ccc] p-1 align-middle break-words"
+          style={{ background: zebraBg }}
         >
           <input
             type="text" value={state.l1.name}
@@ -386,7 +388,7 @@ export function StructureRow({
               setDirty(true); 
             }}
             onBlur={handleInputBlur} onKeyDown={handleInputKeyDown} placeholder="완제품명 입력"
-            className="w-full text-center border-0 outline-none text-xs font-semibold min-h-6 bg-white/95 rounded px-1"
+            className="w-full text-center border-0 outline-none text-xs font-semibold min-h-6 bg-transparent rounded px-1"
           />
         </td>
       )}
