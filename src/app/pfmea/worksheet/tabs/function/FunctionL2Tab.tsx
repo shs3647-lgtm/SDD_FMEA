@@ -530,10 +530,13 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                        !name.includes('추가') && !name.includes('입력') && !name.includes('필요');
               });
               const procRowSpan = meaningfulFuncs.length === 0 ? 1 : meaningfulFuncs.reduce((a, f) => {
-                const meaningfulChars = (f.productChars || []).filter((c: any) => {
+                const meaningfulChars = (f.productChars || []).filter((c: any, idx: number, arr: any[]) => {
                   const name = c.name || '';
-                  return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && 
+                  const isMeaningful = name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && 
                          !name.includes('추가') && !name.includes('입력') && !name.includes('필요');
+                  // ✅ 중복 제거: 같은 이름의 제품특성 중 첫 번째만 유지
+                  const isFirst = arr.findIndex((x: any) => x.name === c.name) === idx;
+                  return isMeaningful && isFirst;
                 });
                 return a + Math.max(1, meaningfulChars.length);
               }, 0);
@@ -579,11 +582,14 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
               }
               
               return meaningfulFuncs.map((f, fIdx) => {
-                // ✅ 의미 있는 제품특성만 필터링
-                const meaningfulChars = (f.productChars || []).filter((c: any) => {
+                // ✅ 의미 있는 제품특성만 필터링 + 중복 제거
+                const meaningfulChars = (f.productChars || []).filter((c: any, idx: number, arr: any[]) => {
                   const name = c.name || '';
-                  return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && 
+                  const isMeaningful = name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && 
                          !name.includes('추가') && !name.includes('입력') && !name.includes('필요');
+                  // ✅ 중복 제거: 같은 이름의 제품특성 중 첫 번째만 유지
+                  const isFirst = arr.findIndex((x: any) => x.name === c.name) === idx;
+                  return isMeaningful && isFirst;
                 });
                 const funcRowSpan = Math.max(1, meaningfulChars.length);
                 
