@@ -267,10 +267,28 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
         const charId = (modal as any).charId;
         newState.l2 = newState.l2.map((proc: any) => {
           if (proc.id !== procId) return proc;
+          
+          // ✅ funcId가 없으면 빈 기능을 자동 생성하여 제품특성 연결
+          let targetFuncId = funcId;
+          let currentFuncs = proc.functions || [];
+          
+          if (!targetFuncId) {
+            // 빈 기능 찾기
+            const emptyFunc = currentFuncs.find((f: any) => !f.name || f.name === '' || f.name.includes('클릭'));
+            if (emptyFunc) {
+              targetFuncId = emptyFunc.id;
+            } else {
+              // 빈 기능이 없으면 새로 생성
+              const newFunc = { id: uid(), name: '', productChars: [] };
+              currentFuncs = [...currentFuncs, newFunc];
+              targetFuncId = newFunc.id;
+            }
+          }
+          
           return {
             ...proc,
-            functions: proc.functions.map((f: any) => {
-              if (f.id !== funcId) return f;
+            functions: currentFuncs.map((f: any) => {
+              if (f.id !== targetFuncId) return f;
               const currentChars = f.productChars || [];
               
               // ✅ charId가 있으면 해당 항목만 수정 (다중선택 개별 수정)
@@ -530,7 +548,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                       <SelectableCell value="" placeholder="공정기능 선택" bgColor={'#e8f5e9'} onClick={() => handleCellClick({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
                     </td>
                     <td className={cellP0}>
-                      <SelectableCell value="" placeholder="제품특성 선택" bgColor={'#fff3e0'} textColor={'#e65100'} onClick={() => {}} />
+                      <SelectableCell value="" placeholder="제품특성 선택" bgColor={'#fff3e0'} textColor={'#e65100'} onClick={() => handleCellClick({ type: 'l2ProductChar', procId: proc.id, title: '제품특성 선택', itemCode: 'A4' })} />
                     </td>
                     <td className="border border-[#ccc] p-1 text-center bg-[#fff3e0] text-[#999] text-xs">
                       -
