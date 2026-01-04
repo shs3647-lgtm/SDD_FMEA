@@ -5,7 +5,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { WorksheetState, FONT_WEIGHTS } from '../../constants';
 import { groupFailureLinksWithFunctionData, groupByProcessName, calculateLastRowMerge } from '../../utils';
 import { exportAllViewExcel } from '../../excel-export';
@@ -28,10 +28,83 @@ interface AllTabWithLinksProps {
 /**
  * 고장연결 데이터가 있을 때 40열 테이블 렌더링
  */
+// 기본 컬럼 폭 설정 (40개 컬럼)
+const DEFAULT_COL_WIDTHS: Record<string, number> = {
+  // 구조분석 4열
+  col_product: 60, col_process: 80, col_m4_1: 30, col_part: 70,
+  // 기능분석 8열
+  col_scope1: 70, col_prodFunc: 120, col_req: 70, col_focusFunc: 160,
+  col_prodChar: 80, col_m4_2: 30, col_partFunc: 140, col_designChar: 80,
+  // 고장분석 6열
+  col_scope2: 90, col_fe: 120, col_s: 30, col_fm: 120, col_fcPart: 100, col_fc: 130,
+  // 리스크분석 8열
+  col_prev: 90, col_o: 30, col_det: 90, col_d: 25, col_ap: 25, col_rpn: 30, col_sc: 60, col_lesson: 80,
+  // 최적화 14열
+  col_action: 120, col_resp: 60, col_target: 70, col_status: 50,
+  col_result: 100, col_complete: 70, col_evidence: 60,
+  col_s2: 25, col_o2: 25, col_d2: 25, col_ap2: 25, col_rpn2: 30, col_remark: 80, col_approved: 50,
+};
+
 export default function AllTabWithLinks({ state, setState, failureLinks, visibleSteps: propsVisibleSteps }: AllTabWithLinksProps) {
   const COLORS = ALL_TAB_COLORS;
   // visibleSteps: props 우선, 없으면 state, 그래도 없으면 기본값
   const visibleSteps = propsVisibleSteps || (state.visibleSteps || [2, 3, 4, 5, 6]);
+  
+  // 컬럼 폭 상태 관리
+  const [colWidths, setColWidths] = useState<Record<string, number>>(DEFAULT_COL_WIDTHS);
+  const resizingRef = useRef<{ colKey: string; startX: number; startWidth: number } | null>(null);
+
+  // 리사이즈 시작
+  const handleResizeStart = useCallback((e: React.MouseEvent, colKey: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resizingRef.current = {
+      colKey,
+      startX: e.clientX,
+      startWidth: colWidths[colKey] || 60,
+    };
+    
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!resizingRef.current) return;
+      const delta = moveEvent.clientX - resizingRef.current.startX;
+      const newWidth = Math.max(30, resizingRef.current.startWidth + delta);
+      setColWidths(prev => ({ ...prev, [resizingRef.current!.colKey]: newWidth }));
+    };
+    
+    const handleMouseUp = () => {
+      resizingRef.current = null;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [colWidths]);
+
+  // 리사이즈 핸들 스타일
+  const resizeHandleStyle: React.CSSProperties = {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: '4px',
+    cursor: 'col-resize',
+    background: 'transparent',
+    zIndex: 10,
+  };
+
+  // 리사이즈 가능한 헤더 셀
+  const ResizableHeader = ({ colKey, children, style }: { colKey: string; children: React.ReactNode; style: React.CSSProperties }) => (
+    <th style={{ ...style, position: 'relative', width: `${colWidths[colKey] || 60}px`, minWidth: '30px' }}>
+      {children}
+      <div 
+        style={resizeHandleStyle}
+        onMouseDown={(e) => handleResizeStart(e, colKey)}
+        onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(0,0,0,0.2)')}
+        onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+      />
+    </th>
+  );
   
   // 모달 훅 사용
   const {
@@ -144,8 +217,8 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
   }
   
   return (
-    <div style={{ width: '100%', minWidth: '2600px', overflowX: 'visible' }}>
-      <table className={`${TW_CLASSES.table} min-w-[2600px] w-full`} style={{ minWidth: '2600px' }}>
+    <div style={{ width: '100%', minWidth: '1800px', overflowX: 'visible' }}>
+      <table className={`${TW_CLASSES.table} w-full all-tab-table`} style={{ tableLayout: 'auto', minWidth: '1800px' }}>
         <thead className={TW_CLASSES.stickyHead}>
           {/* 1행: 단계 대분류 */}
           <tr>

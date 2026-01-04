@@ -607,6 +607,27 @@ body {
   background: linear-gradient(to bottom, #0d1757, #303f9f) !important;
 }
 
+/* ===== All 탭 컬럼 리사이즈 ===== */
+.all-tab-table th {
+  resize: horizontal;
+  overflow: hidden;
+  min-width: 30px;
+}
+
+.all-tab-table th:hover {
+  cursor: col-resize;
+}
+
+.all-tab-table th::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+}
+
 /* ===== 완료 애니메이션 ===== */
 @keyframes pulse {
   0% {
