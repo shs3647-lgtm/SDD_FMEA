@@ -22,13 +22,16 @@ interface AllTabWithLinksProps {
   state: WorksheetState;
   setState?: React.Dispatch<React.SetStateAction<WorksheetState>>;
   failureLinks: any[];
+  visibleSteps?: number[];
 }
 
 /**
  * 고장연결 데이터가 있을 때 40열 테이블 렌더링
  */
-export default function AllTabWithLinks({ state, setState, failureLinks }: AllTabWithLinksProps) {
+export default function AllTabWithLinks({ state, setState, failureLinks, visibleSteps: propsVisibleSteps }: AllTabWithLinksProps) {
   const COLORS = ALL_TAB_COLORS;
+  // visibleSteps: props 우선, 없으면 state, 그래도 없으면 기본값
+  const visibleSteps = propsVisibleSteps || (state.visibleSteps || [2, 3, 4, 5, 6]);
   
   // 모달 훅 사용
   const {

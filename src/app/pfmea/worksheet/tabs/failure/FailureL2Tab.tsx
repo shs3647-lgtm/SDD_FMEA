@@ -130,11 +130,11 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
     });
     setDirty(true);
     
-    // ✅ 즉시 저장 (requestAnimationFrame 사용)
-    requestAnimationFrame(() => {
+    // ✅ 확정 상태 저장 - setTimeout으로 state 업데이트 대기
+    setTimeout(() => {
       saveToLocalStorage?.();
       console.log('[FailureL2Tab] 확정 후 localStorage 저장 완료');
-    });
+    }, 100);
     
     alert('2L 고장형태(FM) 분석이 확정되었습니다.');
   }, [missingCount, state.l2, setState, setDirty, saveToLocalStorage]);
@@ -142,7 +142,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
   const handleEdit = useCallback(() => {
     setState(prev => ({ ...prev, failureL2Confirmed: false }));
     setDirty(true);
-    requestAnimationFrame(() => saveToLocalStorage?.());
+    setTimeout(() => saveToLocalStorage?.(), 100);
   }, [setState, setDirty, saveToLocalStorage]);
 
   // ✅ failureModes 변경 감지용 ref
@@ -284,6 +284,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
       showFunc: boolean;
       charId: string;
       charName: string;
+      specialChar?: string;
       charRowSpan: number;
       showChar: boolean;
       modeId: string;

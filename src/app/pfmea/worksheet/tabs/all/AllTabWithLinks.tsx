@@ -144,8 +144,8 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
   }
   
   return (
-    <>
-      <table className={`${TW_CLASSES.table} min-w-[2600px]`}>
+    <div style={{ width: '100%', minWidth: '2600px', overflowX: 'visible' }}>
+      <table className={`${TW_CLASSES.table} min-w-[2600px] w-full`} style={{ minWidth: '2600px' }}>
         <thead className={TW_CLASSES.stickyHead}>
           {/* 1행: 단계 대분류 */}
           <tr>
@@ -189,7 +189,7 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
             {visibleSteps.includes(2) && <>
               <th style={colHeaderStyle('60px', COLORS.structure.l1.h3)}>제품명</th>
               <th style={colHeaderStyle('80px', COLORS.structure.l2.h3)}>NO+공정명</th>
-              <th style={colHeaderStyleWithOptions('30px', COLORS.special.m4.h3, '#fff', { fontWeight: FONT_WEIGHTS.bold })}>I/F</th>
+              <th style={colHeaderStyleWithOptions('30px', COLORS.special.m4.h3, '#fff', { fontWeight: FONT_WEIGHTS.bold })}>4M</th>
               <th style={colHeaderStyle('70px', COLORS.structure.l3.h3)}>부품</th>
             </>}
             {/* 기능분석 8열 */}
@@ -199,7 +199,7 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
               <th style={colHeaderStyle('70px', COLORS.function.l1.h3)}>요구사항</th>
               <th style={colHeaderStyle('160px', COLORS.function.l2.h3)}>초점요소 기능</th>
               <th style={colHeaderStyleWithOptions('80px', COLORS.function.l2.h3, undefined, { whiteSpace: 'nowrap' })}>제품특성</th>
-              <th style={colHeaderStyleWithOptions('30px', COLORS.special.m4.h3, '#fff', { fontWeight: FONT_WEIGHTS.bold })}>I/F</th>
+              <th style={colHeaderStyleWithOptions('30px', COLORS.special.m4.h3, '#fff', { fontWeight: FONT_WEIGHTS.bold })}>4M</th>
               <th style={colHeaderStyle('140px', COLORS.function.l3.h3)}>부품 기능</th>
               <th style={colHeaderStyleWithOptions('80px', COLORS.function.l3.h3, undefined, { whiteSpace: 'nowrap' })}>설계특성</th>
             </>}
@@ -409,7 +409,7 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
           currentValues={[(state.riskData || {})[`${controlModal.type}-${controlModal.rowIndex}`] || ''].filter(Boolean).map(String)}
         />
       )}
-    </>
+    </div>
   );
 }
 

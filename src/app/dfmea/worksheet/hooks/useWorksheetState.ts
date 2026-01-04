@@ -24,11 +24,13 @@ import {
   createEmptyDB,
 } from '../schema';
 import {
-  loadWorksheetDB,
-  saveWorksheetDB,
   migrateToAtomicDB,
   convertToLegacyFormat,
 } from '../migration';
+import {
+  loadWorksheetDB,
+  saveWorksheetDB,
+} from '../db-storage';
 
 interface UseWorksheetStateReturn {
   state: WorksheetState;
@@ -148,7 +150,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       };
       
       const newAtomicDB = migrateToAtomicDB(legacyData);
-      saveWorksheetDB(newAtomicDB);
+      saveWorksheetDB(newAtomicDB).catch(e => console.error('[원자성 DB 저장] 오류:', e));
       setAtomicDB(newAtomicDB);
       
       console.log('[원자성 DB 저장] 완료:', {
@@ -216,7 +218,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         failureEffects: newAtomicDB.failureEffects.length,
         l1Functions: newAtomicDB.l1Functions.length,
       });
-      saveWorksheetDB(newAtomicDB);
+      saveWorksheetDB(newAtomicDB).catch(e => console.error('[저장] DB 저장 오류:', e));
       setAtomicDB(newAtomicDB);
       
       // 로그
@@ -330,11 +332,12 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     
     console.log('[워크시트] 데이터 로드 시작:', selectedFmeaId);
     
-    // 원자성 DB 로드 시도
-    const loadedDB = loadWorksheetDB(selectedFmeaId);
-    
-    // 원자성 DB가 있고 (l1Structure 또는 failureEffects가 있으면 유효한 DB)
-    if (loadedDB && (loadedDB.l1Structure || (loadedDB.failureEffects && loadedDB.failureEffects.length > 0) || loadedDB.l2Structures.length > 0)) {
+    // 원자성 DB 로드 시도 (async)
+    (async () => {
+      const loadedDB = await loadWorksheetDB(selectedFmeaId);
+      
+      // 원자성 DB가 있고 (l1Structure 또는 failureEffects가 있으면 유효한 DB)
+      if (loadedDB && (loadedDB.l1Structure || (loadedDB.failureEffects && loadedDB.failureEffects.length > 0) || loadedDB.l2Structures.length > 0)) {
       console.log('[워크시트] 원자성 DB 발견:', loadedDB);
       console.log('[워크시트] 원자성 DB 상태:', {
         l1Structure: !!loadedDB.l1Structure,
@@ -482,7 +485,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
             failureL3Confirmed: parsed.failureL3Confirmed,
           });
           setAtomicDB(atomicData);
-          saveWorksheetDB(atomicData);
+          saveWorksheetDB(atomicData).catch(e => console.error('[마이그레이션] DB 저장 오류:', e));
 
           // ✅ 기존 state의 tab/riskData가 있으면 유지
           setState(prev => {
@@ -546,6 +549,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         structureConfirmed: false
       }));
     }
+    })(); // async 함수 닫기
   }, [selectedFmeaId]);
 
   const handleInputKeyDown = useCallback((e: React.KeyboardEvent) => {

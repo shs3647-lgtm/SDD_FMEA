@@ -1,14 +1,15 @@
 /**
  * @file StatusBar.tsx
- * @description L7 상태바 (상태/모듈/단계/레벨/사용자 표시)
+ * @description L7 상태바 (상태/모듈/단계/레벨/사용자 + 좌우스크롤바 표시)
  * @author AI Assistant
  * @created 2025-12-25
- * @version 1.0.0
+ * @version 1.1.0
  */
 
 'use client';
 
 import { cn } from '@/lib/utils';
+import { useEffect, useState, useCallback, useRef } from 'react';
 
 interface StatusBarProps {
   /** 현재 상태 */
@@ -23,13 +24,16 @@ interface StatusBarProps {
   saved?: boolean;
   /** 사용자명 */
   userName?: string;
+  /** 스크롤 컨테이너 ID (스크롤바 연동용) */
+  scrollContainerId?: string;
 }
 
 /**
  * 상태바 컴포넌트 (L7)
  * 
  * @description
- * 화면 하단에 현재 작업 상태, 모듈, 단계, 레벨, 사용자 정보를 표시합니다.
+ * 화면 하단에 현재 작업 상태, 모듈, 단계, 레벨, 사용자 정보와
+ * 좌우 스크롤바를 표시합니다.
  * 높이: 24px
  */
 export function StatusBar({
@@ -39,7 +43,13 @@ export function StatusBar({
   level = 3,
   saved = true,
   userName = 'Admin',
+  scrollContainerId = 'worksheet-scroll-container',
 }: StatusBarProps) {
+  const [scrollPercent, setScrollPercent] = useState(0);
+  const [canScroll, setCanScroll] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const trackRef = useRef<HTMLDivElement>(null);
+
   // 상태별 색상 및 아이콘
   const statusConfig = {
     ready: { color: 'text-green-500', icon: '🟢', label: 'Ready' },
@@ -50,46 +60,224 @@ export function StatusBar({
 
   const currentStatus = statusConfig[status];
 
+  // 스크롤 컨테이너 가져오기
+  const getScrollContainer = useCallback(() => {
+    // all-tab-scroll-wrapper 먼저 확인 (All 탭용)
+    let container = document.getElementById('all-tab-scroll-wrapper');
+    if (container && container.scrollWidth > container.clientWidth) {
+      return container;
+    }
+    // 기본 worksheet-scroll-container 확인
+    container = document.getElementById(scrollContainerId);
+    return container;
+  }, [scrollContainerId]);
+
+  // 스크롤 위치 업데이트
+  const updateScrollPosition = useCallback(() => {
+    const container = getScrollContainer();
+    if (container) {
+      const maxScroll = container.scrollWidth - container.clientWidth;
+      setCanScroll(maxScroll > 0);
+      if (maxScroll > 0) {
+        setScrollPercent((container.scrollLeft / maxScroll) * 100);
+      } else {
+        setScrollPercent(0);
+      }
+    }
+  }, [getScrollContainer]);
+
+  // 왼쪽으로 스크롤
+  const scrollLeft = useCallback(() => {
+    const container = getScrollContainer();
+    if (container) {
+      container.scrollBy({ left: -200, behavior: 'smooth' });
+    }
+  }, [getScrollContainer]);
+
+  // 오른쪽으로 스크롤
+  const scrollRight = useCallback(() => {
+    const container = getScrollContainer();
+    if (container) {
+      container.scrollBy({ left: 200, behavior: 'smooth' });
+    }
+  }, [getScrollContainer]);
+
+  // 트랙 클릭으로 스크롤
+  const handleTrackClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const container = getScrollContainer();
+    const track = trackRef.current;
+    if (!container || !track) return;
+
+    const rect = track.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percent = clickX / rect.width;
+    const maxScroll = container.scrollWidth - container.clientWidth;
+    container.scrollLeft = percent * maxScroll;
+  }, [getScrollContainer]);
+
+  // 드래그 시작
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  // 드래그 중
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const container = getScrollContainer();
+      const track = trackRef.current;
+      if (!container || !track) return;
+
+      const rect = track.getBoundingClientRect();
+      const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+      const percent = x / rect.width;
+      const maxScroll = container.scrollWidth - container.clientWidth;
+      container.scrollLeft = percent * maxScroll;
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, getScrollContainer]);
+
+  // 스크롤 이벤트 리스너
+  useEffect(() => {
+    const handleScroll = () => updateScrollPosition();
+    
+    // 주기적으로 컨테이너 확인 (탭 전환 대응)
+    const interval = setInterval(() => {
+      updateScrollPosition();
+    }, 500);
+
+    // 모든 잠재적 스크롤 컨테이너에 리스너 추가
+    const container1 = document.getElementById('all-tab-scroll-wrapper');
+    const container2 = document.getElementById(scrollContainerId);
+    
+    container1?.addEventListener('scroll', handleScroll);
+    container2?.addEventListener('scroll', handleScroll);
+    
+    // 초기 위치 설정
+    updateScrollPosition();
+
+    return () => {
+      clearInterval(interval);
+      container1?.removeEventListener('scroll', handleScroll);
+      container2?.removeEventListener('scroll', handleScroll);
+    };
+  }, [scrollContainerId, updateScrollPosition]);
+
   return (
-    <footer className="fixed bottom-0 left-12 right-0 z-20 h-6 bg-gray-100 border-t border-gray-200">
-      <div className="flex h-full items-center justify-between px-4 text-xs text-gray-600">
+    <footer className="fixed bottom-0 left-12 right-0 z-20 h-8 bg-gray-100 border-t border-gray-300">
+      <div className="flex h-full items-center px-2 text-xs text-gray-600 gap-2">
         {/* ======== 좌측: 상태 정보 ======== */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 shrink-0">
           {/* 상태 */}
           <span className={cn('flex items-center gap-1', currentStatus.color)}>
             {currentStatus.icon} {currentStatus.label}
           </span>
-
-          {/* 구분선 */}
           <span className="text-gray-300">|</span>
-
-          {/* 모듈 */}
           <span>{module}</span>
-
-          {/* 구분선 */}
           <span className="text-gray-300">|</span>
-
-          {/* 단계 */}
           <span>{step}</span>
-
-          {/* 구분선 */}
           <span className="text-gray-300">|</span>
-
-          {/* 레벨 */}
           <span>{level}레벨</span>
-
-          {/* 구분선 */}
           <span className="text-gray-300">|</span>
-
-          {/* 저장 상태 */}
           <span className={saved ? 'text-green-500' : 'text-yellow-500'}>
-            {saved ? '🟢 저장됨' : '🟡 수정됨'}
+            {saved ? '✓저장' : '●수정'}
           </span>
         </div>
 
+        {/* ======== 중앙: 좌우 스크롤바 ======== */}
+        <div className="flex-1 flex items-center gap-2 mx-4">
+          {/* 왼쪽 화살표 버튼 */}
+          <button
+            onClick={scrollLeft}
+            disabled={!canScroll || scrollPercent <= 0}
+            className={cn(
+              "w-6 h-5 flex items-center justify-center rounded",
+              "bg-gray-200 hover:bg-gray-300 transition-colors",
+              (!canScroll || scrollPercent <= 0) && "opacity-40 cursor-not-allowed"
+            )}
+            title="왼쪽으로 스크롤"
+          >
+            ◀
+          </button>
+
+          {/* 스크롤 트랙 */}
+          <div
+            ref={trackRef}
+            onClick={handleTrackClick}
+            className={cn(
+              "flex-1 h-4 rounded cursor-pointer relative",
+              canScroll ? "bg-gray-300" : "bg-gray-200"
+            )}
+            style={{
+              background: canScroll 
+                ? 'linear-gradient(to bottom, #d0d0d0, #e0e0e0)' 
+                : '#e8e8e8',
+              boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)',
+            }}
+          >
+            {/* 스크롤 썸 (드래그 가능) */}
+            {canScroll && (
+              <div
+                onMouseDown={handleDragStart}
+                className="absolute top-0 h-full rounded cursor-grab active:cursor-grabbing"
+                style={{
+                  left: `${Math.max(0, Math.min(scrollPercent, 100) - 10)}%`,
+                  width: '20%',
+                  minWidth: '40px',
+                  maxWidth: '100px',
+                  background: isDragging 
+                    ? 'linear-gradient(to bottom, #0d1757, #303f9f)'
+                    : 'linear-gradient(to bottom, #1a237e, #3f51b5)',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                  transition: isDragging ? 'none' : 'left 0.1s ease-out',
+                }}
+              />
+            )}
+            {!canScroll && (
+              <div className="flex items-center justify-center h-full text-[10px] text-gray-500">
+                스크롤 없음
+              </div>
+            )}
+          </div>
+
+          {/* 오른쪽 화살표 버튼 */}
+          <button
+            onClick={scrollRight}
+            disabled={!canScroll || scrollPercent >= 100}
+            className={cn(
+              "w-6 h-5 flex items-center justify-center rounded",
+              "bg-gray-200 hover:bg-gray-300 transition-colors",
+              (!canScroll || scrollPercent >= 100) && "opacity-40 cursor-not-allowed"
+            )}
+            title="오른쪽으로 스크롤"
+          >
+            ▶
+          </button>
+
+          {/* 스크롤 퍼센트 표시 */}
+          {canScroll && (
+            <span className="text-[10px] text-gray-500 w-8 text-right">
+              {Math.round(scrollPercent)}%
+            </span>
+          )}
+        </div>
+
         {/* ======== 우측: 사용자 정보 ======== */}
-        <div className="flex items-center gap-2">
-          <span>사용자: {userName}</span>
+        <div className="flex items-center gap-2 shrink-0">
+          <span>👤 {userName}</span>
         </div>
       </div>
     </footer>
@@ -97,6 +285,3 @@ export function StatusBar({
 }
 
 export default StatusBar;
-
-
-

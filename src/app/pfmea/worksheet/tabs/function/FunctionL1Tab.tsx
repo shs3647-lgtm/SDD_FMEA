@@ -105,7 +105,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
   // ✅ 1L COUNT 계산 (완제품기능, 요구사항)
   const functionCount = useMemo(() => {
     return state.l1.types.reduce((sum, type) => 
-      sum + (type.functions || []).filter(f => f.name && !f.name.includes('클릭')).length, 0);
+      sum + (type.functions || []).filter((f: any) => f.name && !f.name.includes('클릭')).length, 0);
   }, [state.l1.types]);
   
   const requirementCount = useMemo(() => {
@@ -170,15 +170,15 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
       ...prev,
       l1: {
         ...prev.l1,
-        types: prev.l1.types.map(t => {
+        types: prev.l1.types.map((t: any) => {
           if (t.id !== typeId) return t;
           return {
             ...t,
-            functions: t.functions.map(f => {
+            functions: t.functions.map((f: any) => {
               if (f.id !== funcId) return f;
               return {
                 ...f,
-                requirements: f.requirements.map(r => {
+                requirements: f.requirements.map((r: any) => {
                   if (r.id !== reqId) return r;
                   return { ...r, name: newValue };
                 })
@@ -198,11 +198,11 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
       ...prev,
       l1: {
         ...prev.l1,
-        types: prev.l1.types.map(t => {
+        types: prev.l1.types.map((t: any) => {
           if (t.id !== typeId) return t;
           return {
             ...t,
-            functions: t.functions.map(f => {
+            functions: t.functions.map((f: any) => {
               if (f.id !== funcId) return f;
               return { ...f, name: newValue };
             })
@@ -226,7 +226,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
 
       if (type === 'l1Type') {
         const currentTypes = [...newState.l1.types];
-        const existingNames = new Set(currentTypes.filter(t => t.name && !t.name.includes('클릭하여')).map(t => t.name));
+        const existingNames = new Set(currentTypes.filter((t: any) => t.name && !t.name.includes('클릭하여')).map((t: any) => t.name));
         
         // 빈 타입 찾기
         const emptyTypeIdx = currentTypes.findIndex(t => !t.name || t.name === '' || t.name.includes('클릭하여'));
@@ -252,7 +252,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
       } 
       else if (type === 'l1Function') {
         const funcId = (modal as any).funcId;
-        newState.l1.types = newState.l1.types.map(t => {
+        newState.l1.types = newState.l1.types.map((t: any) => {
           if (t.id !== id) return t;
           const currentFuncs = t.functions;
           
@@ -262,12 +262,12 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
               // 선택 해제 시 해당 기능 삭제
               return {
                 ...t,
-                functions: currentFuncs.filter(f => f.id !== funcId)
+                functions: currentFuncs.filter((f: any) => f.id !== funcId)
               };
             }
             return {
               ...t,
-              functions: currentFuncs.map(f => 
+              functions: currentFuncs.map((f: any) => 
                 f.id === funcId 
                   ? { ...f, name: selectedValues[0] || f.name }
                   : f
@@ -277,7 +277,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
           
           // ✅ 다중 선택: 각각 별도 행으로 추가
           const updatedFuncs = [...currentFuncs];
-          const existingNames = new Set(currentFuncs.filter(f => f.name && !f.name.includes('클릭하여')).map(f => f.name));
+          const existingNames = new Set(currentFuncs.filter((f: any) => f.name && !f.name.includes('클릭하여')).map((f: any) => f.name));
           
           // 빈 기능 찾기
           const emptyFuncIdx = updatedFuncs.findIndex(f => !f.name || f.name === '' || f.name.includes('클릭하여'));
@@ -304,9 +304,9 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
       }
       else if (type === 'l1Requirement') {
         const reqId = (modal as any).reqId;
-        newState.l1.types = newState.l1.types.map(t => ({
+        newState.l1.types = newState.l1.types.map((t: any) => ({
           ...t,
-          functions: t.functions.map(f => {
+          functions: t.functions.map((f: any) => {
             if (f.id !== id) return f;
             const currentReqs = f.requirements || [];
             
@@ -314,7 +314,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
             if (reqId && selectedValues.length === 1) {
               return {
                 ...f,
-                requirements: currentReqs.map(r => 
+                requirements: currentReqs.map((r: any) => 
                   r.id === reqId ? { ...r, name: selectedValues[0] || r.name } : r
                 )
               };
@@ -322,12 +322,12 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
             
             // ✅ reqId가 있고 선택값이 없으면 삭제
             if (reqId && selectedValues.length === 0) {
-              return { ...f, requirements: currentReqs.filter(r => r.id !== reqId) };
+              return { ...f, requirements: currentReqs.filter((r: any) => r.id !== reqId) };
             }
             
             // ✅ 다중 선택: 각각 별도 행으로 추가 (reqId가 있어도 2개 이상 선택 시)
             const updatedReqs = [...currentReqs];
-            const existingNames = new Set(currentReqs.filter(r => r.name && !r.name.includes('클릭하여')).map(r => r.name));
+            const existingNames = new Set(currentReqs.filter((r: any) => r.name && !r.name.includes('클릭하여')).map((r: any) => r.name));
             
             // 빈 요구사항 찾기
             const emptyReqIdx = updatedReqs.findIndex(r => !r.name || r.name === '' || r.name.includes('클릭하여'));
@@ -609,12 +609,12 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
           parentFunction={modal.parentFunction}
           parentCategory={modal.parentCategory}
           currentValues={(() => {
-            if (modal.type === 'l1Type') return state.l1.types.map(t => t.name);
-            if (modal.type === 'l1Function') return state.l1.types.find(t => t.id === modal.id)?.functions.map(f => f.name) || [];
+            if (modal.type === 'l1Type') return state.l1.types.map((t: any) => t.name);
+            if (modal.type === 'l1Function') return state.l1.types.find(t => t.id === modal.id)?.functions.map((f: any) => f.name) || [];
             if (modal.type === 'l1Requirement') {
               for (const t of state.l1.types) {
                 const f = t.functions.find(f => f.id === modal.id);
-                if (f) return f.requirements.map(r => r.name);
+                if (f) return f.requirements.map((r: any) => r.name);
               }
             }
             return [];

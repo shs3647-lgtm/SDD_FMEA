@@ -394,12 +394,7 @@ function FMEAWorksheetPageContent() {
 
   return (
     <>
-      <PFMEATopNav 
-        selectedFmeaId={currentFmea?.id} 
-        fmCount={state.l2.reduce((sum, p) => sum + (p.failureModes?.length || 0), 0)}
-        feCount={(state.l1.failureScopes || []).filter((s: any) => s.effect).length}
-        fcCount={state.l2.reduce((sum, p) => sum + (p.l3 || []).reduce((s2, w) => s2 + (w.failureCauses?.length || 0), 0), 0)}
-      />
+      <PFMEATopNav selectedFmeaId={currentFmea?.id} />
       
       <div className="h-full flex flex-col font-[Segoe_UI,Malgun_Gothic,Arial,sans-serif]" style={{ background: COLORS.bg, color: COLORS.text }}>
         
@@ -472,84 +467,22 @@ function FMEAWorksheetPageContent() {
         <div className="fixed top-[100px] left-[50px] right-0 bottom-0 flex flex-row overflow-hidden">
           
           {/* ===== 좌측: 워크시트 영역 ===== */}
-          <div 
-            className="flex-1 flex flex-col min-w-0 bg-white overflow-hidden"
-          >
+          <div className="flex-1 flex flex-col min-w-0 bg-white overflow-hidden">
 
             {/* 구조분석 제목 바는 StructureTab 내부 헤더로 이동됨 (표준화 완료) */}
 
-            {/* 테이블 스크롤 영역 - 상하좌우 스크롤 가능, 헤더 sticky */}
-            {/* ✅ 유일한 스크롤 컨테이너 - all 탭에서 좌우 스크롤 항상 표시 */}
-            <div 
-              id="worksheet-scroll-container"
-              className={state.tab === 'all' ? 'all-tab-scroll-container' : ''}
-              style={{ 
-                flex: 1,
-                overflowX: 'scroll',
-                overflowY: 'auto',
-                background: '#fff',
-                position: 'relative',
-                paddingBottom: state.tab === 'all' ? '20px' : '0', // 스크롤바 공간 확보
-              }}
-              onWheel={(e) => {
-                // All 탭에서 마우스 휠로 좌우 스크롤 (Shift 없이도 가능)
-                if (state.tab === 'all' && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-                  const container = e.currentTarget;
-                  // 세로 스크롤을 가로 스크롤로 변환
-                  container.scrollLeft += e.deltaY;
-                  // 위치 표시기 업데이트
-                  const indicator = document.getElementById('scroll-position-indicator');
-                  if (indicator) {
-                    const scrollPercent = (container.scrollLeft / (container.scrollWidth - container.clientWidth)) * 100;
-                    indicator.style.left = `${Math.min(scrollPercent, 95)}%`;
+            {/* ✅ All 탭: 브라우저 하단 고정 스크롤 래퍼 */}
+            {state.tab === 'all' ? (
+              <div 
+                id="all-tab-scroll-wrapper"
+                onWheel={(e) => {
+                  // 마우스 휠로 좌우 스크롤 (Shift 없이도 가능)
+                  if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                    e.currentTarget.scrollLeft += e.deltaY;
                   }
-                }
-              }}
-              onScroll={(e) => {
-                // All 탭에서 스크롤 위치 표시기 업데이트
-                if (state.tab === 'all') {
-                  const target = e.currentTarget;
-                  const indicator = document.getElementById('scroll-position-indicator');
-                  if (indicator) {
-                    const scrollPercent = (target.scrollLeft / (target.scrollWidth - target.clientWidth)) * 100;
-                    indicator.style.left = `${Math.min(scrollPercent, 95)}%`;
-                  }
-                }
-              }}
-            >
-              {/* 기초정보 없으면 안내 메시지 */}
-              {currentFmea && !currentFmea.fmeaInfo?.subject && (
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '200px',
                 }}
-                className="bg-yellow-50 border-2 border-dashed border-amber-400 rounded-lg m-5 p-5"
               >
-                  <div className="text-base font-bold text-orange-600 mb-3">
-                    ⚠️ 기초정보가 없습니다
-                  </div>
-                  <div className="text-[13px] text-gray-600 mb-4 text-center">
-                    FMEA 분석을 시작하려면 먼저 기초정보를 입력해주세요.<br/>
-                    기초정보에는 회사명, FMEA명, 고객명, 책임자 등이 포함됩니다.
-                  </div>
-                  <button
-                    onClick={() => router.push(`/pfmea/register?id=${currentFmea.id}`)}
-                    className="bg-blue-700 text-white border-none py-2.5 px-6 rounded-md text-[13px] font-semibold cursor-pointer shadow-md"
-                  >
-                    📝 기초정보 입력하기
-                  </button>
-                </div>
-              )}
-              {/* 워크시트 상단 구분선 (1px) */}
-              {state.tab.startsWith('function') ? (
-                <FunctionTabFull {...tabProps} />
-              ) : state.tab.startsWith('failure') ? (
-                <FailureTabFull {...tabProps} />
-              ) : state.tab === 'all' ? (
-                /* 전체보기 탭: 통합 화면 (40열 구조) */
+                {/* 전체보기 탭: 통합 화면 (40열 구조) */}
                 <AllTabRenderer 
                   tab={state.tab} 
                   rows={rows} 
@@ -562,73 +495,72 @@ function FMEAWorksheetPageContent() {
                   onAPClick={() => setShowAPModal(true)}
                   visibleSteps={state.visibleSteps || [2, 3, 4, 5, 6]}
                 />
-              ) : state.tab === 'fmea4' ? (
-                /* FMEA 4판 (RPN 방식) */
-                <Fmea4Tab 
-                  state={state} 
-                  setState={setState} 
-                  setDirty={setDirty} 
-                />
-              ) : (
-                <table className="w-full border-collapse table-fixed">
-                  {state.tab === 'structure' && <StructureTabFull {...tabProps} />}
-                  {state.tab === 'doc' && <DocTabFull {...tabProps} />}
-                </table>
-              )}
-              
-              {/* All 탭 스크롤 위치 표시기 */}
-              {state.tab === 'all' && (
-                <div 
-                  style={{
-                    position: 'sticky',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    height: '18px',
-                    background: 'linear-gradient(to right, #e0e0e0, #f5f5f5, #e0e0e0)',
-                    borderTop: '1px solid #ccc',
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '0 10px',
-                    zIndex: 50,
-                  }}
-                >
+              </div>
+            ) : (
+              /* 다른 탭: 브라우저 하단 고정 스크롤바 */
+              <div 
+                id="worksheet-scroll-container"
+                className="worksheet-scroll-container"
+                style={{ 
+                  flex: 1,
+                  overflowX: 'scroll',
+                  overflowY: 'auto',
+                  background: '#fff',
+                  position: 'relative',
+                }}
+                onWheel={(e) => {
+                  // 마우스 휠로 좌우 스크롤 (Shift 없이도 가능)
+                  if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                    e.currentTarget.scrollLeft += e.deltaY;
+                  }
+                }}
+              >
+                {/* 기초정보 없으면 안내 메시지 */}
+                {currentFmea && !currentFmea.fmeaInfo?.subject && (
                   <div 
                     style={{
-                      position: 'relative',
-                      flex: 1,
-                      height: '8px',
-                      background: '#ddd',
-                      borderRadius: '4px',
-                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '200px',
                     }}
+                    className="bg-yellow-50 border-2 border-dashed border-amber-400 rounded-lg m-5 p-5"
                   >
-                    <div 
-                      id="scroll-position-indicator"
-                      style={{
-                        position: 'absolute',
-                        width: '60px',
-                        height: '100%',
-                        background: 'linear-gradient(90deg, #1a237e, #3f51b5)',
-                        borderRadius: '4px',
-                        left: '0%',
-                        transition: 'left 0.1s ease-out',
-                        cursor: 'pointer',
-                      }}
-                      onClick={() => {
-                        const container = document.getElementById('worksheet-scroll-container');
-                        if (container) {
-                          container.scrollLeft += 200;
-                        }
-                      }}
-                    />
+                    <div className="text-base font-bold text-orange-600 mb-3">
+                      ⚠️ 기초정보가 없습니다
+                    </div>
+                    <div className="text-[13px] text-gray-600 mb-4 text-center">
+                      FMEA 분석을 시작하려면 먼저 기초정보를 입력해주세요.<br/>
+                      기초정보에는 회사명, FMEA명, 고객명, 책임자 등이 포함됩니다.
+                    </div>
+                    <button
+                      onClick={() => router.push(`/pfmea/register?id=${currentFmea.id}`)}
+                      className="bg-blue-700 text-white border-none py-2.5 px-6 rounded-md text-[13px] font-semibold cursor-pointer shadow-md"
+                    >
+                      📝 기초정보 입력하기
+                    </button>
                   </div>
-                  <span style={{ marginLeft: '10px', fontSize: '10px', color: '#666' }}>
-                    ← → 드래그하여 스크롤
-                  </span>
-                </div>
-              )}
-            </div>
+                )}
+                {/* 워크시트 콘텐츠 */}
+                {state.tab.startsWith('function') ? (
+                  <FunctionTabFull {...tabProps} />
+                ) : state.tab.startsWith('failure') ? (
+                  <FailureTabFull {...tabProps} />
+                ) : state.tab === 'fmea4' ? (
+                  <Fmea4Tab 
+                    state={state} 
+                    setState={setState} 
+                    setDirty={setDirty} 
+                  />
+                ) : (
+                  <table className="w-full border-collapse table-fixed">
+                    {state.tab === 'structure' && <StructureTabFull {...tabProps} />}
+                    {state.tab === 'doc' && <DocTabFull {...tabProps} />}
+                  </table>
+                )}
+              </div>
+            )}
           </div>
           {/* 워크시트 영역 닫힘 */}
 

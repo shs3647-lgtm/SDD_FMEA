@@ -83,7 +83,7 @@ export default function Fmea4Page() {
     const l2Count = state.l2?.length || 0;
     const l3Count = state.l2?.reduce((sum, proc) => sum + (proc.l3?.length || 0), 0) || 0;
     const fmCount = state.l2?.reduce((sum, proc) => 
-      sum + (proc.l3?.reduce((s, we) => s + (we.riskData?.length || 0), 0) || 0), 0) || 0;
+      sum + (proc.failureModes?.length || 0), 0) || 0;
     
     return {
       l2Count,
@@ -108,9 +108,6 @@ export default function Fmea4Page() {
       {/* TopNav */}
       <PFMEATopNav 
         selectedFmeaId={fmeaId || undefined}
-        processCount={stats.l2Count}
-        workElementCount={stats.l3Count}
-        fmCount={stats.fmCount}
       />
 
       {/* 헤더 */}

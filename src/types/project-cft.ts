@@ -13,7 +13,7 @@ export const CFT_DEFAULT_ROLES = [
 
 export type CFTRole = (typeof CFT_DEFAULT_ROLES)[number];
 
-export type CFTActionType = '추가' | '수정' | '삭제';
+export type CFTActionType = '추가' | '수정' | '삭제' | '조회' | '승인' | '생성';
 
 export interface CFTMember {
   id: string;

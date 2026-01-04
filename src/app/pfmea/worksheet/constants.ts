@@ -79,6 +79,11 @@ export interface WorkElement {
   failureCauses?: L3FailureCause[];
 }
 
+// L3 고장원인 (공정 레벨에서 관리되는 확장 타입)
+export interface L3FailureCauseExtended extends L3FailureCause {
+  processCharId?: string; // [원자성] 상위 공정특성 FK
+}
+
 export interface Process {
   id: string;
   no: string;
@@ -91,6 +96,8 @@ export interface Process {
   failureMode?: string; // 나중에 Atomic 연계 예정
   // 고장분석: 원자적 고장형태 배열
   failureModes?: L2FailureMode[];
+  // 고장분석: 원자적 고장원인 배열 (공정 레벨에서 관리)
+  failureCauses?: L3FailureCauseExtended[];
 }
 
 export interface L1Data {

@@ -62,12 +62,14 @@ export default function AllTabRenderer({
   const failureLinks = (state as any).failureLinks || [];
   
   // 전체보기(all) 탭: 고장연결 결과 기반 40열 테이블
+  // ⚠️ 스크롤은 상위 page.tsx에서 처리 - 여기서 래퍼 제거
   if (tab === 'all' && failureLinks.length > 0) {
     return (
       <AllTabWithLinks
         state={state}
         setState={setState}
         failureLinks={failureLinks}
+        visibleSteps={visibleSteps}
       />
     );
   }

@@ -157,11 +157,11 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
     });
     setDirty(true);
     
-    // ✅ 즉시 저장 (requestAnimationFrame 사용)
-    requestAnimationFrame(() => {
+    // ✅ 확정 상태 저장 - setTimeout으로 state 업데이트 대기
+    setTimeout(() => {
       saveToLocalStorage?.();
       console.log('[FailureL1Tab] 확정 후 localStorage 저장 완료');
-    });
+    }, 100);
     
     alert('1L 고장영향(FE) 분석이 확정되었습니다.');
   }, [missingCount, state.l1, setState, setDirty, saveToLocalStorage]);
@@ -170,7 +170,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
   const handleEdit = useCallback(() => {
     setState(prev => ({ ...prev, failureL1Confirmed: false }));
     setDirty(true);
-    requestAnimationFrame(() => saveToLocalStorage?.());
+    setTimeout(() => saveToLocalStorage?.(), 100);
   }, [setState, setDirty, saveToLocalStorage]);
 
   // 기능분석 L1에서 요구사항 목록 가져오기 (구분 포함)
@@ -526,14 +526,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
 
       <table className="w-full border-collapse table-fixed" style={{ minWidth: '750px', marginBottom: '50px' }}>
         {/* 컬럼: 완제품공정명 90px, 구분 55px, 완제품기능 auto, 요구사항 70px, 고장영향 280px, S 30px */}
-        <colgroup>
-          <col style={{ width: '90px', minWidth: '90px' }} />
-          <col style={{ width: '55px', minWidth: '55px' }} />
-          <col />
-          <col style={{ width: '70px', minWidth: '70px' }} />
-          <col style={{ width: '280px', minWidth: '280px' }} />
-          <col style={{ width: '30px', minWidth: '30px' }} />
-        </colgroup>
+        <colgroup><col style={{ width: '90px', minWidth: '90px' }} /><col style={{ width: '55px', minWidth: '55px' }} /><col /><col style={{ width: '140px', minWidth: '140px' }} /><col style={{ width: '280px', minWidth: '280px' }} /><col style={{ width: '30px', minWidth: '30px' }} /></colgroup>
         
         {/* 3행 헤더 구조 - 하단 2px 검은색 구분선 */}
         <thead className="sticky top-0 z-20 bg-white border-b-2 border-black">

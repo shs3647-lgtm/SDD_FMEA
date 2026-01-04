@@ -30,6 +30,7 @@ import {
   actionButtonGroupStyle,
   actionButtonStyle
 } from './FailureLinkStyles';
+import { saveToAIHistory } from '@/lib/ai-recommendation';
 
 interface FEItem { id: string; scope: string; feNo: string; text: string; severity?: number; }
 interface FMItem { id: string; fmNo: string; processName: string; text: string; }
@@ -52,48 +53,65 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
   const feColRef = useRef<HTMLDivElement>(null);
   const fcColRef = useRef<HTMLDivElement>(null);
   
-  // state.failureLinks 변경 시 savedLinks 동기화 (초기 로드 시에만, 이후에는 savedLinks가 소스)
-  // useRef로 초기 로드 여부 추적
+  // ========== 초기 데이터 로드 (화면 전환 시에도 항상 복원) ==========
   const isInitialLoad = useRef(true);
   useEffect(() => {
     const stateLinks = (state as any).failureLinks || [];
-    // 초기 로드 시에만 동기화 (한 번만 실행)
-    if (isInitialLoad.current && stateLinks.length > 0) {
-      console.log('[초기 동기화] state.failureLinks → savedLinks:', stateLinks.length, '개');
+    // ✅ 수정: isInitialLoad 조건 제거 - state.failureLinks가 있으면 항상 복원
+    if (stateLinks.length > 0) {
+      console.log('[FailureLinkTab] 데이터 복원: state.failureLinks →', stateLinks.length, '개');
       setSavedLinks(stateLinks);
-      if (stateLinks.length > 0) {
-        setViewMode('result');
-      }
+      // ✅ 고장사슬을 기본값으로 유지 (result 화면으로 자동 전환하지 않음)
       isInitialLoad.current = false;
     }
-  }, [(state as any).failureLinks]); // state.failureLinks 변경 시 체크하되, isInitialLoad로 한 번만 실행
+  }, [(state as any).failureLinks]);
 
   // 제거: useEffect로 인한 무한 루프 방지 (toggleFE/toggleFC에서 직접 처리)
 
-  // FE 데이터 추출 (번호 포함)
+  // ========== FE 데이터 추출 (확정된 것만 사용 + 중복 제거) ==========
+  const isL1Confirmed = state.failureL1Confirmed || false;
+  
   const feData: FEItem[] = useMemo(() => {
+    // ✅ 핵심: 1L 고장영향 분석이 확정되지 않으면 FE 데이터 반환 안함
+    if (!isL1Confirmed) {
+      console.log('[FE 데이터] 1L 고장분석 미확정 → 빈 배열 반환');
+      return [];
+    }
+    
     const items: FEItem[] = [];
+    const seen = new Set<string>(); // 구분+고장영향 조합으로 중복 체크
     const counters: Record<string, number> = { 'Your Plant': 0, 'Ship to Plant': 0, 'User': 0 };
     
     (state.l1?.failureScopes || []).forEach((fs: any) => {
-      if (fs.effect) {
-        let scope = '';
+      if (!fs.effect || !fs.id) return;
+      
+      // 구분(scope) 찾기: reqId로 type 조회
+      let scope = 'Your Plant';
+      if (fs.reqId) {
         (state.l1?.types || []).forEach((type: any) => {
           (type.functions || []).forEach((fn: any) => {
             (fn.requirements || []).forEach((req: any) => {
-              if (req.id === fs.reqId) scope = type.name;
+              if (req.id === fs.reqId) scope = type.name || 'Your Plant';
             });
           });
         });
-        const scopeName = scope || 'Your Plant';
-        const prefix = scopeName === 'Your Plant' ? 'Y' : scopeName === 'Ship to Plant' ? 'S' : scopeName === 'User' ? 'U' : 'X';
-        const feNo = `${prefix}${(counters[scopeName] || 0) + 1}`;
-        counters[scopeName] = (counters[scopeName] || 0) + 1;
-        items.push({ id: fs.id, scope: scopeName, feNo, text: fs.effect, severity: fs.severity });
       }
+      
+      // 중복 체크: 동일 구분 + 동일 고장영향은 하나로 통합
+      const key = `${scope}|${fs.effect}`;
+      if (seen.has(key)) {
+        return; // 이미 추가된 조합이면 스킵
+      }
+      seen.add(key);
+      
+      const scopeName = scope || 'Your Plant';
+      const prefix = scopeName === 'Your Plant' ? 'Y' : scopeName === 'Ship to Plant' ? 'S' : scopeName === 'User' ? 'U' : 'X';
+      const feNo = `${prefix}${(counters[scopeName] || 0) + 1}`;
+      counters[scopeName] = (counters[scopeName] || 0) + 1;
+      items.push({ id: fs.id, scope: scopeName, feNo, text: fs.effect, severity: fs.severity });
     });
     return items;
-  }, [state.l1]);
+  }, [state.l1, isL1Confirmed]);
 
   // FM 데이터 추출 (번호 포함)
   const fmData: FMItem[] = useMemo(() => {

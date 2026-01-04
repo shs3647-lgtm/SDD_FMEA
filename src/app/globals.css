@@ -477,51 +477,148 @@ body {
   display: none;  /* Chrome, Safari and Opera */
 }
 
-/* ===== All 탭 스크롤바 강제 표시 ===== */
-/* Windows 오버레이 스크롤바 문제 해결 */
-.all-tab-scroll-container {
-  /* 스크롤바 공간 확보 */
+/* ===== All 탭 스크롤바: 브라우저 하단 고정 ===== */
+/* 
+ * 핵심 원리:
+ * 1. 스크롤 래퍼가 남은 공간 전체를 채움 (flex: 1)
+ * 2. 내부 콘텐츠가 넓어서 가로 스크롤 발생
+ * 3. 스크롤바는 래퍼 하단에 위치 = 브라우저 하단
+ */
+
+/* 스크롤 래퍼: 브라우저 하단까지 확장 */
+#all-tab-scroll-wrapper {
+  /* 남은 공간 전체 사용 */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  
+  /* 가로 스크롤만 표시, 세로는 자동 */
+  overflow-x: scroll !important;
+  overflow-y: auto !important;
+  
+  /* 스크롤바 항상 표시 */
   scrollbar-gutter: stable;
+  
   /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #1a237e #e0e0e0;
+  
+  /* 배경 */
+  background: #fff;
+}
+
+/* 내부 콘텐츠: 최소 너비로 스크롤 유발 */
+#all-tab-scroll-wrapper > * {
+  min-width: 2600px;
+}
+
+/* Chrome/Edge 가로 스크롤바 */
+#all-tab-scroll-wrapper::-webkit-scrollbar {
+  height: 18px !important;
+  width: 12px !important;
+  display: block !important;
+  background: #e8e8e8;
+}
+
+#all-tab-scroll-wrapper::-webkit-scrollbar:horizontal {
+  height: 18px !important;
+  display: block !important;
+  background: linear-gradient(to bottom, #d8d8d8, #e8e8e8);
+}
+
+#all-tab-scroll-wrapper::-webkit-scrollbar-track:horizontal {
+  background: linear-gradient(to bottom, #e8e8e8, #d8d8d8) !important;
+  border-top: 1px solid #ccc;
+}
+
+#all-tab-scroll-wrapper::-webkit-scrollbar-thumb:horizontal {
+  background: linear-gradient(to bottom, #1a237e, #3f51b5) !important;
+  border-radius: 9px;
+  border: 3px solid #e8e8e8;
+  min-width: 100px;
+}
+
+#all-tab-scroll-wrapper::-webkit-scrollbar-thumb:horizontal:hover {
+  background: linear-gradient(to bottom, #0d1757, #303f9f) !important;
+}
+
+/* 스크롤바 버튼 (좌/우 화살표) */
+#all-tab-scroll-wrapper::-webkit-scrollbar-button:single-button:horizontal:decrement {
+  width: 18px;
+  height: 18px;
+  background: #d8d8d8 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23333' d='M6 1L2 5l4 4V1z'/%3E%3C/svg%3E") center center no-repeat;
+  border: 1px solid #bbb;
+  border-radius: 3px;
+}
+
+#all-tab-scroll-wrapper::-webkit-scrollbar-button:single-button:horizontal:increment {
+  width: 18px;
+  height: 18px;
+  background: #d8d8d8 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23333' d='M4 1v8l4-4-4-4z'/%3E%3C/svg%3E") center center no-repeat;
+  border: 1px solid #bbb;
+  border-radius: 3px;
+}
+
+#all-tab-scroll-wrapper::-webkit-scrollbar-button:single-button:hover {
+  background-color: #c8c8c8;
+}
+
+/* 기존 클래스 (호환성 유지) */
+.all-tab-scroll-container {
+  overflow-x: scroll !important;
+  overflow-y: auto !important;
+}
+
+/* ===== 워크시트 스크롤바: 브라우저 하단 고정 ===== */
+.worksheet-scroll-container {
+  overflow-x: scroll !important;
+  overflow-y: auto !important;
+  scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: #1a237e #e0e0e0;
 }
 
-.all-tab-scroll-container::-webkit-scrollbar {
+.worksheet-scroll-container::-webkit-scrollbar {
+  height: 16px !important;
+  width: 12px !important;
+  display: block !important;
+  background: #e8e8e8;
+}
+
+.worksheet-scroll-container::-webkit-scrollbar:horizontal {
   height: 16px !important;
   display: block !important;
-  background: #e0e0e0;
+  background: linear-gradient(to bottom, #d8d8d8, #e8e8e8);
 }
 
-.all-tab-scroll-container::-webkit-scrollbar-track {
-  background: linear-gradient(to bottom, #f0f0f0, #e0e0e0, #f0f0f0) !important;
-  border-radius: 8px;
-  margin: 0 10px;
+.worksheet-scroll-container::-webkit-scrollbar-track:horizontal {
+  background: linear-gradient(to bottom, #e8e8e8, #d8d8d8) !important;
+  border-top: 1px solid #ccc;
 }
 
-.all-tab-scroll-container::-webkit-scrollbar-thumb {
-  background: linear-gradient(to right, #1a237e, #3f51b5, #1a237e) !important;
+.worksheet-scroll-container::-webkit-scrollbar-thumb:horizontal {
+  background: linear-gradient(to bottom, #1a237e, #3f51b5) !important;
   border-radius: 8px;
-  border: 3px solid #e0e0e0;
+  border: 2px solid #e8e8e8;
   min-width: 80px;
 }
 
-.all-tab-scroll-container::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to right, #0d1757, #303f9f, #0d1757) !important;
+.worksheet-scroll-container::-webkit-scrollbar-thumb:horizontal:hover {
+  background: linear-gradient(to bottom, #0d1757, #303f9f) !important;
 }
 
-.all-tab-scroll-container::-webkit-scrollbar-button:single-button {
-  display: block;
-  width: 16px;
-  height: 16px;
-  background-color: #c0c0c0;
-  border-radius: 4px;
-}
-
-.all-tab-scroll-container::-webkit-scrollbar-button:single-button:horizontal:decrement {
-  background: #d0d0d0 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath fill='%23333' d='M5 1L1 4l4 3V1z'/%3E%3C/svg%3E") center center no-repeat;
-}
-
-.all-tab-scroll-container::-webkit-scrollbar-button:single-button:horizontal:increment {
-  background: #d0d0d0 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath fill='%23333' d='M3 1v6l4-3-4-3z'/%3E%3C/svg%3E") center center no-repeat;
+/* ===== 완료 애니메이션 ===== */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 16px 4px rgba(76, 175, 80, 0.6);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4);
+  }
 }

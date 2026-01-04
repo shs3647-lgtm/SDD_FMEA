@@ -21,7 +21,6 @@ function createEmptyMeetingMinute(no: number): MeetingMinute {
     id: `meeting-${Date.now()}-${no}`,
     no,
     date: '',
-    meetingDate: '',
     projectName: '',
     content: '',
     author: '',
@@ -332,7 +331,7 @@ export default function APQPRevisionPage() {
         </div>
 
         <div className="mt-3 px-4 py-2 bg-white rounded border border-gray-300 flex justify-between text-xs text-gray-500">
-          <span>개정 이력 {revisions.length}건 | 회의록 {meetingMinutes.filter(m => m.meetingDate).length}건</span>
+          <span>개정 이력 {revisions.length}건 | 회의록 {meetingMinutes.filter(m => m.date).length}건</span>
           <span>버전: APQP Suite v3.0 | 사용자: APQP Lead</span>
         </div>
 

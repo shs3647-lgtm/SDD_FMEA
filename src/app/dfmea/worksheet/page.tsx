@@ -391,9 +391,6 @@ function FMEAWorksheetPageContent() {
     <>
       <PFMEATopNav 
         selectedFmeaId={currentFmea?.id} 
-        fmCount={state.l2.reduce((sum, p) => sum + (p.failureModes?.length || 0), 0)}
-        feCount={(state.l1.failureScopes || []).filter((s: any) => s.effect).length}
-        fcCount={state.l2.reduce((sum, p) => sum + (p.l3 || []).reduce((s2, w) => s2 + (w.failureCauses?.length || 0), 0), 0)}
       />
       
       <div className="h-full flex flex-col font-[Segoe_UI,Malgun_Gothic,Arial,sans-serif] pt-16 bg-gray-50 text-gray-800">

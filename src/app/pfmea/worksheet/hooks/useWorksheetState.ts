@@ -25,11 +25,13 @@ import {
   createEmptyDB,
 } from '../schema';
 import {
-  loadWorksheetDB,
-  saveWorksheetDB,
   migrateToAtomicDB,
   convertToLegacyFormat,
 } from '../migration';
+import {
+  loadWorksheetDB,
+  saveWorksheetDB,
+} from '../db-storage';
 
 interface UseWorksheetStateReturn {
   state: WorksheetState;
@@ -128,7 +130,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
   }, [state]);
 
   // 원자성 DB 저장
-  const saveAtomicDB = useCallback(() => {
+  const saveAtomicDB = useCallback(async () => {
     if (!atomicDB) return;
     
     setIsSaving(true);
@@ -149,7 +151,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       };
       
       const newAtomicDB = migrateToAtomicDB(legacyData);
-      saveWorksheetDB(newAtomicDB);
+      saveWorksheetDB(newAtomicDB).catch(e => console.error('[원자성 DB 저장] 오류:', e));
       setAtomicDB(newAtomicDB);
       
       console.log('[원자성 DB 저장] 완료:', {
@@ -212,13 +214,13 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       });
       localStorage.setItem(`pfmea_worksheet_${targetId}`, JSON.stringify(worksheetData));
       
-      // 2. 원자성 DB로도 저장
+      // 2. 원자성 DB로도 저장 (async)
       const newAtomicDB = migrateToAtomicDB(worksheetData);
       console.log('[저장] 원자성 DB 변환 후:', {
         failureEffects: newAtomicDB.failureEffects.length,
         l1Functions: newAtomicDB.l1Functions.length,
       });
-      saveWorksheetDB(newAtomicDB);
+      saveWorksheetDB(newAtomicDB).catch(e => console.error('[저장] DB 저장 오류:', e));
       setAtomicDB(newAtomicDB);
       
       // 로그
@@ -402,6 +404,49 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     };
   }, [state.l2, saveToLocalStorage, selectedFmeaId, currentFmea?.id]);
 
+  // ✅ 확정 상태 변경 시 즉시 저장 (분석 확정 상태 손실 방지)
+  const confirmedStateRef = useRef<string>('');
+  useEffect(() => {
+    const confirmedState = JSON.stringify({
+      structureConfirmed: (state as any).structureConfirmed || false,
+      l1Confirmed: (state as any).l1Confirmed || false,
+      l2Confirmed: (state as any).l2Confirmed || false,
+      l3Confirmed: (state as any).l3Confirmed || false,
+      failureL1Confirmed: (state as any).failureL1Confirmed || false,
+      failureL2Confirmed: (state as any).failureL2Confirmed || false,
+      failureL3Confirmed: (state as any).failureL3Confirmed || false,
+      failureLinkConfirmed: (state as any).failureLinkConfirmed || false,
+    });
+    
+    // 초기화 시에는 저장하지 않음
+    if (confirmedStateRef.current === '') {
+      confirmedStateRef.current = confirmedState;
+      return;
+    }
+    
+    // 확정 상태가 변경되었을 때만 저장
+    if (confirmedState !== confirmedStateRef.current) {
+      console.log('[자동저장] 확정 상태 변경 감지:', JSON.parse(confirmedState));
+      confirmedStateRef.current = confirmedState;
+      
+      // 즉시 저장 (100ms 딜레이로 state 업데이트 대기)
+      setTimeout(() => {
+        saveToLocalStorage();
+        console.log('[자동저장] 확정 상태 저장 완료');
+      }, 100);
+    }
+  }, [
+    (state as any).structureConfirmed,
+    (state as any).l1Confirmed,
+    (state as any).l2Confirmed,
+    (state as any).l3Confirmed,
+    (state as any).failureL1Confirmed,
+    (state as any).failureL2Confirmed,
+    (state as any).failureL3Confirmed,
+    (state as any).failureLinkConfirmed,
+    saveToLocalStorage
+  ]);
+
   // ========== 트리뷰 데이터 기준 복구 로직 (로드 후 state 업데이트 시) ==========
   const treeViewRecoveryRef = useRef<boolean>(false);
   const lastFmeaIdRef = useRef<string>('');
@@ -439,7 +484,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       });
       
       // 원자성 DB 데이터 추출
-      const atomicDBCauses = atomicDB.failureCauses.map(fc => {
+      const atomicDBCauses = atomicDB.failureCauses.map((fc: any) => {
         const l2Struct = atomicDB.l2Structures.find(s => s.id === fc.l2StructId);
         const l3Func = atomicDB.l3Functions.find(f => f.id === fc.l3FuncId);
         return {
@@ -458,7 +503,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       const treeViewKeys = new Set(treeViewCauses.map(treeViewKey));
       const atomicDBKeys = new Set(atomicDBCauses.map(atomicDBKey));
       
-      const missingInAtomicDB = treeViewCauses.filter(fc => !atomicDBKeys.has(treeViewKey(fc)));
+      const missingInAtomicDB = treeViewCauses.filter((fc: any) => !atomicDBKeys.has(treeViewKey(fc)));
       const isConsistent = missingInAtomicDB.length === 0 && treeViewCauses.length === atomicDBCauses.length;
       
       if (!isConsistent && treeViewCauses.length > 0) {
@@ -471,7 +516,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         
         if (missingInAtomicDB.length > 0) {
           console.warn('⚠️ [트리뷰 기준 복구] 원자성 DB에 없는 항목 (트리뷰에만 있음):', missingInAtomicDB.length, '개');
-          missingInAtomicDB.forEach(fc => {
+          missingInAtomicDB.forEach((fc: any) => {
             console.warn(`     • [${fc.procName}] ${fc.causeName} (processCharId: ${fc.processCharId})`);
           });
         }
@@ -479,7 +524,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         // 트리뷰 데이터를 기준으로 원자성 DB 복구
         console.log('🔧 [트리뷰 기준 복구 시작] 트리뷰 데이터를 기준으로 원자성 DB 복구');
         
-        const recoveredCauses = treeViewCauses.map(fc => {
+        const recoveredCauses = treeViewCauses.map((fc: any) => {
           const l3Func = atomicDB.l3Functions.find(f => f.id === fc.processCharId);
           if (!l3Func) {
             console.warn(`[트리뷰 복구] processCharId ${fc.processCharId}에 해당하는 L3Function을 찾을 수 없음`);
@@ -497,7 +542,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
             cause: fc.causeName,
             occurrence: fc.occurrence || existingFC?.occurrence,
           };
-        }).filter((fc): fc is NonNullable<typeof fc> => fc !== null);
+        }).filter((fc: any): fc is NonNullable<typeof fc> => fc !== null);
         
         // 원자성 DB 업데이트
         const recoveredDB = {
@@ -505,8 +550,8 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           failureCauses: recoveredCauses
         };
         
-        // 복구된 DB 저장
-        saveWorksheetDB(recoveredDB);
+        // 복구된 DB 저장 (async)
+        saveWorksheetDB(recoveredDB).catch(e => console.error('[복구] DB 저장 오류:', e));
         setAtomicDB(recoveredDB);
         
         console.log('✅ [트리뷰 기준 복구 완료] 원자성 DB가 트리뷰 데이터로 복구되었습니다.');
@@ -615,18 +660,19 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       console.error('[기초정보] 로드 오류:', e);
     }
     
-    // 원자성 DB 로드 시도
-    const loadedDB = loadWorksheetDB(selectedFmeaId);
-    
-    // ✅ 원자성 DB에 실제 데이터가 있는지 확인 (빈 DB 객체 구분)
-    const hasValidData = loadedDB && (
-      (loadedDB.l1Structure && loadedDB.l1Structure.name) || 
-      (loadedDB.failureEffects && loadedDB.failureEffects.length > 0) || 
-      loadedDB.l2Structures.length > 0
-    );
-    
-    // 원자성 DB가 있고 실제 데이터가 있는 경우
-    if (hasValidData) {
+    // 원자성 DB 로드 시도 (async)
+    (async () => {
+      const loadedDB = await loadWorksheetDB(selectedFmeaId);
+      
+      // ✅ 원자성 DB에 실제 데이터가 있는지 확인 (빈 DB 객체 구분)
+      const hasValidData = loadedDB && (
+        (loadedDB.l1Structure && loadedDB.l1Structure.name) || 
+        (loadedDB.failureEffects && loadedDB.failureEffects.length > 0) || 
+        loadedDB.l2Structures.length > 0
+      );
+      
+      // 원자성 DB가 있고 실제 데이터가 있는 경우
+      if (hasValidData) {
       console.log('[워크시트] 원자성 DB 발견:', loadedDB);
       console.log('[워크시트] 원자성 DB 상태:', {
         l1Structure: !!loadedDB.l1Structure,
@@ -729,8 +775,8 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       const treeViewKeys = new Set(treeViewCauses.map(treeViewKey));
       const atomicDBKeys = new Set(atomicDBCauses.map(atomicDBKey));
       
-      const missingInAtomicDB = treeViewCauses.filter(fc => !atomicDBKeys.has(treeViewKey(fc)));
-      const extraInAtomicDB = atomicDBCauses.filter(fc => !treeViewKeys.has(atomicDBKey(fc)));
+      const missingInAtomicDB = treeViewCauses.filter((fc: any) => !atomicDBKeys.has(treeViewKey(fc)));
+      const extraInAtomicDB = atomicDBCauses.filter((fc: any) => !treeViewKeys.has(atomicDBKey(fc)));
       
       const isConsistent = missingInAtomicDB.length === 0 && extraInAtomicDB.length === 0;
       
@@ -744,13 +790,13 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         console.warn('⚠️ [일관성 불일치 감지]');
         if (missingInAtomicDB.length > 0) {
           console.warn('   - 원자성 DB에 없는 항목 (트리뷰에만 있음):', missingInAtomicDB.length, '개');
-          missingInAtomicDB.forEach(fc => {
+          missingInAtomicDB.forEach((fc: any) => {
             console.warn(`     • [${fc.procName}] ${fc.causeName} (processCharId: ${fc.processCharId})`);
           });
         }
         if (extraInAtomicDB.length > 0) {
           console.warn('   - 트리뷰에 없는 항목 (원자성 DB에만 있음):', extraInAtomicDB.length, '개');
-          extraInAtomicDB.forEach(fc => {
+          extraInAtomicDB.forEach((fc: any) => {
             console.warn(`     • [${fc.procName}] ${fc.causeName} (processCharId: ${fc.processCharId})`);
           });
         }
@@ -759,7 +805,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         console.log('🔧 [복구 시작] 트리뷰 데이터를 기준으로 원자성 DB 복구');
         
         // 트리뷰 데이터를 원자성 DB 형식으로 변환
-        const recoveredCauses = treeViewCauses.map(fc => {
+        const recoveredCauses = treeViewCauses.map((fc: any) => {
           // l3FuncId 찾기 (processCharId로)
           const l3Func = loadedDB.l3Functions.find(f => f.id === fc.processCharId);
           if (!l3Func) {
@@ -779,13 +825,13 @@ export function useWorksheetState(): UseWorksheetStateReturn {
             cause: fc.causeName,
             occurrence: fc.occurrence || existingFC?.occurrence,
           };
-        }).filter((fc): fc is NonNullable<typeof fc> => fc !== null);
+        }).filter((fc: any): fc is NonNullable<typeof fc> => fc !== null);
         
         // 원자성 DB 업데이트
         loadedDB.failureCauses = recoveredCauses;
         
         // 복구된 DB 저장
-        saveWorksheetDB(loadedDB);
+        saveWorksheetDB(loadedDB).catch(e => console.error('[로드] DB 저장 오류:', e));
         setAtomicDB(loadedDB);
         
         console.log('✅ [복구 완료] 원자성 DB가 트리뷰 데이터로 복구되었습니다.');
@@ -847,7 +893,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           failureL1Confirmed: legacy.failureL1Confirmed || false,
           failureL2Confirmed: legacy.failureL2Confirmed || false,
           failureL3Confirmed: legacy.failureL3Confirmed || false,
-          failureLinkConfirmed: legacy.failureLinkConfirmed || false,  // ✅ 고장연결 확정 상태 복원
+          failureLinkConfirmed: (legacy as any).failureLinkConfirmed || false,  // ✅ 고장연결 확정 상태 복원
           visibleSteps: prev.visibleSteps || [2, 3, 4, 5, 6],  // 기존 토글 상태 유지
         };
       });
@@ -1012,7 +1058,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
             failureL3Confirmed: parsed.failureL3Confirmed,
           });
           setAtomicDB(atomicData);
-          saveWorksheetDB(atomicData);
+          saveWorksheetDB(atomicData).catch(e => console.error('[마이그레이션] DB 저장 오류:', e));
           
           // ========== 레거시 마이그레이션 후 일관성 검증 및 복구 ==========
           // ✅ 근본적인 해결: 원본 데이터(parsed.l2)에서 직접 추출
@@ -1050,7 +1096,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           const treeViewKeys = new Set(treeViewCauses.map(treeViewKey));
           const atomicDBKeys = new Set(atomicDBCauses.map(atomicDBKey));
           
-          const missingInAtomicDB = treeViewCauses.filter(fc => !atomicDBKeys.has(treeViewKey(fc)));
+          const missingInAtomicDB = treeViewCauses.filter((fc: any) => !atomicDBKeys.has(treeViewKey(fc)));
           const isConsistent = missingInAtomicDB.length === 0;
           
           if (!isConsistent) {
@@ -1060,7 +1106,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
             // 트리뷰 데이터를 기준으로 원자성 DB 복구
             console.log('🔧 [복구 시작] 트리뷰 데이터를 기준으로 원자성 DB 복구');
             
-            const recoveredCauses = treeViewCauses.map(fc => {
+            const recoveredCauses = treeViewCauses.map((fc: any) => {
               const l3Func = atomicData.l3Functions.find(f => f.id === fc.processCharId);
               if (!l3Func) {
                 console.warn(`[복구] processCharId ${fc.processCharId}에 해당하는 L3Function을 찾을 수 없음`);
@@ -1078,10 +1124,10 @@ export function useWorksheetState(): UseWorksheetStateReturn {
                 cause: fc.causeName,
                 occurrence: fc.occurrence || existingFC?.occurrence,
               };
-            }).filter((fc): fc is NonNullable<typeof fc> => fc !== null);
+            }).filter((fc: any): fc is NonNullable<typeof fc> => fc !== null);
             
             atomicData.failureCauses = recoveredCauses;
-            saveWorksheetDB(atomicData);
+            saveWorksheetDB(atomicData).catch(e => console.error('[복구] DB 저장 오류:', e));
             setAtomicDB(atomicData);
             
             console.log('✅ [복구 완료] 원자성 DB가 트리뷰 데이터로 복구되었습니다.');
@@ -1116,7 +1162,15 @@ export function useWorksheetState(): UseWorksheetStateReturn {
             const parsedRiskData = parsed.riskData || {};
             const hasNewRiskData = Object.keys(parsedRiskData).length > 0;
             
-            return { 
+            // ✅ 고장분석 확정 상태 로드 디버깅
+          console.log('[확정상태 로드] 원본 데이터:', {
+            failureL1Confirmed: parsed.failureL1Confirmed,
+            failureL2Confirmed: parsed.failureL2Confirmed,
+            failureL3Confirmed: parsed.failureL3Confirmed,
+            failureLinkConfirmed: parsed.failureLinkConfirmed,
+          });
+          
+          return { 
               ...prev, 
               l1: migratedL1, 
               l2: migratedL2,
@@ -1192,6 +1246,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         structureConfirmed: false
       }));
     }
+    })(); // async 함수 닫기
   }, [selectedFmeaId]);
 
   const handleInputKeyDown = useCallback((e: React.KeyboardEvent) => {

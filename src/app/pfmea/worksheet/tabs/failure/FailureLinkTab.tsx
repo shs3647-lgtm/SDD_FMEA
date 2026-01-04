@@ -1095,6 +1095,27 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
 
       {/* 우측: 토글 화면 (40%) */}
       <div style={rightPanelStyle}>
+        {/* ✅ 고장연결 완료 배너 */}
+        {linkStats.fmMissingCount === 0 && savedLinks.length > 0 && !isConfirmed && (
+          <div style={{
+            background: 'linear-gradient(135deg, #4caf50, #2e7d32)',
+            color: '#fff',
+            padding: '12px 16px',
+            borderRadius: '8px',
+            margin: '8px',
+            textAlign: 'center',
+            boxShadow: '0 4px 12px rgba(76, 175, 80, 0.4)',
+            animation: 'pulse 2s infinite',
+          }}>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>
+              🎉 모든 고장연결이 완료되었습니다!
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.9 }}>
+              아래 [전체확정] 버튼을 눌러 확정해주세요
+            </div>
+          </div>
+        )}
+        
         {/* 헤더 */}
         <div style={rightHeaderStyle}>
           <button onClick={() => setViewMode('diagram')} style={modeButtonStyle(viewMode === 'diagram')}>
@@ -1130,12 +1151,21 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
               <button 
                 onClick={handleConfirmAll} 
                 disabled={savedLinks.length === 0}
-                style={actionButtonStyle({ 
-                  bg: '#4caf50', color: '#fff', 
-                  opacity: savedLinks.length === 0 ? 0.5 : 1
-                })}
+                style={{
+                  ...actionButtonStyle({ 
+                    bg: linkStats.fmMissingCount === 0 && savedLinks.length > 0 ? '#2e7d32' : '#4caf50', 
+                    color: '#fff', 
+                    opacity: savedLinks.length === 0 ? 0.5 : 1
+                  }),
+                  // ✅ 완료 시 강조 애니메이션
+                  ...(linkStats.fmMissingCount === 0 && savedLinks.length > 0 ? {
+                    boxShadow: '0 0 12px rgba(46, 125, 50, 0.8)',
+                    animation: 'pulse 1.5s infinite',
+                    fontWeight: 700,
+                  } : {})
+                }}
               >
-                ✅ 전체확정
+                {linkStats.fmMissingCount === 0 && savedLinks.length > 0 ? '🎉 전체확정' : '✅ 전체확정'}
               </button>
             ) : (
               <button 

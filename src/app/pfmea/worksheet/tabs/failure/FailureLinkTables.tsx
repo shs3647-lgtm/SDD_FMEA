@@ -186,7 +186,7 @@ export default function FailureLinkTables({
                   const cellBg = isSelected ? '#fff8e1' : (idx % 2 === 1 ? '#ffe0b2' : '#fff3e0');
                   
                   // 체크표시: 현재 선택된 FM만 파란색 체크표시, 확정된 FM은 녹색 텍스트만
-                  let checkMark = '';
+                  let checkMark: React.ReactNode = '';
                   if (isSelected && !isLinked) {
                     checkMark = <span className="text-blue-600 font-bold mr-1">✓</span>; // 현재 선택됨 - 파란색 체크
                   }

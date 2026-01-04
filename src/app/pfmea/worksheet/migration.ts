@@ -51,7 +51,8 @@ interface OldProcess {
     name: string;
     productChars?: Array<{ id: string; name: string; specialChar?: string }>;
   }>;
-  failureModes?: Array<{ id: string; name: string; sc?: boolean }>;
+  failureModes?: Array<{ id: string; name: string; sc?: boolean; productCharId?: string }>;
+  failureCauses?: Array<{ id: string; name: string; occurrence?: number; processCharId?: string }>;
   l3: Array<{
     id: string;
     m4: string;
@@ -62,7 +63,7 @@ interface OldProcess {
       name: string;
       processChars?: Array<{ id: string; name: string; specialChar?: string }>;
     }>;
-    failureCauses?: Array<{ id: string; name: string; occurrence?: number }>;
+    failureCauses?: Array<{ id: string; name: string; occurrence?: number; processCharId?: string }>;
   }>;
 }
 
@@ -105,6 +106,7 @@ interface OldWorksheetData {
   failureL1Confirmed?: boolean;
   failureL2Confirmed?: boolean;
   failureL3Confirmed?: boolean;
+  failureLinkConfirmed?: boolean;  // ✅ 고장연결 확정 상태
 }
 
 /**
@@ -262,7 +264,7 @@ export function migrateToAtomicDB(oldData: OldWorksheetData): FMEAWorksheetDB {
     
     // L2 고장형태 (FM) - ✅ productCharId 보존
     const failureModes = proc.failureModes || [];
-    failureModes.forEach(fm => {
+    failureModes.forEach((fm: any) => {
       // productCharId가 있으면 해당 제품특성의 L2Function 연결
       let relatedL2Func = fm.productCharId 
         ? db.l2Functions.find(f => f.id === fm.productCharId)
