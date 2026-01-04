@@ -105,25 +105,40 @@ export async function upsertActiveMasterFromWorksheetTx(tx: any, db: FMEAWorkshe
   const items = extractMasterFlatItemsFromWorksheet(db);
   if (items.length === 0) return;
 
-  // ensure active dataset exists
-  let ds = await tx.pfmeaMasterDataset.findFirst({ where: { isActive: true } });
-  if (!ds) {
-    ds = await tx.pfmeaMasterDataset.create({
-      data: { name: 'AUTO-MASTER', isActive: true },
-    });
+  // ✅ 방어 코드: 마스터 테이블이 DB에 없으면 (마이그레이션 전) 스킵
+  if (!tx.pfmeaMasterDataset) {
+    console.warn('[sync] PfmeaMasterDataset 테이블 없음 - 마스터 동기화 스킵 (prisma db push 필요)');
+    return;
   }
 
-  await tx.pfmeaMasterFlatItem.createMany({
-    data: items.map(i => ({
-      datasetId: ds.id,
-      processNo: i.processNo,
-      category: i.category,
-      itemCode: i.itemCode,
-      value: i.value,
-      sourceFmeaId: i.sourceFmeaId,
-    })),
-    skipDuplicates: true,
-  });
+  try {
+    // ensure active dataset exists
+    let ds = await tx.pfmeaMasterDataset.findFirst({ where: { isActive: true } });
+    if (!ds) {
+      ds = await tx.pfmeaMasterDataset.create({
+        data: { name: 'AUTO-MASTER', isActive: true },
+      });
+    }
+
+    await tx.pfmeaMasterFlatItem.createMany({
+      data: items.map(i => ({
+        datasetId: ds.id,
+        processNo: i.processNo,
+        category: i.category,
+        itemCode: i.itemCode,
+        value: i.value,
+        sourceFmeaId: i.sourceFmeaId,
+      })),
+      skipDuplicates: true,
+    });
+  } catch (err: any) {
+    // 테이블이 없는 경우 (마이그레이션 전) 에러 무시
+    if (err?.code === 'P2021' || err?.message?.includes('does not exist')) {
+      console.warn('[sync] 마스터 테이블 없음 - 동기화 스킵:', err.message);
+      return;
+    }
+    throw err; // 다른 에러는 그대로 throw
+  }
 }
 
 
