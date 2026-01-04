@@ -558,13 +558,6 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
                 );
               }
               
-              // 공정에 기능이 있는 경우 - ✅ 의미 있는 기능만 필터링
-              const meaningfulFuncs = funcs.filter((f: any) => {
-                const name = f.name || '';
-                return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && 
-                       !name.includes('추가') && !name.includes('입력') && !name.includes('필요');
-              });
-              
               // 의미 있는 기능이 없으면 빈 행 표시
               if (meaningfulFuncs.length === 0) {
                 return (
