@@ -323,10 +323,28 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
             ...proc,
             l3: proc.l3.map((we: any) => {
               if (we.id !== l3Id) return we;
+              
+              // ✅ funcId가 없으면 빈 기능을 자동 생성하여 공정특성 연결
+              let targetFuncId = funcId;
+              let currentFuncs = we.functions || [];
+              
+              if (!targetFuncId) {
+                // 빈 기능 찾기
+                const emptyFunc = currentFuncs.find((f: any) => !f.name || f.name === '' || f.name.includes('클릭'));
+                if (emptyFunc) {
+                  targetFuncId = emptyFunc.id;
+                } else {
+                  // 빈 기능이 없으면 새로 생성
+                  const newFunc = { id: uid(), name: '', processChars: [] };
+                  currentFuncs = [...currentFuncs, newFunc];
+                  targetFuncId = newFunc.id;
+                }
+              }
+              
               return {
                 ...we,
-                functions: (we.functions || []).map((f: any) => {
-                  if (f.id !== funcId) return f;
+                functions: currentFuncs.map((f: any) => {
+                  if (f.id !== targetFuncId) return f;
                   const currentChars = f.processChars || [];
                   
                   // ✅ charId가 있으면 해당 항목만 수정 (다중선택 개별 수정)
