@@ -361,7 +361,7 @@ export function StructureHeader({ onProcessModalOpen, missingCounts, isConfirmed
 }
 
 export function StructureRow({
-  row, idx, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown, handleSelect, setIsProcessModalOpen, setIsWorkElementModalOpen, setTargetL2Id, saveToLocalStorage, zebraBg, isConfirmed,
+  row, idx, l2Spans, state, setState, setStateSynced, setDirty, handleInputBlur, handleInputKeyDown, handleSelect, setIsProcessModalOpen, setIsWorkElementModalOpen, setTargetL2Id, saveToLocalStorage, zebraBg, isConfirmed,
 }: StructureTabProps & { row: FlatRow; idx: number; zebraBg: string; isConfirmed?: boolean }) {
   // 완제품 공정명과 메인 공정명이 1:1로 병합되도록 l2Spans 사용
   // ✅ 수정: l2Spans[idx]가 0이면 병합된 행이므로 표시 안함
@@ -380,7 +380,9 @@ export function StructureRow({
             type="text" value={state.l1.name}
             onChange={(e) => { 
               // ✅ 데이터 변경 시 확정 상태 해제 (수정하면 다시 확정 버튼 눌러야 함)
-              setState(prev => ({ ...prev, l1: { ...prev.l1, name: e.target.value }, structureConfirmed: false } as any)); 
+              const updateFn = (prev: any) => ({ ...prev, l1: { ...prev.l1, name: e.target.value }, structureConfirmed: false } as any);
+              if (setStateSynced) setStateSynced(updateFn);
+              else setState(updateFn);
               setDirty(true); 
             }}
             onBlur={handleInputBlur} onKeyDown={handleInputKeyDown} placeholder="완제품명 입력"
@@ -635,7 +637,9 @@ export default function StructureTab(props: StructureTabProps) {
                   value={state.l1.name || ''}
                   onChange={(e) => { 
                     // ✅ 데이터 변경 시 확정 상태 해제
-                    setState(prev => ({ ...prev, l1: { ...prev.l1, name: e.target.value }, structureConfirmed: false } as any)); 
+                    const updateFn = (prev: any) => ({ ...prev, l1: { ...prev.l1, name: e.target.value }, structureConfirmed: false } as any);
+                    if (setStateSynced) setStateSynced(updateFn);
+                    else setState(updateFn);
                     setDirty(true); 
                   }}
                   onBlur={handleInputBlur} 

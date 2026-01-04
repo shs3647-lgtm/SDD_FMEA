@@ -148,6 +148,31 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     }
   }, []);
 
+  // ✅ 확정 플래그 불일치 복구 (이전 저장 버그로 플래그만 유실된 케이스 방어)
+  const normalizeConfirmedFlags = useCallback((flags: {
+    structureConfirmed: boolean;
+    l1Confirmed: boolean;
+    l2Confirmed: boolean;
+    l3Confirmed: boolean;
+    failureL1Confirmed: boolean;
+    failureL2Confirmed: boolean;
+    failureL3Confirmed: boolean;
+    failureLinkConfirmed: boolean;
+  }) => {
+    const out = { ...flags };
+    // 하위 단계가 확정이면 상위 단계도 확정이었어야 함 (플래그 유실 복원)
+    if (out.failureL1Confirmed && !out.l1Confirmed) out.l1Confirmed = true;
+    if (out.failureL2Confirmed && !out.l2Confirmed) out.l2Confirmed = true;
+    if (out.failureL3Confirmed && !out.l3Confirmed) out.l3Confirmed = true;
+
+    // 단계 체인
+    if (out.l3Confirmed && !out.l2Confirmed) out.l2Confirmed = true;
+    if (out.l2Confirmed && !out.l1Confirmed) out.l1Confirmed = true;
+    if (out.l1Confirmed && !out.structureConfirmed) out.structureConfirmed = true;
+
+    return out;
+  }, []);
+
   // 원자성 DB 저장
   const saveAtomicDB = useCallback(async () => {
     if (!atomicDB) return;
@@ -214,10 +239,29 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       // 1. 레거시 형식으로 저장 (하위호환)
       const failureScopesCount = (currentState.l1 as any).failureScopes?.length || 0;
       console.log('[저장 시작] failureScopes:', failureScopesCount, '개');
-      
+
+      // ✅ 근본 방어: l1.name이 빈 값으로 덮어써지는 케이스 방지 (이전 stateRef/blur 타이밍 이슈 대비)
+      let preservedL1Name: string | null = null;
+      try {
+        const existingRaw = localStorage.getItem(`pfmea_worksheet_${targetId}`);
+        if (existingRaw) {
+          const existing = JSON.parse(existingRaw) as any;
+          const existingName = existing?.l1?.name;
+          if (typeof existingName === 'string' && existingName.trim() !== '') {
+            preservedL1Name = existingName;
+          }
+        }
+      } catch {
+        // ignore
+      }
+      const l1ToSave =
+        (!currentState?.l1?.name || String(currentState.l1.name).trim() === '') && preservedL1Name
+          ? { ...currentState.l1, name: preservedL1Name }
+          : currentState.l1;
+
       const worksheetData = {
         fmeaId: targetId,
-        l1: currentState.l1,
+        l1: l1ToSave,
         l2: currentState.l2,
         tab: currentState.tab,
         structureConfirmed: (currentState as any).structureConfirmed || false,
@@ -923,22 +967,40 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           useExistingRiskData: hasExistingRiskData,
         });
         
+        const src: any = finalLegacy as any;
+        const normalized = normalizeConfirmedFlags({
+          structureConfirmed: Boolean(src.structureConfirmed ?? legacy.structureConfirmed ?? false),
+          l1Confirmed: Boolean(src.l1Confirmed ?? legacy.l1Confirmed ?? false),
+          l2Confirmed: Boolean(src.l2Confirmed ?? legacy.l2Confirmed ?? false),
+          l3Confirmed: Boolean(src.l3Confirmed ?? legacy.l3Confirmed ?? false),
+          failureL1Confirmed: Boolean(src.failureL1Confirmed ?? legacy.failureL1Confirmed ?? false),
+          failureL2Confirmed: Boolean(src.failureL2Confirmed ?? legacy.failureL2Confirmed ?? false),
+          failureL3Confirmed: Boolean(src.failureL3Confirmed ?? legacy.failureL3Confirmed ?? false),
+          failureLinkConfirmed: Boolean(src.failureLinkConfirmed ?? (legacy as any).failureLinkConfirmed ?? false),
+        });
+
+        const nextL1: any = {
+          ...(finalLegacy.l1 as any),
+          // ✅ l1.name 유실 방지: 새 값이 비어있으면 기존 state의 name 유지
+          name: (finalLegacy as any)?.l1?.name || (prev as any)?.l1?.name || '',
+        };
+
         return { 
           ...prev, 
-          l1: finalLegacy.l1 as any, 
+          l1: nextL1, 
           l2: finalLegacy.l2 as any,
           failureLinks: finalLegacy.failureLinks || [],
           // ✅ 기존 값이 있으면 유지, 없으면 레거시에서 복원
           riskData: hasExistingRiskData ? prev.riskData : legacyRiskData,
           tab: hasExistingTab ? prev.tab : (legacyTab !== 'structure' ? legacyTab : prev.tab),
-          structureConfirmed: legacy.structureConfirmed || false,
-          l1Confirmed: legacy.l1Confirmed || false,
-          l2Confirmed: legacy.l2Confirmed || false,
-          l3Confirmed: legacy.l3Confirmed || false,
-          failureL1Confirmed: legacy.failureL1Confirmed || false,
-          failureL2Confirmed: legacy.failureL2Confirmed || false,
-          failureL3Confirmed: legacy.failureL3Confirmed || false,
-          failureLinkConfirmed: (legacy as any).failureLinkConfirmed || false,  // ✅ 고장연결 확정 상태 복원
+          structureConfirmed: normalized.structureConfirmed,
+          l1Confirmed: normalized.l1Confirmed,
+          l2Confirmed: normalized.l2Confirmed,
+          l3Confirmed: normalized.l3Confirmed,
+          failureL1Confirmed: normalized.failureL1Confirmed,
+          failureL2Confirmed: normalized.failureL2Confirmed,
+          failureL3Confirmed: normalized.failureL3Confirmed,
+          failureLinkConfirmed: normalized.failureLinkConfirmed,  // ✅ 고장연결 확정 상태 복원
           visibleSteps: prev.visibleSteps || [2, 3, 4, 5, 6],  // 기존 토글 상태 유지
         };
       });
