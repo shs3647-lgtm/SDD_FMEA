@@ -30,6 +30,7 @@ import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
 import { WS, btnConfirm, btnEdit, badgeConfirmed, badgeOk, badgeMissing } from '@/styles/worksheet';
+import { handleEnterBlur } from '../../utils/keyboard';
 
 // 구분(Type)별 색상 정의 - 공통 색상 사용
 import { L1_TYPE_COLORS, getL1TypeColor } from '@/styles/level-colors';
@@ -435,7 +436,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
   const totalRows = getTotalRows();
 
   return (
-    <div className="p-0 overflow-auto h-full" style={{ paddingBottom: '50px' }}>
+    <div className="p-0 overflow-auto h-full" style={{ paddingBottom: '50px' }} onKeyDown={handleEnterBlur}>
       <table className="w-full border-collapse table-fixed">
         {/* 컬럼 너비: 완제품공정명 120px, 구분 95px(구분선택 한줄표시), 완제품기능 auto(넓게+줄바꿈), 요구사항 140px */}
         <colgroup>

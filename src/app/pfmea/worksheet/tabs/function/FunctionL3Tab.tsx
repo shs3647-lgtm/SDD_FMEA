@@ -28,6 +28,7 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { FunctionTabProps } from './types';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
 import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
+import { handleEnterBlur } from '../../utils/keyboard';
 import { getZebraColors } from '@/styles/level-colors';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
@@ -472,7 +473,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
   const hasAnyL3 = state.l2.some(p => (p.l3 || []).length > 0);
 
   return (
-    <div className="p-0 overflow-auto h-full" style={{ paddingBottom: '50px' }}>
+    <div className="p-0 overflow-auto h-full" style={{ paddingBottom: '50px' }} onKeyDown={handleEnterBlur}>
       <table className="w-full border-collapse table-fixed">
         <colgroup>
           <col className="w-[120px]" />

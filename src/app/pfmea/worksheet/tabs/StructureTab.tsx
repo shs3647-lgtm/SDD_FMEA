@@ -27,6 +27,7 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { WorksheetState, COLORS, FlatRow, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../constants';
 import { S, F, X, L1, L2, L3, cell, cellCenter, border, btnConfirm, btnEdit, badgeConfirmed, badgeOk, badgeMissing } from '@/styles/worksheet';
+import { handleEnterBlur } from '../utils/keyboard';
 
 interface StructureTabProps {
   state: WorksheetState;
@@ -584,7 +585,7 @@ export default function StructureTab(props: StructureTabProps) {
           s3Count={sCounts.s3Count}
         />
       </thead>
-      <tbody>
+      <tbody onKeyDown={handleEnterBlur}>
         {rows.length === 0 ? (
           // ✅ rows가 비어있을 때도 완제품 공정명 입력 가능
           <tr className="h-6 bg-white">

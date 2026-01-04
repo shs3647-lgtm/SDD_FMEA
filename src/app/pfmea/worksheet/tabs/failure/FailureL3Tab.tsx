@@ -31,6 +31,7 @@ import DataSelectModal from '@/components/modals/DataSelectModal';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
 import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
 import { getZebraColors } from '@/styles/level-colors';
+import { handleEnterBlur } from '../../utils/keyboard';
 
 // 색상 정의
 const FAIL_COLORS = {
@@ -423,7 +424,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
   }, [state.l2]);
 
   return (
-    <div className="p-0 overflow-auto h-full" style={{ paddingBottom: '50px' }}>
+    <div className="p-0 overflow-auto h-full" style={{ paddingBottom: '50px' }} onKeyDown={handleEnterBlur}>
       <table className="w-full border-collapse table-fixed" style={{ marginBottom: '50px' }}>
         <colgroup>
           <col className="w-[120px]" />

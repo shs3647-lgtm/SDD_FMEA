@@ -34,6 +34,7 @@ import SODSelectModal from '@/components/modals/SODSelectModal';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
 import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
 import { L1_TYPE_COLORS, getL1TypeColor, getZebraColors } from '@/styles/level-colors';
+import { handleEnterBlur } from '../../utils/keyboard';
 
 // 색상 정의
 const STEP_COLORS = {
@@ -514,7 +515,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
   }, [typeGroups, getFeNo]);
 
   return (
-    <div className="p-0 overflow-auto h-full" style={{ paddingBottom: '50px' }}>
+    <div className="p-0 overflow-auto h-full" style={{ paddingBottom: '50px' }} onKeyDown={handleEnterBlur}>
       {/* 안내 메시지 */}
       {requirementsFromFunction.length === 0 && (
         <div className="p-5 bg-[#fff3e0] border-b border-[#ccc] text-center">

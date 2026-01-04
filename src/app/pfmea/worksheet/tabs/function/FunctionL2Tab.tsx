@@ -28,6 +28,7 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { FunctionTabProps } from './types';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
 import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
+import { handleEnterBlur } from '../../utils/keyboard';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 import SpecialCharSelectModal, { SPECIAL_CHAR_DATA } from '@/components/modals/SpecialCharSelectModal';
@@ -465,7 +466,7 @@ export default function FunctionL2Tab({ state, setState, setDirty, saveToLocalSt
   const totalRows = getTotalRows();
 
   return (
-    <div className="p-0 overflow-auto h-full" style={{ paddingBottom: '50px' }}>
+    <div className="p-0 overflow-auto h-full" style={{ paddingBottom: '50px' }} onKeyDown={handleEnterBlur}>
       <table className="w-full border-collapse table-fixed">
         <colgroup>
           <col className="w-[140px]" />
