@@ -91,6 +91,7 @@ function FMEAWorksheetPageContent() {
     l1FuncSpans,
     l2Spans,
     saveToLocalStorage,
+    saveToLocalStorageOnly,
     saveAtomicDB,
     handleInputKeyDown,
     handleInputBlur,
@@ -392,6 +393,7 @@ function FMEAWorksheetPageContent() {
     setIsWorkElementModalOpen,
     setTargetL2Id,
     saveToLocalStorage,
+    saveToLocalStorageOnly,
     saveAtomicDB,
     onAPClick: () => setShowAPModal(true),
   };

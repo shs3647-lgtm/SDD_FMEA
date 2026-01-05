@@ -253,6 +253,73 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     }
   }, [atomicDB]); // ✅ state 의존성 제거, stateRef 사용
 
+  /**
+   * ✅ 성능 최적화용 저장 함수 (localStorage ONLY)
+   * - 고장연결처럼 잦은 클릭이 발생하는 화면에서 매번 PostgreSQL 저장하면 반응속도가 급격히 느려짐
+   * - 임시 편집 중에는 localStorage에만 저장하고, "전체확정"에서만 DB 저장하도록 분리
+   */
+  const saveToLocalStorageOnly = useCallback(() => {
+    const targetId = selectedFmeaId || currentFmea?.id;
+    if (!targetId) {
+      console.warn('[저장(local-only)] FMEA ID가 없어 저장할 수 없습니다.');
+      return;
+    }
+    if (suppressAutoSaveRef.current) {
+      console.warn('[저장(local-only)] suppressAutoSave=true 이므로 저장 스킵');
+      return;
+    }
+
+    const currentState = stateRef.current;
+    setIsSaving(true);
+    try {
+      // l1.name preserve (기존 saveToLocalStorage와 동일 방어)
+      let preservedL1Name: string | null = null;
+      try {
+        const existingRaw = localStorage.getItem(`pfmea_worksheet_${targetId}`);
+        if (existingRaw) {
+          const existing = JSON.parse(existingRaw) as any;
+          const existingName = existing?.l1?.name;
+          if (typeof existingName === 'string' && existingName.trim() !== '') {
+            preservedL1Name = existingName;
+          }
+        }
+      } catch {
+        // ignore
+      }
+      const l1ToSave =
+        (!currentState?.l1?.name || String(currentState.l1.name).trim() === '') && preservedL1Name
+          ? { ...currentState.l1, name: preservedL1Name }
+          : currentState.l1;
+
+      const worksheetData = {
+        fmeaId: targetId,
+        l1: l1ToSave,
+        l2: currentState.l2,
+        tab: currentState.tab,
+        structureConfirmed: (currentState as any).structureConfirmed || false,
+        l1Confirmed: (currentState as any).l1Confirmed || false,
+        l2Confirmed: (currentState as any).l2Confirmed || false,
+        l3Confirmed: (currentState as any).l3Confirmed || false,
+        failureL1Confirmed: (currentState as any).failureL1Confirmed || false,
+        failureL2Confirmed: (currentState as any).failureL2Confirmed || false,
+        failureL3Confirmed: (currentState as any).failureL3Confirmed || false,
+        failureLinkConfirmed: (currentState as any).failureLinkConfirmed || false,
+        failureLinks: (currentState as any).failureLinks || [],
+        riskData: currentState.riskData || {},
+        savedAt: new Date().toISOString(),
+      };
+
+      localStorage.setItem(`pfmea_worksheet_${targetId}`, JSON.stringify(worksheetData));
+      setLastSaved(new Date().toLocaleTimeString('ko-KR'));
+      setDirty(false);
+      console.log('[저장(local-only)] ✅ localStorage 저장 완료:', { fmeaId: targetId, failureLinks: worksheetData.failureLinks.length });
+    } catch (e) {
+      console.error('[저장(local-only)] 오류:', e);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [selectedFmeaId, currentFmea?.id]);
+
   // 기존 호환 저장 함수 (레거시 + 원자성 동시 저장) - ✅ stateRef 사용으로 항상 최신 상태 저장
   const saveToLocalStorage = useCallback(() => {
     const targetId = selectedFmeaId || currentFmea?.id;
@@ -2073,7 +2140,9 @@ export function useWorksheetState(): UseWorksheetStateReturn {
   return {
     state, setState, setStateSynced, dirty, setDirty, isSaving, lastSaved, fmeaList, currentFmea, selectedFmeaId, handleFmeaChange,
     rows, l1Spans, l1TypeSpans, l1FuncSpans, l2Spans,
-    saveToLocalStorage, handleInputKeyDown, handleInputBlur, handleSelect, addL2, addL3, deleteL2, deleteL3, handleProcessSelect,
+    saveToLocalStorage,
+    saveToLocalStorageOnly,
+    handleInputKeyDown, handleInputBlur, handleSelect, addL2, addL3, deleteL2, deleteL3, handleProcessSelect,
     // 원자성 DB
     atomicDB, flattenedRows, saveAtomicDB,
   };

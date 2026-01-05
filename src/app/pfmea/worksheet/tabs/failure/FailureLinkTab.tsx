@@ -83,7 +83,7 @@ interface LinkResult {
   fcText: string; 
 }
 
-export default function FailureLinkTab({ state, setState, setDirty, saveToLocalStorage, saveAtomicDB }: FailureTabProps) {
+export default function FailureLinkTab({ state, setState, setDirty, saveToLocalStorage, saveToLocalStorageOnly, saveAtomicDB }: FailureTabProps) {
   // ========== 상태 관리 ==========
   const [currentFMId, setCurrentFMId] = useState<string | null>(null);
   const [linkedFEs, setLinkedFEs] = useState<Map<string, FEItem>>(new Map());
@@ -120,6 +120,9 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     }
   }, [stateFailureLinksJson]); // ✅ JSON 문자열로 깊은 비교
 
+  // ✅ 성능 최적화: 편집 중에는 localStorage만 저장, 전체확정에서만 DB 저장
+  const saveTemp = saveToLocalStorageOnly ?? saveToLocalStorage;
+
   // ========== savedLinks 변경 시 자동 동기화 + 저장 ==========
   const savedLinksJson = JSON.stringify(savedLinks);
   const prevSavedLinksRef = useRef<string>('[]');
@@ -145,13 +148,12 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     // ✅ 변경 시 자동 저장 (debounce)
     const saveTimer = setTimeout(() => {
       setDirty(true);
-      saveToLocalStorage?.();
-      saveAtomicDB?.();
+      saveTemp?.();
       console.log('[FailureLinkTab] ✅ 자동 저장 완료:', savedLinks.length, '건');
     }, 300);
     
     return () => clearTimeout(saveTimer);
-  }, [savedLinksJson, setState, setDirty, saveToLocalStorage, saveAtomicDB]);
+  }, [savedLinksJson, setState, setDirty, saveTemp]);
 
   // ========== FE 데이터 추출 (확정된 것만 사용 + 중복 제거) ==========
   const isL1Confirmed = state.failureL1Confirmed || false;
@@ -424,8 +426,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
         setState((prev: any) => ({ ...prev, failureLinks: filtered }));
         setDirty(true);
         requestAnimationFrame(() => {
-          saveToLocalStorage?.();
-          saveAtomicDB?.();  // ✅ PostgreSQL DB 저장
+          saveTemp?.(); // ✅ 편집 중: localStorage만
         });
         
         alert(`✅ "${fe.text}" 연결이 해제되었습니다.`);
@@ -744,8 +745,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       setState((prev: any) => ({ ...prev, failureLinks: filtered }));
       setDirty(true);
       requestAnimationFrame(() => {
-        saveToLocalStorage?.();
-        saveAtomicDB?.();  // ✅ PostgreSQL DB 저장
+        saveTemp?.(); // ✅ 편집 중: localStorage만
       });
       
       setLinkedFEs(prev => {
@@ -866,8 +866,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
         setState((prev: any) => ({ ...prev, failureLinks: filtered }));
         setDirty(true);
         requestAnimationFrame(() => {
-          saveToLocalStorage?.();
-          saveAtomicDB?.();  // ✅ PostgreSQL DB 저장
+          saveTemp?.(); // ✅ 편집 중: localStorage만
         });
         
         alert(`✅ "${fc.text}" 연결이 해제되었습니다.`);
@@ -903,8 +902,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       setState((prev: any) => ({ ...prev, failureLinks: newLinks }));
       setDirty(true);
       requestAnimationFrame(() => {
-        saveToLocalStorage?.();
-        saveAtomicDB?.();  // ✅ PostgreSQL DB 저장
+        saveTemp?.(); // ✅ 편집 중: localStorage만
       });
       console.log('[연결 해제]', currentFM.text);
       return;
@@ -954,8 +952,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     setState((prev: any) => ({ ...prev, failureLinks: newLinks }));
     setDirty(true);
     requestAnimationFrame(() => {
-      saveToLocalStorage?.();
-      saveAtomicDB?.();  // ✅ PostgreSQL DB 저장
+      saveTemp?.(); // ✅ 편집 중: localStorage만
     });
     
     // ✅ 현재 공정의 모든 FM 연결 완료 확인 → 자동으로 다음 공정 이동
@@ -1072,17 +1069,10 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     }));
     setDirty(true);
     
-    // ✅ 강화: 즉시 저장 + 지연 저장 (이중 안전장치)
-    console.log('[고장연결 전체확정] ✅ DB 저장 시작:', savedLinks.length, '건');
-    saveToLocalStorage?.();
-    saveAtomicDB?.();
-    
-    // ✅ 추가: 500ms 후 재저장 (비동기 state 업데이트 반영)
-    setTimeout(() => {
-      saveToLocalStorage?.();
-      saveAtomicDB?.();
-      console.log('[고장연결 전체확정] ✅ DB 재저장 완료 (지연)');
-    }, 500);
+    // ✅ 전체확정: DB에 확정 저장 (원자성 + 레거시 SSOT)
+    console.log('[고장연결 전체확정] ✅ DB 확정 저장 시작:', savedLinks.length, '건');
+    saveToLocalStorage?.(); // 레거시 local backup
+    saveAtomicDB?.();       // PostgreSQL 저장 (확정 시 1회)
     
     // ===== AI 학습 데이터 저장 =====
     // 확정된 고장연결 데이터를 AI 시스템에 저장하여 학습
@@ -1117,8 +1107,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     setState((prev: any) => ({ ...prev, failureLinkConfirmed: false }));
     setDirty(true);
     requestAnimationFrame(() => {
-      saveToLocalStorage?.();
-      saveAtomicDB?.();  // ✅ PostgreSQL DB 저장
+      saveTemp?.(); // ✅ 편집 중: localStorage만
     });
     alert('📝 고장연결 수정 모드로 전환되었습니다.');
   }, [setState, setDirty, saveToLocalStorage, saveAtomicDB]);
@@ -1134,8 +1123,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     setState((prev: any) => ({ ...prev, failureLinks: [], failureLinkConfirmed: false }));
     setDirty(true);
     requestAnimationFrame(() => {
-      saveToLocalStorage?.();
-      saveAtomicDB?.();  // ✅ PostgreSQL DB 저장
+      saveTemp?.(); // ✅ 편집 중: localStorage만
     });
     setViewMode('diagram');
     alert('✅ 모든 고장연결이 초기화되었습니다.');
