@@ -144,14 +144,13 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
   }
   
   return (
-    <div style={{ width: '100%', minWidth: '1800px', overflowX: 'visible' }}>
-      <table className={`${TW_CLASSES.table} min-w-[1800px] w-full`} style={{ minWidth: '1800px' }}>
+    <div style={{ width: '100%', minWidth: '1700px', overflowX: 'visible' }}>
+      <table className={`${TW_CLASSES.table} min-w-[1700px] w-full`} style={{ minWidth: '1700px' }}>
         <colgroup>
           <col style={{ width: '120px' }} />
+          <col style={{ width: '120px' }} />
           <col style={{ width: '20px' }} />
-          <col style={{ width: '100px' }} />
-          <col style={{ width: '20px' }} />
-          <col style={{ width: '200px' }} />
+          <col style={{ width: '120px' }} />
           <col style={{ width: '30px' }} />
           <col style={{ width: '220px' }} />
           <col style={{ width: '200px' }} />
@@ -159,7 +158,7 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
           <col style={{ width: '100px' }} />
           <col style={{ width: '30px' }} />
           <col style={{ width: '280px' }} />
-          <col style={{ width: '100px' }} />
+          <col style={{ width: '80px' }} />
         </colgroup>
         <thead className={TW_CLASSES.stickyHead}>
           {/* 1행: 단계 대분류 */}
@@ -203,10 +202,9 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
             {/* 구조분석 4열 */}
             {visibleSteps.includes(2) && <>
               <th style={colHeaderStyle('120px', COLORS.structure.l1.h3)}>제품명</th>
-              <th style={colHeaderStyle('20px', COLORS.structure.l2.h3)}>NO</th>
-              <th style={colHeaderStyle('100px', COLORS.structure.l2.h3)}>공정명</th>
+              <th style={colHeaderStyle('120px', COLORS.structure.l2.h3)}>NO+공정명</th>
               <th style={colHeaderStyleWithOptions('20px', COLORS.special.m4.h3, '#fff', { fontWeight: FONT_WEIGHTS.bold })}>4M</th>
-              <th style={colHeaderStyle('200px', COLORS.structure.l3.h3)}>부품</th>
+              <th style={colHeaderStyle('120px', COLORS.structure.l3.h3)}>부품</th>
             </>}
             {/* 기능분석 8열 */}
             {visibleSteps.includes(3) && <>
@@ -293,17 +291,7 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
                 {/* 구조분석 4열 */}
                 {visibleSteps.includes(2) && <>
                   {idx === 0 && <td rowSpan={allRows.length} className="text-center font-semibold" style={structureCellStyle(COLORS.structure.l1.cell, 0, COLORS.structure.l1.cell, { textAlign: 'center', fontWeight: FONT_WEIGHTS.semibold })}>{state.l1?.name || ''}</td>}
-                  {row.showProcess && row.processRowSpan > 0 && (() => {
-                    const processParts = row.processName.split(/\s+/);
-                    const processNo = processParts[0] || '';
-                    const processName = processParts.slice(1).join(' ') || '';
-                    return (
-                      <>
-                        <td rowSpan={row.processRowSpan} style={structureCellStyle(COLORS.structure.l2.cell, idx, zebraBg, { textAlign: 'center' })}>{processNo}</td>
-                        <td rowSpan={row.processRowSpan} style={structureCellStyle(COLORS.structure.l2.cell, idx, zebraBg, { textAlign: 'center' })}>{processName}</td>
-                      </>
-                    );
-                  })()}
+                  {row.showProcess && row.processRowSpan > 0 && <td rowSpan={row.processRowSpan} style={structureCellStyle(COLORS.structure.l2.cell, idx, zebraBg, { textAlign: 'center' })}>{row.processName}</td>}
                   {row.showFc && <td rowSpan={row.fcRowSpan} style={structureCellStyle(COLORS.special.m4.cell, idx, zebraBg, { textAlign: 'center', fontWeight: FONT_WEIGHTS.bold })}>{structureM4 || ''}</td>}
                   {row.showFc && <td rowSpan={row.fcRowSpan} style={structureCellStyle(COLORS.structure.l3.cell, idx, zebraBg, { textAlign: 'center' })}>{row.fc?.workElem || ''}</td>}
                 </>}

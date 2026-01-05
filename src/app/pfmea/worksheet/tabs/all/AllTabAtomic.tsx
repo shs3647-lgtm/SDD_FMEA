@@ -218,13 +218,12 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6] }:
         </div>
       )}
       
-      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 1800 }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 1700 }}>
         <colgroup>
           <col style={{ width: '120px' }} />
+          <col style={{ width: '120px' }} />
           <col style={{ width: '20px' }} />
-          <col style={{ width: '100px' }} />
-          <col style={{ width: '20px' }} />
-          <col style={{ width: '200px' }} />
+          <col style={{ width: '120px' }} />
           <col style={{ width: '30px' }} />
           <col style={{ width: '220px' }} />
           <col style={{ width: '200px' }} />
@@ -232,7 +231,7 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6] }:
           <col style={{ width: '100px' }} />
           <col style={{ width: '30px' }} />
           <col style={{ width: '280px' }} />
-          <col style={{ width: '100px' }} />
+          <col style={{ width: '80px' }} />
           <col style={{ width: '200px' }} />
           <col style={{ width: '40px' }} />
           <col style={{ width: '200px' }} />
@@ -252,7 +251,7 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6] }:
         <thead>
           {/* 단계 헤더 */}
           <tr>
-            <th colSpan={5} style={stickyHeaderCellStyle(COLORS.structure.main, 0, '#fff', 60)}>2. 구조분석</th>
+            <th colSpan={4} style={stickyHeaderCellStyle(COLORS.structure.main, 0, '#fff', 60)}>2. 구조분석</th>
             <th colSpan={8} style={stickyHeaderCellStyle(COLORS.function.main, 0, '#fff', 60)}>3. 기능분석</th>
             <th colSpan={5} style={stickyHeaderCellStyle(COLORS.failure.main, 0, '#fff', 60)}>4. 고장분석</th>
             <th colSpan={6} style={stickyHeaderCellStyle(COLORS.risk.main, 0, '#fff', 60)}>5. 리스크분석</th>
@@ -262,8 +261,7 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6] }:
           <tr>
             {/* 구조분석 */}
             <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H, '#000', 59)}>완제품</th>
-            <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H, '#000', 59)}>공정No</th>
-            <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H, '#000', 59)}>공정명</th>
+            <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H, '#000', 59)}>NO+공정명</th>
             <th style={stickyHeaderCellStyle(COLORS.special.m4.h3, HEADER_ROW_H, '#000', 59)}>4M</th>
             <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H, '#000', 59)}>작업요소</th>
             {/* 기능분석 */}
@@ -297,8 +295,8 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6] }:
           {/* No 헤더 (3행 고정) */}
           <tr>
             {([
-              'A','B','C','D','E',
-              'F','G','H','I','J','K','L','M',
+              'A','B','C','D',
+              'E','F','G','H','I','J','K','L','M',
               'N','O','P','Q','R',
               'S','T','U','V','W','X',
               'Y','Z','AA','AB'
@@ -318,8 +316,7 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6] }:
                 {pr.showProcess && (
                   <>
                     <td rowSpan={pr.processRowSpan} style={cellStyle(zebra.structure, 'center')}>{r.l1StructName}</td>
-                    <td rowSpan={pr.processRowSpan} style={cellStyle(zebra.structure, 'center')}>{r.l2StructNo}</td>
-                    <td rowSpan={pr.processRowSpan} style={cellStyle(zebra.structure, 'center')}>{r.l2StructName}</td>
+                    <td rowSpan={pr.processRowSpan} style={cellStyle(zebra.structure, 'center')}>{r.l2StructNo} {r.l2StructName}</td>
                   </>
                 )}
                 <td style={cellStyle(zebra.structure, 'center')}>{r.l3M4}</td>
