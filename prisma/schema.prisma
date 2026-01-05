@@ -310,6 +310,7 @@ model Optimization {
   newAP            String?  // 개선 후 AP
   status           String   // 'planned' | 'in_progress' | 'completed'
   completedDate    String?  // YYYY-MM-DD
+  remarks          String?  // 비고
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

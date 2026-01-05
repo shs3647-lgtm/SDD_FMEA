@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     // 레거시 + 확정 상태 합성 (migration.ts가 기대하는 형태)
     const legacyData: any = {
-      ...legacyRec.data,
+      ...(typeof legacyRec.data === 'object' && legacyRec.data !== null ? legacyRec.data : {}),
       fmeaId,
       structureConfirmed: confirmed?.structureConfirmed ?? (legacyRec.data as any)?.structureConfirmed ?? false,
       l1Confirmed: confirmed?.l1FunctionConfirmed ?? (legacyRec.data as any)?.l1Confirmed ?? false,
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       failureLinkConfirmed: confirmed?.failureLinkConfirmed ?? (legacyRec.data as any)?.failureLinkConfirmed ?? false,
     };
 
-    const atomic = migrateToAtomicDB(legacyData);
+    const atomic = migrateToAtomicDB(legacyData as any);
 
     await prisma.$transaction(async (tx: any) => {
       // purge (cascade)
