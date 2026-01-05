@@ -218,19 +218,19 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6] }:
         </div>
       )}
       
-      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 1380 }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 1350 }}>
         <colgroup>
-          <col style={{ width: '110px' }} />
+          <col style={{ width: '100px' }} />
           <col style={{ width: '40px' }} />
           <col style={{ width: '20px' }} />
           <col style={{ width: '120px' }} />
           <col style={{ width: '30px' }} />
-          <col style={{ width: '210px' }} />
+          <col style={{ width: '200px' }} />
           <col style={{ width: '140px' }} />
           <col style={{ width: '200px' }} />
           <col style={{ width: '100px' }} />
           <col style={{ width: '30px' }} />
-          <col style={{ width: '200px' }} />
+          <col style={{ width: '190px' }} />
           <col style={{ width: '80px' }} />
           <col style={{ width: '200px' }} />
           <col style={{ width: '40px' }} />

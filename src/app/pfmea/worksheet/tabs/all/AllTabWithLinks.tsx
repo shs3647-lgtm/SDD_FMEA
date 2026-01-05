@@ -144,20 +144,20 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
   }
   
   return (
-    <div style={{ width: '100%', minWidth: '1380px', overflowX: 'visible' }}>
-      <table className={`${TW_CLASSES.table} min-w-[1380px] w-full`} style={{ minWidth: '1380px' }}>
+    <div style={{ width: '100%', minWidth: '1350px', overflowX: 'visible' }}>
+      <table className={`${TW_CLASSES.table} min-w-[1350px] w-full`} style={{ minWidth: '1350px' }}>
         <colgroup>
-          <col style={{ width: '110px' }} />
+          <col style={{ width: '100px' }} />
           <col style={{ width: '40px' }} />
           <col style={{ width: '20px' }} />
           <col style={{ width: '120px' }} />
           <col style={{ width: '30px' }} />
-          <col style={{ width: '210px' }} />
+          <col style={{ width: '200px' }} />
           <col style={{ width: '140px' }} />
           <col style={{ width: '200px' }} />
           <col style={{ width: '100px' }} />
           <col style={{ width: '30px' }} />
-          <col style={{ width: '200px' }} />
+          <col style={{ width: '190px' }} />
           <col style={{ width: '80px' }} />
         </colgroup>
         <thead className={TW_CLASSES.stickyHead}>
