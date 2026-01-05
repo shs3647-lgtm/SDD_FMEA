@@ -58,8 +58,8 @@ export default function FailureLinkTables({
 }: FailureLinkTablesProps) {
   const clickTimerRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   
-  // FC 싱글클릭 핸들러 (200ms 딜레이)
-  const handleFCClick = useCallback((id: string, onToggle: (id: string) => void) => {
+  // 싱글클릭 핸들러 (200ms 딜레이) - FE/FC 공용
+  const handleClick = useCallback((id: string, onToggle: (id: string) => void) => {
     // 기존 타이머가 있으면 취소
     const existingTimer = clickTimerRef.current.get(id);
     if (existingTimer) {
@@ -75,8 +75,8 @@ export default function FailureLinkTables({
     clickTimerRef.current.set(id, timer);
   }, []);
   
-  // FC 더블클릭 핸들러 (타이머 취소 후 즉시 해제)
-  const handleFCDoubleClick = useCallback((id: string, onUnlink: (id: string) => void) => {
+  // 더블클릭 핸들러 (타이머 취소 후 즉시 해제) - FE/FC 공용
+  const handleDoubleClick = useCallback((id: string, onUnlink: (id: string) => void) => {
     // 싱글클릭 타이머 취소
     const existingTimer = clickTimerRef.current.get(id);
     if (existingTimer) {
@@ -155,8 +155,8 @@ export default function FailureLinkTables({
                   return (
                     <tr
                       key={fe.id}
-                      onClick={() => onToggleFE(fe.id)}
-                      onDoubleClick={() => onUnlinkFE(fe.id)}
+                      onClick={() => handleClick(fe.id, onToggleFE)}
+                      onDoubleClick={() => handleDoubleClick(fe.id, onUnlinkFE)}
                       className={currentFMId ? 'cursor-pointer' : ''}
                       title="클릭: 연결 / 더블클릭: 연결 해제"
                     >
@@ -292,8 +292,8 @@ export default function FailureLinkTables({
                       {/* 고장원인열 클릭 → 연결 추가 */}
                       <td 
                         style={{...tdStyle(cellBg, BORDER_GREEN, { color: COLORS.function.text }), cursor: 'pointer'}}
-                        onClick={() => handleFCClick(fc.id, onToggleFC)}
-                        onDoubleClick={() => handleFCDoubleClick(fc.id, onUnlinkFC)}
+                        onClick={() => handleClick(fc.id, onToggleFC)}
+                        onDoubleClick={() => handleDoubleClick(fc.id, onUnlinkFC)}
                         title="클릭: 연결 추가 / 더블클릭: 연결 해제"
                       >
                         {isLinkedInSaved && <span className="mr-1 text-green-700 font-bold">●</span>}
