@@ -246,15 +246,6 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
-      {/* 네비게이션 경로 */}
-      <div style={{ padding: '8px 16px', background: '#f5f5f5', borderBottom: '1px solid #ddd', fontSize: 12, color: '#666' }}>
-        <span>PFMEA</span>
-        <span style={{ margin: '0 8px', color: '#999' }}>|</span>
-        <span>4단계-고장연결</span>
-        <span style={{ margin: '0 8px', color: '#999' }}>|</span>
-        <span>3레벨</span>
-      </div>
-      
       <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: getOptimizedWidth }}>
         <colgroup>
           {/* 구조분석 4열 */}
