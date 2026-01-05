@@ -327,7 +327,7 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
                     const feText = row.fe?.text || '';
                     const feSeverityFromDB = riskData[`S-fe-${feText}`] || row.fe?.severity || 0;
                     return (
-                      <td rowSpan={row.feRowSpan} style={failureCellStyle(COLORS.failure.l1.cell, idx, zebraBg)}>
+                      <td rowSpan={row.feRowSpan} style={failureCellStyle(COLORS.failure.l1.cell, idx, zebraBg, { textAlign: 'center' })}>
                         {feText}{feSeverityFromDB ? <span className="text-red-800 font-semibold">({feSeverityFromDB})</span> : ''}
                       </td>
                     );
