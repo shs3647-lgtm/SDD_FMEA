@@ -267,7 +267,7 @@ export default function FailureLinkTables({
                 <tr>
                   <th style={thStyle('#e8f5e9', '6%', { fontWeight: 'normal', fontSize: '10px' })}>No</th>
                   <th style={thStyle('#e8f5e9', '14%', { whiteSpace: 'nowrap', fontWeight: 'normal', fontSize: '10px' })}>공정명</th>
-                  <th style={thStyle('#e8f5e9', '18%', { whiteSpace: 'nowrap', fontWeight: 'normal', fontSize: '10px' })}>작업요소</th>
+                  <th style={thStyle('#e8f5e9', '22%', { whiteSpace: 'nowrap', fontWeight: 'normal', fontSize: '10px' })}>작업요소</th>
                   <th style={thStyle('#e8f5e9', undefined, { fontWeight: 'normal', fontSize: '10px' })}>고장원인(FC)</th>
                 </tr>
               </thead>
@@ -288,7 +288,15 @@ export default function FailureLinkTables({
                         {fc.fcNo}
                       </td>
                       <td style={tdCenterStyle(cellBg, BORDER_GREEN, COLORS.function.text, { fontSize: '10px', whiteSpace: 'nowrap', fontWeight: 'normal' })}>{fc.processName}</td>
-                      <td style={tdStyle(cellBg, BORDER_GREEN, { fontSize: '10px', whiteSpace: 'nowrap', color: COLORS.function.text, fontWeight: 'normal' })}>{fc.workElem}</td>
+                      <td style={tdStyle(cellBg, BORDER_GREEN, { 
+                        fontSize: '10px', 
+                        color: COLORS.function.text, 
+                        fontWeight: 'normal',
+                        maxWidth: '120px',
+                        wordBreak: 'keep-all',
+                        overflowWrap: 'break-word',
+                        lineHeight: '1.2'
+                      })}>{fc.workElem}</td>
                       {/* 고장원인열 클릭 → 연결 추가 */}
                       <td 
                         style={{...tdStyle(cellBg, BORDER_GREEN, { color: COLORS.function.text, fontSize: '10px', fontWeight: 'normal' }), cursor: 'pointer'}}
