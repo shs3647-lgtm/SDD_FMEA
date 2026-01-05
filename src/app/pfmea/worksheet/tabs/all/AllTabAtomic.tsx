@@ -12,17 +12,10 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { FONT_WEIGHTS } from '../../constants';
-import { BORDER } from './constants';
+import { ALL_TAB_COLORS, BORDER } from './constants';
 import { getZebraColors } from '@/styles/level-colors';
 
-// 간단한 색상 상수 (원자성 전용)
-const ATOMIC_COLORS = {
-  structure: { header: '#1565c0', sub: '#90caf9' },
-  function: { header: '#2e7d32', sub: '#a5d6a7' },
-  failure: { header: '#1a237e', sub: '#9fa8da' },
-  risk: { header: '#5c6bc0', sub: '#7986cb' },
-  opt: { header: '#2e7d32', sub: '#81c784' },
-};
+const HEADER_ROW_H = 24; // 3행 sticky header stacking용
 
 interface AllViewRow {
   l1StructName: string;
@@ -66,7 +59,7 @@ interface AllTabAtomicProps {
 }
 
 export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6] }: AllTabAtomicProps) {
-  const COLORS = ATOMIC_COLORS;
+  const COLORS = ALL_TAB_COLORS;
   const [rows, setRows] = useState<AllViewRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -169,6 +162,18 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6] }:
     fontWeight: FONT_WEIGHTS.semibold, fontSize: '11px', textAlign: 'center'
   });
 
+  const stickyHeaderCellStyle = (bg: string, top: number, color = '#fff', zIndex = 50): React.CSSProperties => ({
+    ...headerCellStyle(bg, color),
+    position: 'sticky',
+    top,
+    zIndex,
+    height: HEADER_ROW_H,
+    lineHeight: `${HEADER_ROW_H - 6}px`,
+    padding: '2px 4px',
+    fontSize: '10px',
+    whiteSpace: 'nowrap',
+  });
+
   const cellStyle = (bg: string): React.CSSProperties => ({
     background: bg, border: BORDER, padding: '4px 6px',
     fontSize: '11px', verticalAlign: 'middle'
@@ -217,47 +222,59 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6] }:
         <thead>
           {/* 단계 헤더 */}
           <tr>
-            <th colSpan={5} style={headerCellStyle(COLORS.structure.header)}>2. 구조분석</th>
-            <th colSpan={8} style={headerCellStyle(COLORS.function.header)}>3. 기능분석</th>
-            <th colSpan={5} style={headerCellStyle(COLORS.failure.header)}>4. 고장분석</th>
-            <th colSpan={6} style={headerCellStyle(COLORS.risk.header)}>5. 리스크분석</th>
-            <th colSpan={4} style={headerCellStyle(COLORS.opt.header)}>6. 최적화</th>
+            <th colSpan={5} style={stickyHeaderCellStyle(COLORS.structure.main, 0, '#fff', 60)}>2. 구조분석</th>
+            <th colSpan={8} style={stickyHeaderCellStyle(COLORS.function.main, 0, '#fff', 60)}>3. 기능분석</th>
+            <th colSpan={5} style={stickyHeaderCellStyle(COLORS.failure.main, 0, '#fff', 60)}>4. 고장분석</th>
+            <th colSpan={6} style={stickyHeaderCellStyle(COLORS.risk.main, 0, '#fff', 60)}>5. 리스크분석</th>
+            <th colSpan={4} style={stickyHeaderCellStyle(COLORS.opt.main, 0, '#fff', 60)}>6. 최적화</th>
           </tr>
-          {/* 컬럼 헤더 */}
+          {/* 컬럼 헤더 (Activity) */}
           <tr>
             {/* 구조분석 */}
-            <th style={headerCellStyle(COLORS.structure.sub)}>완제품</th>
-            <th style={headerCellStyle(COLORS.structure.sub)}>공정No</th>
-            <th style={headerCellStyle(COLORS.structure.sub)}>공정명</th>
-            <th style={headerCellStyle(COLORS.structure.sub)}>4M</th>
-            <th style={headerCellStyle(COLORS.structure.sub)}>작업요소</th>
+            <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H, '#000', 59)}>완제품</th>
+            <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H, '#000', 59)}>공정No</th>
+            <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H, '#000', 59)}>공정명</th>
+            <th style={stickyHeaderCellStyle(COLORS.special.m4.h3, HEADER_ROW_H, '#000', 59)}>4M</th>
+            <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H, '#000', 59)}>작업요소</th>
             {/* 기능분석 */}
-            <th style={headerCellStyle(COLORS.function.sub)}>범위</th>
-            <th style={headerCellStyle(COLORS.function.sub)}>완제품기능</th>
-            <th style={headerCellStyle(COLORS.function.sub)}>요구사항</th>
-            <th style={headerCellStyle(COLORS.function.sub)}>공정기능</th>
-            <th style={headerCellStyle(COLORS.function.sub)}>제품특성</th>
-            <th style={headerCellStyle(COLORS.function.sub)}>특별특성</th>
-            <th style={headerCellStyle(COLORS.function.sub)}>작업기능</th>
-            <th style={headerCellStyle(COLORS.function.sub)}>공정특성</th>
+            <th style={stickyHeaderCellStyle(COLORS.special.scope.h3, HEADER_ROW_H, '#000', 59)}>범위</th>
+            <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>완제품기능</th>
+            <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>요구사항</th>
+            <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>공정기능</th>
+            <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>제품특성</th>
+            <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>특별특성</th>
+            <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>작업기능</th>
+            <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>공정특성</th>
             {/* 고장분석 */}
-            <th style={headerCellStyle(COLORS.failure.sub)}>고장영향</th>
-            <th style={headerCellStyle(COLORS.failure.sub)}>S</th>
-            <th style={headerCellStyle(COLORS.failure.sub)}>고장형태</th>
-            <th style={headerCellStyle(COLORS.failure.sub)}>고장원인</th>
-            <th style={headerCellStyle(COLORS.failure.sub)}>O</th>
+            <th style={stickyHeaderCellStyle(COLORS.failure.header, HEADER_ROW_H, '#000', 59)}>고장영향</th>
+            <th style={stickyHeaderCellStyle(COLORS.indicator.severity.bg, HEADER_ROW_H, COLORS.indicator.severity.text, 59)}>S</th>
+            <th style={stickyHeaderCellStyle(COLORS.failure.header, HEADER_ROW_H, '#000', 59)}>고장형태</th>
+            <th style={stickyHeaderCellStyle(COLORS.failure.header, HEADER_ROW_H, '#000', 59)}>고장원인</th>
+            <th style={stickyHeaderCellStyle(COLORS.indicator.occurrence.bg, HEADER_ROW_H, COLORS.indicator.occurrence.text, 59)}>O</th>
             {/* 리스크분석 */}
-            <th style={headerCellStyle(COLORS.risk.sub)}>S</th>
-            <th style={headerCellStyle(COLORS.risk.sub)}>O</th>
-            <th style={headerCellStyle(COLORS.risk.sub)}>D</th>
-            <th style={headerCellStyle(COLORS.risk.sub)}>AP</th>
-            <th style={headerCellStyle(COLORS.risk.sub)}>예방관리</th>
-            <th style={headerCellStyle(COLORS.risk.sub)}>검출관리</th>
+            <th style={stickyHeaderCellStyle(COLORS.indicator.severity.bg, HEADER_ROW_H, COLORS.indicator.severity.text, 59)}>S</th>
+            <th style={stickyHeaderCellStyle(COLORS.indicator.occurrence.bg, HEADER_ROW_H, COLORS.indicator.occurrence.text, 59)}>O</th>
+            <th style={stickyHeaderCellStyle(COLORS.indicator.detection.bg, HEADER_ROW_H, COLORS.indicator.detection.text, 59)}>D</th>
+            <th style={stickyHeaderCellStyle(COLORS.indicator.ap.bg, HEADER_ROW_H, COLORS.indicator.ap.text, 59)}>AP</th>
+            <th style={stickyHeaderCellStyle(COLORS.risk.prevention.header, HEADER_ROW_H, '#000', 59)}>예방관리</th>
+            <th style={stickyHeaderCellStyle(COLORS.risk.detection.header, HEADER_ROW_H, '#000', 59)}>검출관리</th>
             {/* 최적화 */}
-            <th style={headerCellStyle(COLORS.opt.sub)}>권고조치</th>
-            <th style={headerCellStyle(COLORS.opt.sub)}>담당자</th>
-            <th style={headerCellStyle(COLORS.opt.sub)}>목표일</th>
-            <th style={headerCellStyle(COLORS.opt.sub)}>상태</th>
+            <th style={stickyHeaderCellStyle(COLORS.opt.plan.header, HEADER_ROW_H, '#000', 59)}>권고조치</th>
+            <th style={stickyHeaderCellStyle(COLORS.opt.plan.header, HEADER_ROW_H, '#000', 59)}>담당자</th>
+            <th style={stickyHeaderCellStyle(COLORS.opt.plan.header, HEADER_ROW_H, '#000', 59)}>목표일</th>
+            <th style={stickyHeaderCellStyle(COLORS.opt.effect.header, HEADER_ROW_H, '#000', 59)}>상태</th>
+          </tr>
+          {/* No 헤더 (3행 고정) */}
+          <tr>
+            {([
+              'A','B','C','D','E',
+              'F','G','H','I','J','K','L','M',
+              'N','O','P','Q','R',
+              'S','T','U','V','W','X',
+              'Y','Z','AA','AB'
+            ] as string[]).map((no) => (
+              <th key={no} style={stickyHeaderCellStyle('#eceff1', HEADER_ROW_H * 2, '#000', 58)}>{no}</th>
+            ))}
           </tr>
         </thead>
         <tbody>
