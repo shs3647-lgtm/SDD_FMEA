@@ -34,6 +34,7 @@ export default function AllTabRenderer({
   fmeaId,
   useAtomicDB = true // 기본값: 원자성 DB 사용
 }: AllTabRendererProps) {
+  const [useLegacyFallback, setUseLegacyFallback] = useState(false);
   
   // 디버깅: 컴포넌트 렌더링 시 state 확인
   useEffect(() => {
@@ -46,9 +47,10 @@ export default function AllTabRenderer({
       hasSetState: !!setState,
       stateL1Name: state.l1?.name,
       fmeaId,
-      useAtomicDB
+      useAtomicDB,
+      useLegacyFallback
     });
-  }, [state.riskData, tab, setState, state.l1, fmeaId, useAtomicDB]);
+  }, [state.riskData, tab, setState, state.l1, fmeaId, useAtomicDB, useLegacyFallback]);
 
   // 탭에 따라 표시할 단계 결정
   const getVisibleSteps = () => {
@@ -69,14 +71,21 @@ export default function AllTabRenderer({
   // 고장연결 데이터
   const failureLinks = (state as any).failureLinks || [];
   
+  // 원자성 DB에 데이터가 없을 때 레거시로 전환하는 콜백
+  const handleNoAtomicData = useCallback(() => {
+    console.log('🔄 AllTabRenderer: 원자성 DB 비어있음 → 레거시 fallback 활성화');
+    setUseLegacyFallback(true);
+  }, []);
+  
   // ★★★ 전체보기(all) 탭: 원자성 DB 기반 렌더링 (우선) ★★★
-  if (tab === 'all' && fmeaId && useAtomicDB) {
+  if (tab === 'all' && fmeaId && useAtomicDB && !useLegacyFallback) {
     console.log('🔷 AllTabRenderer: 원자성 DB 모드 사용');
     return (
       <AllTabAtomic
         fmeaId={fmeaId}
         visibleSteps={visibleSteps}
         setState={setState}
+        onNoData={handleNoAtomicData}
       />
     );
   }

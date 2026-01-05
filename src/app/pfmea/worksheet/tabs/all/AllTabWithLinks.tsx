@@ -316,7 +316,7 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
             {visibleSteps.includes(6) && <>
               <th colSpan={4} style={subHeaderStyle(COLORS.opt.plan.h2)}>계획</th>
               <th colSpan={3} style={subHeaderStyle(COLORS.opt.monitor.h2)}>모니터링</th>
-              <th colSpan={7} style={subHeaderStyle(COLORS.opt.effect.h2)}>효과평가</th>
+              <th colSpan={8} style={subHeaderStyle(COLORS.opt.effect.h2)}>효과평가</th>
             </>}
           </tr>
           {/* 3행: 컬럼명 */}

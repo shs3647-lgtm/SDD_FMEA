@@ -58,9 +58,10 @@ interface AllTabAtomicProps {
   fmeaId: string;
   visibleSteps?: number[];
   setState?: React.Dispatch<React.SetStateAction<any>>;
+  onNoData?: () => void; // 데이터가 없을 때 콜백
 }
 
-export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], setState }: AllTabAtomicProps) {
+export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], setState, onNoData }: AllTabAtomicProps) {
   const COLORS = ALL_TAB_COLORS;
   const [rows, setRows] = useState<AllViewRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,9 +93,16 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
           throw new Error(data.error || 'Failed to load data');
         }
         
-        setRows(data.rows || []);
+        const loadedRows = data.rows || [];
+        setRows(loadedRows);
         setStats(data.stats);
         console.log('[AllTabAtomic] ✅ 원자성 DB에서 로드 완료:', data.stats);
+        
+        // 데이터가 없으면 콜백 호출 (레거시 fallback 트리거)
+        if (loadedRows.length === 0 && onNoData) {
+          console.log('[AllTabAtomic] ⚠️ 데이터 없음 → 레거시 fallback 트리거');
+          onNoData();
+        }
       } catch (err: any) {
         setError(err.message);
         console.error('[AllTabAtomic] ❌ 로드 오류:', err);
@@ -104,7 +112,7 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
     };
     
     if (fmeaId) loadData();
-  }, [fmeaId]);
+  }, [fmeaId, onNoData]);
 
   // 공정별 그룹핑 (rowSpan 계산용)
   const processedRows = useMemo(() => {
