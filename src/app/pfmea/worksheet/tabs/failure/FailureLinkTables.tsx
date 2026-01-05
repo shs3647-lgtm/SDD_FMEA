@@ -127,8 +127,8 @@ export default function FailureLinkTables({
       </div>
       
       <div className="flex flex-1 overflow-hidden gap-1 p-1">
-        {/* FE 테이블 - 폭 확대 */}
-        <div style={panelStyleWithFlex('0 0 28%', COLORS.structure.dark)}>
+        {/* FE 테이블 - 비율 5:3:5 중 5 */}
+        <div style={panelStyleWithFlex('0 0 38%', COLORS.structure.dark)}>
           <div style={panelHeaderStyle(COLORS.structure.dark)}>
             FE(고장영향:
               <span style={{ color: '#ffeb3b', fontWeight: 700 }}>{feData.length}</span>
@@ -175,8 +175,8 @@ export default function FailureLinkTables({
           </div>
         </div>
 
-        {/* FM 테이블 */}
-        <div style={panelStyleWithFlex('0 0 28%', COLORS.failure.dark)}>
+        {/* FM 테이블 - 비율 5:3:5 중 3 */}
+        <div style={panelStyleWithFlex('0 0 24%', COLORS.failure.dark)}>
           <div style={panelHeaderStyle(COLORS.failure.dark)}>
             FM(고장형태:
               <span style={{ color: '#ffeb3b', fontWeight: 700 }}>{fmData.length}</span>
@@ -242,8 +242,8 @@ export default function FailureLinkTables({
           </div>
         </div>
 
-        {/* FC 테이블 - 폭 축소 */}
-        <div style={panelStyleWithFlex('1 1 44%', COLORS.function.dark)}>
+        {/* FC 테이블 - 비율 5:3:5 중 5 */}
+        <div style={panelStyleWithFlex('0 0 38%', COLORS.function.dark)}>
           <div className="flex justify-between items-center" style={panelHeaderStyle(COLORS.function.dark)}>
             <span className="flex-1 text-center">
               FC(고장원인:
