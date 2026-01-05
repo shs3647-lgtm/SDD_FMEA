@@ -265,10 +265,10 @@ export default function FailureLinkTables({
             <table style={{ ...tableFullStyle(FONT_SIZES.cell), fontSize: '10px' }}>
               <thead>
                 <tr>
-                  <th style={thStyle('#e8f5e9', '6%')}>No</th>
-                  <th style={thStyle('#e8f5e9', '14%', { whiteSpace: 'nowrap' })}>공정명</th>
-                  <th style={thStyle('#e8f5e9', '18%', { whiteSpace: 'nowrap' })}>작업요소</th>
-                  <th style={thStyle('#e8f5e9')}>고장원인(FC)</th>
+                  <th style={thStyle('#e8f5e9', '6%', { fontWeight: 'normal', fontSize: '10px' })}>No</th>
+                  <th style={thStyle('#e8f5e9', '14%', { whiteSpace: 'nowrap', fontWeight: 'normal', fontSize: '10px' })}>공정명</th>
+                  <th style={thStyle('#e8f5e9', '18%', { whiteSpace: 'nowrap', fontWeight: 'normal', fontSize: '10px' })}>작업요소</th>
+                  <th style={thStyle('#e8f5e9', undefined, { fontWeight: 'normal', fontSize: '10px' })}>고장원인(FC)</th>
                 </tr>
               </thead>
               <tbody>
@@ -281,24 +281,24 @@ export default function FailureLinkTables({
                     <tr key={fc.id}>
                       {/* NO열 클릭 → 연결 해제 */}
                       <td 
-                        style={{...tdCenterStyle(noBg, BORDER_GREEN, '#fff'), cursor: 'pointer'}}
+                        style={{...tdCenterStyle(noBg, BORDER_GREEN, '#fff'), cursor: 'pointer', fontSize: '10px', fontWeight: 'normal'}}
                         onClick={() => onUnlinkFC(fc.id)}
                         title="클릭: 연결 해제"
                       >
                         {fc.fcNo}
                       </td>
-                      <td style={tdCenterStyle(cellBg, BORDER_GREEN, COLORS.function.text, { fontSize: FONT_SIZES.small, whiteSpace: 'nowrap' })}>{fc.processName}</td>
-                      <td style={tdStyle(cellBg, BORDER_GREEN, { fontSize: '10px', whiteSpace: 'nowrap', color: COLORS.function.text })}>{fc.workElem}</td>
+                      <td style={tdCenterStyle(cellBg, BORDER_GREEN, COLORS.function.text, { fontSize: '10px', whiteSpace: 'nowrap', fontWeight: 'normal' })}>{fc.processName}</td>
+                      <td style={tdStyle(cellBg, BORDER_GREEN, { fontSize: '10px', whiteSpace: 'nowrap', color: COLORS.function.text, fontWeight: 'normal' })}>{fc.workElem}</td>
                       {/* 고장원인열 클릭 → 연결 추가 */}
                       <td 
-                        style={{...tdStyle(cellBg, BORDER_GREEN, { color: COLORS.function.text }), cursor: 'pointer'}}
+                        style={{...tdStyle(cellBg, BORDER_GREEN, { color: COLORS.function.text, fontSize: '10px', fontWeight: 'normal' }), cursor: 'pointer'}}
                         onClick={() => handleClick(fc.id, onToggleFC)}
                         onDoubleClick={() => handleDoubleClick(fc.id, onUnlinkFC)}
                         title="클릭: 연결 추가 / 더블클릭: 연결 해제"
                       >
-                        {isLinkedInSaved && <span className="mr-1 text-green-700 font-bold">●</span>}
+                        {isLinkedInSaved && <span className="mr-1 text-green-700">●</span>}
                         {fc.text}
-                        {isLinkedToCurrentFM && <span className="ml-1 text-blue-700 font-bold">✓</span>}
+                        {isLinkedToCurrentFM && <span className="ml-1 text-blue-700">✓</span>}
                       </td>
                     </tr>
                   );
