@@ -205,7 +205,7 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6] }:
   }
 
   return (
-    <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 200px)' }}>
+    <div style={{ width: '100%', height: '100%' }}>
       {/* 통계 정보 */}
       {stats && (
         <div style={{ padding: '8px 16px', background: '#f5f5f5', borderBottom: '1px solid #ddd', fontSize: 12 }}>
@@ -218,7 +218,42 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6] }:
         </div>
       )}
       
-      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 2000 }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 2400 }}>
+        <colgroup>
+          {/* 구조분석 5열: 650px */}
+          <col style={{ width: '120px' }} /> {/* 완제품 */}
+          <col style={{ width: '80px' }} />  {/* 공정No */}
+          <col style={{ width: '200px' }} /> {/* 공정명 */}
+          <col style={{ width: '50px' }} />  {/* 4M */}
+          <col style={{ width: '200px' }} /> {/* 작업요소 */}
+          {/* 기능분석 8열: 1750px */}
+          <col style={{ width: '80px' }} />  {/* 범위 */}
+          <col style={{ width: '220px' }} /> {/* 완제품기능 */}
+          <col style={{ width: '200px' }} /> {/* 요구사항 */}
+          <col style={{ width: '280px' }} /> {/* 공정기능 */}
+          <col style={{ width: '220px' }} /> {/* 제품특성 */}
+          <col style={{ width: '180px' }} /> {/* 특별특성 */}
+          <col style={{ width: '280px' }} /> {/* 작업기능 */}
+          <col style={{ width: '290px' }} /> {/* 공정특성 */}
+          {/* 고장분석 5열 */}
+          <col style={{ width: '200px' }} /> {/* 고장영향 */}
+          <col style={{ width: '40px' }} />  {/* S */}
+          <col style={{ width: '200px' }} /> {/* 고장형태 */}
+          <col style={{ width: '200px' }} /> {/* 고장원인 */}
+          <col style={{ width: '40px' }} />  {/* O */}
+          {/* 리스크분석 6열 */}
+          <col style={{ width: '40px' }} />  {/* S */}
+          <col style={{ width: '40px' }} />  {/* O */}
+          <col style={{ width: '40px' }} />  {/* D */}
+          <col style={{ width: '40px' }} />  {/* AP */}
+          <col style={{ width: '180px' }} /> {/* 예방관리 */}
+          <col style={{ width: '180px' }} /> {/* 검출관리 */}
+          {/* 최적화 4열 */}
+          <col style={{ width: '200px' }} /> {/* 권고조치 */}
+          <col style={{ width: '80px' }} />  {/* 담당자 */}
+          <col style={{ width: '100px' }} /> {/* 목표일 */}
+          <col style={{ width: '60px' }} />  {/* 상태 */}
+        </colgroup>
         <thead>
           {/* 단계 헤더 */}
           <tr>
