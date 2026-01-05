@@ -93,6 +93,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
   };
 
   // ✅ 항목별 누락 건수 분리 계산 (필터링된 데이터만 카운트)
+  // ⚠️ 중복 제품특성은 1번만 카운트 (buildFlatRows 중복 제거 로직과 동일)
   const missingCounts = useMemo(() => {
     // ✅ 상위 단계 미확정이면 누락 계산 자체를 하지 않음 (확정 게이트)
     if (!isUpstreamConfirmed) return { failureModeCount: 0, total: 0 };
@@ -106,6 +107,9 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
     
     meaningfulProcs.forEach(proc => {
       const allModes = proc.failureModes || [];
+      
+      // ✅ 공정별 중복 제품특성 추적 (이름 기준)
+      const countedCharsInProc = new Set<string>();
       
       // ✅ 의미 있는 기능만 필터링
       const meaningfulFuncs = (proc.functions || []).filter((f: any) => {
@@ -121,6 +125,14 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
         });
         
         meaningfulChars.forEach((pc: any) => {
+          const charName = pc.name?.trim();
+          
+          // ✅ 중복 제품특성 스킵 (이미 카운트한 이름은 무시)
+          if (countedCharsInProc.has(charName)) {
+            return;
+          }
+          countedCharsInProc.add(charName);
+          
           const linkedModes = allModes.filter((m: any) => m.productCharId === pc.id);
           if (linkedModes.length === 0) {
             failureModeCount++;
@@ -137,6 +149,44 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
   
   const missingCount = missingCounts.total;
 
+  // ✅ 확정 건수 계산 (중복 제품특성 제외, 화면 표시 개수와 일치)
+  const confirmedCount = useMemo(() => {
+    if (!isUpstreamConfirmed) return 0;
+    let count = 0;
+    
+    const meaningfulProcs = state.l2.filter((p: any) => {
+      const name = p.name || '';
+      return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+    });
+    
+    meaningfulProcs.forEach(proc => {
+      const allModes = proc.failureModes || [];
+      const countedCharsInProc = new Set<string>();
+      
+      const meaningfulFuncs = (proc.functions || []).filter((f: any) => {
+        const name = f.name || '';
+        return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+      });
+      
+      meaningfulFuncs.forEach((f: any) => {
+        const meaningfulChars = (f.productChars || []).filter((pc: any) => {
+          const name = pc.name || '';
+          return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+        });
+        
+        meaningfulChars.forEach((pc: any) => {
+          const charName = pc.name?.trim();
+          if (countedCharsInProc.has(charName)) return;
+          countedCharsInProc.add(charName);
+          
+          // 해당 제품특성에 연결된 고장형태 개수 카운트
+          const linkedModes = allModes.filter((m: any) => m.productCharId === pc.id && !isMissing(m.name));
+          count += linkedModes.length > 0 ? linkedModes.length : 0;
+        });
+      });
+    });
+    return count;
+  }, [isUpstreamConfirmed, state.l2]);
 
   const handleConfirm = useCallback(() => {
     if (!isUpstreamConfirmed) {
@@ -384,10 +434,19 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
       return true;
     };
 
+    // ✅ 공정별로 이미 표시한 제품특성 이름 추적 (중복 제거)
+    const displayedCharsByProc = new Map<string, Set<string>>();
+    
     processes.forEach(proc => {
       const allModes = proc.failureModes || [];
       // ✅ 의미 있는 기능만 필터링
       const functions = (proc.functions || []).filter((f: any) => isMeaningful(f.name));
+      
+      // 이 공정에서 이미 표시된 제품특성 이름 Set
+      if (!displayedCharsByProc.has(proc.id)) {
+        displayedCharsByProc.set(proc.id, new Set());
+      }
+      const displayedCharsInProc = displayedCharsByProc.get(proc.id)!;
       
       let procRowCount = 0;
       let procFirstRowIdx = rows.length;
@@ -397,8 +456,17 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
         return;
       } else {
         functions.forEach((f: any, fIdx: number) => {
-          // ✅ 의미 있는 제품특성만 필터링
-          const pChars = (f.productChars || []).filter((pc: any) => isMeaningful(pc.name));
+          // ✅ 의미 있는 제품특성만 필터링 + 중복 이름 제거
+          const allPChars = (f.productChars || []).filter((pc: any) => isMeaningful(pc.name));
+          const pChars = allPChars.filter((pc: any) => {
+            const charName = pc.name?.trim();
+            if (displayedCharsInProc.has(charName)) {
+              console.log('[FailureL2Tab] 중복 제품특성 스킵:', charName, '공정:', proc.name);
+              return false; // 이미 표시된 제품특성은 스킵
+            }
+            displayedCharsInProc.add(charName);
+            return true;
+          });
           let funcRowCount = 0;
           const funcFirstRowIdx = rows.length;
           
@@ -488,7 +556,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
                 <span className="font-bold">고장분석(4단계)</span>
                 <div className="flex gap-1">
                   {isConfirmed ? (
-                    <span className={badgeConfirmed}>✓ 확정됨({state.l2.reduce((sum, p) => sum + (p.failureModes?.length || 0), 0)})</span>
+                    <span className={badgeConfirmed}>✓ 확정됨({confirmedCount})</span>
                   ) : (
                     <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
                   )}

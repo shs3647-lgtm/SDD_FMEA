@@ -190,7 +190,11 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
       saveToLocalStorage?.();
       // ✅ 확정 시 DB 저장 (명시적 호출)
       if (saveAtomicDB) {
-        saveAtomicDB().catch(e => console.error('[FailureL1Tab] DB 저장 오류:', e));
+        try {
+          saveAtomicDB();
+        } catch (e) {
+          console.error('[FailureL1Tab] DB 저장 오류:', e);
+        }
       }
       console.log('[FailureL1Tab] 확정 후 localStorage 및 DB 저장 완료');
     }, 100);
@@ -565,14 +569,24 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
         </div>
       )}
 
-      <table className="w-full border-collapse table-fixed" style={{ minWidth: '650px', marginBottom: '50px' }}>
-        {/* ✅ 컬럼 수정: 완제품공정명 제거, 구분 55px, 완제품기능 auto, 요구사항 140px, 고장영향 280px, S 30px */}
-        <colgroup><col style={{ width: '55px', minWidth: '55px' }} /><col /><col style={{ width: '140px', minWidth: '140px' }} /><col style={{ width: '280px', minWidth: '280px' }} /><col style={{ width: '30px', minWidth: '30px' }} /></colgroup>
+      <table className="w-full border-collapse table-fixed" style={{ minWidth: '800px', marginBottom: '50px' }}>
+        {/* ✅ 컬럼: 완제품공정명 100px, 구분 55px, 완제품기능 auto, 요구사항 140px, 고장영향 280px, S 30px */}
+        <colgroup>
+          <col style={{ width: '100px', minWidth: '100px' }} />
+          <col style={{ width: '55px', minWidth: '55px' }} />
+          <col />
+          <col style={{ width: '140px', minWidth: '140px' }} />
+          <col style={{ width: '280px', minWidth: '280px' }} />
+          <col style={{ width: '30px', minWidth: '30px' }} />
+        </colgroup>
         
         {/* 3행 헤더 구조 - 하단 2px 검은색 구분선 */}
         <thead className="sticky top-0 z-20 bg-white border-b-2 border-black">
           <tr>
-            {/* ✅ 구조(2) 컬럼 제거 - 1L 기능과 요구사항만 표시 */}
+            {/* ✅ 구조분석(2단계) 컬럼 복구 */}
+            <th className="bg-[#1976d2] text-white border border-[#ccc] px-0.5 py-1 text-[11px] font-extrabold text-center whitespace-nowrap">
+              구조분석(2단계)
+            </th>
             <th colSpan={3} className="bg-[#388e3c] text-white border border-[#ccc] px-0.5 py-1 text-[11px] font-extrabold text-center whitespace-nowrap">
               기능분석(3단계)
             </th>
@@ -595,7 +609,10 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
           </tr>
           
           <tr>
-            {/* ✅ 완제품 공정명 컬럼 제거 */}
+            {/* ✅ 완제품 공정명 영역 복구 */}
+            <th className={`${S.h2} whitespace-nowrap text-[10px] px-0.5`}>
+              완제품 공정명
+            </th>
             <th colSpan={3} className={`${F.h2} whitespace-nowrap text-[10px] px-0.5`}>
               완제품 공정기능/요구사항
             </th>
@@ -605,7 +622,10 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
           </tr>
           
           <tr>
-            {/* ✅ 공정명 컬럼 제거 - 구분/완제품기능/요구사항만 표시 */}
+            {/* ✅ 완제품 공정명 컬럼 복구 */}
+            <th className={`${S.h3} text-center whitespace-nowrap text-[10px] px-0.5`}>
+              완제품 공정명
+            </th>
             <th className={`${F.h3} text-center whitespace-nowrap text-[10px] px-0.5`}>
               구분
             </th>
@@ -632,8 +652,8 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
         <tbody>
           {renderRows.length === 0 ? (
             <tr>
-              {/* ✅ 컬럼 5개로 수정 (완제품 공정명 제거) */}
-              <td colSpan={5} className="border border-[#ccc] p-8 text-center text-gray-400 text-xs">
+              {/* ✅ 컬럼 6개 (완제품 공정명 복구) */}
+              <td colSpan={6} className="border border-[#ccc] p-8 text-center text-gray-400 text-xs">
                 기능분석(L1)에서 요구사항을 입력하면 여기에 자동으로 표시됩니다.
               </td>
             </tr>
@@ -642,7 +662,16 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
               const zebra = getZebraColors(idx); // 표준화된 색상
               return (
               <tr key={row.key}>
-                {/* ✅ 완제품 공정명 컬럼 제거됨 */}
+                {/* ✅ 완제품 공정명 컬럼 복구 */}
+                {row.showProduct && (
+                  <td 
+                    rowSpan={row.productRowSpan} 
+                    className="border border-[#ccc] p-1 text-center text-xs font-medium align-middle"
+                    style={{ background: zebra.structure }}
+                  >
+                    {state.l1?.name || '(완제품명 없음)'}
+                  </td>
+                )}
                 
                 {/* 구분 (자동) - 구분별 색상 적용 */}
                 {row.showType && (
@@ -663,7 +692,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                   </td>
                 )}
                 
-                {/* 완제품기능 (기능분석에서 연결) - 같은 기능 병합 */}
+                {/* 완제품기능 (기능분석에서 연결) - 같은 기능 병합 - 녹색 줄무늬 */}
                 {row.showFunc && (
                   <td 
                     rowSpan={row.funcRowSpan}
@@ -684,14 +713,14 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                   </td>
                 )}
                 
-                {/* 요구사항 (자동) */}
+                {/* 요구사항 (자동) - 주황색 줄무늬 (failure 타입) */}
                 {row.showReq && (
                   <td 
                     rowSpan={row.reqRowSpan} 
                     style={{ 
                       border: `1px solid #ccc`, 
                       padding: '2px 4px', 
-                      background: zebra.function, 
+                      background: zebra.failure, 
                       verticalAlign: 'middle',
                       textAlign: 'center',
                       fontSize: FONT_SIZES.cell

@@ -32,6 +32,7 @@ import {
   loadWorksheetDB,
   saveWorksheetDB,
 } from '../db-storage';
+import { loadWorksheetDBAtomic } from '../db-storage';
 
 interface UseWorksheetStateReturn {
   state: WorksheetState;
@@ -75,6 +76,8 @@ export function useWorksheetState(): UseWorksheetStateReturn {
   
   // ✅ 클라이언트에서만 localStorage에서 tab/riskData 복원 (마운트 후)
   const [isHydrated, setIsHydrated] = useState(false);
+  // ✅ 복구/초기 로드 중 자동저장 방지 (빈 데이터로 덮어쓰기 방지)
+  const suppressAutoSaveRef = useRef<boolean>(false);
   useEffect(() => {
     setIsHydrated(true);
     
@@ -176,6 +179,10 @@ export function useWorksheetState(): UseWorksheetStateReturn {
   // 원자성 DB 저장
   const saveAtomicDB = useCallback(async () => {
     if (!atomicDB) return;
+    if (suppressAutoSaveRef.current) {
+      console.warn('[원자성 DB 저장] suppressAutoSave=true 이므로 저장 스킵');
+      return;
+    }
     
     setIsSaving(true);
     try {
@@ -195,14 +202,27 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         failureL1Confirmed: (currentState as any).failureL1Confirmed || false,
         failureL2Confirmed: (currentState as any).failureL2Confirmed || false,
         failureL3Confirmed: (currentState as any).failureL3Confirmed || false,
+        failureLinkConfirmed: (currentState as any).failureLinkConfirmed || false,  // ✅ 고장연결 확정 추가
       };
       
+      console.log('[원자성 DB 저장] 확정상태:', {
+        structureConfirmed: legacyData.structureConfirmed,
+        l1Confirmed: legacyData.l1Confirmed,
+        l2Confirmed: legacyData.l2Confirmed,
+        l3Confirmed: legacyData.l3Confirmed,
+        failureL1Confirmed: legacyData.failureL1Confirmed,
+        failureL2Confirmed: legacyData.failureL2Confirmed,
+        failureL3Confirmed: legacyData.failureL3Confirmed,
+        failureLinkConfirmed: legacyData.failureLinkConfirmed,
+      });
       console.log('[원자성 DB 저장] l1.name:', legacyData.l1.name); // ✅ 디버깅 로그 추가
       
       const newAtomicDB = migrateToAtomicDB(legacyData);
       console.log('[원자성 DB 저장] l1Structure.name:', newAtomicDB.l1Structure?.name); // ✅ 디버깅 로그 추가
       
-      saveWorksheetDB(newAtomicDB).catch(e => console.error('[원자성 DB 저장] 오류:', e));
+      // ★★★ 레거시 데이터를 Single Source of Truth로 함께 저장 ★★★
+      // 원자성 DB 변환 과정에서의 데이터 손실 방지를 위해 레거시 데이터도 DB에 저장
+      saveWorksheetDB(newAtomicDB, legacyData).catch(e => console.error('[원자성 DB 저장] 오류:', e));
       setAtomicDB(newAtomicDB);
       
       console.log('[원자성 DB 저장] 완료:', {
@@ -228,6 +248,10 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     const targetId = selectedFmeaId || currentFmea?.id;
     if (!targetId) {
       console.warn('[저장] FMEA ID가 없어 저장할 수 없습니다.');
+      return;
+    }
+    if (suppressAutoSaveRef.current) {
+      console.warn('[저장] suppressAutoSave=true 이므로 저장 스킵');
       return;
     }
     
@@ -291,7 +315,10 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         failureEffects: newAtomicDB.failureEffects.length,
         l1Functions: newAtomicDB.l1Functions.length,
       });
-      saveWorksheetDB(newAtomicDB).catch(e => console.error('[저장] DB 저장 오류:', e));
+      
+      // ★★★ 레거시 데이터를 Single Source of Truth로 함께 저장 ★★★
+      // 원자성 DB 변환 과정에서의 데이터 손실 방지를 위해 레거시 데이터도 DB에 저장
+      saveWorksheetDB(newAtomicDB, worksheetData).catch(e => console.error('[저장] DB 저장 오류:', e));
       setAtomicDB(newAtomicDB);
       
       // 로그
@@ -733,7 +760,328 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     
     // 원자성 DB 로드 시도 (async)
     (async () => {
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('[로드 시작] FMEA ID:', selectedFmeaId);
+      console.log('═══════════════════════════════════════════════════════');
+
+      // ✅ 초기 복구 동안 자동저장 방지
+      suppressAutoSaveRef.current = true;
+      
       const loadedDB = await loadWorksheetDB(selectedFmeaId);
+      console.log('[로드] DB 응답:', loadedDB ? '데이터 있음' : 'null');
+
+      // ✅ 원자성 DB 강제 로드 (레거시가 있어도 raw atomic 확보)
+      const loadedAtomicDB = await loadWorksheetDBAtomic(selectedFmeaId);
+      console.log('[로드] 원자성(강제) DB 응답:', loadedAtomicDB ? '데이터 있음' : 'null');
+      
+      // ★★★ 1단계: localStorage에서 모든 가능한 키 검색 ★★★
+      const legacyKeys = [
+        `pfmea_worksheet_${selectedFmeaId}`,
+        `fmea-worksheet-${selectedFmeaId}`,
+        `pfmea_atomic_${selectedFmeaId}`,  // 원자성 DB 백업
+      ];
+      let localStorageLegacy: any = null;
+      let legacyTab = 'structure';
+      let legacyRiskData: { [key: string]: number | string } = {};
+      
+      // 모든 localStorage 키 출력 (디버깅)
+      const allFmeaKeys = Object.keys(localStorage).filter(k => 
+        k.includes('pfmea') || k.includes('fmea') || k.includes('PFM')
+      );
+      console.log('[로드] localStorage FMEA 관련 키:', allFmeaKeys);
+      
+      for (const key of legacyKeys) {
+        const saved = localStorage.getItem(key);
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            // l1과 l2가 있는지 확인 (레거시 형식)
+            if (parsed.l1 || parsed.l2) {
+              localStorageLegacy = parsed;
+              legacyTab = parsed.tab || 'structure';
+              legacyRiskData = parsed.riskData || {};
+              console.log('[로드] ✅ localStorage에서 레거시 데이터 발견:', key, {
+                l1Name: parsed.l1?.name,
+                l2Count: parsed.l2?.length,
+              });
+              break;
+            }
+            // 원자성 DB 형식인 경우 (l2Structures가 있음)
+            if (parsed.l2Structures) {
+              console.log('[로드] 원자성 DB 백업 발견:', key);
+              // 역변환하여 사용
+              const legacy = convertToLegacyFormat(parsed);
+              localStorageLegacy = {
+                ...legacy,
+                structureConfirmed: parsed.l1Structure?.confirmed ?? false,
+              };
+              legacyTab = 'structure';
+              console.log('[로드] ✅ 원자성 DB에서 레거시 형식으로 변환:', {
+                l1Name: localStorageLegacy.l1?.name,
+                l2Count: localStorageLegacy.l2?.length,
+              });
+              break;
+            }
+          } catch (e) { 
+            console.warn('[로드] localStorage 파싱 오류:', key, e);
+          }
+        }
+      }
+      
+      console.log('[로드] localStorage 레거시 데이터:', localStorageLegacy ? '발견' : '없음');
+      
+      // ✅ 후보 스냅샷 중 “가장 완성도 높은 것” 선택 (복구 핵심)
+      const scoreLegacy = (cand: any): number => {
+        if (!cand) return 0;
+        let score = 0;
+        const l1Name = String(cand.l1?.name || '').trim();
+        if (l1Name) score += 50;
+        const l2 = Array.isArray(cand.l2) ? cand.l2 : [];
+        // 공정(프로세스) 수
+        const meaningfulProcs = l2.filter((p: any) => String(p?.name || p?.no || '').trim());
+        score += meaningfulProcs.length * 20;
+        // 작업요소/기능/특성/고장 데이터량
+        const l3Count = l2.reduce((acc: number, p: any) => acc + (Array.isArray(p?.l3) ? p.l3.length : 0), 0);
+        score += l3Count * 5;
+        const fmCount = l2.reduce((acc: number, p: any) => acc + (Array.isArray(p?.failureModes) ? p.failureModes.length : 0), 0);
+        const fcCount = l2.reduce((acc: number, p: any) => acc + (Array.isArray(p?.failureCauses) ? p.failureCauses.length : 0), 0);
+        score += (fmCount + fcCount) * 2;
+        const feCount = Array.isArray(cand?.l1?.failureScopes) ? cand.l1.failureScopes.length : 0;
+        score += feCount * 2;
+        return score;
+      };
+
+      const dbLegacyCandidate = (loadedDB && (loadedDB as any)._isLegacyDirect) ? (loadedDB as any) : null;
+      let atomicAsLegacy: any = null;
+      if (loadedAtomicDB && (loadedAtomicDB as any).l2Structures) {
+        try {
+          atomicAsLegacy = convertToLegacyFormat(loadedAtomicDB as any);
+          // confirmed 복원
+          const c = (loadedAtomicDB as any).confirmed || {};
+          atomicAsLegacy.structureConfirmed = Boolean(c.structure ?? (loadedAtomicDB as any).l1Structure?.confirmed ?? false);
+          atomicAsLegacy.l1Confirmed = Boolean(c.l1Function ?? false);
+          atomicAsLegacy.l2Confirmed = Boolean(c.l2Function ?? false);
+          atomicAsLegacy.l3Confirmed = Boolean(c.l3Function ?? false);
+          atomicAsLegacy.failureL1Confirmed = Boolean(c.l1Failure ?? false);
+          atomicAsLegacy.failureL2Confirmed = Boolean(c.l2Failure ?? false);
+          atomicAsLegacy.failureL3Confirmed = Boolean(c.l3Failure ?? false);
+          atomicAsLegacy.failureLinkConfirmed = Boolean(c.failureLink ?? false);
+        } catch (e) {
+          console.warn('[복구] 원자성→레거시 변환 실패:', e);
+        }
+      }
+
+      const candidates: Array<{ label: string; data: any; score: number }> = [
+        { label: 'localStorageLegacy', data: localStorageLegacy, score: scoreLegacy(localStorageLegacy) },
+        { label: 'dbLegacy', data: dbLegacyCandidate, score: scoreLegacy(dbLegacyCandidate) },
+        { label: 'atomicAsLegacy', data: atomicAsLegacy, score: scoreLegacy(atomicAsLegacy) },
+      ].sort((a, b) => b.score - a.score);
+
+      console.log('[복구] 후보 스냅샷 점수:', candidates.map(c => ({ label: c.label, score: c.score })));
+
+      const best = candidates[0];
+      if (best && best.score > 0 && best.data) {
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('★★★ [복구] 가장 완성도 높은 스냅샷 선택:', best.label, 'score=', best.score, '★★★');
+        console.log('═══════════════════════════════════════════════════════');
+
+        const src = best.data;
+        const confirmedFlags = {
+          structureConfirmed: Boolean(src.structureConfirmed ?? src.confirmed?.structure ?? false),
+          l1Confirmed: Boolean(src.l1Confirmed ?? src.confirmed?.l1Function ?? false),
+          l2Confirmed: Boolean(src.l2Confirmed ?? src.confirmed?.l2Function ?? false),
+          l3Confirmed: Boolean(src.l3Confirmed ?? src.confirmed?.l3Function ?? false),
+          failureL1Confirmed: Boolean(src.failureL1Confirmed ?? src.confirmed?.l1Failure ?? false),
+          failureL2Confirmed: Boolean(src.failureL2Confirmed ?? src.confirmed?.l2Failure ?? false),
+          failureL3Confirmed: Boolean(src.failureL3Confirmed ?? src.confirmed?.l3Failure ?? false),
+          failureLinkConfirmed: Boolean(src.failureLinkConfirmed ?? src.confirmed?.failureLink ?? false),
+        };
+        const normalizedConfirmed = normalizeConfirmedFlags(confirmedFlags);
+
+        const newState: WorksheetState = {
+          l1: src.l1 || createInitialState().l1,
+          l2: src.l2 || [],
+          tab: legacyTab,
+          riskData: legacyRiskData,
+          search: String(src.search || ''),
+          ...normalizedConfirmed,
+        };
+
+        setStateSynced(newState);
+
+        // atomic도 확보/동기화
+        const derivedAtomic = loadedAtomicDB && (loadedAtomicDB as any).l2Structures
+          ? (loadedAtomicDB as any)
+          : migrateToAtomicDB(src);
+        setAtomicDB(derivedAtomic);
+
+        // ✅ 복구된 레거시를 DB에 저장 (단, suppress 해제 후)
+        setTimeout(() => {
+          suppressAutoSaveRef.current = false;
+          saveWorksheetDB(derivedAtomic, src).catch(e => console.error('[복구] DB 동기화 오류:', e));
+          console.log('[복구] ✅ 자동저장 재개 + DB 동기화 트리거');
+        }, 1200);
+
+        return;
+      }
+
+      // ★★★ 최우선: localStorage에 데이터가 있으면 그것을 사용 ★★★
+      if (localStorageLegacy && (localStorageLegacy.l1?.name || localStorageLegacy.l2?.length > 0)) {
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('★★★ [localStorage 우선] 로컬 데이터 직접 사용 ★★★');
+        console.log('═══════════════════════════════════════════════════════');
+        
+        const confirmedFlags = {
+          structureConfirmed: Boolean(localStorageLegacy.structureConfirmed ?? false),
+          l1Confirmed: Boolean(localStorageLegacy.l1Confirmed ?? false),
+          l2Confirmed: Boolean(localStorageLegacy.l2Confirmed ?? false),
+          l3Confirmed: Boolean(localStorageLegacy.l3Confirmed ?? false),
+          failureL1Confirmed: Boolean(localStorageLegacy.failureL1Confirmed ?? false),
+          failureL2Confirmed: Boolean(localStorageLegacy.failureL2Confirmed ?? false),
+          failureL3Confirmed: Boolean(localStorageLegacy.failureL3Confirmed ?? false),
+          failureLinkConfirmed: Boolean(localStorageLegacy.failureLinkConfirmed ?? false),
+        };
+        const normalizedConfirmed = normalizeConfirmedFlags(confirmedFlags);
+        
+        const newState: WorksheetState = {
+          l1: localStorageLegacy.l1 || createInitialState().l1,
+          l2: localStorageLegacy.l2 || [],
+          tab: legacyTab,
+          riskData: legacyRiskData,
+          search: '',
+          ...normalizedConfirmed,
+        };
+        
+        console.log('[로드] localStorage 데이터 적용:', {
+          l1Name: newState.l1.name,
+          l2Count: newState.l2.length,
+          structureConfirmed: newState.structureConfirmed,
+          failureModesCount: newState.l2.flatMap((p: any) => p.failureModes || []).length,
+          failureCausesCount: newState.l2.flatMap((p: any) => p.failureCauses || []).length,
+        });
+        
+        setStateSynced(newState);
+        
+        // 원자성 DB 생성 및 DB에도 저장 (동기화)
+        const derivedAtomicDB = migrateToAtomicDB(localStorageLegacy);
+        setAtomicDB(derivedAtomicDB);
+        
+        // DB에도 레거시 데이터 저장 (동기화)
+        saveWorksheetDB(derivedAtomicDB, localStorageLegacy).catch(e => console.error('[로드] DB 동기화 오류:', e));
+        
+        console.log('[로드] ✅ localStorage 데이터 로드 완료, DB에도 동기화');
+        setTimeout(() => { suppressAutoSaveRef.current = false; }, 1200);
+        return;
+      }
+      
+      // ★★★ 2순위: DB에서 레거시 데이터가 직접 반환된 경우 ★★★
+      if (loadedDB && (loadedDB as any)._isLegacyDirect) {
+        const legacyDirect = loadedDB as any;
+        
+        // ✅ DB에서 가져온 레거시 데이터가 비어있으면 localStorage 사용
+        const hasValidDBData = legacyDirect.l1?.name || (legacyDirect.l2 && legacyDirect.l2.length > 0);
+        
+        if (!hasValidDBData && localStorageLegacy) {
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('⚠️ [복구] DB 레거시 데이터가 비어있음, localStorage에서 복구');
+          console.log('═══════════════════════════════════════════════════════');
+          
+          // localStorage 데이터를 사용
+          const recoveredLegacy = localStorageLegacy;
+          
+          // 확정 상태
+          const confirmedFlags = {
+            structureConfirmed: Boolean(recoveredLegacy.structureConfirmed ?? false),
+            l1Confirmed: Boolean(recoveredLegacy.l1Confirmed ?? false),
+            l2Confirmed: Boolean(recoveredLegacy.l2Confirmed ?? false),
+            l3Confirmed: Boolean(recoveredLegacy.l3Confirmed ?? false),
+            failureL1Confirmed: Boolean(recoveredLegacy.failureL1Confirmed ?? false),
+            failureL2Confirmed: Boolean(recoveredLegacy.failureL2Confirmed ?? false),
+            failureL3Confirmed: Boolean(recoveredLegacy.failureL3Confirmed ?? false),
+            failureLinkConfirmed: Boolean(recoveredLegacy.failureLinkConfirmed ?? false),
+          };
+          const normalizedConfirmed = normalizeConfirmedFlags(confirmedFlags);
+          
+          const newState: WorksheetState = {
+            l1: recoveredLegacy.l1 || createInitialState().l1,
+            l2: recoveredLegacy.l2 || [],
+            tab: legacyTab,
+            riskData: legacyRiskData,
+            search: '',
+            ...normalizedConfirmed,
+          };
+          
+          console.log('[복구] localStorage에서 복구된 데이터:', {
+            l1Name: newState.l1.name,
+            l2Count: newState.l2.length,
+            structureConfirmed: newState.structureConfirmed,
+          });
+          
+          setStateSynced(newState);
+          
+          // DB에도 저장 (복구 데이터 동기화)
+          const derivedAtomicDB = migrateToAtomicDB(recoveredLegacy);
+          setAtomicDB(derivedAtomicDB);
+          saveWorksheetDB(derivedAtomicDB, recoveredLegacy).catch(e => console.error('[복구] DB 저장 오류:', e));
+          
+          console.log('[복구] ✅ localStorage에서 복구 완료, DB에도 동기화');
+          return;
+        }
+        
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('★★★ [Single Source of Truth] 레거시 데이터 직접 사용 ★★★');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('[로드] 레거시 버전:', (loadedDB as any)._legacyVersion);
+        console.log('[로드] 로드 시간:', (loadedDB as any)._loadedAt);
+        
+        // ✅ API의 confirmed 객체를 플랫 형태로 변환
+        const apiConfirmed = legacyDirect.confirmed || {};
+        const confirmedFlags = {
+          structureConfirmed: Boolean(legacyDirect.structureConfirmed ?? apiConfirmed.structure ?? false),
+          l1Confirmed: Boolean(legacyDirect.l1Confirmed ?? apiConfirmed.l1Function ?? false),
+          l2Confirmed: Boolean(legacyDirect.l2Confirmed ?? apiConfirmed.l2Function ?? false),
+          l3Confirmed: Boolean(legacyDirect.l3Confirmed ?? apiConfirmed.l3Function ?? false),
+          failureL1Confirmed: Boolean(legacyDirect.failureL1Confirmed ?? apiConfirmed.l1Failure ?? false),
+          failureL2Confirmed: Boolean(legacyDirect.failureL2Confirmed ?? apiConfirmed.l2Failure ?? false),
+          failureL3Confirmed: Boolean(legacyDirect.failureL3Confirmed ?? apiConfirmed.l3Failure ?? false),
+          failureLinkConfirmed: Boolean(legacyDirect.failureLinkConfirmed ?? apiConfirmed.failureLink ?? false),
+        };
+        
+        console.log('[로드] 확정 상태 원본:', { legacyDirect: legacyDirect.structureConfirmed, apiConfirmed });
+        
+        // 확정 상태 정규화
+        const normalizedConfirmed = normalizeConfirmedFlags(confirmedFlags);
+        
+        console.log('[로드] 정규화된 확정 상태:', normalizedConfirmed);
+        
+        // state 설정
+        const newState: WorksheetState = {
+          l1: legacyDirect.l1 || createInitialState().l1,
+          l2: legacyDirect.l2 || [],
+          tab: legacyTab,
+          riskData: legacyRiskData,
+          search: legacyDirect.search || '',  // ✅ 검색어 기본값 추가
+          ...normalizedConfirmed,
+        };
+        
+        console.log('[로드] 레거시 데이터 직접 적용:', {
+          l1Name: newState.l1.name,
+          l2Count: newState.l2.length,
+          failureModesCount: newState.l2.flatMap((p: any) => p.failureModes || []).length,
+          failureCausesCount: newState.l2.flatMap((p: any) => p.failureCauses || []).length,
+          tab: newState.tab,
+        });
+        
+        setStateSynced(newState);
+        
+        // 원자성 DB 생성 (PFD/CP/WS/PM 연동용)
+        const derivedAtomicDB = migrateToAtomicDB(legacyDirect);
+        setAtomicDB(derivedAtomicDB);
+        
+        console.log('[로드] ✅ 레거시 데이터 직접 로드 완료 (역변환 없음!)');
+        setTimeout(() => { suppressAutoSaveRef.current = false; }, 1200);
+        return; // ★★★ 역변환 과정 스킵 ★★★
+      }
       
       // ✅ 원자성 DB에 실제 데이터가 있는지 확인 (빈 DB 객체 구분)
       const hasValidData = loadedDB && (
@@ -742,9 +1090,9 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         loadedDB.l2Structures.length > 0
       );
       
-      // 원자성 DB가 있고 실제 데이터가 있는 경우
+      // 원자성 DB가 있고 실제 데이터가 있는 경우 (하위 호환성)
       if (hasValidData) {
-      console.log('[워크시트] 원자성 DB 발견:', loadedDB);
+      console.log('[워크시트] ⚠️ 원자성 DB에서 역변환 (레거시 데이터 없음 - 하위 호환성)');
       console.log('[워크시트] 원자성 DB 상태:', {
         l1Structure: !!loadedDB.l1Structure,
         l2Structures: loadedDB.l2Structures.length,
@@ -754,7 +1102,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       });
       setAtomicDB(loadedDB);
       
-      // 원자성 DB를 레거시 형식으로 변환하여 state에 적용
+      // 원자성 DB를 레거시 형식으로 변환하여 state에 적용 (하위 호환성)
       const legacy = convertToLegacyFormat(loadedDB);
       
       // ✅ 레거시 원본 데이터에서 직접 추출 (근본적인 해결책)
@@ -935,22 +1283,27 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       }
       console.log('═══════════════════════════════════════════════════════');
       
-      // ✅ 근본적인 해결: 레거시 원본 데이터의 failureCauses를 finalLegacy에 반영
-      if (legacyOriginalData && legacyOriginalData.l2 && legacyOriginalCauses.length > 0) {
-        console.log('🔧 [근본 해결] 레거시 원본 데이터의 failureCauses를 finalLegacy에 반영');
-        // 각 공정별로 failureCauses 복사
+      // ✅ 근본적인 해결: 레거시 원본 데이터의 failureModes와 failureCauses를 finalLegacy에 반영
+      if (legacyOriginalData && legacyOriginalData.l2) {
+        console.log('🔧 [근본 해결] 레거시 원본 데이터의 failureModes/failureCauses를 finalLegacy에 반영');
+        // 각 공정별로 failureModes와 failureCauses 복사
         finalLegacy.l2 = finalLegacy.l2.map((proc: any) => {
           const originalProc = legacyOriginalData.l2.find((p: any) => p.id === proc.id);
-          if (originalProc && originalProc.failureCauses) {
+          if (originalProc) {
             return {
               ...proc,
-              failureCauses: originalProc.failureCauses // 레거시 원본 데이터의 failureCauses 사용
+              // ✅ 고장형태 복원 (레거시 원본 데이터 우선)
+              failureModes: originalProc.failureModes || proc.failureModes || [],
+              // ✅ 고장원인 복원 (레거시 원본 데이터 우선)
+              failureCauses: originalProc.failureCauses || proc.failureCauses || [],
             };
           }
           return proc;
         });
-        console.log('✅ [근본 해결] 레거시 원본 데이터의 failureCauses 반영 완료:', 
-          finalLegacy.l2.flatMap((p: any) => p.failureCauses || []).length, '개');
+        const modesCount = finalLegacy.l2.flatMap((p: any) => p.failureModes || []).length;
+        const causesCount = finalLegacy.l2.flatMap((p: any) => p.failureCauses || []).length;
+        console.log('✅ [근본 해결] 레거시 원본 데이터 반영 완료:', 
+          '고장형태:', modesCount, '개, 고장원인:', causesCount, '개');
       }
       
       // ✅ 기존 state의 tab/riskData가 있으면 유지 (초기화 함수에서 이미 설정됨)

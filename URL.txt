@@ -1,8 +1,8 @@
 === PFMEA URL ===
-메인 워크시트: http://localhost:3001/pfmea/worksheet?id=PFM25-310&v=20260104-upstream-confirm-gating
+메인 워크시트: http://localhost:3001/pfmea/worksheet?id=PFM26-001&v=20260105-dedup-productchar
 FMEA 리스트: http://localhost:3001/pfmea/list
 FMEA 등록: http://localhost:3001/pfmea/register
-FMEA 4판: http://localhost:3001/pfmea/fmea4?id=PFM25-310
+FMEA 4판: http://localhost:3001/pfmea/fmea4?id=PFM26-001
 
 === DFMEA URL ===
 메인 워크시트: http://localhost:3001/dfmea/worksheet?id=DFM25-310
@@ -10,44 +10,31 @@ FMEA 리스트: http://localhost:3001/dfmea/list
 FMEA 등록: http://localhost:3001/dfmea/register
 
 === VERSION INFO ===
-Version: 1.0.1-upstream-confirm-gating
-Last Updated: 2026-01-04
+Version: 1.0.4-dedup-productchar
+Last Updated: 2026-01-05
 Changes: 
-  - 상위 단계 확정 게이팅 구현 (하위 단계는 상위 확정 후 활성화)
-  - 확정 시 PostgreSQL DB 저장 명시적 호출 추가
-  - 플레이스홀더 요구사항 필터링으로 빈셀 폭증 방지
-  - Playwright 테스트 추가 (upstream-confirm-gating.spec.ts)
+  - ✅ FmeaConfirmedState 테이블 추가 (모든 확정 상태 DB 저장)
+  - ✅ 제품특성 중복 제거 로직 강화 (FunctionL2Tab)
+  - ✅ 마운트 시 기존 중복 데이터 자동 정리
+  - ✅ 자동연결 시 중복 방지 강화
 Status: Ready for Testing
-Cache Busting: v=20260104-upstream-confirm-gating
+Cache Busting: v=20260105-dedup-productchar
 
-=== 주요 기능 ===
-1. 구조분석 (StructureTab)
-   - 확정 상태 관리
-   - 자동 저장
-   - EditableL2Cell (인라인 수정)
-   - COUNT 표시 (S1/S2/S3)
-
-2. 고장분석 (FailureL1Tab/L2Tab/L3Tab)
-   - 상위 단계 확정 게이팅 (미확정 시 비활성화)
-   - 확정 시 PostgreSQL DB 저장
-   - 플레이스홀더 요구사항 필터링
-
-3. 고장연결 (FailureLinkTab)
-   - 확정된 FE만 사용
-   - AI 히스토리 저장
-   - 중복 제거
-
-4. All 화면
-   - visibleSteps prop 지원
-   - 고장연결 데이터 기반 40열 테이블
+=== 수정된 문제 ===
+1. 확정 상태 저장/로드 문제 해결
+   - FmeaConfirmedState 테이블에 10가지 확정 상태 저장
+   
+2. 제품특성 중복 문제 해결
+   - 마운트 시 기존 중복 데이터 자동 정리
+   - 저장 시 중복 방지 (existingNames Set 활용)
+   - 자동연결 시 중복 체크 (seenChars Set 활용)
+   - 렌더링 시 중복 필터링 (isFirst 체크)
 
 === PostgreSQL 연동 ===
 - API: /api/fmea (GET/POST)
-- DB 저장 실패 시 localStorage 폴백
-- 확정 시 saveAtomicDB 명시적 호출로 DB 저장 보장
-- 배치 처리 최적화
+- 확정 상태 저장: fmea_confirmed_states 테이블
+- DB 저장 실패 시 localStorage 자동 폴백
 
 === 코드프리즈 ===
-- 태그: codefreeze-20260104-upstream-confirm-gating
-- 커밋: 7079e8f
+- 태그: codefreeze-20260105-dedup-productchar
 - 보호 파일: FailureL1Tab.tsx, FailureL2Tab.tsx, FailureL3Tab.tsx

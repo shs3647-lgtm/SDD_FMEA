@@ -672,8 +672,8 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
                       <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle">
                         <SelectableCell value={f.name} placeholder="기능" bgColor={funcZebraBg} textColor="#000000" onClick={() => handleCellClick({ type: 'l1Function', id: t.id, funcId: f.id, title: '완제품 기능 선택', itemCode: 'C2' })} onDoubleClickEdit={(newValue) => handleInlineEditFunction(t.id, f.id, newValue)} />
                       </td>
-                      <td className="border border-[#ccc] p-0">
-                        <SelectableCell value="" placeholder="요구사항 선택" bgColor={COLORS.failure.zebra} textColor={COLORS.failure.text} onClick={() => handleCellClick({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} />
+                      <td className="border border-[#ccc] p-0" style={{ background: getZebra('failure', rowIdx) }}>
+                        <SelectableCell value="" placeholder="요구사항 선택" bgColor={getZebra('failure', rowIdx)} textColor={COLORS.failure.text} onClick={() => handleCellClick({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} />
                       </td>
                     </tr>
                   );
@@ -698,11 +698,11 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
                           <SelectableCell value={f.name} placeholder="기능" bgColor={funcZebraBg} textColor="#000000" onClick={() => handleCellClick({ type: 'l1Function', id: t.id, funcId: f.id, title: '완제품 기능 선택', itemCode: 'C2' })} onDoubleClickEdit={(newValue) => handleInlineEditFunction(t.id, f.id, newValue)} />
                         </td>
                       )}
-                      <td className="border border-[#ccc] p-0">
+                      <td className="border border-[#ccc] p-0" style={{ background: getZebra('failure', rowIdx) }}>
                         <SelectableCell 
                           value={r.name} 
                           placeholder="요구사항" 
-                          bgColor={COLORS.failure.zebra} 
+                          bgColor={getZebra('failure', rowIdx)} 
                           textColor={COLORS.failure.text} 
                           onClick={() => handleCellClick({ type: 'l1Requirement', id: f.id, reqId: r.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} 
                           onDoubleClickEdit={(newValue) => handleInlineEditRequirement(t.id, f.id, r.id, newValue)}

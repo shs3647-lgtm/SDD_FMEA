@@ -336,22 +336,26 @@ export function migrateToAtomicDB(oldData: OldWorksheetData): FMEAWorksheetDB {
       });
     });
     
-    // ✅ L3 고장원인 (FC) - proc.failureCauses에서 읽기 (우선순위 1)
+    // ✅ L3 고장원인 (FC) - proc.failureCauses에서 읽기 (FailureMode 패턴과 동일)
+    // processCharId를 직접 저장하여 데이터 손실 방지
     const procFailureCauses = proc.failureCauses || [];
     procFailureCauses.forEach(fc => {
-      // processCharId로 l3Func 찾기
-      const relatedL3Func = db.l3Functions.find(f => f.id === fc.processCharId);
+      // processCharId가 있으면 해당 공정특성의 L3Function 연결
+      let relatedL3Func = fc.processCharId 
+        ? db.l3Functions.find(f => f.id === fc.processCharId)
+        : null;
+      // 없으면 해당 공정의 첫 번째 L3Function 사용
       if (!relatedL3Func) {
-        console.warn('[마이그레이션] FC의 processCharId에 해당하는 L3Function을 찾을 수 없음:', fc.processCharId, fc.name);
-        return;
+        relatedL3Func = db.l3Functions.find(f => f.l2StructId === l2Struct.id);
       }
       
       db.failureCauses.push({
         id: fc.id || uid(),
         fmeaId: oldData.fmeaId,
-        l3FuncId: relatedL3Func.id,
-        l3StructId: relatedL3Func.l3StructId,
-        l2StructId: relatedL3Func.l2StructId,
+        l3FuncId: relatedL3Func?.id || '',
+        l3StructId: relatedL3Func?.l3StructId || '',
+        l2StructId: l2Struct.id,
+        processCharId: fc.processCharId || '', // ✅ processCharId 직접 저장 (FailureMode 패턴)
         cause: fc.name,
         occurrence: fc.occurrence,
       });
@@ -433,10 +437,12 @@ export function migrateToAtomicDB(oldData: OldWorksheetData): FMEAWorksheetDB {
     l1Failure: oldData.failureL1Confirmed || false,
     l2Failure: oldData.failureL2Confirmed || false,
     l3Failure: oldData.failureL3Confirmed || false,
-    failureLink: false,
+    failureLink: oldData.failureLinkConfirmed || false,
     risk: false,
     optimization: false,
   };
+  
+  console.log('[마이그레이션] 확정 상태:', db.confirmed);
   
   console.log('[마이그레이션] 완료:', {
     l1Structure: db.l1Structure?.name,
@@ -475,7 +481,10 @@ export function convertToLegacyFormat(db: FMEAWorksheetDB): OldWorksheetData {
     failureL1Confirmed: db.confirmed.l1Failure,
     failureL2Confirmed: db.confirmed.l2Failure,
     failureL3Confirmed: db.confirmed.l3Failure,
+    failureLinkConfirmed: db.confirmed.failureLink,  // ✅ 고장연결 확정 상태 추가
   };
+  
+  console.log('[역변환] 확정 상태:', result);
   
   console.log('[역변환] 시작, failureEffects:', db.failureEffects.length, '개');
   
@@ -611,20 +620,14 @@ export function convertToLegacyFormat(db: FMEAWorksheetDB): OldWorksheetData {
     });
     
     // ✅ FC는 proc.failureCauses에 저장 (l2StructId 기준으로 그룹화)
-    // 원자성 DB에서 failureCauses는 l3FuncId로 연결되어 있으므로, l3FuncId로 processChar를 찾아서 그 processChar가 속한 proc에 저장
+    // ✅ processCharId 직접 복원 (FailureMode의 productCharId 패턴과 동일)
     const allFcs = db.failureCauses.filter(c => c.l2StructId === l2.id);
-    procObj.failureCauses = allFcs.map(fc => {
-      // l3FuncId로 processChar 찾기
-      const l3Func = db.l3Functions.find(f => f.id === fc.l3FuncId);
-      const processCharId = l3Func?.id || ''; // processChar의 ID는 l3Func.id와 동일
-      
-      return {
-        id: fc.id,
-        name: fc.cause,
-        occurrence: fc.occurrence,
-        processCharId: processCharId, // ✅ CASCADE 연결
-      };
-    });
+    procObj.failureCauses = allFcs.map(fc => ({
+      id: fc.id,
+      name: fc.cause,
+      occurrence: fc.occurrence,
+      processCharId: fc.processCharId || '', // ✅ processCharId 직접 복원
+    }));
     
     result.l2.push(procObj);
   });

@@ -2,38 +2,53 @@
  * @file db-storage.ts
  * @description PostgreSQL DB 저장/로드 함수
  * 
- * localStorage 대신 PostgreSQL DB를 사용하는 저장/로드 함수
+ * ★★★ 근본적인 해결책: 레거시 데이터 = Single Source of Truth ★★★
+ * - 저장 시: 원자성 DB + 레거시 데이터 JSON 동시 저장
+ * - 로드 시: API가 레거시 데이터 우선 반환 (역변환 없음!)
+ * - 이를 통해 원자성 DB ↔ 레거시 변환 과정에서의 데이터 손실 문제 해결
+ * 
  * DB 저장 실패 시 localStorage로 폴백
  */
 
 import type { FMEAWorksheetDB } from './schema';
 
 /**
- * PostgreSQL DB에 원자성 DB 저장 (폴백 포함)
+ * PostgreSQL DB에 원자성 DB 저장 (레거시 데이터 포함, 폴백 포함)
+ * 
+ * @param db - 원자성 DB 데이터
+ * @param legacyData - 레거시 WorksheetState 데이터 (Single Source of Truth)
  */
-export async function saveWorksheetDB(db: FMEAWorksheetDB): Promise<void> {
+export async function saveWorksheetDB(db: FMEAWorksheetDB, legacyData?: any): Promise<void> {
   try {
+    // ★★★ 레거시 데이터도 함께 전송 (Single Source of Truth) ★★★
+    const requestBody = {
+      ...db,
+      legacyData: legacyData || null,
+    };
+    
     const response = await fetch('/api/fmea', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(db),
+      body: JSON.stringify(requestBody),
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      console.error('[DB 저장] API 응답 오류:', error);
+    const result = await response.json();
+    
+    // ✅ 응답이 fallback 플래그를 포함하면 localStorage로 폴백
+    if (!response.ok || result.fallback || !result.success) {
+      const errorMsg = result.message || result.error || 'API 오류';
+      console.warn('[DB 저장] DB 저장 실패:', errorMsg);
       // ✅ 에러를 throw하지 않고 localStorage로 폴백
       if (typeof window !== 'undefined') {
         const key = `pfmea_atomic_${db.fmeaId}`;
         localStorage.setItem(key, JSON.stringify(db));
-        console.warn('[DB 저장] DB 저장 실패, localStorage로 폴백 저장 (API 오류)');
+        console.warn('[DB 저장] localStorage로 폴백 저장 완료');
       }
       return; // 에러 throw 대신 조기 리턴
     }
 
-    const result = await response.json();
     console.log('[DB 저장] 원자성 DB 저장 완료:', result.fmeaId);
     
     // ✅ DB 저장 성공 시 localStorage에도 백업 저장 (폴백용)
@@ -133,6 +148,28 @@ export async function loadWorksheetDB(fmeaId: string): Promise<FMEAWorksheetDB |
     }
     
     // 둘 다 실패하면 null 반환 (빈 DB로 초기화)
+    return null;
+  }
+}
+
+/**
+ * PostgreSQL DB에서 원자성(Atomic) 데이터를 강제로 로드
+ * - 레거시 DB가 있어도 무조건 원자성 DB를 반환
+ * - 복구/검증용
+ */
+export async function loadWorksheetDBAtomic(fmeaId: string): Promise<FMEAWorksheetDB | null> {
+  try {
+    const response = await fetch(`/api/fmea?fmeaId=${encodeURIComponent(fmeaId)}&format=atomic`);
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || 'Failed to load atomic FMEA data');
+    }
+    const db = await response.json();
+    if (!db) return null;
+    console.log('[DB 로드] 원자성 DB(강제) 로드 완료:', fmeaId);
+    return db as FMEAWorksheetDB;
+  } catch (error: any) {
+    console.error('[DB 로드] 원자성(강제) 로드 오류:', error);
     return null;
   }
 }

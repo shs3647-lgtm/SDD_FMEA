@@ -366,7 +366,7 @@ function FMEAWorksheetPageContent() {
 
   // 검색 필터링된 트리 데이터
   const filteredTree = useMemo(() => {
-    const q = state.search.toLowerCase();
+    const q = (state.search || '').toLowerCase();
     if (!q) return state.l2;
     return state.l2.filter(proc => {
       const procLabel = `${proc.no} ${proc.name}`.toLowerCase();

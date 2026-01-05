@@ -2,14 +2,46 @@
  * @file route.ts
  * @description FMEA 데이터 저장/로드 API 라우트
  * 
+ * ★★★ 근본적인 해결책: 레거시 데이터 = Single Source of Truth ★★★
+ * - 저장 시: 레거시 데이터를 FmeaLegacyData 테이블에 JSON으로 직접 저장
+ * - 로드 시: FmeaLegacyData에서 직접 가져오고, 원자성 DB는 PFD/CP/WS/PM 연동용으로만 사용
+ * - 이를 통해 원자성 DB ↔ 레거시 변환 과정에서의 데이터 손실 문제 해결
+ * 
  * POST /api/fmea - FMEA 데이터 저장
  * GET /api/fmea?fmeaId=xxx - FMEA 데이터 로드
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import type { FMEAWorksheetDB } from '@/app/pfmea/worksheet/schema';
-import { getPrisma } from '@/lib/prisma';
+import { getBaseDatabaseUrl, getPrisma, getPrismaForSchema } from '@/lib/prisma';
 import { upsertActiveMasterFromWorksheetTx } from '@/app/api/pfmea/master/sync';
+import { ensureProjectSchemaReady, getProjectSchemaName } from '@/lib/project-schema';
+
+// 레거시 데이터 스키마 버전
+const LEGACY_DATA_VERSION = '1.0.0';
+
+function computeLegacyCompletenessScore(legacy: any): number {
+  if (!legacy) return 0;
+  let score = 0;
+  const l1Name = String(legacy?.l1?.name || '').trim();
+  if (l1Name) score += 50;
+
+  const l2 = Array.isArray(legacy?.l2) ? legacy.l2 : [];
+  const meaningfulProcs = l2.filter((p: any) => String(p?.name || p?.no || '').trim());
+  score += meaningfulProcs.length * 20;
+
+  const l3Count = l2.reduce((acc: number, p: any) => acc + (Array.isArray(p?.l3) ? p.l3.length : 0), 0);
+  score += l3Count * 5;
+
+  const fmCount = l2.reduce((acc: number, p: any) => acc + (Array.isArray(p?.failureModes) ? p.failureModes.length : 0), 0);
+  const fcCount = l2.reduce((acc: number, p: any) => acc + (Array.isArray(p?.failureCauses) ? p.failureCauses.length : 0), 0);
+  score += (fmCount + fcCount) * 2;
+
+  const feCount = Array.isArray(legacy?.l1?.failureScopes) ? legacy.l1.failureScopes.length : 0;
+  score += feCount * 2;
+
+  return score;
+}
 
 // ✅ Prisma는 Node.js 런타임에서만 안정적으로 동작 (edge/browser 번들 방지)
 export const runtime = 'nodejs';
@@ -22,17 +54,24 @@ const TRANSACTION_TIMEOUT = 30000;
  */
 export async function POST(request: NextRequest) {
   try {
-    const prisma = getPrisma();
-    // ✅ Prisma 연결 확인
-    if (!prisma) {
+    const baseUrl = getBaseDatabaseUrl();
+    if (!baseUrl) {
       console.warn('[API] Prisma 미활성(null), 저장 스킵 (localStorage 폴백 사용)');
       return NextResponse.json(
-        { message: 'DATABASE_URL not configured, using localStorage fallback', fmeaId: null },
+        { 
+          success: false,
+          message: 'DATABASE_URL not configured, using localStorage fallback', 
+          fmeaId: null,
+          fallback: true 
+        },
         { status: 200 }
       );
     }
 
-    const db: FMEAWorksheetDB = await request.json();
+    const requestBody = await request.json();
+    const db: FMEAWorksheetDB = requestBody;
+    const legacyData = requestBody.legacyData; // ✅ 레거시 데이터 (Single Source of Truth)
+    const forceOverwrite = Boolean(requestBody.forceOverwrite); // ✅ 서버 가드 우회 (디버깅/관리자용)
     
     if (!db.fmeaId) {
       return NextResponse.json(
@@ -41,19 +80,109 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ✅ 프로젝트별 DB(스키마) 규칙: fmeaId 기준으로 스키마 자동 생성/초기화 후 그 스키마에 저장
+    const schema = getProjectSchemaName(db.fmeaId);
+    await ensureProjectSchemaReady({ baseDatabaseUrl: baseUrl, schema });
+    const prisma = getPrismaForSchema(schema);
+    if (!prisma) {
+      console.warn('[API] Prisma 미활성(null), 저장 스킵 (localStorage 폴백 사용)');
+      return NextResponse.json(
+        { 
+          success: false,
+          message: 'DATABASE_URL not configured, using localStorage fallback', 
+          fmeaId: null,
+          fallback: true 
+        },
+        { status: 200 }
+      );
+    }
+
+    // ✅ DB 연결 테스트 (스키마별 Prisma)
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+    } catch (connError: any) {
+      console.error('[API] DB 연결 실패:', connError);
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Database connection failed',
+          message: '데이터베이스 연결에 실패했습니다. localStorage로 폴백됩니다.',
+          details: connError.message,
+          fallback: true
+        },
+        { status: 200 }
+      );
+    }
+
+    const incomingLegacyScore = legacyData ? computeLegacyCompletenessScore(legacyData) : 0;
+
+    // ✅ 서버-사이드 보호 가드:
+    // - 기존 레거시 데이터가 충분히 풍부한데, 들어온 legacyData가 빈/저품질이면 덮어쓰기 차단
+    // - 자동저장 타이밍 이슈로 “빈 상태 저장”이 발생해도 DB가 망가지지 않도록 보호
+    if (!forceOverwrite && legacyData) {
+      try {
+        const existing = await prisma.fmeaLegacyData.findUnique({ where: { fmeaId: db.fmeaId } });
+        if (existing?.data) {
+          const incomingScore = computeLegacyCompletenessScore(legacyData);
+          const existingScore = computeLegacyCompletenessScore(existing.data);
+          const incomingL2Count = Array.isArray((legacyData as any)?.l2) ? (legacyData as any).l2.length : 0;
+          const existingL2Count = Array.isArray((existing.data as any)?.l2) ? (existing.data as any).l2.length : 0;
+
+          const looksLikeWipe =
+            (incomingScore === 0 && existingScore >= 50) ||
+            (incomingL2Count === 0 && existingL2Count > 0) ||
+            (incomingScore < existingScore && incomingScore <= 20);
+
+          if (looksLikeWipe) {
+            console.warn('[API] 🛡️ 덮어쓰기 차단: 기존 레거시가 더 풍부함', {
+              fmeaId: db.fmeaId,
+              incomingScore,
+              existingScore,
+              incomingL2Count,
+              existingL2Count,
+            });
+            // 200으로 반환하여 클라이언트가 에러로 간주하지 않게 하고, 기존 DB 데이터 보존
+            return NextResponse.json(
+              {
+                success: true,
+                preventedOverwrite: true,
+                message: 'Prevented overwriting existing legacy data with an empty/low-quality payload.',
+                incomingScore,
+                existingScore,
+              },
+              { status: 200 }
+            );
+          }
+        }
+      } catch (e: any) {
+        // 테이블 없거나 접근 실패 시 가드 스킵 (하위 호환)
+        if (e?.code !== 'P2021') {
+          console.warn('[API] 레거시 덮어쓰기 가드 오류(무시):', e.message);
+        }
+      }
+    }
+
     // 트랜잭션으로 모든 데이터 저장 (배치 처리)
     await prisma.$transaction(async (tx: any) => {
+      // ✅ 표준화: 원자성 DB는 "현재 payload"와 정확히 일치해야 함
+      // - 기존에 id가 비어 uid()가 매번 생성되던 케이스로 인해 동일 fmeaId에 중복 row가 누적됨
+      // - legacyData가 충분히 있는 정상 저장에서는 원자성 DB를 한 번 비우고(구조부터 cascade),
+      //   payload 기준으로 재생성하여 항상 1:1 일치 보장
+      if (legacyData && incomingLegacyScore > 0) {
+        console.log('[API] 🧹 원자성 DB 정규화: 기존 fmeaId 데이터 purge 후 재생성', {
+          fmeaId: db.fmeaId,
+          incomingLegacyScore,
+        });
+        // L1Structure 삭제 시 onDelete: Cascade로 하위 대부분이 함께 삭제됨
+        await tx.l1Structure.deleteMany({ where: { fmeaId: db.fmeaId } });
+      }
+
       // 1. L1Structure 저장
       if (db.l1Structure) {
-        await tx.l1Structure.upsert({
-          where: { id: db.l1Structure.id },
-          create: {
+        await tx.l1Structure.create({
+          data: {
             id: db.l1Structure.id,
             fmeaId: db.fmeaId,
-            name: db.l1Structure.name,
-            confirmed: db.l1Structure.confirmed ?? false,
-          },
-          update: {
             name: db.l1Structure.name,
             confirmed: db.l1Structure.confirmed ?? false,
           },
@@ -62,216 +191,129 @@ export async function POST(request: NextRequest) {
 
       // 2. L2Structures 배치 저장
       if (db.l2Structures.length > 0) {
-        await Promise.all(
-          db.l2Structures.map(l2 =>
-            tx.l2Structure.upsert({
-              where: { id: l2.id },
-              create: {
-                id: l2.id,
-                fmeaId: db.fmeaId,
-                l1Id: l2.l1Id,
-                no: l2.no,
-                name: l2.name,
-                order: l2.order,
-              },
-              update: {
-                l1Id: l2.l1Id,
-                no: l2.no,
-                name: l2.name,
-                order: l2.order,
-              },
-            })
-          )
-        );
+        await tx.l2Structure.createMany({
+          data: db.l2Structures.map(l2 => ({
+            id: l2.id,
+            fmeaId: db.fmeaId,
+            l1Id: l2.l1Id,
+            no: l2.no,
+            name: l2.name,
+            order: l2.order,
+          })),
+          skipDuplicates: true,
+        });
       }
 
       // 3. L3Structures 배치 저장
       if (db.l3Structures.length > 0) {
-        await Promise.all(
-          db.l3Structures.map(l3 =>
-            tx.l3Structure.upsert({
-              where: { id: l3.id },
-              create: {
-                id: l3.id,
-                fmeaId: db.fmeaId,
-                l1Id: l3.l1Id,
-                l2Id: l3.l2Id,
-                m4: l3.m4 || null,
-                name: l3.name,
-                order: l3.order,
-              },
-              update: {
-                l1Id: l3.l1Id,
-                l2Id: l3.l2Id,
-                m4: l3.m4 || null,
-                name: l3.name,
-                order: l3.order,
-              },
-            })
-          )
-        );
+        await tx.l3Structure.createMany({
+          data: db.l3Structures.map(l3 => ({
+            id: l3.id,
+            fmeaId: db.fmeaId,
+            l1Id: l3.l1Id,
+            l2Id: l3.l2Id,
+            m4: l3.m4 || null,
+            name: l3.name,
+            order: l3.order,
+          })),
+          skipDuplicates: true,
+        });
       }
 
       // 4. L1Functions 배치 저장
       if (db.l1Functions.length > 0) {
-        await Promise.all(
-          db.l1Functions.map(l1Func =>
-            tx.l1Function.upsert({
-              where: { id: l1Func.id },
-              create: {
-                id: l1Func.id,
-                fmeaId: db.fmeaId,
-                l1StructId: l1Func.l1StructId,
-                category: l1Func.category,
-                functionName: l1Func.functionName,
-                requirement: l1Func.requirement,
-              },
-              update: {
-                l1StructId: l1Func.l1StructId,
-                category: l1Func.category,
-                functionName: l1Func.functionName,
-                requirement: l1Func.requirement,
-              },
-            })
-          )
-        );
+        await tx.l1Function.createMany({
+          data: db.l1Functions.map(f => ({
+            id: f.id,
+            fmeaId: db.fmeaId,
+            l1StructId: f.l1StructId,
+            category: f.category,
+            functionName: f.functionName,
+            requirement: f.requirement,
+          })),
+          skipDuplicates: true,
+        });
       }
 
       // 5. L2Functions 배치 저장
       if (db.l2Functions.length > 0) {
-        await Promise.all(
-          db.l2Functions.map(l2Func =>
-            tx.l2Function.upsert({
-              where: { id: l2Func.id },
-              create: {
-                id: l2Func.id,
-                fmeaId: db.fmeaId,
-                l2StructId: l2Func.l2StructId,
-                functionName: l2Func.functionName,
-                productChar: l2Func.productChar,
-                specialChar: l2Func.specialChar || null,
-              },
-              update: {
-                l2StructId: l2Func.l2StructId,
-                functionName: l2Func.functionName,
-                productChar: l2Func.productChar,
-                specialChar: l2Func.specialChar || null,
-              },
-            })
-          )
-        );
+        await tx.l2Function.createMany({
+          data: db.l2Functions.map(f => ({
+            id: f.id,
+            fmeaId: db.fmeaId,
+            l2StructId: f.l2StructId,
+            functionName: f.functionName,
+            productChar: f.productChar,
+            specialChar: f.specialChar || null,
+          })),
+          skipDuplicates: true,
+        });
       }
 
       // 6. L3Functions 배치 저장
       if (db.l3Functions.length > 0) {
-        await Promise.all(
-          db.l3Functions.map(l3Func =>
-            tx.l3Function.upsert({
-              where: { id: l3Func.id },
-              create: {
-                id: l3Func.id,
-                fmeaId: db.fmeaId,
-                l3StructId: l3Func.l3StructId,
-                l2StructId: l3Func.l2StructId,
-                functionName: l3Func.functionName,
-                processChar: l3Func.processChar,
-                specialChar: l3Func.specialChar || null,
-              },
-              update: {
-                l3StructId: l3Func.l3StructId,
-                l2StructId: l3Func.l2StructId,
-                functionName: l3Func.functionName,
-                processChar: l3Func.processChar,
-                specialChar: l3Func.specialChar || null,
-              },
-            })
-          )
-        );
+        await tx.l3Function.createMany({
+          data: db.l3Functions.map(f => ({
+            id: f.id,
+            fmeaId: db.fmeaId,
+            l3StructId: f.l3StructId,
+            l2StructId: f.l2StructId,
+            functionName: f.functionName,
+            processChar: f.processChar,
+            specialChar: f.specialChar || null,
+          })),
+          skipDuplicates: true,
+        });
       }
 
       // 7. FailureEffects 배치 저장
       if (db.failureEffects.length > 0) {
-        await Promise.all(
-          db.failureEffects.map(fe =>
-            tx.failureEffect.upsert({
-              where: { id: fe.id },
-              create: {
-                id: fe.id,
-                fmeaId: db.fmeaId,
-                l1FuncId: fe.l1FuncId,
-                category: fe.category,
-                effect: fe.effect,
-                severity: fe.severity,
-              },
-              update: {
-                l1FuncId: fe.l1FuncId,
-                category: fe.category,
-                effect: fe.effect,
-                severity: fe.severity,
-              },
-            })
-          )
-        );
+        await tx.failureEffect.createMany({
+          data: db.failureEffects.map(fe => ({
+            id: fe.id,
+            fmeaId: db.fmeaId,
+            l1FuncId: fe.l1FuncId,
+            category: fe.category,
+            effect: fe.effect,
+            severity: fe.severity,
+          })),
+          skipDuplicates: true,
+        });
       }
 
       // 8. FailureModes 배치 저장
       if (db.failureModes.length > 0) {
-        await Promise.all(
-          db.failureModes.map(fm =>
-            tx.failureMode.upsert({
-              where: { id: fm.id },
-              create: {
-                id: fm.id,
-                fmeaId: db.fmeaId,
-                l2FuncId: fm.l2FuncId,
-                l2StructId: fm.l2StructId,
-                productCharId: fm.productCharId || null,
-                mode: fm.mode,
-                specialChar: fm.specialChar ?? false,
-              },
-              update: {
-                l2FuncId: fm.l2FuncId,
-                l2StructId: fm.l2StructId,
-                productCharId: fm.productCharId || null,
-                mode: fm.mode,
-                specialChar: fm.specialChar ?? false,
-              },
-            })
-          )
-        );
+        await tx.failureMode.createMany({
+          data: db.failureModes.map(fm => ({
+            id: fm.id,
+            fmeaId: db.fmeaId,
+            l2FuncId: fm.l2FuncId,
+            l2StructId: fm.l2StructId,
+            productCharId: fm.productCharId || null,
+            mode: fm.mode,
+            specialChar: fm.specialChar ?? false,
+          })),
+          skipDuplicates: true,
+        });
       }
 
       // 9. FailureCauses 배치 저장
       if (db.failureCauses.length > 0) {
-        await Promise.all(
-          db.failureCauses.map(fc =>
-            tx.failureCause.upsert({
-              where: { id: fc.id },
-              create: {
-                id: fc.id,
-                fmeaId: db.fmeaId,
-                l3FuncId: fc.l3FuncId,
-                l3StructId: fc.l3StructId,
-                l2StructId: fc.l2StructId,
-                cause: fc.cause,
-                occurrence: fc.occurrence || null,
-              },
-              update: {
-                l3FuncId: fc.l3FuncId,
-                l3StructId: fc.l3StructId,
-                l2StructId: fc.l2StructId,
-                cause: fc.cause,
-                occurrence: fc.occurrence || null,
-              },
-            })
-          )
-        );
+        await tx.failureCause.createMany({
+          data: db.failureCauses.map(fc => ({
+            id: fc.id,
+            fmeaId: db.fmeaId,
+            l3FuncId: fc.l3FuncId,
+            l3StructId: fc.l3StructId,
+            l2StructId: fc.l2StructId,
+            cause: fc.cause,
+            occurrence: fc.occurrence || null,
+          })),
+          skipDuplicates: true,
+        });
       }
 
       // 10. FailureLinks 저장 (기존 링크 삭제 후 재생성)
-      await tx.failureLink.deleteMany({
-        where: { fmeaId: db.fmeaId },
-      });
       if (db.failureLinks.length > 0) {
         await tx.failureLink.createMany({
           data: db.failureLinks.map(link => ({
@@ -354,7 +396,77 @@ export async function POST(request: NextRequest) {
       }
 
       // ✅ PFMEA Master 자동 업데이트 (프로젝트 신규 데이터 추출 → 마스터 누적)
-      await upsertActiveMasterFromWorksheetTx(tx, db);
+      // 마스터 DB는 공용(public)으로 유지 (프로젝트별 DB와 분리)
+      const publicPrisma = getPrisma();
+      if (publicPrisma) {
+        await publicPrisma.$transaction(async (pubTx: any) => {
+          await upsertActiveMasterFromWorksheetTx(pubTx, db);
+        });
+      }
+
+      // 13. FmeaConfirmedState 저장 (확정 상태)
+      if (db.confirmed) {
+        try {
+          await tx.fmeaConfirmedState.upsert({
+            where: { fmeaId: db.fmeaId },
+            create: {
+              fmeaId: db.fmeaId,
+              structureConfirmed: db.confirmed.structure || false,
+              l1FunctionConfirmed: db.confirmed.l1Function || false,
+              l2FunctionConfirmed: db.confirmed.l2Function || false,
+              l3FunctionConfirmed: db.confirmed.l3Function || false,
+              failureL1Confirmed: db.confirmed.l1Failure || false,
+              failureL2Confirmed: db.confirmed.l2Failure || false,
+              failureL3Confirmed: db.confirmed.l3Failure || false,
+              failureLinkConfirmed: db.confirmed.failureLink || false,
+              riskConfirmed: db.confirmed.risk || false,
+              optimizationConfirmed: db.confirmed.optimization || false,
+            },
+            update: {
+              structureConfirmed: db.confirmed.structure || false,
+              l1FunctionConfirmed: db.confirmed.l1Function || false,
+              l2FunctionConfirmed: db.confirmed.l2Function || false,
+              l3FunctionConfirmed: db.confirmed.l3Function || false,
+              failureL1Confirmed: db.confirmed.l1Failure || false,
+              failureL2Confirmed: db.confirmed.l2Failure || false,
+              failureL3Confirmed: db.confirmed.l3Failure || false,
+              failureLinkConfirmed: db.confirmed.failureLink || false,
+              riskConfirmed: db.confirmed.risk || false,
+              optimizationConfirmed: db.confirmed.optimization || false,
+            },
+          });
+        } catch (e: any) {
+          // 테이블이 없으면 스킵 (마이그레이션 전)
+          if (e?.code !== 'P2021') {
+            console.warn('[API] 확정 상태 저장 오류 (무시):', e.message);
+          }
+        }
+      }
+      
+      // ★★★ 14. FmeaLegacyData 저장 (Single Source of Truth) ★★★
+      // 레거시 데이터를 JSON으로 직접 저장하여 원자성 DB ↔ 레거시 변환 문제 방지
+      if (legacyData) {
+        try {
+          await tx.fmeaLegacyData.upsert({
+            where: { fmeaId: db.fmeaId },
+            create: {
+              fmeaId: db.fmeaId,
+              data: legacyData,
+              version: LEGACY_DATA_VERSION,
+            },
+            update: {
+              data: legacyData,
+              version: LEGACY_DATA_VERSION,
+            },
+          });
+          console.log('[API] ✅ 레거시 데이터 DB 저장 완료 (Single Source of Truth)');
+        } catch (e: any) {
+          // 테이블이 없으면 스킵 (마이그레이션 전)
+          if (e?.code !== 'P2021') {
+            console.warn('[API] 레거시 데이터 저장 오류 (무시):', e.message);
+          }
+        }
+      }
     }, {
       timeout: TRANSACTION_TIMEOUT,
     });
@@ -368,10 +480,36 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('[API] FMEA 저장 오류:', error);
     
+    // 연결 에러인 경우 localStorage 폴백 가능하도록 200 반환
+    const isConnectionError = 
+      error.code === 'P1001' || // Connection timeout
+      error.code === 'P1002' || // Database server connection timeout
+      error.code === 'P1003' || // Database does not exist
+      error.code === 'P1017' || // Server has closed the connection
+      error.message?.includes('connect') ||
+      error.message?.includes('timeout') ||
+      error.message?.includes('ECONNREFUSED');
+    
+    if (isConnectionError) {
+      console.warn('[API] DB 연결 에러 - localStorage 폴백 가능:', error.message);
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Database connection error',
+          message: '데이터베이스 연결 오류가 발생했습니다. localStorage로 폴백됩니다.',
+          code: error.code,
+          details: error.message,
+          fallback: true
+        },
+        { status: 200 } // 200으로 반환하여 클라이언트가 localStorage로 폴백할 수 있도록
+      );
+    }
+    
     // Prisma 에러 상세 정보
     if (error.code) {
       return NextResponse.json(
         { 
+          success: false,
           error: 'Failed to save FMEA data',
           code: error.code,
           details: error.meta || error.message,
@@ -381,7 +519,11 @@ export async function POST(request: NextRequest) {
     }
     
     return NextResponse.json(
-      { error: 'Failed to save FMEA data', details: error.message },
+      { 
+        success: false,
+        error: 'Failed to save FMEA data', 
+        details: error.message 
+      },
       { status: 500 }
     );
   }
@@ -389,18 +531,23 @@ export async function POST(request: NextRequest) {
 
 /**
  * FMEA 데이터 로드
+ * 
+ * ★★★ 근본적인 해결책: 레거시 데이터 우선 로드 ★★★
+ * 1. FmeaLegacyData 테이블에서 레거시 데이터 로드 (Single Source of Truth)
+ * 2. 레거시 데이터가 있으면 그것을 직접 사용 (역변환 과정 없음!)
+ * 3. 레거시 데이터가 없으면 원자성 DB에서 역변환 (하위 호환성)
  */
 export async function GET(request: NextRequest) {
   try {
-    const prisma = getPrisma();
-    // ✅ Prisma 연결 확인
-    if (!prisma) {
+    const baseUrl = getBaseDatabaseUrl();
+    if (!baseUrl) {
       console.warn('[API] Prisma 미활성(null), null 반환 (localStorage 폴백 사용)');
       return NextResponse.json(null);
     }
 
     const searchParams = request.nextUrl.searchParams;
     const fmeaId = searchParams.get('fmeaId');
+    const format = searchParams.get('format'); // 'atomic' | undefined
 
     if (!fmeaId) {
       return NextResponse.json(
@@ -409,7 +556,86 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 모든 데이터를 병렬로 조회
+    // ✅ format=atomic이면 legacy 우선 로드를 스킵하고 원자성 DB를 그대로 반환
+    // (복구/검증/타 모듈 연동을 위해 raw atomic이 필요할 때 사용)
+    const forceAtomic = format === 'atomic';
+
+    // ✅ 프로젝트별 DB(스키마) 규칙 적용
+    const schema = getProjectSchemaName(fmeaId);
+    await ensureProjectSchemaReady({ baseDatabaseUrl: baseUrl, schema });
+    const prisma = getPrismaForSchema(schema);
+    if (!prisma) {
+      console.warn('[API] Prisma 미활성(null), null 반환 (localStorage 폴백 사용)');
+      return NextResponse.json(null);
+    }
+    
+    // ★★★ 1단계: 레거시 데이터 우선 로드 (Single Source of Truth) ★★★
+    let legacyDataRecord: any = null;
+    try {
+      legacyDataRecord = await prisma.fmeaLegacyData.findUnique({
+        where: { fmeaId }
+      });
+    } catch (e: any) {
+      // 테이블이 없으면 스킵 (마이그레이션 전)
+      if (e?.code !== 'P2021') {
+        console.warn('[API] 레거시 데이터 로드 오류 (무시):', e.message);
+      }
+    }
+
+    // ✅ 프로젝트 스키마에 레거시가 없으면 public(기존 저장소)에서 1회 마이그레이션
+    if (!legacyDataRecord?.data) {
+      const publicPrisma = getPrisma();
+      const fromPublic = await publicPrisma?.fmeaLegacyData.findUnique({ where: { fmeaId } }).catch(() => null);
+      if (fromPublic?.data) {
+        await prisma.fmeaLegacyData.upsert({
+          where: { fmeaId },
+          create: { fmeaId, data: fromPublic.data, version: fromPublic.version || '1.0.0' },
+          update: { data: fromPublic.data, version: fromPublic.version || '1.0.0' },
+        });
+        legacyDataRecord = await prisma.fmeaLegacyData.findUnique({ where: { fmeaId } }).catch(() => null);
+      }
+    }
+    
+    // ★★★ 레거시 데이터가 있으면 직접 반환 (역변환 과정 없음!) ★★★
+    if (!forceAtomic && legacyDataRecord && legacyDataRecord.data) {
+      console.log('[API] ✅ 레거시 데이터 DB에서 직접 로드 (Single Source of Truth)');
+      
+      // 확정 상태도 함께 로드
+      const confirmedState = await prisma.fmeaConfirmedState.findUnique({
+        where: { fmeaId }
+      }).catch(() => null);
+      
+      // 레거시 데이터에 confirmed 상태 추가
+      const legacyWithConfirmed = {
+        ...legacyDataRecord.data,
+        confirmed: {
+          structure: confirmedState?.structureConfirmed ?? false,
+          l1Function: confirmedState?.l1FunctionConfirmed ?? false,
+          l2Function: confirmedState?.l2FunctionConfirmed ?? false,
+          l3Function: confirmedState?.l3FunctionConfirmed ?? false,
+          l1Failure: confirmedState?.failureL1Confirmed ?? false,
+          l2Failure: confirmedState?.failureL2Confirmed ?? false,
+          l3Failure: confirmedState?.failureL3Confirmed ?? false,
+          failureLink: confirmedState?.failureLinkConfirmed ?? false,
+          risk: confirmedState?.riskConfirmed ?? false,
+          optimization: confirmedState?.optimizationConfirmed ?? false,
+        },
+        // 프론트엔드에서 레거시 데이터임을 알 수 있도록 플래그 추가
+        _isLegacyDirect: true,
+        _legacyVersion: legacyDataRecord.version,
+        _loadedAt: new Date().toISOString(),
+      };
+      
+      return NextResponse.json(legacyWithConfirmed);
+    }
+    
+    if (forceAtomic) {
+      console.log('[API] format=atomic 요청 - 원자성 DB를 그대로 반환');
+    } else {
+      console.log('[API] ⚠️ 레거시 데이터 없음, 원자성 DB에서 역변환 (하위 호환성)');
+    }
+
+    // 모든 데이터를 병렬로 조회 (하위 호환성)
     const [
       l1Structure,
       l2Structures,
@@ -423,6 +649,7 @@ export async function GET(request: NextRequest) {
       failureLinks,
       riskAnalyses,
       optimizations,
+      confirmedState,
     ] = await Promise.all([
       prisma.l1Structure.findFirst({ where: { fmeaId } }),
       prisma.l2Structure.findMany({ where: { fmeaId }, orderBy: { order: 'asc' } }),
@@ -436,6 +663,8 @@ export async function GET(request: NextRequest) {
       prisma.failureLink.findMany({ where: { fmeaId } }),
       prisma.riskAnalysis.findMany({ where: { fmeaId } }),
       prisma.optimization.findMany({ where: { fmeaId } }),
+      // 확정 상태 로드 (테이블 없으면 null 반환)
+      prisma.fmeaConfirmedState.findUnique({ where: { fmeaId } }).catch(() => null),
     ]);
 
     // 데이터가 없으면 null 반환
@@ -578,16 +807,16 @@ export async function GET(request: NextRequest) {
         updatedAt: opt.updatedAt.toISOString(),
       })),
       confirmed: {
-        structure: l1Structure?.confirmed ?? false,
-        l1Function: false, // TODO: 확정 상태를 별도 테이블에 저장
-        l2Function: false,
-        l3Function: false,
-        l1Failure: false,
-        l2Failure: false,
-        l3Failure: false,
-        failureLink: false,
-        risk: false,
-        optimization: false,
+        structure: confirmedState?.structureConfirmed ?? l1Structure?.confirmed ?? false,
+        l1Function: confirmedState?.l1FunctionConfirmed ?? false,
+        l2Function: confirmedState?.l2FunctionConfirmed ?? false,
+        l3Function: confirmedState?.l3FunctionConfirmed ?? false,
+        l1Failure: confirmedState?.failureL1Confirmed ?? false,
+        l2Failure: confirmedState?.failureL2Confirmed ?? false,
+        l3Failure: confirmedState?.failureL3Confirmed ?? false,
+        failureLink: confirmedState?.failureLinkConfirmed ?? false,
+        risk: confirmedState?.riskConfirmed ?? false,
+        optimization: confirmedState?.optimizationConfirmed ?? false,
       },
     };
 

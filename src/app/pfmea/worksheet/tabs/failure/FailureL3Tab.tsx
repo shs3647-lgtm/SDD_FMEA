@@ -45,7 +45,7 @@ const cellBase: React.CSSProperties = { border: BORDER, padding: '4px 6px', font
 const headerStyle = (bg: string, color = '#fff'): React.CSSProperties => ({ ...cellBase, background: bg, color, fontWeight: FONT_WEIGHTS.bold, textAlign: 'center' });
 const dataCell = (bg: string): React.CSSProperties => ({ ...cellBase, background: bg });
 
-export default function FailureL3Tab({ state, setState, setDirty, saveToLocalStorage, saveAtomicDB }: FailureTabProps) {
+export default function FailureL3Tab({ state, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB }: FailureTabProps) {
   const [modal, setModal] = useState<{ 
     type: string; 
     processId: string; 
@@ -94,6 +94,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
   };
 
   // ✅ 항목별 누락 건수 분리 계산 - CASCADE 구조 (공정특성 기준, 필터링된 데이터만 카운트)
+  // ⚠️ 중복 공정특성은 1번만 카운트 (flatRows 중복 제거 로직과 동일)
   const missingCounts = useMemo(() => {
     // ✅ 상위 단계 미확정이면 누락 계산 자체를 하지 않음 (확정 게이트)
     if (!isUpstreamConfirmed) return { failureCauseCount: 0, total: 0 };
@@ -107,6 +108,9 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
     
     meaningfulProcs.forEach(proc => {
       const allCauses = proc.failureCauses || [];  // 공정 레벨 고장원인
+      
+      // ✅ 공정별 중복 공정특성 추적 (이름 기준)
+      const countedCharsInProc = new Set<string>();
       
       // ✅ 의미 있는 작업요소만 필터링
       const meaningfulL3 = (proc.l3 || []).filter((we: any) => {
@@ -129,6 +133,14 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
           });
           
           meaningfulChars.forEach((pc: any) => {
+            const charName = pc.name?.trim();
+            
+            // ✅ 중복 공정특성 스킵 (이미 카운트한 이름은 무시)
+            if (countedCharsInProc.has(charName)) {
+              return;
+            }
+            countedCharsInProc.add(charName);
+            
             // 이 공정특성에 연결된 고장원인들
             const linkedCauses = allCauses.filter((c: any) => c.processCharId === pc.id);
             if (linkedCauses.length === 0) {
@@ -147,6 +159,45 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
   
   // 총 누락 건수 (기존 호환성)
   const missingCount = missingCounts.total;
+
+  // ✅ 중복 고장원인 정리 (마운트 시 1회만 실행)
+  const hasCleanedRef = useRef(false);
+  useEffect(() => {
+    if (hasCleanedRef.current) return;
+    hasCleanedRef.current = true;
+    
+    // 중복 고장원인 검사 및 정리
+    let hasDuplicates = false;
+    const cleanedL2 = state.l2.map((proc: any) => {
+      const currentCauses = proc.failureCauses || [];
+      if (currentCauses.length === 0) return proc;
+      
+      // processCharId + name 조합으로 중복 제거
+      const seen = new Set<string>();
+      const uniqueCauses = currentCauses.filter((c: any) => {
+        const key = `${c.processCharId || ''}_${c.name || ''}`;
+        if (seen.has(key)) {
+          hasDuplicates = true;
+          console.log('[FailureL3Tab] 중복 제거:', c.name, 'processCharId:', c.processCharId);
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+      
+      if (uniqueCauses.length !== currentCauses.length) {
+        return { ...proc, failureCauses: uniqueCauses };
+      }
+      return proc;
+    });
+    
+    if (hasDuplicates) {
+      console.log('[FailureL3Tab] 중복 고장원인 정리 완료');
+      setState(prev => ({ ...prev, l2: cleanedL2 as any }));
+      setDirty(true);
+      setTimeout(() => saveToLocalStorage?.(), 100);
+    }
+  }, [state.l2, setState, setDirty, saveToLocalStorage]);
 
   // ✅ failureCauses 변경 감지용 ref (FailureL2Tab 패턴과 동일)
   const failureCausesRef = useRef<string>('');
@@ -170,8 +221,8 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
   // 현재: 저장 직후에만 검증 (자동 저장 로직에서 처리)
 
 
-  // 확정 핸들러 (L2 패턴 적용)
-  const handleConfirm = useCallback(() => {
+  // 확정 핸들러 (L2 패턴 적용) - ✅ setStateSynced 사용하여 확정 상태 즉시 동기화
+  const handleConfirm = useCallback(async () => {
     if (!isUpstreamConfirmed) {
       alert('⚠️ 기능분석(3L)을 먼저 확정해주세요.\n\n기능분석 확정 후 고장원인(FC)을 확정할 수 있습니다.');
       return;
@@ -183,35 +234,48 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
     }
     
     // ✅ 현재 고장원인 통계 로그
-    const allCauses = state.l2.flatMap((p: any) => (p.l3 || []).flatMap((we: any) => we.failureCauses || []));
+    const allCauses = state.l2.flatMap((p: any) => (p.failureCauses || []));
     console.log('[FailureL3Tab] 확정 시 고장원인:', allCauses.length, '개');
     
-    setState(prev => {
-      const newState = { ...prev, failureL3Confirmed: true };
-      console.log('[FailureL3Tab] 확정 상태 업데이트:', newState.failureL3Confirmed);
-      return newState;
-    });
+    // ✅ setStateSynced 사용하여 stateRef 즉시 동기화 (확정 상태 저장 보장)
+    const updateState = (prev: any) => ({ ...prev, failureL3Confirmed: true });
+    if (setStateSynced) {
+      setStateSynced(updateState);
+      console.log('[FailureL3Tab] setStateSynced로 확정 상태 동기화');
+    } else {
+      setState(updateState);
+    }
     setDirty(true);
     
     // ✅ 확정 상태 저장 - setTimeout으로 state 업데이트 대기
-    setTimeout(() => {
+    setTimeout(async () => {
       saveToLocalStorage?.();
-      // ✅ 확정 시 DB 저장 (명시적 호출)
+      // ✅ 확정 시 DB 저장 (try-catch 사용)
       if (saveAtomicDB) {
-        saveAtomicDB().catch(e => console.error('[FailureL3Tab] DB 저장 오류:', e));
+        try {
+          await saveAtomicDB();
+          console.log('[FailureL3Tab] DB 저장 완료');
+        } catch (e: any) {
+          console.error('[FailureL3Tab] DB 저장 오류:', e);
+        }
       }
       console.log('[FailureL3Tab] 확정 후 localStorage 및 DB 저장 완료');
     }, 100);
     
     alert('3L 고장원인(FC) 분석이 확정되었습니다.');
-  }, [isUpstreamConfirmed, missingCount, state.l2, setState, setDirty, saveToLocalStorage, saveAtomicDB]);
+  }, [isUpstreamConfirmed, missingCount, state.l2, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
-  // 수정 핸들러
+  // 수정 핸들러 - ✅ setStateSynced 사용
   const handleEdit = useCallback(() => {
-    setState(prev => ({ ...prev, failureL3Confirmed: false }));
+    const updateState = (prev: any) => ({ ...prev, failureL3Confirmed: false });
+    if (setStateSynced) {
+      setStateSynced(updateState);
+    } else {
+      setState(updateState);
+    }
     setDirty(true);
     setTimeout(() => saveToLocalStorage?.(), 100);
-  }, [setState, setDirty, saveToLocalStorage]);
+  }, [setState, setStateSynced, setDirty, saveToLocalStorage]);
 
   /**
    * ✅ [핵심] handleSave - CASCADE 구조 (공정특성→고장원인 연결)
@@ -226,7 +290,8 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
     
     console.log('[FailureL3Tab] 저장 시작', { processId, processCharId, causeId, selectedCount: selectedValues.length });
     
-    setState(prev => {
+    // ✅ setStateSynced 사용하여 stateRef 즉시 동기화 (저장 보장)
+    const updateFn = (prev: any) => {
       const newState = JSON.parse(JSON.stringify(prev));
 
       if (type === 'l3FailureCause') {
@@ -325,17 +390,32 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
       
       console.log('[FailureL3Tab] 상태 업데이트 완료');
       return newState;
-    });
+    };
+    
+    // ✅ setStateSynced 사용하여 stateRef 즉시 동기화
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     
     setDirty(true);
     setModal(null);
     
-    // ✅ 저장 보장 (stateRef 업데이트 대기 후 저장)
-    setTimeout(() => {
+    // ✅ 저장 보장 (stateRef 업데이트 대기 후 저장) + DB 저장 추가
+    setTimeout(async () => {
       saveToLocalStorage?.();
+      if (saveAtomicDB) {
+        try {
+          await saveAtomicDB();
+          console.log('[FailureL3Tab] DB 저장 완료');
+        } catch (e: any) {
+          console.error('[FailureL3Tab] DB 저장 오류:', e);
+        }
+      }
       console.log('[FailureL3Tab] 저장 완료');
     }, 200);
-  }, [modal, setState, setDirty, saveToLocalStorage]);
+  }, [modal, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   const handleDelete = useCallback((deletedValues: string[]) => {
     if (!modal) return;
@@ -343,7 +423,7 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
     const { type, processId, processCharId } = modal;
     const deletedSet = new Set(deletedValues);
     
-    setState(prev => {
+    const updateFn = (prev: any) => {
       const newState = JSON.parse(JSON.stringify(prev));
       
       if (type === 'l3FailureCause') {
@@ -363,15 +443,33 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
       newState.failureL3Confirmed = false;
       
       return newState;
-    });
+    };
+    
+    // ✅ setStateSynced 사용하여 stateRef 즉시 동기화
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     
     setDirty(true);
-    setTimeout(() => saveToLocalStorage?.(), 200);
-  }, [modal, setState, setDirty, saveToLocalStorage]);
+    
+    // ✅ 저장 보장 + DB 저장
+    setTimeout(async () => {
+      saveToLocalStorage?.();
+      if (saveAtomicDB) {
+        try {
+          await saveAtomicDB();
+        } catch (e: any) {
+          console.error('[FailureL3Tab] 삭제 후 DB 저장 오류:', e);
+        }
+      }
+    }, 200);
+  }, [modal, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   // ✅ 발생도 업데이트 - 공정 레벨에서 수정 (CASCADE)
   const updateOccurrence = useCallback((processId: string, causeId: string, occurrence: number | undefined) => {
-    setState(prev => {
+    const updateFn = (prev: any) => {
       const newState = JSON.parse(JSON.stringify(prev));
       newState.l2 = newState.l2.map((proc: any) => {
         if (proc.id !== processId) return proc;
@@ -385,10 +483,24 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
       // ✅ CRUD Update: 확정 상태 해제
       newState.failureL3Confirmed = false;
       return newState;
-    });
+    };
+    
+    // ✅ setStateSynced 사용
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     setDirty(true);
-    if (saveToLocalStorage) saveToLocalStorage();
-  }, [setState, setDirty, saveToLocalStorage]);
+    
+    // ✅ 저장 보장 + DB 저장
+    setTimeout(async () => {
+      saveToLocalStorage?.();
+      if (saveAtomicDB) {
+        try { await saveAtomicDB(); } catch (e) { /* ignore */ }
+      }
+    }, 100);
+  }, [setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   /**
    * ✅ 평탄화된 행 데이터 - CASCADE 구조 (FailureL2Tab 패턴)
@@ -401,9 +513,18 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
     const rows: any[] = [];
     const processes = state.l2.filter(p => p.name && !p.name.includes('클릭'));
     
+    // ✅ 공정별로 이미 표시한 공정특성 이름 추적 (중복 제거)
+    const displayedCharsByProc = new Map<string, Set<string>>();
+    
     processes.forEach(proc => {
       const workElements = (proc.l3 || []).filter((we: any) => we.name && !we.name.includes('클릭'));
       const allCauses = proc.failureCauses || [];  // 공정 레벨에 저장된 고장원인
+      
+      // 이 공정에서 이미 표시된 공정특성 이름 Set
+      if (!displayedCharsByProc.has(proc.id)) {
+        displayedCharsByProc.set(proc.id, new Set());
+      }
+      const displayedCharsInProc = displayedCharsByProc.get(proc.id)!;
       
       if (workElements.length === 0) {
         rows.push({ proc, we: null, processChar: null, cause: null, procRowSpan: 1, weRowSpan: 1, charRowSpan: 1, showProc: true, showWe: true, showChar: true });
@@ -431,6 +552,15 @@ export default function FailureL3Tab({ state, setState, setDirty, saveToLocalSto
           (f.processChars || []).forEach((c: any) => {
             // ✅ 의미 있는 공정특성만 추가
             if (!isMeaningful(c.name)) return;
+            
+            // ✅ 중복 공정특성 제거: 이미 표시된 이름은 스킵
+            const charName = c.name?.trim();
+            if (displayedCharsInProc.has(charName)) {
+              console.log('[FailureL3Tab] 중복 공정특성 스킵:', charName, '공정:', proc.name);
+              return; // 이미 표시된 공정특성은 스킵
+            }
+            displayedCharsInProc.add(charName);
+            
             allProcessChars.push({ ...c, funcId: f.id, funcName: f.name });
           });
         });

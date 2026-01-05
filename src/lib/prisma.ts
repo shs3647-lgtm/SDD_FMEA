@@ -17,6 +17,8 @@ import { Pool } from 'pg';
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
   pgPool: Pool | undefined;
+  prismaBySchema: Map<string, PrismaClient> | undefined;
+  pgPoolBySchema: Map<string, Pool> | undefined;
 };
 
 function ensureDatabaseUrlLoaded(): void {
@@ -87,5 +89,51 @@ function getPrismaClient(): PrismaClient | null {
 // Lazy getter export (API에서 요청 시점에 호출)
 export function getPrisma(): PrismaClient | null {
   return getPrismaClient();
+}
+
+function buildDatabaseUrlWithSchema(baseUrl: string, schema: string): string {
+  // Avoid logging secrets; use URL to safely manipulate query params
+  const u = new URL(baseUrl);
+  u.searchParams.set('schema', schema);
+  return u.toString();
+}
+
+/**
+ * 프로젝트별 스키마용 Prisma Client
+ * - DATABASE_URL을 기반으로 ?schema=...만 바꿔서 각 스키마 전용 client를 생성/캐시
+ */
+export function getPrismaForSchema(schema: string): PrismaClient | null {
+  ensureDatabaseUrlLoaded();
+  if (!process.env.DATABASE_URL) return null;
+
+  const targetSchema = String(schema || 'public');
+  const cacheKey = targetSchema;
+
+  globalForPrisma.prismaBySchema ??= new Map<string, PrismaClient>();
+  globalForPrisma.pgPoolBySchema ??= new Map<string, Pool>();
+
+  const existing = globalForPrisma.prismaBySchema.get(cacheKey);
+  if (existing) return existing;
+
+  const url = buildDatabaseUrlWithSchema(process.env.DATABASE_URL, targetSchema);
+
+  const pool =
+    globalForPrisma.pgPoolBySchema.get(cacheKey) ??
+    new Pool({
+      connectionString: url,
+    });
+  globalForPrisma.pgPoolBySchema.set(cacheKey, pool);
+
+  const client = new PrismaClient({
+    adapter: new PrismaPg(pool),
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  });
+  globalForPrisma.prismaBySchema.set(cacheKey, client);
+  return client;
+}
+
+export function getBaseDatabaseUrl(): string | null {
+  ensureDatabaseUrlLoaded();
+  return process.env.DATABASE_URL || null;
 }
 

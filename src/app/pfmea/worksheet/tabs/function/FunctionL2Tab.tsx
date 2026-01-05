@@ -93,6 +93,72 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
   // ✅ L2 기능 데이터 변경 감지용 ref (고장분석 패턴 적용)
   const l2FuncDataRef = useRef<string>('');
   
+  // ✅ 제품특성 + 기능 중복 제거 (마운트 시 + 데이터 변경 시)
+  const lastCleanedHash = useRef<string>('');
+  useEffect(() => {
+    // 이미 정리한 데이터인지 체크 (무한 루프 방지)
+    const currentHash = JSON.stringify(state.l2.map(p => ({
+      id: p.id,
+      funcs: (p.functions || []).map((f: any) => ({ name: f.name, chars: (f.productChars || []).map((c: any) => c.name) }))
+    })));
+    if (lastCleanedHash.current === currentHash) return;
+    
+    let cleaned = false;
+    const newL2 = state.l2.map((proc: any) => {
+      const funcs = proc.functions || [];
+      
+      // 1. 기능 중복 제거 (같은 이름의 기능은 첫 번째만 유지, 나머지는 합침)
+      const funcMap = new Map<string, any>();
+      funcs.forEach((f: any) => {
+        const name = f.name?.trim();
+        if (!name) return;
+        if (funcMap.has(name)) {
+          // 이미 있으면 제품특성 합침
+          const existing = funcMap.get(name);
+          const allChars = [...(existing.productChars || []), ...(f.productChars || [])];
+          existing.productChars = allChars;
+          cleaned = true;
+        } else {
+          funcMap.set(name, { ...f });
+        }
+      });
+      
+      // 2. 각 기능별 제품특성 중복 제거
+      const uniqueFuncs = Array.from(funcMap.values()).map((f: any) => {
+        const chars = f.productChars || [];
+        const seen = new Set<string>();
+        const uniqueChars = chars.filter((c: any) => {
+          const name = c.name?.trim();
+          if (!name || name === '' || seen.has(name)) {
+            if (name && seen.has(name)) cleaned = true;
+            return false;
+          }
+          seen.add(name);
+          return true;
+        });
+        return { ...f, productChars: uniqueChars };
+      });
+      
+      return { ...proc, functions: uniqueFuncs };
+    });
+    
+    if (cleaned) {
+      console.log('[FunctionL2Tab] ⚠️ 기능/제품특성 중복 발견 → 자동 정리');
+      lastCleanedHash.current = JSON.stringify(newL2.map((p: any) => ({
+        id: p.id,
+        funcs: (p.functions || []).map((f: any) => ({ name: f.name, chars: (f.productChars || []).map((c: any) => c.name) }))
+      })));
+      setState(prev => ({ ...prev, l2: newL2 }));
+      setDirty(true);
+      setTimeout(() => {
+        saveToLocalStorage?.();
+        console.log('[FunctionL2Tab] ✅ 중복 정리 후 저장 완료');
+      }, 100);
+    } else {
+      lastCleanedHash.current = currentHash;
+    }
+  }, [state.l2, setState, setDirty, saveToLocalStorage]);
+  
   // ✅ L2 기능 데이터 변경 시 자동 저장 (확실한 저장 보장)
   useEffect(() => {
     const allFuncs = state.l2.flatMap((p: any) => p.functions || []);
@@ -275,14 +341,22 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
             if (!existingNames.has(val)) {
               // ✅ 자동연결: 다른 공정에서 동일 기능에 연결된 제품특성 찾기
               const linkedChars = findLinkedProductCharsForFunction(prev, val);
-              const autoLinkedChars = linkedChars.map(name => ({ id: uid(), name, specialChar: null }));
+              // ✅ 중복 제거: 자동연결된 제품특성도 중복 체크
+              const seenChars = new Set<string>();
+              const autoLinkedChars = linkedChars
+                .filter(name => {
+                  if (seenChars.has(name)) return false;
+                  seenChars.add(name);
+                  return true;
+                })
+                .map(name => ({ id: uid(), name, specialChar: null }));
               
               updatedFuncs.push({ id: uid(), name: val, productChars: autoLinkedChars });
               existingNames.add(val);
               
               // 자동연결 알림
               if (autoLinkedChars.length > 0) {
-                const message = getAutoLinkMessage(linkedChars, '제품특성');
+                const message = getAutoLinkMessage(autoLinkedChars.map(c => c.name), '제품특성');
                 console.log(`[FunctionL2Tab] ${val}: ${message}`);
               }
             }
@@ -577,39 +651,39 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
                     <td rowSpan={procRowSpan} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: procZebraBg }}>
                       {proc.no}. {proc.name}
                     </td>
-                    <td className={cellP0}>
-                      <SelectableCell value="" placeholder="공정기능 선택" bgColor={'#e8f5e9'} onClick={() => handleCellClick({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
-                    </td>
-                    <td className={cellP0}>
-                      <SelectableCell value="" placeholder="제품특성 선택" bgColor={'#fff3e0'} textColor={'#e65100'} onClick={() => {}} />
-                    </td>
-                    <td className="border border-[#ccc] p-1 text-center bg-[#fff3e0] text-[#999] text-xs">
-                      -
-                    </td>
-                  </tr>
-                );
-              }
-              
-              // 의미 있는 기능이 없으면 빈 행 표시
-              if (meaningfulFuncs.length === 0) {
-                const procZebraBg = getZebra('structure', pIdx); // ✅ 공정별 줄무늬
-                return (
-                  <tr key={proc.id} className={globalRowIdx++ % 2 === 1 ? "bg-[#c8e6c9]" : "bg-[#e8f5e9]"}>
-                    <td rowSpan={1} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: procZebraBg }}>
-                      {proc.no}. {proc.name}
-                    </td>
-                    <td className={cellP0}>
-                      <SelectableCell value="" placeholder="공정기능 선택" bgColor={'#e8f5e9'} onClick={() => handleCellClick({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
-                    </td>
-                    <td className={cellP0}>
-                      <SelectableCell value="" placeholder="제품특성 선택" bgColor={'#fff3e0'} textColor={'#e65100'} onClick={() => {}} />
-                    </td>
-                    <td className="border border-[#ccc] p-1 text-center bg-[#fff3e0] text-[#999] text-xs">
-                      -
-                    </td>
-                  </tr>
-                );
-              }
+                      <td className={cellP0}>
+                        <SelectableCell value="" placeholder="공정기능 선택" bgColor={getZebra('function', pIdx)} onClick={() => handleCellClick({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
+                      </td>
+                      <td className={cellP0}>
+                        <SelectableCell value="" placeholder="제품특성 선택" bgColor={getZebra('failure', pIdx)} textColor={'#e65100'} onClick={() => {}} />
+                      </td>
+                      <td className="border border-[#ccc] p-1 text-center text-[#999] text-xs" style={{ background: getZebra('failure', pIdx) }}>
+                        -
+                      </td>
+                    </tr>
+                  );
+                }
+                
+                // 의미 있는 기능이 없으면 빈 행 표시
+                if (meaningfulFuncs.length === 0) {
+                  const procZebraBg = getZebra('structure', pIdx); // ✅ 공정별 줄무늬
+                  return (
+                    <tr key={proc.id}>
+                      <td rowSpan={1} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: procZebraBg }}>
+                        {proc.no}. {proc.name}
+                      </td>
+                      <td className={cellP0}>
+                        <SelectableCell value="" placeholder="공정기능 선택" bgColor={getZebra('function', pIdx)} onClick={() => handleCellClick({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
+                      </td>
+                      <td className={cellP0}>
+                        <SelectableCell value="" placeholder="제품특성 선택" bgColor={getZebra('failure', pIdx)} textColor={'#e65100'} onClick={() => {}} />
+                      </td>
+                      <td className="border border-[#ccc] p-1 text-center text-[#999] text-xs" style={{ background: getZebra('failure', pIdx) }}>
+                        -
+                      </td>
+                    </tr>
+                  );
+                }
               
               const procZebraBg = getZebra('structure', pIdx); // ✅ 공정별 줄무늬 (map 바깥에서 한 번만 계산)
               
@@ -627,26 +701,29 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
                 
                 // 기능에 제품특성이 없는 경우
                 if (meaningfulChars.length === 0) {
+                  const rowIdx = globalRowIdx++;
+                  const funcZebra = getZebra('function', rowIdx);
+                  const failureZebra = getZebra('failure', rowIdx);
                   return (
-                    <tr key={f.id} className={globalRowIdx++ % 2 === 1 ? "bg-[#c8e6c9]" : "bg-[#e8f5e9]"}>
+                    <tr key={f.id}>
                       {fIdx === 0 && (
                         <td rowSpan={procRowSpan} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: procZebraBg }}>
                           {proc.no}. {proc.name}
                         </td>
                       )}
-                      <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle">
+                      <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle" style={{ background: funcZebra }}>
                         <SelectableCell 
                           value={f.name} 
                           placeholder="공정기능" 
-                          bgColor={'#e8f5e9'} 
+                          bgColor={funcZebra} 
                           onClick={() => handleCellClick({ type: 'l2Function', procId: proc.id, funcId: f.id, title: '메인공정 기능 선택', itemCode: 'A3' })} 
                           onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, f.id, newValue)}
                         />
                       </td>
-                      <td className={cellP0}>
-                        <SelectableCell value="" placeholder="제품특성 선택" bgColor={'#ffe0b2'} textColor={'#e65100'} onClick={() => handleCellClick({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, title: '제품특성 선택', itemCode: 'A4' })} />
+                      <td className={cellP0} style={{ background: failureZebra }}>
+                        <SelectableCell value="" placeholder="제품특성 선택" bgColor={failureZebra} textColor={'#e65100'} onClick={() => handleCellClick({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, title: '제품특성 선택', itemCode: 'A4' })} />
                       </td>
-                      <td className="border border-[#ccc] p-1 text-center bg-[#fff3e0] text-[#999] text-xs">
+                      <td className="border border-[#ccc] p-1 text-center text-[#999] text-xs" style={{ background: failureZebra }}>
                         -
                       </td>
                     </tr>
@@ -654,35 +731,39 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
                 }
                 
                 // 기능에 제품특성이 있는 경우
-                return meaningfulChars.map((c, cIdx) => (
-                  <tr key={c.id} className={globalRowIdx++ % 2 === 1 ? "bg-[#c8e6c9]" : "bg-[#e8f5e9]"}>
+                return meaningfulChars.map((c, cIdx) => {
+                  const rowIdx = globalRowIdx++;
+                  const funcZebra = getZebra('function', rowIdx);
+                  const failureZebra = getZebra('failure', rowIdx);
+                  return (
+                  <tr key={c.id}>
                     {fIdx === 0 && cIdx === 0 && (
                       <td rowSpan={procRowSpan} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: procZebraBg }}>
                         {proc.no}. {proc.name}
                       </td>
                     )}
                     {cIdx === 0 && (
-                      <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle">
+                      <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle" style={{ background: funcZebra }}>
                         <SelectableCell 
                           value={f.name} 
                           placeholder="공정기능" 
-                          bgColor={'#e8f5e9'} 
+                          bgColor={funcZebra} 
                           onClick={() => handleCellClick({ type: 'l2Function', procId: proc.id, funcId: f.id, title: '메인공정 기능 선택', itemCode: 'A3' })} 
                           onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, f.id, newValue)}
                         />
                       </td>
                     )}
-                    <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0">
+                    <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0" style={{ background: failureZebra }}>
                       <SelectableCell 
                         value={c.name} 
                         placeholder="제품특성" 
-                        bgColor={'#ffe0b2'} 
+                        bgColor={failureZebra} 
                         textColor={'#e65100'}
                         onClick={() => handleCellClick({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, charId: c.id, title: '제품특성 선택', itemCode: 'A4' })} 
                         onDoubleClickEdit={(newValue) => handleInlineEditProductChar(proc.id, f.id, c.id, newValue)}
                       />
                     </td>
-                    <td className="border border-[#ccc] p-0 text-center">
+                    <td className="border border-[#ccc] p-0 text-center" style={{ background: failureZebra }}>
                       <SpecialCharBadge 
                         value={(c as any).specialChar || ''} 
                         onClick={() => setSpecialCharModal({ 
@@ -695,7 +776,7 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
                       />
                     </td>
                   </tr>
-                ));
+                );});
               });
             });
           })()}

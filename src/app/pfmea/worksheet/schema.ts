@@ -153,6 +153,7 @@ export interface FailureCause extends AtomicRecord {
   l3FuncId: string;       // FK: L3Function.id (상위 기능분석 - 공정특성)
   l3StructId: string;     // FK: L3Structure.id (작업요소 - 역전개용)
   l2StructId: string;     // FK: L2Structure.id (메인공정 - 연결용)
+  processCharId?: string; // ✅ FK: 공정특성 ID (FailureMode의 productCharId와 동일 패턴)
   cause: string;          // 고장원인 내용
   occurrence?: number;    // 발생도 (1-10)
 }
