@@ -224,11 +224,8 @@ export default function DataSelectModal({
     const oldItem = items.find(i => i.id === editingId);
     if (!oldItem) return;
     
-    // 중복 체크 (자기 자신 제외)
-    if (items.some(i => i.id !== editingId && i.value === trimmed)) {
-      alert('이미 존재하는 항목입니다.');
-      return;
-    }
+    // 중복 체크 (자기 자신 제외) - 중복이면 무시
+    if (items.some(i => i.id !== editingId && i.value === trimmed)) return;
     
     // 아이템 업데이트
     setItems(prev => prev.map(item => 
@@ -285,10 +282,8 @@ export default function DataSelectModal({
     if (!newValue.trim()) return;
     const trimmedValue = newValue.trim();
     
-    if (items.some(i => i.value === trimmedValue)) {
-      alert('이미 존재하는 항목입니다.');
-      return;
-    }
+    // 중복이면 무시
+    if (items.some(i => i.value === trimmedValue)) return;
     
     const newItem: DataItem = { id: `new_${Date.now()}`, value: trimmedValue, category: '추가' };
     setItems(prev => [newItem, ...prev]); // 맨 위에 추가
@@ -447,7 +442,6 @@ export default function DataSelectModal({
                     localStorage.setItem('pfmea_master_data', JSON.stringify(dataList));
                   } catch (err) { console.error(err); }
                   setSearch('');
-                  alert(`✅ "${trimmed}" 항목이 추가되었습니다.`);
                 } else {
                   // 이미 있으면 선택
                   const found = items.find(i => i.value === trimmed);

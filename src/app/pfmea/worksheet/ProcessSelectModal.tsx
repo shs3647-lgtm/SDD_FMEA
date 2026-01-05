@@ -99,17 +99,36 @@ export default function ProcessSelectModal({
   const [newNo, setNewNo] = useState('');
   const [newName, setNewName] = useState('');
 
+  const [loading, setLoading] = useState(false);
+  const [dataSource, setDataSource] = useState<string>('');
+
   useEffect(() => {
     if (isOpen) {
+      setLoading(true);
+      setDataSource('');
+      
       // DB에서 마스터 공정 로드 (우선), 없으면 localStorage 폴백
       const loadData = async () => {
+        console.log('🔄 공정 데이터 로드 시작...');
+        
         let loaded = await loadMasterProcessesFromDB();
         
-        // DB에 없으면 localStorage에서 로드
-        if (loaded.length === 0) {
+        if (loaded.length > 0) {
+          setDataSource('Master FMEA (DB)');
+          console.log('✅ 마스터 공정 사용:', loaded.length, '개');
+        } else {
+          // DB에 없으면 localStorage에서 로드
           loaded = loadProcessesFromBasicInfo();
+          if (loaded.length > 0) {
+            setDataSource('localStorage');
+            console.log('⚠️ localStorage 폴백:', loaded.length, '개');
+          } else {
+            setDataSource('없음 - 직접 입력 필요');
+            console.log('❌ 공정 데이터 없음');
+          }
         }
         
+        console.log('📋 로드된 공정:', loaded.map(p => p.name).join(', '));
         setProcesses(loaded);
         
         const preSelected = new Set<string>();
@@ -119,6 +138,7 @@ export default function ProcessSelectModal({
           }
         });
         setSelectedIds(preSelected);
+        setLoading(false);
       };
       
       loadData();
@@ -213,16 +233,10 @@ export default function ProcessSelectModal({
 
   // 신규 공정 추가
   const handleAddNew = () => {
-    if (!newName.trim()) {
-      alert('공정명을 입력해주세요.');
-      return;
-    }
+    if (!newName.trim()) return;
     
-    // 중복 확인
-    if (processes.some(p => p.name === newName.trim())) {
-      alert('이미 존재하는 공정명입니다.');
-      return;
-    }
+    // 중복 확인 - 이미 존재하면 무시
+    if (processes.some(p => p.name === newName.trim())) return;
     
     // 공정번호 자동 생성 (입력 안했으면)
     const procNo = newNo.trim() || String((processes.length + 1) * 10);
@@ -255,7 +269,6 @@ export default function ProcessSelectModal({
     
     setNewNo('');
     setNewName('');
-    alert(`✅ "${newProc.name}" 공정이 추가되었습니다.`);
   };
 
   if (!isOpen) return null;
@@ -286,9 +299,12 @@ export default function ProcessSelectModal({
           <span className="px-2 py-1 text-[10px] font-bold bg-blue-600 text-white rounded">{productLineName}</span>
         </div>
 
-        {/* ===== 하위항목 라벨 ===== */}
-        <div className="px-3 py-1 border-b bg-gradient-to-r from-green-50 to-emerald-50">
+        {/* ===== 하위항목 라벨 + 데이터 소스 ===== */}
+        <div className="px-3 py-1 border-b bg-gradient-to-r from-green-50 to-emerald-50 flex items-center justify-between">
           <span className="text-[10px] font-bold text-green-700">▼ 하위항목: 메인공정명</span>
+          <span className={`text-[9px] px-2 py-0.5 rounded ${dataSource.includes('Master') ? 'bg-blue-100 text-blue-700' : dataSource.includes('local') ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>
+            {loading ? '로딩중...' : `📂 ${dataSource} (${processes.length}개)`}
+          </span>
         </div>
 
         {/* ===== 신규 공정 추가 ===== */}
@@ -337,6 +353,22 @@ export default function ProcessSelectModal({
 
         {/* 컴팩트 테이블 - 고정 높이 */}
         <div className="overflow-auto p-2 h-80 min-h-[320px]">
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+                <p className="text-xs text-gray-500">마스터 공정 데이터 로딩중...</p>
+              </div>
+            </div>
+          ) : processes.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <p className="text-lg mb-2">📭</p>
+                <p className="text-xs text-gray-500 mb-2">등록된 공정이 없습니다</p>
+                <p className="text-[10px] text-gray-400">위 입력창에서 직접 추가해주세요</p>
+              </div>
+            </div>
+          ) : (
           <div className="grid grid-cols-2 gap-1">
             {filteredProcesses.map(proc => {
                 const isSelected = selectedIds.has(proc.id);
@@ -420,6 +452,7 @@ export default function ProcessSelectModal({
                 </div>
               ))}
             </div>
+          )}
         </div>
 
         {/* 푸터 - 선택 수 표시만 */}

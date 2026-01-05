@@ -207,7 +207,6 @@ export default function WorkElementSelectModal({
     }
     
     setNewValue('');
-    alert(`✅ "${newElem.name}" 작업요소가 추가되었습니다.`);
   };
 
   // 개별 삭제

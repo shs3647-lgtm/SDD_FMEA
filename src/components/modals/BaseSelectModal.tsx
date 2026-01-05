@@ -274,11 +274,8 @@ export default function BaseSelectModal({
     if (!newValue.trim()) return;
     const trimmed = newValue.trim();
     
-    // 중복 체크
-    if (items.some(i => i.value === trimmed)) {
-      alert('이미 존재하는 항목입니다.');
-      return;
-    }
+    // 중복 체크 - 중복이면 무시
+    if (items.some(i => i.value === trimmed)) return;
     
     const newItem: BaseItem = { 
       id: `new_${Date.now()}`, 
