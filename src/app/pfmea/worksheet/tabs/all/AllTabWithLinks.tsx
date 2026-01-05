@@ -147,20 +147,18 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
     <div style={{ width: '100%', minWidth: '2400px', overflowX: 'visible' }}>
       <table className={`${TW_CLASSES.table} min-w-[2400px] w-full`} style={{ minWidth: '2400px' }}>
         <colgroup>
-          {/* 구조분석 4열: 650px */}
-          <col style={{ width: '120px' }} /> {/* 제품명 */}
-          <col style={{ width: '200px' }} /> {/* NO+공정명 */}
-          <col style={{ width: '50px' }} />  {/* 4M */}
-          <col style={{ width: '280px' }} /> {/* 부품 */}
-          {/* 기능분석 8열: 1750px */}
-          <col style={{ width: '80px' }} />  {/* 구분 */}
-          <col style={{ width: '220px' }} /> {/* 제품 기능 */}
-          <col style={{ width: '200px' }} /> {/* 요구사항 */}
-          <col style={{ width: '280px' }} /> {/* 초점요소 기능 */}
-          <col style={{ width: '220px' }} /> {/* 제품특성 */}
-          <col style={{ width: '50px' }} />  {/* 4M */}
-          <col style={{ width: '280px' }} /> {/* 부품 기능 */}
-          <col style={{ width: '420px' }} /> {/* 설계특성 */}
+          <col style={{ width: '120px' }} />
+          <col style={{ width: '200px' }} />
+          <col style={{ width: '50px' }} />
+          <col style={{ width: '280px' }} />
+          <col style={{ width: '80px' }} />
+          <col style={{ width: '220px' }} />
+          <col style={{ width: '200px' }} />
+          <col style={{ width: '280px' }} />
+          <col style={{ width: '220px' }} />
+          <col style={{ width: '50px' }} />
+          <col style={{ width: '280px' }} />
+          <col style={{ width: '420px' }} />
         </colgroup>
         <thead className={TW_CLASSES.stickyHead}>
           {/* 1행: 단계 대분류 */}
