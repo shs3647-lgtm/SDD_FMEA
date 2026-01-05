@@ -913,52 +913,38 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     const feArray = Array.from(linkedFEs.values());
     const fcArray = Array.from(linkedFCs.values());
     
-    // 검증: FE와 FC 모두 필요
-    if (feArray.length === 0 && fcArray.length === 0) {
-      alert('⚠️ 연결할 FE 또는 FC를 선택해주세요.');
+    // ✅ 검증(원자성/DB FK 보장): FE/FC 둘 다 있어야 "연결확정" 가능
+    if (feArray.length === 0 || fcArray.length === 0) {
+      const missing = [];
+      if (feArray.length === 0) missing.push('FE(고장영향)');
+      if (fcArray.length === 0) missing.push('FC(고장원인)');
+      alert(`⚠️ ${missing.join(' + ')}를 선택해야 연결확정이 가능합니다.`);
       return;
     }
     
     // 기존 연결 제거 후 새 연결 추가
     let newLinks = savedLinks.filter(l => l.fmId !== currentFMId);
     
-    // FE 연결 추가
+    // ✅ 원자성 링크 생성: (FM, FE, FC) 완전한 3자 링크만 저장
+    // - 1개의 FM에 여러 FE/FC를 선택할 수 있으므로, FE×FC 조합(카테시안)으로 link row 생성
     feArray.forEach(fe => {
-      newLinks.push({
-        fmId: currentFMId,
-        fmText: currentFM.text,
-        fmProcess: currentFM.processName,
-        feId: fe.id,
-        feNo: fe.feNo,
-        feScope: fe.scope,
-        feText: fe.text,
-        severity: fe.severity || 0,
-        fcId: '',
-        fcNo: '',
-        fcProcess: '',
-        fcM4: '',
-        fcWorkElem: '',
-        fcText: ''
-      });
-    });
-    
-    // FC 연결 추가
-    fcArray.forEach(fc => {
-      newLinks.push({
-        fmId: currentFMId,
-        fmText: currentFM.text,
-        fmProcess: currentFM.processName,
-        feId: '',
-        feNo: '',
-        feScope: '',
-        feText: '',
-        severity: 0,
-        fcId: fc.id,
-        fcNo: fc.fcNo,
-        fcProcess: fc.processName,
-        fcM4: fc.m4,
-        fcWorkElem: fc.workElem,
-        fcText: fc.text
+      fcArray.forEach(fc => {
+        newLinks.push({
+          fmId: currentFMId,
+          fmText: currentFM.text,
+          fmProcess: currentFM.processName,
+          feId: fe.id,
+          feNo: fe.feNo,
+          feScope: fe.scope,
+          feText: fe.text,
+          severity: fe.severity || 0,
+          fcId: fc.id,
+          fcNo: fc.fcNo,
+          fcProcess: fc.processName,
+          fcM4: fc.m4,
+          fcWorkElem: fc.workElem,
+          fcText: fc.text
+        });
       });
     });
     
