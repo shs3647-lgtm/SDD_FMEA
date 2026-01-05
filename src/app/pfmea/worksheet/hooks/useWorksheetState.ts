@@ -233,6 +233,16 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         failureModes: newAtomicDB.failureModes.length,
         failureLinks: newAtomicDB.failureLinks.length,
       });
+      console.log('[원자성 DB 저장] ✅ failureLinks 상세:', {
+        입력: legacyData.failureLinks?.length || 0,
+        변환: newAtomicDB.failureLinks.length,
+        샘플: newAtomicDB.failureLinks.slice(0, 3).map(l => ({
+          fmId: l.fmId,
+          feId: l.feId,
+          fcId: l.fcId,
+          fmText: l.cache?.fmText?.substring(0, 20)
+        }))
+      });
       
       setDirty(false);
       setLastSaved(new Date().toLocaleTimeString('ko-KR'));
@@ -1112,6 +1122,15 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       
       // 원자성 DB를 레거시 형식으로 변환하여 state에 적용 (하위 호환성)
       const legacy = convertToLegacyFormat(loadedDB);
+      console.log('[원자성 DB 로드] ✅ failureLinks 변환 완료:', {
+        원자성DB: loadedDB.failureLinks.length,
+        레거시변환: legacy.failureLinks?.length || 0,
+        샘플: legacy.failureLinks?.slice(0, 2).map(l => ({
+          fmText: l.fmText?.substring(0, 20),
+          feText: l.feText?.substring(0, 20),
+          fcText: l.fcText?.substring(0, 20)
+        }))
+      });
       
       // ✅ 레거시 원본 데이터에서 직접 추출 (근본적인 해결책)
       const legacyKeys = [`pfmea_worksheet_${selectedFmeaId}`, `fmea-worksheet-${selectedFmeaId}`];

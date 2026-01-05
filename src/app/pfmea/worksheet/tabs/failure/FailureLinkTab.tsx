@@ -83,7 +83,7 @@ interface LinkResult {
   fcText: string; 
 }
 
-export default function FailureLinkTab({ state, setState, setDirty, saveToLocalStorage }: FailureTabProps) {
+export default function FailureLinkTab({ state, setState, setDirty, saveToLocalStorage, saveAtomicDB }: FailureTabProps) {
   // ========== 상태 관리 ==========
   const [currentFMId, setCurrentFMId] = useState<string | null>(null);
   const [linkedFEs, setLinkedFEs] = useState<Map<string, FEItem>>(new Map());
@@ -619,7 +619,10 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       setSavedLinks(filtered);
       setState((prev: any) => ({ ...prev, failureLinks: filtered }));
       setDirty(true);
-      requestAnimationFrame(() => saveToLocalStorage?.());
+      requestAnimationFrame(() => {
+        saveToLocalStorage?.();
+        saveAtomicDB?.();  // ✅ PostgreSQL DB 저장
+      });
       
       setLinkedFEs(prev => {
         const next = new Map(prev);
@@ -738,7 +741,10 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
         setSavedLinks(filtered);
         setState((prev: any) => ({ ...prev, failureLinks: filtered }));
         setDirty(true);
-        requestAnimationFrame(() => saveToLocalStorage?.());
+        requestAnimationFrame(() => {
+          saveToLocalStorage?.();
+          saveAtomicDB?.();  // ✅ PostgreSQL DB 저장
+        });
         
         alert(`✅ "${fc.text}" 연결이 해제되었습니다.`);
       } else if (!removedFromLinked) {
@@ -772,7 +778,10 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       setSavedLinks(newLinks);
       setState((prev: any) => ({ ...prev, failureLinks: newLinks }));
       setDirty(true);
-      requestAnimationFrame(() => saveToLocalStorage?.());
+      requestAnimationFrame(() => {
+        saveToLocalStorage?.();
+        saveAtomicDB?.();  // ✅ PostgreSQL DB 저장
+      });
       console.log('[연결 해제]', currentFM.text);
       return;
     }
@@ -834,7 +843,10 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     setSavedLinks(newLinks);
     setState((prev: any) => ({ ...prev, failureLinks: newLinks }));
     setDirty(true);
-    requestAnimationFrame(() => saveToLocalStorage?.());
+    requestAnimationFrame(() => {
+      saveToLocalStorage?.();
+      saveAtomicDB?.();  // ✅ PostgreSQL DB 저장
+    });
     
     // ✅ 현재 공정의 모든 FM 연결 완료 확인 → 자동으로 다음 공정 이동
     const currentProcess = currentFM.processName;
@@ -944,7 +956,10 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     
     setState((prev: any) => ({ ...prev, failureLinkConfirmed: true }));
     setDirty(true);
-    saveToLocalStorage?.();
+    requestAnimationFrame(() => {
+      saveToLocalStorage?.();
+      saveAtomicDB?.();  // ✅ PostgreSQL DB 저장
+    });
     
     // ===== AI 학습 데이터 저장 =====
     // 확정된 고장연결 데이터를 AI 시스템에 저장하여 학습
@@ -978,8 +993,12 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
   const handleEditMode = useCallback(() => {
     setState((prev: any) => ({ ...prev, failureLinkConfirmed: false }));
     setDirty(true);
+    requestAnimationFrame(() => {
+      saveToLocalStorage?.();
+      saveAtomicDB?.();  // ✅ PostgreSQL DB 저장
+    });
     alert('📝 고장연결 수정 모드로 전환되었습니다.');
-  }, [setState, setDirty]);
+  }, [setState, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   // ========== 초기화 ==========
   const handleClearAll = useCallback(() => {
@@ -991,10 +1010,13 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     setCurrentFMId(null);
     setState((prev: any) => ({ ...prev, failureLinks: [], failureLinkConfirmed: false }));
     setDirty(true);
-    saveToLocalStorage?.();
+    requestAnimationFrame(() => {
+      saveToLocalStorage?.();
+      saveAtomicDB?.();  // ✅ PostgreSQL DB 저장
+    });
     setViewMode('diagram');
     alert('✅ 모든 고장연결이 초기화되었습니다.');
-  }, [setState, setDirty, saveToLocalStorage]);
+  }, [setState, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   // ========== 역전개 ==========
   const handleReverseGenerate = useCallback(() => {

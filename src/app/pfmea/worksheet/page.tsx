@@ -486,7 +486,7 @@ function FMEAWorksheetPageContent() {
                   }
                 }}
               >
-                {/* 전체보기 탭: 통합 화면 (40열 구조) */}
+                {/* 전체보기 탭: 통합 화면 (40열 구조) - 원자성 DB 기반 */}
                 <AllTabRenderer 
                   tab={state.tab} 
                   rows={rows} 
@@ -498,6 +498,8 @@ function FMEAWorksheetPageContent() {
                   l2Spans={l2Spans}
                   onAPClick={() => setShowAPModal(true)}
                   visibleSteps={state.visibleSteps || [2, 3, 4, 5, 6]}
+                  fmeaId={selectedFmeaId || undefined}
+                  useAtomicDB={true}
                 />
               </div>
             ) : (
