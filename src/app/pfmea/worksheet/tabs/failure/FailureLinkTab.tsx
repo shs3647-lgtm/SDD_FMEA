@@ -317,7 +317,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
           });
           counter++;
         });
-      }
+      });
     });
     
     console.log('[FC 데이터]', items.length, '개 (확정됨 + 중복 제거됨):', items.map(f => `${f.fcNo}:${f.text.substring(0, 20)}`));
