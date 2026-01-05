@@ -53,11 +53,54 @@ const cellBase: React.CSSProperties = { border: BORDER, padding: '4px 6px', font
 const headerStyle = (bg: string, color = '#fff'): React.CSSProperties => ({ ...cellBase, background: bg, color, fontWeight: FONT_WEIGHTS.bold, textAlign: 'center' });
 const dataCell = (bg: string): React.CSSProperties => ({ ...cellBase, background: bg });
 
-// 4M 셀 - 읽기 전용 표시
-function M4Cell({ value, zebraBg }: { value: string; zebraBg: string }) {
+// 4M 옵션
+const M4_OPTIONS = [
+  { value: 'MN', label: 'MN (인)', color: '#e3f2fd' },
+  { value: 'MC', label: 'MC (기계)', color: '#fff3e0' },
+  { value: 'IM', label: 'IM (재료)', color: '#e8f5e9' },
+  { value: 'MT', label: 'MT (방법)', color: '#fce4ec' },
+];
+
+// 4M 셀 - 드롭다운 선택 가능
+function EditableM4Cell({ 
+  value, zebraBg, weId, l2Id, state, setState, setDirty, saveToLocalStorage, isConfirmed 
+}: { 
+  value: string; zebraBg: string; weId: string; l2Id: string;
+  state: WorksheetState; setState: React.Dispatch<React.SetStateAction<WorksheetState>>;
+  setDirty: (dirty: boolean) => void; saveToLocalStorage?: () => void; isConfirmed?: boolean;
+}) {
+  const handleChange = (newValue: string) => {
+    setState(prev => ({
+      ...prev,
+      l2: prev.l2.map(proc => ({
+        ...proc,
+        l3: proc.l3.map(we => we.id === weId ? { ...we, m4: newValue } : we)
+      }))
+    }));
+    setDirty(true);
+    saveToLocalStorage?.();
+  };
+
+  const currentOption = M4_OPTIONS.find(opt => opt.value === value);
+  const bgColor = currentOption?.color || zebraBg;
+
   return (
-    <td className={`${cell} w-20 max-w-[80px] min-w-[80px] text-center font-bold text-blue-800`} style={{ background: zebraBg }}>
-      {value || <span className="text-red-600 font-semibold">-</span>}
+    <td className={`${cell} w-20 max-w-[80px] min-w-[80px] text-center`} style={{ background: bgColor, padding: '2px' }}>
+      {isConfirmed ? (
+        <span className="font-bold text-blue-800">{value || '-'}</span>
+      ) : (
+        <select
+          value={value || ''}
+          onChange={(e) => handleChange(e.target.value)}
+          className="w-full px-1 py-1 text-xs font-bold text-center border-0 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400"
+          style={{ background: 'transparent' }}
+        >
+          <option value="">선택</option>
+          {M4_OPTIONS.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.value}</option>
+          ))}
+        </select>
+      )}
     </td>
   );
 }
@@ -411,7 +454,17 @@ export function StructureRow({
           isConfirmed={isConfirmed}
         />
       )}
-      <M4Cell value={row.m4} zebraBg={zebraBg} />
+      <EditableM4Cell 
+        value={row.m4} 
+        zebraBg={zebraBg} 
+        weId={row.l3Id} 
+        l2Id={row.l2Id} 
+        state={state} 
+        setState={setState} 
+        setDirty={setDirty} 
+        saveToLocalStorage={saveToLocalStorage} 
+        isConfirmed={isConfirmed}
+      />
       <EditableL3Cell value={row.l3Name} l3Id={row.l3Id} l2Id={row.l2Id} state={state} setState={setState} setDirty={setDirty} handleSelect={handleSelect} setTargetL2Id={setTargetL2Id} setIsWorkElementModalOpen={setIsWorkElementModalOpen} saveToLocalStorage={saveToLocalStorage} zebraBg={zebraBg} isConfirmed={isConfirmed} />
     </>
   );
