@@ -55,6 +55,7 @@ export default function FailureLinkTables({
   // 클릭 타이머 관리 (더블클릭과 싱글클릭 구분)
   ...restProps
 }: FailureLinkTablesProps) {
+  const { linkStats } = restProps;
   const clickTimerRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   
   // FC 싱글클릭 핸들러 (200ms 딜레이)
@@ -128,7 +129,11 @@ export default function FailureLinkTables({
         {/* FE 테이블 */}
         <div style={panelStyle(COLORS.structure.dark)}>
           <div style={panelHeaderStyle(COLORS.structure.dark)}>
-            FE(고장영향:<span style={{ color: '#ffeb3b', fontWeight: 700 }}>{feData.length}</span>)
+            FE(고장영향:
+              <span style={{ color: '#ffeb3b', fontWeight: 700 }}>{feData.length}</span>
+              <span className="ml-1" style={{ color: '#ff9800', fontWeight: 700 }}>C:{linkStats.feLinkedCount}</span>
+              <span className="ml-1" style={{ color: '#ff9800', fontWeight: 700 }}>M:{Math.max(0, feData.length - linkStats.feLinkedCount)}</span>
+            )
           </div>
           <div className="flex-1 overflow-y-auto">
             <table className="w-full border-collapse text-xs">
@@ -150,6 +155,7 @@ export default function FailureLinkTables({
                     <tr key={fe.id} onClick={() => onToggleFE(fe.id)} className={currentFMId ? 'cursor-pointer' : ''}>
                       <td style={tdCenterStyle(noBg, BORDER_BLUE, '#fff')}>{fe.feNo}</td>
                       <td style={tdStyle(cellBg, BORDER_BLUE, { color: COLORS.structure.text })}>
+                        {isLinkedInSaved && <span className="mr-1 text-green-700 font-bold">●</span>}
                         {fe.text}
                         {isLinkedToCurrentFM && <span className="ml-1 text-green-700 font-bold">✓</span>}
                       </td>
@@ -165,7 +171,11 @@ export default function FailureLinkTables({
         {/* FM 테이블 */}
         <div style={panelStyleWithFlex('0 0 28%', COLORS.failure.dark)}>
           <div style={panelHeaderStyle(COLORS.failure.dark)}>
-            FM(고장형태:<span style={{ color: '#ffeb3b', fontWeight: 700 }}>{fmData.length}</span>)
+            FM(고장형태:
+              <span style={{ color: '#ffeb3b', fontWeight: 700 }}>{fmData.length}</span>
+              <span className="ml-1" style={{ color: '#ff9800', fontWeight: 700 }}>C:{linkStats.fmLinkedCount}</span>
+              <span className="ml-1" style={{ color: '#ff9800', fontWeight: 700 }}>M:{Math.max(0, fmData.length - linkStats.fmLinkedCount)}</span>
+            )
           </div>
           <div style={scrollAreaStyle}>
             <table style={tableFullStyle(FONT_SIZES.cell)}>
@@ -212,6 +222,7 @@ export default function FailureLinkTables({
                         fontWeight: isMissing ? FONT_WEIGHTS.bold : FONT_WEIGHTS.normal, 
                         padding: '4px 6px' 
                       })}>
+                        {isLinked && <span className="mr-1 text-green-700 font-bold">●</span>}
                         {checkMark}
                         {fm.text}
                         <span className={`text-[11px] ${isLinked ? 'text-green-700' : 'text-orange-600'}`}>{statusIcon}</span>
@@ -228,7 +239,11 @@ export default function FailureLinkTables({
         <div style={panelStyleWithFlex('1 1 47%', COLORS.function.dark)}>
           <div className="flex justify-between items-center" style={panelHeaderStyle(COLORS.function.dark)}>
             <span className="flex-1 text-center">
-              FC(고장원인:<span style={{ color: '#ffeb3b', fontWeight: 700 }}>{fcData.length}</span>)
+              FC(고장원인:
+              <span style={{ color: '#ffeb3b', fontWeight: 700 }}>{fcData.length}</span>
+              <span className="ml-1" style={{ color: '#ff9800', fontWeight: 700 }}>C:{linkStats.fcLinkedCount}</span>
+              <span className="ml-1" style={{ color: '#ff9800', fontWeight: 700 }}>M:{Math.max(0, fcData.length - linkStats.fcLinkedCount)}</span>
+              )
             </span>
             <select
               value={fcLinkScope}
@@ -270,11 +285,13 @@ export default function FailureLinkTables({
                       {/* 고장원인열 클릭 → 연결 추가 */}
                       <td 
                         style={{...tdStyle(cellBg, BORDER_GREEN, { color: COLORS.function.text }), cursor: 'pointer'}}
-                        onClick={() => onToggleFC(fc.id)}
-                        title="클릭: 연결 추가"
+                        onClick={() => handleFCClick(fc.id, onToggleFC)}
+                        onDoubleClick={() => handleFCDoubleClick(fc.id, onUnlinkFC)}
+                        title="클릭: 연결 추가 / 더블클릭: 연결 해제"
                       >
+                        {isLinkedInSaved && <span className="mr-1 text-green-700 font-bold">●</span>}
                         {fc.text}
-                        {isLinkedToCurrentFM && <span className="ml-1 text-green-700 font-bold">✓</span>}
+                        {isLinkedToCurrentFM && <span className="ml-1 text-blue-700 font-bold">✓</span>}
                       </td>
                     </tr>
                   );

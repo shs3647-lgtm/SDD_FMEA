@@ -344,6 +344,30 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     chainAreaRef, fmNodeRef, feColRef, fcColRef, linkedFEs, linkedFCs, currentFM
   );
 
+  // ========== 현재 FM 연결 해제 ==========
+  const unlinkCurrentFM = useCallback(() => {
+    if (!currentFMId) {
+      alert('⚠️ 고장형태(FM)를 먼저 선택해주세요.');
+      return;
+    }
+    const before = savedLinks.length;
+    const filtered = savedLinks.filter(l => l.fmId !== currentFMId);
+    if (filtered.length === before) {
+      alert('⚠️ 현재 FM에 저장된 연결이 없습니다.');
+      return;
+    }
+    setSavedLinks(filtered);
+    setLinkedFEs(new Map());
+    setLinkedFCs(new Map());
+    setState((prev: any) => ({ ...prev, failureLinks: filtered }));
+    setDirty(true);
+    requestAnimationFrame(() => {
+      saveToLocalStorage?.();
+      saveAtomicDB?.();
+    });
+    alert('✅ 현재 FM의 연결이 모두 해제되었습니다.');
+  }, [currentFMId, savedLinks, setState, setDirty, saveToLocalStorage, saveAtomicDB]);
+
   // ========== viewMode 변경 시 화살표 다시 그리기 ==========
   useEffect(() => {
     if (viewMode === 'diagram') {
@@ -1167,9 +1191,10 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
             <button 
               onClick={confirmLink} 
               disabled={!currentFMId || (!isCurrentFMLinked && linkedFEs.size === 0 && linkedFCs.size === 0)}
+              className={!isCurrentFMLinked ? 'blink-orange' : ''}
               style={{
                 ...actionButtonStyle({
-                  bg: isCurrentFMLinked ? '#2196f3' : '#9e9e9e', 
+                  bg: isCurrentFMLinked ? '#2196f3' : '#ef6c00', 
                   color: '#fff',
                   opacity: (!currentFMId || (!isCurrentFMLinked && linkedFEs.size === 0 && linkedFCs.size === 0)) ? 0.5 : 1
                 }),
@@ -1178,6 +1203,23 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
               }}
             >
               {isCurrentFMLinked ? '연결확정' : '미확정'}
+            </button>
+            {/* 연결 해제 버튼 */}
+            <button
+              onClick={unlinkCurrentFM}
+              disabled={!currentFMId}
+              style={{
+                ...actionButtonStyle({
+                  bg: '#ef6c00',
+                  color: '#fff',
+                  opacity: currentFMId ? 1 : 0.5
+                }),
+                whiteSpace: 'nowrap',
+                minWidth: '80px'
+              }}
+              title="현재 선택된 FM의 저장된 연결을 모두 해제"
+            >
+              연결해제
             </button>
             
             {/* 전체 확정/수정 버튼 */}
