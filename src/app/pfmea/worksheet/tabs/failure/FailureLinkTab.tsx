@@ -1233,23 +1233,6 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
             >
               {isCurrentFMLinked ? '연결확정' : '미확정'}
             </button>
-            {/* 연결 해제 버튼 */}
-            <button
-              onClick={unlinkCurrentFM}
-              disabled={!currentFMId}
-              style={{
-                ...actionButtonStyle({
-                  bg: '#ef6c00',
-                  color: '#fff',
-                  opacity: currentFMId ? 1 : 0.5
-                }),
-                whiteSpace: 'nowrap',
-                minWidth: '80px'
-              }}
-              title="현재 선택된 FM의 저장된 연결을 모두 해제"
-            >
-              연결해제
-            </button>
             
             {/* 전체 확정/수정 버튼 */}
             {!isConfirmed ? (
