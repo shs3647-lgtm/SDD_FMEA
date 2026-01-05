@@ -112,7 +112,7 @@ interface OldWorksheetData {
 /**
  * 기존 중첩 구조 데이터를 원자성 DB 구조로 마이그레이션
  */
-export function migrateToAtomicDB(oldData: OldWorksheetData): FMEAWorksheetDB {
+export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorksheetDB {
   const db = createEmptyDB(oldData.fmeaId);
   
   console.log('[마이그레이션] 시작:', oldData.fmeaId);
