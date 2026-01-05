@@ -1,40 +1,17 @@
-=== PFMEA URL ===
-메인 워크시트: http://localhost:3001/pfmea/worksheet?id=PFM26-001&v=20260105-dedup-productchar
-FMEA 리스트: http://localhost:3001/pfmea/list
-FMEA 등록: http://localhost:3001/pfmea/register
-FMEA 4판: http://localhost:3001/pfmea/fmea4?id=PFM26-001
-
-=== DFMEA URL ===
-메인 워크시트: http://localhost:3001/dfmea/worksheet?id=DFM25-310
-FMEA 리스트: http://localhost:3001/dfmea/list
-FMEA 등록: http://localhost:3001/dfmea/register
+http://localhost:3001/pfmea/worksheet?id=PFM26-001
 
 === VERSION INFO ===
-Version: 1.0.4-dedup-productchar
+Version: 2.3.0
 Last Updated: 2026-01-05
-Changes: 
-  - ✅ FmeaConfirmedState 테이블 추가 (모든 확정 상태 DB 저장)
-  - ✅ 제품특성 중복 제거 로직 강화 (FunctionL2Tab)
-  - ✅ 마운트 시 기존 중복 데이터 자동 정리
-  - ✅ 자동연결 시 중복 방지 강화
-Status: Ready for Testing
-Cache Busting: v=20260105-dedup-productchar
+Changes: 원자성 DB 기반 전체화면 CASCADE 역전개 (AI 분석 기반)
+Status: PRODUCTION READY
+Cache Busting: v=2.3.0-20260105-atomic-db
 
-=== 수정된 문제 ===
-1. 확정 상태 저장/로드 문제 해결
-   - FmeaConfirmedState 테이블에 10가지 확정 상태 저장
-   
-2. 제품특성 중복 문제 해결
-   - 마운트 시 기존 중복 데이터 자동 정리
-   - 저장 시 중복 방지 (existingNames Set 활용)
-   - 자동연결 시 중복 체크 (seenChars Set 활용)
-   - 렌더링 시 중복 필터링 (isFirst 체크)
+=== 신규 기능 ===
+1. 프로젝트별 원자성 관계형 DB
+2. 전체화면 API (/api/fmea/all-view)
+3. AllTabAtomic 컴포넌트
+4. AI 분석/고장예측 기반 구축
 
-=== PostgreSQL 연동 ===
-- API: /api/fmea (GET/POST)
-- 확정 상태 저장: fmea_confirmed_states 테이블
-- DB 저장 실패 시 localStorage 자동 폴백
-
-=== 코드프리즈 ===
-- 태그: codefreeze-20260105-dedup-productchar
-- 보호 파일: FailureL1Tab.tsx, FailureL2Tab.tsx, FailureL3Tab.tsx
+=== 코드프리즈 태그 ===
+codefreeze-20260105-atomic-db

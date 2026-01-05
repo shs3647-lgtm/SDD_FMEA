@@ -1,11 +1,59 @@
 # 📋 FMEA On-Premise 개발 히스토리
 
 > **최종 업데이트**: 2026-01-05  
-> **현재 버전**: 2.2.0
+> **현재 버전**: 2.3.0
 
 ---
 
 ## 📅 2026-01-05
+
+### v2.3.0 - 원자성 DB 기반 전체화면 CASCADE 역전개 (AI 분석 기반)
+
+**작업 내용**:
+1. ✅ **프로젝트별 원자성 관계형 DB 구축**
+   - L1Structure, L2Structure, L3Structure (구조분석)
+   - L1Function, L2Function, L3Function (기능분석)
+   - FailureEffect, FailureMode, FailureCause (고장분석)
+   - FailureLink, RiskAnalysis, Optimization (연결/분석)
+
+2. ✅ **전체화면 API** (`/api/fmea/all-view`)
+   - JOIN으로 CASCADE 역전개
+   - 고장연결 결과 → 기능분석 → 구조분석 역추적
+
+3. ✅ **AllTabAtomic 컴포넌트**
+   - 원자성 DB에서 직접 데이터 로드
+   - 28열 FMEA 워크시트 렌더링
+
+4. ✅ **AllTabRenderer 통합**
+   - `fmeaId` + `useAtomicDB` prop 추가
+   - 원자성 모드 / 레거시 모드 자동 전환
+
+**아키텍처**:
+```
+AllTabRenderer
+├─ fmeaId + useAtomicDB=true → AllTabAtomic (원자성 DB)
+├─ failureLinks.length > 0   → AllTabWithLinks (state)
+└─ 기타                      → AllTabBasic
+
+/api/fmea/all-view
+└─ FailureLink + JOIN (FM→L2Func→L2Struct, FE→L1Func,
+                       FC→L3Func→L3Struct, Risk, Opt)
+```
+
+**AI 분석 가능성**:
+- 공정별 고장 빈도 분석 (SQL GROUP BY)
+- 유사 공정 고장 패턴 예측
+- RPN 기반 위험도 학습
+- 프로젝트간 Lessons Learned
+
+**생성된 파일**:
+- `src/app/api/fmea/all-view/route.ts` - 전체화면 API
+- `src/app/pfmea/worksheet/tabs/all/AllTabAtomic.tsx` - 원자성 컴포넌트
+
+**커밋 해시**: `b12d8a4`
+**코드프리즈 태그**: `codefreeze-20260105-atomic-db`
+
+---
 
 ### v2.2.0 - 3L기능 스타일 줄무늬 표준화 + 2L기능 누락 버튼
 
