@@ -83,7 +83,27 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
     return false;
   };
 
-  // 누락건수 계산 제거 - 사용자 요청에 따라 삭제
+  // ✅ 누락건수 계산 (제품특성이 없는 기능 수)
+  const missingCount = useMemo(() => {
+    const isPlaceholderName = (name: string) => {
+      if (!name || !name.trim()) return true;
+      if (name.includes('클릭하여')) return true;
+      if (name.includes('선택')) return true;
+      if (name.includes('입력')) return true;
+      if (name.includes('필요')) return true;
+      if (name.includes('추가')) return true;
+      return false;
+    };
+    let count = 0;
+    state.l2.forEach((proc: any) => {
+      const funcs = (proc.functions || []).filter((f: any) => f.name && !isPlaceholderName(f.name));
+      funcs.forEach((f: any) => {
+        const chars = (f.productChars || []).filter((c: any) => c.name && !isPlaceholderName(c.name));
+        if (chars.length === 0) count++;
+      });
+    });
+    return count;
+  }, [state.l2]);
 
   // ✅ 2L COUNT 계산 (메인공정, 메인공정기능, 제품특성)
   const processCount = useMemo(() => state.l2.filter(p => p.name && !p.name.includes('클릭')).length, [state.l2]);
@@ -570,6 +590,7 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
                   ) : (
                     <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
                   )}
+                  <span className={missingCount > 0 ? badgeMissing : badgeOk}>누락 {missingCount}건</span>
                   {isConfirmed && (
                     <button type="button" onClick={handleEdit} className={btnEdit}>수정</button>
                   )}
