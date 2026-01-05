@@ -190,12 +190,13 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
     requestAnimationFrame(() => {
       setTimeout(() => {
         saveToLocalStorage?.();
-        console.log('[FunctionL3Tab] 확정 후 localStorage 저장 완료');
+        saveAtomicDB?.();  // ✅ DB 저장 추가
+        console.log('[FunctionL3Tab] 확정 후 localStorage + DB 저장 완료');
       }, 50);
     });
     
     alert('✅ 3L 작업요소 기능분석이 확정되었습니다.');
-  }, [missingCount, state.l2, setState, setStateSynced, setDirty, saveToLocalStorage]);
+  }, [missingCount, state.l2, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   // 수정 핸들러 (고장분석 패턴 적용) - ✅ setStateSynced 사용
   const handleEdit = useCallback(() => {

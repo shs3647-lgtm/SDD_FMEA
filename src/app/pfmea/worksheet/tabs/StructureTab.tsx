@@ -44,6 +44,7 @@ interface StructureTabProps {
   setIsWorkElementModalOpen: (open: boolean) => void;
   setTargetL2Id: (id: string | null) => void;
   saveToLocalStorage?: () => void; // 영구 저장 함수
+  saveAtomicDB?: () => void;  // ✅ DB 저장 함수 추가
 }
 
 // 스타일 함수
@@ -417,7 +418,7 @@ export function StructureRow({
 }
 
 export default function StructureTab(props: StructureTabProps) {
-  const { rows, setIsProcessModalOpen, state, setState, setStateSynced, setDirty, saveToLocalStorage, handleInputBlur, handleInputKeyDown } = props;
+  const { rows, setIsProcessModalOpen, state, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB, handleInputBlur, handleInputKeyDown } = props;
   
   // ✅ 확정 상태 (고장분석 패턴 적용)
   const isConfirmed = (state as any).structureConfirmed || false;
@@ -587,7 +588,8 @@ export default function StructureTab(props: StructureTabProps) {
         console.log('[StructureTab] 저장 실행');
         if (saveToLocalStorage) {
           saveToLocalStorage();
-          console.log('[StructureTab] 확정 후 localStorage 저장 완료');
+          saveAtomicDB?.();  // ✅ DB 저장 추가
+          console.log('[StructureTab] 확정 후 localStorage + DB 저장 완료');
         } else {
           console.error('[StructureTab] saveToLocalStorage가 없습니다!');
         }
