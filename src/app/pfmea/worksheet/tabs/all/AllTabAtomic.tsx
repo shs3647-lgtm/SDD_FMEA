@@ -66,6 +66,19 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<any>(null);
 
+  // 단계 조합에 따른 최적화 폭 계산
+  const getOptimizedWidth = useMemo(() => {
+    const steps = visibleSteps.sort((a, b) => a - b).join(',');
+    const widthMap: Record<string, number> = {
+      '2': 300,           // 2ST만: 구조분석만
+      '2,3': 1380,        // 2ST+3ST: 3단계, 4단계 한 화면
+      '2,3,4': 1900,      // 2ST+3ST+4ST: 5단계, 6단계 일부
+      '2,3,4,5': 2500,    // 2ST+3ST+4ST+5ST: 6단계 보이게
+      '2,3,4,5,6': 3500,  // 전체: 모든 단계
+    };
+    return widthMap[steps] || 1350;
+  }, [visibleSteps]);
+
   // 원자성 DB에서 데이터 로드
   useEffect(() => {
     const loadData = async () => {
@@ -241,7 +254,7 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
         <span>3레벨</span>
       </div>
       
-      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 1350 }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: getOptimizedWidth }}>
         <colgroup>
           {/* 구조분석 4열 */}
           {visibleSteps.includes(2) && (
