@@ -315,8 +315,37 @@ export async function POST(request: NextRequest) {
 
       // 10. FailureLinks 저장 (기존 링크 삭제 후 재생성)
       if (db.failureLinks.length > 0) {
+        // ✅ 강력한 원자성 보장:
+        // - failure_links는 fmId/feId/fcId 모두 유효 FK여야만 저장 가능
+        // - UI 편집 중(부분 연결) 또는 id 불일치가 섞이면 FK(P2003)로 전체 트랜잭션 롤백 → 새로고침 시 "사라짐" 발생
+        // - 해결: atomic 테이블에 실제로 생성된 id 집합으로 필터링하여 "완전한 링크만" 저장
+        const fmIdSet = new Set(db.failureModes.map(fm => fm.id));
+        const feIdSet = new Set(db.failureEffects.map(fe => fe.id));
+        const fcIdSet = new Set(db.failureCauses.map(fc => fc.id));
+
+        const validLinks = db.failureLinks.filter(link =>
+          !!link.fmId && !!link.feId && !!link.fcId &&
+          fmIdSet.has(link.fmId) &&
+          feIdSet.has(link.feId) &&
+          fcIdSet.has(link.fcId)
+        );
+
+        const dropped = db.failureLinks.length - validLinks.length;
+        if (dropped > 0) {
+          console.warn('[API] ⚠️ failureLinks 중 FK 불일치/부분 연결 제외:', {
+            fmeaId: db.fmeaId,
+            total: db.failureLinks.length,
+            valid: validLinks.length,
+            dropped,
+            sampleDropped: db.failureLinks
+              .filter(l => !validLinks.includes(l))
+              .slice(0, 3)
+              .map(l => ({ fmId: l.fmId, feId: l.feId, fcId: l.fcId })),
+          });
+        }
+
         await tx.failureLink.createMany({
-          data: db.failureLinks.map(link => ({
+          data: validLinks.map(link => ({
             id: link.id,
             fmeaId: db.fmeaId,
             fmId: link.fmId,
