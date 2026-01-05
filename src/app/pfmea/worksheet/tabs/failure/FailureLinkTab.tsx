@@ -680,6 +680,17 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       return;
     }
     
+    // 0단계: 아직 확정되지 않은 임시 연결(Linked 상태)만 있을 때는 단순 토글 해제
+    if (linkedFEs.has(id)) {
+      setLinkedFEs(prev => {
+        const next = new Map(prev);
+        next.delete(id);
+        return next;
+      });
+      setTimeout(drawLines, 50);
+      return;
+    }
+    
     // 현재 FM과의 연결만 확인 (다른 FM과의 연결은 유지)
     const existingLink = savedLinks.find(l => 
       l.fmId === currentFMId && (l.feId === id || l.feText === fe.text)
