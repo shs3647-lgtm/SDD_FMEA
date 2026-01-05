@@ -22,6 +22,15 @@ import { getAIStatus } from '@/lib/ai-recommendation';
 // =====================================================
 // 타입 정의
 // =====================================================
+
+/**
+ * FMEA 유형 구분
+ * - M: Master FMEA (마스터)
+ * - F: Family FMEA (패밀리)
+ * - P: Part FMEA (부품)
+ */
+type FMEAType = 'M' | 'F' | 'P';
+
 interface FMEAInfo {
   companyName: string;
   engineeringLocation: string;
@@ -32,6 +41,7 @@ interface FMEAInfo {
   fmeaRevisionDate: string;
   fmeaProjectName: string;
   fmeaId: string;
+  fmeaType: FMEAType;  // FMEA 유형 (M/F/P)
   designResponsibility: string;
   confidentialityLevel: string;
   fmeaResponsibleName: string;
@@ -50,33 +60,49 @@ const INITIAL_FMEA: FMEAInfo = {
   fmeaRevisionDate: '',
   fmeaProjectName: '',
   fmeaId: '',
+  fmeaType: 'P',  // 기본값: Part FMEA
   designResponsibility: '',
   confidentialityLevel: '',
   fmeaResponsibleName: '',
 };
 
-function generateFMEAId(): string {
+/**
+ * FMEA ID 생성 규칙
+ * 형식: pfm{YY}-{T}{NNN}
+ * - pfm: PFMEA 약어 (소문자)
+ * - YY: 연도 뒤 2자리 (예: 26 = 2026년)
+ * - T: 유형 구분자 (M=Master, F=Family, P=Part)
+ * - NNN: 시리얼 번호 3자리 (001, 002, ...)
+ * 예시: pfm26-M001 (Master), pfm26-F001 (Family), pfm26-P001 (Part)
+ */
+function generateFMEAId(fmeaType: FMEAType = 'P'): string {
   const year = new Date().getFullYear().toString().slice(-2);
   
-  // ✅ 기존 프로젝트에서 최대 ID 찾아서 순차 증가
+  // ✅ 기존 프로젝트에서 해당 유형의 최대 ID 찾아서 순차 증가
   try {
     const stored = localStorage.getItem('pfmea-projects');
     if (stored) {
       const projects = JSON.parse(stored);
-      const currentYearIds = projects
-        .filter((p: { id: string }) => p.id?.startsWith(`PFM${year}-`))
-        .map((p: { id: string }) => parseInt(p.id.split('-')[1]) || 0);
+      // 해당 연도 + 유형의 ID 찾기 (예: pfm26-M, pfm26-F, pfm26-P)
+      const prefix = `pfm${year}-${fmeaType}`.toLowerCase();
+      const currentTypeIds = projects
+        .filter((p: { id: string }) => p.id?.toLowerCase().startsWith(prefix))
+        .map((p: { id: string }) => {
+          // pfm26-M001 -> 001 추출
+          const match = p.id.match(/\d{3}$/);
+          return match ? parseInt(match[0]) : 0;
+        });
       
-      if (currentYearIds.length > 0) {
-        const maxSeq = Math.max(...currentYearIds);
-        return `PFM${year}-${(maxSeq + 1).toString().padStart(3, '0')}`;
+      if (currentTypeIds.length > 0) {
+        const maxSeq = Math.max(...currentTypeIds);
+        return `pfm${year}-${fmeaType}${(maxSeq + 1).toString().padStart(3, '0')}`;
       }
     }
   } catch (e) {
     console.error('ID 생성 중 오류:', e);
   }
   
-  return `PFM${year}-001`;
+  return `pfm${year}-${fmeaType}001`;
 }
 
 // =====================================================
@@ -385,9 +411,27 @@ function PFMEARegisterPageContent() {
               </td>
               <td className={`${headerCell} w-[10%]`}>FMEA ID 번호</td>
               <td className={`${inputCell} w-[10%]`}>
-                <span className="px-2 text-xs text-gray-600">{fmeaId}</span>
+                <span className="px-2 text-xs font-semibold text-blue-600">{fmeaId}</span>
               </td>
-              <td className={`${headerCell} w-[10%]`}>회사에 의해 결정됨</td>
+              <td className={`${headerCell} w-[12%]`}>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span>FMEA 유형</span>
+                  <select 
+                    value={fmeaInfo.fmeaType} 
+                    onChange={(e) => {
+                      const newType = e.target.value as FMEAType;
+                      updateField('fmeaType', newType);
+                      // 유형 변경 시 ID 재생성
+                      setFmeaId(generateFMEAId(newType));
+                    }}
+                    className="w-full h-6 px-1 text-[10px] border border-white/50 bg-[#00587a] text-yellow-300 font-bold rounded focus:outline-none cursor-pointer"
+                  >
+                    <option value="M">M - Master FMEA</option>
+                    <option value="F">F - Family FMEA</option>
+                    <option value="P">P - Part FMEA</option>
+                  </select>
+                </div>
+              </td>
             </tr>
             
             {/* 2행 - 흰색 */}

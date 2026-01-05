@@ -1,11 +1,44 @@
 # 📋 FMEA On-Premise 개발 히스토리
 
 > **최종 업데이트**: 2026-01-06  
-> **현재 버전**: 2.4.0
+> **현재 버전**: 2.5.0
 
 ---
 
 ## 📅 2026-01-06
+
+### v2.5.0 - FMEA ID 유형 구분자 + 리스트 정렬 개선
+
+**핵심 변경사항**:
+
+1. ✅ **FMEA ID 유형 구분자 추가**
+   - 새 형식: `pfm{YY}-{T}{NNN}`
+   - 유형 구분자: **M** (Master), **F** (Family), **P** (Part)
+   - 예시: `pfm26-M001`, `pfm26-F001`, `pfm26-P001`
+
+2. ✅ **등록 화면 FMEA 유형 선택**
+   - "회사에 의해 결정됨" → FMEA 유형 드롭다운으로 변경
+   - 유형 변경 시 ID 자동 재생성
+
+3. ✅ **리스트 TYPE 컬럼 추가**
+   - FMEA ID 옆에 TYPE 배지 표시
+   - 색상: 🟣 M(보라), 🔵 F(파랑), 🟢 P(초록)
+
+4. ✅ **리스트 정렬 순서 변경**
+   - 1행: Master FMEA (항상 최상단)
+   - 2행: Family FMEA (항상 2번째)
+   - 3행~: Part FMEA (최신순)
+
+5. ✅ **5ST/6ST 확정 버튼 항상 표시**
+   - 조건부 숨김 → 항상 표시로 변경
+   - 비활성 상태: 회색 + 클릭 시 경고
+
+**수정된 파일**:
+- `src/app/pfmea/list/page.tsx` - TYPE 컬럼, 정렬 로직
+- `src/app/pfmea/register/page.tsx` - FMEA 유형 선택 UI
+- `src/app/pfmea/worksheet/components/TabMenu.tsx` - 확정 버튼 상시 표시
+
+---
 
 ### v2.4.0 - 리스크평가/최적화 확정 기능 + DB 저장 완성
 

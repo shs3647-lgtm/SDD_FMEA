@@ -46,6 +46,7 @@ interface FMEAProject {
 const COLUMN_HEADERS = [
   'No',
   'FMEA ID',
+  'TYPE',  // M=Master, F=Family, P=Part
   '프로젝트명',
   'FMEA명',
   '고객사',
@@ -58,21 +59,59 @@ const COLUMN_HEADERS = [
   '단계',
 ];
 
-// FMEA ID 포맷 생성 (pfm26-001) - 소문자 사용
-function formatFmeaId(id: string, index: number): string {
-  // 기존 ID가 pfm 형식이면 그대로 반환 (대소문자 구분 없이)
-  if (id.toLowerCase().startsWith('pfm')) return id.toLowerCase();
+/**
+ * FMEA ID에서 유형(TYPE) 추출
+ * pfm26-M001 → M, pfm26-F001 → F, pfm26-P001 → P
+ */
+function extractFmeaType(id: string): { code: string; label: string; color: string } {
+  const match = id.match(/pfm\d{2}-([MFP])/i);
+  const typeCode = match ? match[1].toUpperCase() : 'P';
   
-  // 년도 추출 (현재 년도 기준)
-  const year = new Date().getFullYear().toString().slice(-2);
-  const seq = (index + 1).toString().padStart(3, '0');
-  return `pfm${year}-${seq}`;
+  const types: Record<string, { label: string; color: string }> = {
+    'M': { label: 'Master', color: 'bg-purple-200 text-purple-700' },
+    'F': { label: 'Family', color: 'bg-blue-200 text-blue-700' },
+    'P': { label: 'Part', color: 'bg-green-200 text-green-700' },
+  };
+  
+  return { code: typeCode, ...types[typeCode] };
 }
 
-// 기본 샘플 데이터 - SDD FMEA만 유지 (소문자 ID)
+/**
+ * FMEA ID 포맷 생성
+ * 형식: pfm{YY}-{T}{NNN}
+ * - pfm: PFMEA 약어 (소문자)
+ * - YY: 연도 뒤 2자리 (예: 26 = 2026년)
+ * - T: 유형 구분자 (M=Master, F=Family, P=Part)
+ * - NNN: 시리얼 번호 3자리 (001, 002, ...)
+ * 예시: pfm26-M001 (Master), pfm26-F001 (Family), pfm26-P001 (Part)
+ */
+function formatFmeaId(id: string, index: number): string {
+  // 기존 ID가 pfm 형식이면 소문자로 정규화하여 반환
+  if (id.toLowerCase().startsWith('pfm')) return id.toLowerCase();
+  
+  // 년도 추출 (현재 년도 기준), 기본 유형 P
+  const year = new Date().getFullYear().toString().slice(-2);
+  const seq = (index + 1).toString().padStart(3, '0');
+  return `pfm${year}-P${seq}`;
+}
+
+// 기본 샘플 데이터 - SDD FMEA (새 ID 형식: pfm{YY}-{T}{NNN})
+// Master → Family → Part 순서로 정렬됨
 const DEFAULT_SAMPLE_DATA: FMEAProject[] = [
   {
-    id: 'pfm25-310',
+    id: 'pfm25-M001',  // M = Master FMEA (1행 고정)
+    project: { projectName: 'PCR 타이어 마스터', customer: 'SDD', productName: 'PCR 타이어 전체', partNo: 'PCR-MASTER', department: '품질팀', leader: '신홍섭', startDate: '2025-01-01', endDate: '2026-12-31' },
+    fmeaInfo: { subject: 'PCR 타이어 마스터 FMEA', fmeaStartDate: '2025-01-01', fmeaRevisionDate: '2025-12-29', modelYear: 'MY2025', designResponsibility: '품질팀', fmeaResponsibleName: '신홍섭' },
+    createdAt: '2025-01-01T09:00:00.000Z', status: 'active', step: 6, revisionNo: 'Rev.03'
+  },
+  {
+    id: 'pfm25-F001',  // F = Family FMEA (2행 고정)
+    project: { projectName: 'PCR 승용차 타이어', customer: 'SDD', productName: 'PCR 승용차용', partNo: 'PCR-FAMILY-01', department: '품질팀', leader: '김철수', startDate: '2025-03-01', endDate: '2026-06-30' },
+    fmeaInfo: { subject: 'PCR 승용차 타이어 Family FMEA', fmeaStartDate: '2025-03-01', fmeaRevisionDate: '2025-12-20', modelYear: 'MY2025', designResponsibility: '품질팀', fmeaResponsibleName: '김철수' },
+    createdAt: '2025-03-01T09:00:00.000Z', status: 'active', step: 5, revisionNo: 'Rev.02'
+  },
+  {
+    id: 'pfm25-P310',  // P = Part FMEA
     project: { projectName: 'SDD NEW FMEA 개발', customer: 'SDD', productName: 'PCR 타이어', partNo: 'PCR-2025-001', department: '품질팀', leader: '신홍섭', startDate: '2025-12-01', endDate: '2026-06-30' },
     fmeaInfo: { subject: 'SDD NEW FMEA 개발', fmeaStartDate: '2025-12-01', fmeaRevisionDate: '2025-12-29', modelYear: 'MY2025', designResponsibility: '품질팀', fmeaResponsibleName: '신홍섭' },
     createdAt: '2025-12-01T09:00:00.000Z', status: 'active', step: 4, revisionNo: 'Rev.01'
@@ -141,10 +180,23 @@ export default function FMEAListPage() {
         return acc;
       }, []);
 
-      // 최신순 정렬
-      const sorted = uniqueProjects.sort((a: FMEAProject, b: FMEAProject) => 
-        (b.createdAt || '').localeCompare(a.createdAt || '')
-      );
+      // 유형별 우선순위 (M=1, F=2, P=3) + 최신순 정렬
+      // Master → Family → Part 순서로 고정 표시
+      const typeOrder: Record<string, number> = { 'M': 1, 'F': 2, 'P': 3 };
+      const getTypeOrder = (id: string) => {
+        const match = id.match(/pfm\d{2}-([MFP])/i);
+        return match ? typeOrder[match[1].toUpperCase()] || 3 : 3;
+      };
+      
+      const sorted = uniqueProjects.sort((a: FMEAProject, b: FMEAProject) => {
+        // 1차: 유형 순서 (M → F → P)
+        const typeA = getTypeOrder(a.id);
+        const typeB = getTypeOrder(b.id);
+        if (typeA !== typeB) return typeA - typeB;
+        
+        // 2차: 같은 유형 내에서 최신순
+        return (b.createdAt || '').localeCompare(a.createdAt || '');
+      });
 
       setProjects(sorted);
     } catch (error) {
@@ -360,6 +412,16 @@ export default function FMEAListPage() {
                     {formatFmeaId(p.id, index)}
                   </a>
                 </td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle">
+                  {(() => {
+                    const type = extractFmeaType(p.id);
+                    return (
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${type.color}`}>
+                        {type.code}
+                      </span>
+                    );
+                  })()}
+                </td>
                 <td className="border border-gray-400 px-2 py-1 text-left align-middle">
                   {p.project?.projectName ? (
                     <a
@@ -429,6 +491,7 @@ export default function FMEAListPage() {
                   <input type="checkbox" disabled className="w-3.5 h-3.5 opacity-30" />
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">{filteredProjects.length + idx + 1}</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>

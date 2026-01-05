@@ -98,48 +98,56 @@ export default function TabMenu({ state, setState, setStateSynced, setDirty, sav
         {/* 구분선 */}
         <div className="hidden sm:block w-px h-5 bg-white/30 mx-1 lg:mx-2 shrink-0" />
         
-        {/* 5단계/6단계 확정 버튼 */}
+        {/* 5단계/6단계 확정 버튼 - 항상 표시 */}
         <div className="flex gap-1 shrink-0">
-          {failureLinkConfirmed && (
-            <button
-              onClick={() => {
-                if (riskConfirmed) {
-                  alert('이미 확정되었습니다.');
-                  return;
-                }
-                setState(prev => ({ ...prev, tab: 'risk' }));
-              }}
-              className={`
-                px-2 py-1 text-[10px] sm:text-xs rounded whitespace-nowrap
-                ${riskConfirmed 
-                  ? 'bg-green-600 text-white cursor-default' 
-                  : 'bg-yellow-500 text-black hover:bg-yellow-400 cursor-pointer'
-                }
-              `}
-            >
-              {riskConfirmed ? '✓ 5단계확정' : '5단계확정'}
-            </button>
-          )}
-          {riskConfirmed && (
-            <button
-              onClick={() => {
-                if (optConfirmed) {
-                  alert('이미 확정되었습니다.');
-                  return;
-                }
-                setState(prev => ({ ...prev, tab: 'opt' }));
-              }}
-              className={`
-                px-2 py-1 text-[10px] sm:text-xs rounded whitespace-nowrap
-                ${optConfirmed 
-                  ? 'bg-green-600 text-white cursor-default' 
-                  : 'bg-yellow-500 text-black hover:bg-yellow-400 cursor-pointer'
-                }
-              `}
-            >
-              {optConfirmed ? '✓ 6단계확정' : '6단계확정'}
-            </button>
-          )}
+          <button
+            onClick={() => {
+              if (!failureLinkConfirmed) {
+                alert('⚠️ 고장연결을 먼저 확정해주세요.');
+                return;
+              }
+              if (riskConfirmed) {
+                alert('✅ 이미 확정되었습니다.');
+                return;
+              }
+              setState(prev => ({ ...prev, tab: 'risk' }));
+            }}
+            className={`
+              px-2 py-1 text-[10px] sm:text-xs rounded whitespace-nowrap border
+              ${riskConfirmed 
+                ? 'bg-green-600 text-white border-green-500 cursor-default' 
+                : failureLinkConfirmed
+                  ? 'bg-yellow-500 text-black border-yellow-400 hover:bg-yellow-400 cursor-pointer'
+                  : 'bg-gray-600 text-gray-300 border-gray-500 cursor-not-allowed opacity-70'
+              }
+            `}
+          >
+            {riskConfirmed ? '✓ 5ST확정' : '5ST확정'}
+          </button>
+          <button
+            onClick={() => {
+              if (!riskConfirmed) {
+                alert('⚠️ 리스크분석(5단계)을 먼저 확정해주세요.');
+                return;
+              }
+              if (optConfirmed) {
+                alert('✅ 이미 확정되었습니다.');
+                return;
+              }
+              setState(prev => ({ ...prev, tab: 'opt' }));
+            }}
+            className={`
+              px-2 py-1 text-[10px] sm:text-xs rounded whitespace-nowrap border
+              ${optConfirmed 
+                ? 'bg-green-600 text-white border-green-500 cursor-default' 
+                : riskConfirmed
+                  ? 'bg-yellow-500 text-black border-yellow-400 hover:bg-yellow-400 cursor-pointer'
+                  : 'bg-gray-600 text-gray-300 border-gray-500 cursor-not-allowed opacity-70'
+              }
+            `}
+          >
+            {optConfirmed ? '✓ 6ST확정' : '6ST확정'}
+          </button>
         </div>
         
         {/* 구분선 */}
