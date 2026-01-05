@@ -245,33 +245,59 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
       
       <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 1350 }}>
         <colgroup>
-          <col style={{ width: '100px' }} />
-          <col style={{ width: '40px' }} />
-          <col style={{ width: '20px' }} />
-          <col style={{ width: '120px' }} />
-          <col style={{ width: '30px' }} />
-          <col style={{ width: '200px' }} />
-          <col style={{ width: '140px' }} />
-          <col style={{ width: '200px' }} />
-          <col style={{ width: '100px' }} />
-          <col style={{ width: '30px' }} />
-          <col style={{ width: '190px' }} />
-          <col style={{ width: '80px' }} />
-          <col style={{ width: '200px' }} />
-          <col style={{ width: '40px' }} />
-          <col style={{ width: '200px' }} />
-          <col style={{ width: '200px' }} />
-          <col style={{ width: '40px' }} />
-          <col style={{ width: '40px' }} />
-          <col style={{ width: '40px' }} />
-          <col style={{ width: '40px' }} />
-          <col style={{ width: '40px' }} />
-          <col style={{ width: '180px' }} />
-          <col style={{ width: '180px' }} />
-          <col style={{ width: '200px' }} />
-          <col style={{ width: '80px' }} />
-          <col style={{ width: '100px' }} />
-          <col style={{ width: '60px' }} />
+          {/* 구조분석 4열 */}
+          {visibleSteps.includes(2) && (
+            <>
+              <col style={{ width: '100px' }} />
+              <col style={{ width: '40px' }} />
+              <col style={{ width: '20px' }} />
+              <col style={{ width: '120px' }} />
+            </>
+          )}
+          {/* 기능분석 8열 */}
+          {visibleSteps.includes(3) && (
+            <>
+              <col style={{ width: '30px' }} />
+              <col style={{ width: '200px' }} />
+              <col style={{ width: '140px' }} />
+              <col style={{ width: '200px' }} />
+              <col style={{ width: '100px' }} />
+              <col style={{ width: '30px' }} />
+              <col style={{ width: '190px' }} />
+              <col style={{ width: '80px' }} />
+            </>
+          )}
+          {/* 고장분석 5열 */}
+          {visibleSteps.includes(4) && (
+            <>
+              <col style={{ width: '200px' }} />
+              <col style={{ width: '40px' }} />
+              <col style={{ width: '200px' }} />
+              <col style={{ width: '200px' }} />
+              <col style={{ width: '40px' }} />
+            </>
+          )}
+          {/* 리스크분석 6열 */}
+          {visibleSteps.includes(5) && (
+            <>
+              <col style={{ width: '40px' }} />
+              <col style={{ width: '40px' }} />
+              <col style={{ width: '40px' }} />
+              <col style={{ width: '40px' }} />
+              <col style={{ width: '40px' }} />
+              <col style={{ width: '180px' }} />
+              <col style={{ width: '180px' }} />
+            </>
+          )}
+          {/* 최적화 4열 */}
+          {visibleSteps.includes(6) && (
+            <>
+              <col style={{ width: '200px' }} />
+              <col style={{ width: '80px' }} />
+              <col style={{ width: '100px' }} />
+              <col style={{ width: '60px' }} />
+            </>
+          )}
         </colgroup>
         <thead>
           {/* 단계 헤더 */}
@@ -330,49 +356,71 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
           {/* 컬럼 헤더 (Activity) */}
           <tr>
             {/* 구조분석 */}
-            <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H, '#000', 59)}>완제품</th>
-            <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H, '#000', 59)}>NO+공정명</th>
-            <th style={stickyHeaderCellStyle(COLORS.special.m4.h3, HEADER_ROW_H, '#000', 59)}>4M</th>
-            <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H, '#000', 59)}>작업요소</th>
+            {visibleSteps.includes(2) && (
+              <>
+                <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H, '#000', 59)}>완제품</th>
+                <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H, '#000', 59)}>NO+공정명</th>
+                <th style={stickyHeaderCellStyle(COLORS.special.m4.h3, HEADER_ROW_H, '#000', 59)}>4M</th>
+                <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H, '#000', 59)}>작업요소</th>
+              </>
+            )}
             {/* 기능분석 */}
-            <th style={stickyHeaderCellStyle(COLORS.special.scope.h3, HEADER_ROW_H, '#000', 59)}>구분</th>
-            <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>완제품기능</th>
-            <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>요구사항</th>
-            <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>공정기능</th>
-            <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>제품특성</th>
-            <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>특별특성</th>
-            <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>작업기능</th>
-            <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>공정특성</th>
+            {visibleSteps.includes(3) && (
+              <>
+                <th style={stickyHeaderCellStyle(COLORS.special.scope.h3, HEADER_ROW_H, '#000', 59)}>구분</th>
+                <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>완제품기능</th>
+                <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>요구사항</th>
+                <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>공정기능</th>
+                <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>제품특성</th>
+                <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>특별특성</th>
+                <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>작업기능</th>
+                <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>공정특성</th>
+              </>
+            )}
             {/* 고장분석 */}
-            <th style={stickyHeaderCellStyle(COLORS.failure.header, HEADER_ROW_H, '#000', 59)}>고장영향</th>
-            <th style={stickyHeaderCellStyle(COLORS.indicator.severity.bg, HEADER_ROW_H, COLORS.indicator.severity.text, 59)}>S</th>
-            <th style={stickyHeaderCellStyle(COLORS.failure.header, HEADER_ROW_H, '#000', 59)}>고장형태</th>
-            <th style={stickyHeaderCellStyle(COLORS.failure.header, HEADER_ROW_H, '#000', 59)}>고장원인</th>
-            <th style={stickyHeaderCellStyle(COLORS.indicator.occurrence.bg, HEADER_ROW_H, COLORS.indicator.occurrence.text, 59)}>O</th>
+            {visibleSteps.includes(4) && (
+              <>
+                <th style={stickyHeaderCellStyle(COLORS.failure.header, HEADER_ROW_H, '#000', 59)}>고장영향</th>
+                <th style={stickyHeaderCellStyle(COLORS.indicator.severity.bg, HEADER_ROW_H, COLORS.indicator.severity.text, 59)}>S</th>
+                <th style={stickyHeaderCellStyle(COLORS.failure.header, HEADER_ROW_H, '#000', 59)}>고장형태</th>
+                <th style={stickyHeaderCellStyle(COLORS.failure.header, HEADER_ROW_H, '#000', 59)}>고장원인</th>
+                <th style={stickyHeaderCellStyle(COLORS.indicator.occurrence.bg, HEADER_ROW_H, COLORS.indicator.occurrence.text, 59)}>O</th>
+              </>
+            )}
             {/* 리스크분석 */}
-            <th style={stickyHeaderCellStyle(COLORS.indicator.severity.bg, HEADER_ROW_H, COLORS.indicator.severity.text, 59)}>S</th>
-            <th style={stickyHeaderCellStyle(COLORS.indicator.occurrence.bg, HEADER_ROW_H, COLORS.indicator.occurrence.text, 59)}>O</th>
-            <th style={stickyHeaderCellStyle(COLORS.indicator.detection.bg, HEADER_ROW_H, COLORS.indicator.detection.text, 59)}>D</th>
-            <th style={stickyHeaderCellStyle(COLORS.indicator.ap.bg, HEADER_ROW_H, COLORS.indicator.ap.text, 59)}>AP</th>
-            <th style={stickyHeaderCellStyle(COLORS.risk.prevention.header, HEADER_ROW_H, '#000', 59)}>예방관리</th>
-            <th style={stickyHeaderCellStyle(COLORS.risk.detection.header, HEADER_ROW_H, '#000', 59)}>검출관리</th>
+            {visibleSteps.includes(5) && (
+              <>
+                <th style={stickyHeaderCellStyle(COLORS.indicator.severity.bg, HEADER_ROW_H, COLORS.indicator.severity.text, 59)}>S</th>
+                <th style={stickyHeaderCellStyle(COLORS.indicator.occurrence.bg, HEADER_ROW_H, COLORS.indicator.occurrence.text, 59)}>O</th>
+                <th style={stickyHeaderCellStyle(COLORS.indicator.detection.bg, HEADER_ROW_H, COLORS.indicator.detection.text, 59)}>D</th>
+                <th style={stickyHeaderCellStyle(COLORS.indicator.ap.bg, HEADER_ROW_H, COLORS.indicator.ap.text, 59)}>AP</th>
+                <th style={stickyHeaderCellStyle(COLORS.risk.prevention.header, HEADER_ROW_H, '#000', 59)}>예방관리</th>
+                <th style={stickyHeaderCellStyle(COLORS.risk.detection.header, HEADER_ROW_H, '#000', 59)}>검출관리</th>
+              </>
+            )}
             {/* 최적화 */}
-            <th style={stickyHeaderCellStyle(COLORS.opt.plan.header, HEADER_ROW_H, '#000', 59)}>권고조치</th>
-            <th style={stickyHeaderCellStyle(COLORS.opt.plan.header, HEADER_ROW_H, '#000', 59)}>담당자</th>
-            <th style={stickyHeaderCellStyle(COLORS.opt.plan.header, HEADER_ROW_H, '#000', 59)}>목표일</th>
-            <th style={stickyHeaderCellStyle(COLORS.opt.effect.header, HEADER_ROW_H, '#000', 59)}>상태</th>
+            {visibleSteps.includes(6) && (
+              <>
+                <th style={stickyHeaderCellStyle(COLORS.opt.plan.header, HEADER_ROW_H, '#000', 59)}>권고조치</th>
+                <th style={stickyHeaderCellStyle(COLORS.opt.plan.header, HEADER_ROW_H, '#000', 59)}>담당자</th>
+                <th style={stickyHeaderCellStyle(COLORS.opt.plan.header, HEADER_ROW_H, '#000', 59)}>목표일</th>
+                <th style={stickyHeaderCellStyle(COLORS.opt.effect.header, HEADER_ROW_H, '#000', 59)}>상태</th>
+              </>
+            )}
           </tr>
           {/* No 헤더 (3행 고정) */}
           <tr>
-            {([
-              'A','B','C','D',
-              'E','F','G','H','I','J','K','L','M',
-              'N','O','P','Q','R',
-              'S','T','U','V','W','X',
-              'Y','Z','AA','AB'
-            ] as string[]).map((no) => (
-              <th key={no} style={stickyHeaderCellStyle('#eceff1', HEADER_ROW_H * 2, '#000', 58)}>{no}</th>
-            ))}
+            {(() => {
+              const noLabels: string[] = [];
+              if (visibleSteps.includes(2)) noLabels.push('A', 'B', 'C', 'D');
+              if (visibleSteps.includes(3)) noLabels.push('E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M');
+              if (visibleSteps.includes(4)) noLabels.push('N', 'O', 'P', 'Q', 'R');
+              if (visibleSteps.includes(5)) noLabels.push('S', 'T', 'U', 'V', 'W', 'X');
+              if (visibleSteps.includes(6)) noLabels.push('Y', 'Z', 'AA', 'AB');
+              return noLabels.map((no) => (
+                <th key={no} style={stickyHeaderCellStyle('#eceff1', HEADER_ROW_H * 2, '#000', 58)}>{no}</th>
+              ));
+            })()}
           </tr>
         </thead>
         <tbody>
@@ -383,59 +431,79 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
             return (
               <tr key={pr.row.linkId}>
                 {/* 구조분석 */}
-                {pr.showProcess && (
+                {visibleSteps.includes(2) && (
                   <>
-                    <td rowSpan={pr.processRowSpan} style={cellStyle(zebra.structure, 'center')}>{r.l1StructName}</td>
-                    <td rowSpan={pr.processRowSpan} style={cellStyle(zebra.structure, 'center')}>{r.l2StructNo} {r.l2StructName}</td>
+                    {pr.showProcess && (
+                      <>
+                        <td rowSpan={pr.processRowSpan} style={cellStyle(zebra.structure, 'center')}>{r.l1StructName}</td>
+                        <td rowSpan={pr.processRowSpan} style={cellStyle(zebra.structure, 'center')}>{r.l2StructNo} {r.l2StructName}</td>
+                      </>
+                    )}
+                    <td style={cellStyle(zebra.structure, 'center')}>{r.l3M4}</td>
+                    <td style={cellStyle(zebra.structure, 'center')}>{r.l3Name}</td>
                   </>
                 )}
-                <td style={cellStyle(zebra.structure, 'center')}>{r.l3M4}</td>
-                <td style={cellStyle(zebra.structure, 'center')}>{r.l3Name}</td>
                 
                 {/* 기능분석 */}
-                {pr.showFe && (
+                {visibleSteps.includes(3) && (
                   <>
-                    <td rowSpan={pr.feRowSpan} style={cellStyle(zebra.function, 'center')}>{r.l1FuncCategory}</td>
-                    <td rowSpan={pr.feRowSpan} style={cellStyle(zebra.function, 'left')}>{r.l1FuncName}</td>
-                    <td rowSpan={pr.feRowSpan} style={cellStyle(zebra.function, 'center')}>{r.l1Requirement}</td>
+                    {pr.showFe && (
+                      <>
+                        <td rowSpan={pr.feRowSpan} style={cellStyle(zebra.function, 'center')}>{r.l1FuncCategory}</td>
+                        <td rowSpan={pr.feRowSpan} style={cellStyle(zebra.function, 'left')}>{r.l1FuncName}</td>
+                        <td rowSpan={pr.feRowSpan} style={cellStyle(zebra.function, 'center')}>{r.l1Requirement}</td>
+                      </>
+                    )}
+                    {pr.showFm && (
+                      <>
+                        <td rowSpan={pr.fmRowSpan} style={cellStyle(zebra.function, 'left')}>{r.l2FuncName}</td>
+                        <td rowSpan={pr.fmRowSpan} style={cellStyle(zebra.function, 'center')}>{r.l2ProductChar}</td>
+                        <td rowSpan={pr.fmRowSpan} style={cellStyle(zebra.function, 'center')}>{r.l2SpecialChar}</td>
+                      </>
+                    )}
+                    <td style={cellStyle(zebra.function, 'left')}>{r.l3FuncName}</td>
+                    <td style={cellStyle(zebra.function, 'center')}>{r.l3ProcessChar}</td>
                   </>
                 )}
-                {pr.showFm && (
-                  <>
-                    <td rowSpan={pr.fmRowSpan} style={cellStyle(zebra.function, 'left')}>{r.l2FuncName}</td>
-                    <td rowSpan={pr.fmRowSpan} style={cellStyle(zebra.function, 'center')}>{r.l2ProductChar}</td>
-                    <td rowSpan={pr.fmRowSpan} style={cellStyle(zebra.function, 'center')}>{r.l2SpecialChar}</td>
-                  </>
-                )}
-                <td style={cellStyle(zebra.function, 'left')}>{r.l3FuncName}</td>
-                <td style={cellStyle(zebra.function, 'center')}>{r.l3ProcessChar}</td>
                 
                 {/* 고장분석 */}
-                {pr.showFe && (
+                {visibleSteps.includes(4) && (
                   <>
-                    <td rowSpan={pr.feRowSpan} style={cellStyle(zebra.failure, 'center')}>{r.feEffect}</td>
-                    <td rowSpan={pr.feRowSpan} style={{ ...cellStyle(zebra.failure, 'center'), fontWeight: 600 }}>{r.feSeverity || ''}</td>
+                    {pr.showFe && (
+                      <>
+                        <td rowSpan={pr.feRowSpan} style={cellStyle(zebra.failure, 'center')}>{r.feEffect}</td>
+                        <td rowSpan={pr.feRowSpan} style={{ ...cellStyle(zebra.failure, 'center'), fontWeight: 600 }}>{r.feSeverity || ''}</td>
+                      </>
+                    )}
+                    {pr.showFm && (
+                      <td rowSpan={pr.fmRowSpan} style={cellStyle(zebra.failure, 'center')}>{r.fmMode}</td>
+                    )}
+                    <td style={cellStyle(zebra.failure, 'center')}>{r.fcCause}</td>
+                    <td style={cellStyle(zebra.failure, 'center')}>{r.fcOccurrence || ''}</td>
                   </>
                 )}
-                {pr.showFm && (
-                  <td rowSpan={pr.fmRowSpan} style={cellStyle(zebra.failure, 'center')}>{r.fmMode}</td>
-                )}
-                <td style={cellStyle(zebra.failure, 'center')}>{r.fcCause}</td>
-                <td style={cellStyle(zebra.failure, 'center')}>{r.fcOccurrence || ''}</td>
                 
                 {/* 리스크분석 */}
-                <td style={cellStyle('#fff', 'center')}>{r.riskSeverity || ''}</td>
-                <td style={cellStyle('#fff', 'center')}>{r.riskOccurrence || ''}</td>
-                <td style={cellStyle('#fff', 'center')}>{r.riskDetection || ''}</td>
-                <td style={{ ...cellStyle('#fff', 'center'), fontWeight: 600, color: r.riskAP === 'H' ? '#d32f2f' : r.riskAP === 'M' ? '#f57c00' : '#388e3c' }}>{r.riskAP || ''}</td>
-                <td style={cellStyle('#fff', 'center')}>{r.preventionControl || ''}</td>
-                <td style={cellStyle('#fff', 'center')}>{r.detectionControl || ''}</td>
+                {visibleSteps.includes(5) && (
+                  <>
+                    <td style={cellStyle('#fff', 'center')}>{r.riskSeverity || ''}</td>
+                    <td style={cellStyle('#fff', 'center')}>{r.riskOccurrence || ''}</td>
+                    <td style={cellStyle('#fff', 'center')}>{r.riskDetection || ''}</td>
+                    <td style={{ ...cellStyle('#fff', 'center'), fontWeight: 600, color: r.riskAP === 'H' ? '#d32f2f' : r.riskAP === 'M' ? '#f57c00' : '#388e3c' }}>{r.riskAP || ''}</td>
+                    <td style={cellStyle('#fff', 'center')}>{r.preventionControl || ''}</td>
+                    <td style={cellStyle('#fff', 'center')}>{r.detectionControl || ''}</td>
+                  </>
+                )}
                 
                 {/* 최적화 */}
-                <td style={cellStyle('#fff', 'center')}>{r.optAction || ''}</td>
-                <td style={cellStyle('#fff', 'center')}>{r.optResponsible || ''}</td>
-                <td style={cellStyle('#fff', 'center')}>{r.optTargetDate || ''}</td>
-                <td style={cellStyle('#fff', 'center')}>{r.optStatus || ''}</td>
+                {visibleSteps.includes(6) && (
+                  <>
+                    <td style={cellStyle('#fff', 'center')}>{r.optAction || ''}</td>
+                    <td style={cellStyle('#fff', 'center')}>{r.optResponsible || ''}</td>
+                    <td style={cellStyle('#fff', 'center')}>{r.optTargetDate || ''}</td>
+                    <td style={cellStyle('#fff', 'center')}>{r.optStatus || ''}</td>
+                  </>
+                )}
               </tr>
             );
           })}
