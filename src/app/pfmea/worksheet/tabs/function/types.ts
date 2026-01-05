@@ -36,4 +36,5 @@ export interface FunctionTabProps {
   handleInputBlur: () => void;
   handleInputKeyDown: (e: React.KeyboardEvent) => void;
   saveToLocalStorage?: () => void;
+  saveAtomicDB?: () => void;  // ✅ DB 저장 함수 추가
 }

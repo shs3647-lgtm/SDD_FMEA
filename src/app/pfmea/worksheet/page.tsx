@@ -481,6 +481,14 @@ function FMEAWorksheetPageContent() {
             {state.tab === 'all' ? (
               <div 
                 id="all-tab-scroll-wrapper"
+                className="worksheet-scroll-container"
+                style={{ 
+                  flex: 1,
+                  overflowX: 'auto',
+                  overflowY: 'auto',
+                  background: '#fff',
+                  position: 'relative',
+                }}
               >
                 {/* 전체보기 탭: 통합 화면 (40열 구조) - 원자성 DB 기반 */}
                 <AllTabRenderer 

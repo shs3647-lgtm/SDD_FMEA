@@ -58,21 +58,21 @@ const COLUMN_HEADERS = [
   '단계',
 ];
 
-// FMEA ID 포맷 생성 (PFM25-001)
+// FMEA ID 포맷 생성 (pfm26-001) - 소문자 사용
 function formatFmeaId(id: string, index: number): string {
-  // 기존 ID가 PFM 형식이면 그대로 반환
-  if (id.startsWith('PFM')) return id;
+  // 기존 ID가 pfm 형식이면 그대로 반환 (대소문자 구분 없이)
+  if (id.toLowerCase().startsWith('pfm')) return id.toLowerCase();
   
   // 년도 추출 (현재 년도 기준)
   const year = new Date().getFullYear().toString().slice(-2);
   const seq = (index + 1).toString().padStart(3, '0');
-  return `PFM${year}-${seq}`;
+  return `pfm${year}-${seq}`;
 }
 
-// 기본 샘플 데이터 - SDD FMEA만 유지
+// 기본 샘플 데이터 - SDD FMEA만 유지 (소문자 ID)
 const DEFAULT_SAMPLE_DATA: FMEAProject[] = [
   {
-    id: 'PFM25-310',
+    id: 'pfm25-310',
     project: { projectName: 'SDD NEW FMEA 개발', customer: 'SDD', productName: 'PCR 타이어', partNo: 'PCR-2025-001', department: '품질팀', leader: '신홍섭', startDate: '2025-12-01', endDate: '2026-06-30' },
     fmeaInfo: { subject: 'SDD NEW FMEA 개발', fmeaStartDate: '2025-12-01', fmeaRevisionDate: '2025-12-29', modelYear: 'MY2025', designResponsibility: '품질팀', fmeaResponsibleName: '신홍섭' },
     createdAt: '2025-12-01T09:00:00.000Z', status: 'active', step: 4, revisionNo: 'Rev.01'

@@ -46,7 +46,7 @@ import { getZebra, getZebraColors } from '@/styles/level-colors';
 // 특별특성 배지 - 공통 컴포넌트 사용
 import SpecialCharBadge from '@/components/common/SpecialCharBadge';
 
-export default function FunctionL2Tab({ state, setState, setStateSynced, setDirty, saveToLocalStorage }: FunctionTabProps) {
+export default function FunctionL2Tab({ state, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB }: FunctionTabProps) {
   const [modal, setModal] = useState<{ type: string; procId: string; funcId?: string; charId?: string; title: string; itemCode: string } | null>(null);
   
   // 특별특성 모달 상태
@@ -216,12 +216,13 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
     requestAnimationFrame(() => {
       setTimeout(() => {
         saveToLocalStorage?.();
-        console.log('[FunctionL2Tab] 확정 후 localStorage 저장 완료');
+        saveAtomicDB?.();  // ✅ DB 저장 추가
+        console.log('[FunctionL2Tab] 확정 후 localStorage + DB 저장 완료');
       }, 50);
     });
     
     alert('✅ 2L 메인공정 기능분석이 확정되었습니다.');
-  }, [state.l2, setState, setStateSynced, setDirty, saveToLocalStorage]);
+  }, [state.l2, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   // 수정 핸들러 (고장분석 패턴 적용) - ✅ setStateSynced 사용
   const handleEdit = useCallback(() => {

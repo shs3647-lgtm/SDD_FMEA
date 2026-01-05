@@ -44,7 +44,7 @@ const dataCell = (bg: string): React.CSSProperties => ({ ...cellBase, background
 // 특별특성 배지 - 공통 컴포넌트 사용
 import SpecialCharBadge from '@/components/common/SpecialCharBadge';
 
-export default function FunctionL3Tab({ state, setState, setStateSynced, setDirty, saveToLocalStorage }: FunctionTabProps) {
+export default function FunctionL3Tab({ state, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB }: FunctionTabProps) {
   const [modal, setModal] = useState<{ 
     type: string; 
     procId: string; 

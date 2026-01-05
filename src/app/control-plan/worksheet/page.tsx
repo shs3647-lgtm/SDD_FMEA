@@ -49,9 +49,9 @@ interface CPPageState {
   dirty: boolean;
 }
 
-// 기본 SDD 샘플 데이터
+// 기본 SDD 샘플 데이터 (소문자 ID)
 const DEFAULT_SDD_FMEA = {
-  id: 'PFM25-310',
+  id: 'pfm25-310',
   project: { projectName: 'SDD NEW FMEA 개발', customer: 'SDD', productName: 'PCR 타이어', partNo: 'PCR-2025-001', department: '품질팀', leader: '신홍섭', startDate: '2025-12-01', endDate: '2026-06-30' },
   fmeaInfo: { subject: 'SDD NEW FMEA 개발', fmeaStartDate: '2025-12-01', fmeaRevisionDate: '2025-12-29', modelYear: 'MY2025', designResponsibility: '품질팀', fmeaResponsibleName: '신홍섭', customer: 'SDD', customerName: 'SDD' },
   createdAt: '2025-12-01T09:00:00.000Z', status: 'active', step: 4, revisionNo: 'Rev.01',
@@ -174,7 +174,7 @@ export default function ControlPlanPage() {
     try {
       // 기본 SDD 샘플 먼저 확인
       let fmea: any = null;
-      if (fmeaId === DEFAULT_SDD_FMEA.id || fmeaId === 'PFM25-310') {
+      if (fmeaId === DEFAULT_SDD_FMEA.id || fmeaId.toLowerCase() === 'pfm25-310') {
         fmea = DEFAULT_SDD_FMEA;
         console.log('✅ SDD 샘플 데이터 사용:', fmea);
       }

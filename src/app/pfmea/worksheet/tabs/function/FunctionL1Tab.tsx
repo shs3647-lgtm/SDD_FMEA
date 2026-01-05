@@ -43,7 +43,7 @@ const cellBase: React.CSSProperties = { border: BORDER, padding: '4px 6px', font
 const headerStyle = (bg: string, color = '#fff'): React.CSSProperties => ({ ...cellBase, background: bg, color, fontWeight: FONT_WEIGHTS.bold, textAlign: 'center' });
 const dataCell = (bg: string): React.CSSProperties => ({ ...cellBase, background: bg });
 
-export default function FunctionL1Tab({ state, setState, setStateSynced, setDirty, saveToLocalStorage }: FunctionTabProps) {
+export default function FunctionL1Tab({ state, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB }: FunctionTabProps) {
   const [modal, setModal] = useState<{ type: string; id: string; title: string; itemCode: string; parentFunction?: string; parentCategory?: string } | null>(null);
   
   // 확정 상태는 state에서 관리 (localStorage에 저장됨)
@@ -188,12 +188,13 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
     requestAnimationFrame(() => {
       setTimeout(() => {
         saveToLocalStorage?.();
-        console.log('[FunctionL1Tab] 확정 후 localStorage 저장 완료');
+        saveAtomicDB?.();  // ✅ DB 저장 추가
+        console.log('[FunctionL1Tab] 확정 후 localStorage + DB 저장 완료');
       }, 50);
     });
     
     alert('✅ 1L 완제품 기능분석이 확정되었습니다.');
-  }, [missingCount, state.l1.types, setState, setStateSynced, setDirty, saveToLocalStorage]);
+  }, [missingCount, state.l1.types, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   // 수정 핸들러 (고장분석 패턴 적용) - ✅ setStateSynced 사용
   const handleEdit = useCallback(() => {
