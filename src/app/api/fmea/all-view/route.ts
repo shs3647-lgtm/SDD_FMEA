@@ -59,6 +59,7 @@ interface AllViewRow {
   optResponsible: string | null;
   optTargetDate: string | null;
   optStatus: string | null;
+  optRemarks: string | null;
   
   // 메타데이터
   linkId: string;
@@ -184,6 +185,7 @@ export async function GET(request: NextRequest) {
         optResponsible: opt?.responsible || null,
         optTargetDate: opt?.targetDate || null,
         optStatus: opt?.status || null,
+        optRemarks: opt?.remarks || null,
         
         // 메타
         linkId: link.id,
