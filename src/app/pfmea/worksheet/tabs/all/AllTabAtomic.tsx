@@ -10,7 +10,7 @@
 
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { FONT_WEIGHTS } from '../../constants';
 import { ALL_TAB_COLORS, BORDER } from './constants';
 import { getZebraColors } from '@/styles/level-colors';
@@ -56,9 +56,10 @@ interface AllViewRow {
 interface AllTabAtomicProps {
   fmeaId: string;
   visibleSteps?: number[];
+  setState?: React.Dispatch<React.SetStateAction<any>>;
 }
 
-export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6] }: AllTabAtomicProps) {
+export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], setState }: AllTabAtomicProps) {
   const COLORS = ALL_TAB_COLORS;
   const [rows, setRows] = useState<AllViewRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -179,6 +180,30 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6] }:
     fontSize: '11px', verticalAlign: 'middle', textAlign
   });
 
+  // 단계 토글 핸들러
+  const handleStepToggle = useCallback((step: number) => {
+    if (!setState) return;
+    
+    setState((prev: any) => {
+      const currentSteps = prev.visibleSteps || [2, 3, 4, 5, 6];
+      const isVisible = currentSteps.includes(step);
+      
+      // 최소 1개는 선택되어야 함
+      if (isVisible && currentSteps.length === 1) {
+        console.log(`[AllTabAtomic] 최소 1개 필요 - 토글 취소`);
+        return prev;
+      }
+      
+      const newSteps = isVisible
+        ? currentSteps.filter((s: number) => s !== step)
+        : [...currentSteps, step].sort((a: number, b: number) => a - b);
+      
+      console.log(`[AllTabAtomic] ${step}ST ${isVisible ? '숨김' : '표시'} → [${newSteps.join(',')}]`);
+      
+      return { ...prev, visibleSteps: newSteps };
+    });
+  }, [setState]);
+
   if (loading) {
     return (
       <div style={{ padding: 40, textAlign: 'center' }}>
@@ -251,11 +276,56 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6] }:
         <thead>
           {/* 단계 헤더 */}
           <tr>
-            <th colSpan={4} style={stickyHeaderCellStyle(COLORS.structure.main, 0, '#fff', 60)}>2. 구조분석</th>
-            <th colSpan={8} style={stickyHeaderCellStyle(COLORS.function.main, 0, '#fff', 60)}>3. 기능분석</th>
-            <th colSpan={5} style={stickyHeaderCellStyle(COLORS.failure.main, 0, '#fff', 60)}>4. 고장분석</th>
-            <th colSpan={6} style={stickyHeaderCellStyle(COLORS.risk.main, 0, '#fff', 60)}>5. 리스크분석</th>
-            <th colSpan={4} style={stickyHeaderCellStyle(COLORS.opt.main, 0, '#fff', 60)}>6. 최적화</th>
+            {visibleSteps.includes(2) && (
+              <th 
+                colSpan={4} 
+                style={{ ...stickyHeaderCellStyle(COLORS.structure.main, 0, '#fff', 60), cursor: 'pointer' }}
+                onClick={() => handleStepToggle(2)}
+                title="2단계 클릭하여 숨기기/보이기"
+              >
+                2. 구조분석
+              </th>
+            )}
+            {visibleSteps.includes(3) && (
+              <th 
+                colSpan={8} 
+                style={{ ...stickyHeaderCellStyle(COLORS.function.main, 0, '#fff', 60), cursor: 'pointer' }}
+                onClick={() => handleStepToggle(3)}
+                title="3단계 클릭하여 숨기기/보이기"
+              >
+                3. 기능분석
+              </th>
+            )}
+            {visibleSteps.includes(4) && (
+              <th 
+                colSpan={5} 
+                style={{ ...stickyHeaderCellStyle(COLORS.failure.main, 0, '#fff', 60), cursor: 'pointer' }}
+                onClick={() => handleStepToggle(4)}
+                title="4단계 클릭하여 숨기기/보이기"
+              >
+                4. 고장분석
+              </th>
+            )}
+            {visibleSteps.includes(5) && (
+              <th 
+                colSpan={6} 
+                style={{ ...stickyHeaderCellStyle(COLORS.risk.main, 0, '#fff', 60), cursor: 'pointer' }}
+                onClick={() => handleStepToggle(5)}
+                title="5단계 클릭하여 숨기기/보이기"
+              >
+                5. 리스크분석
+              </th>
+            )}
+            {visibleSteps.includes(6) && (
+              <th 
+                colSpan={4} 
+                style={{ ...stickyHeaderCellStyle(COLORS.opt.main, 0, '#fff', 60), cursor: 'pointer' }}
+                onClick={() => handleStepToggle(6)}
+                title="6단계 클릭하여 숨기기/보이기"
+              >
+                6. 최적화
+              </th>
+            )}
           </tr>
           {/* 컬럼 헤더 (Activity) */}
           <tr>

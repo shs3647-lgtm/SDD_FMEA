@@ -76,6 +76,7 @@ export default function AllTabRenderer({
       <AllTabAtomic
         fmeaId={fmeaId}
         visibleSteps={visibleSteps}
+        setState={setState}
       />
     );
   }

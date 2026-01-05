@@ -5,7 +5,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { WorksheetState, FONT_WEIGHTS } from '../../constants';
 import { groupFailureLinksWithFunctionData, groupByProcessName, calculateLastRowMerge } from '../../utils';
 import { exportAllViewExcel } from '../../excel-export';
@@ -32,6 +32,30 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
   const COLORS = ALL_TAB_COLORS;
   // visibleSteps: props 우선, 없으면 state, 그래도 없으면 기본값
   const visibleSteps = propsVisibleSteps || (state.visibleSteps || [2, 3, 4, 5, 6]);
+  
+  // 단계 토글 핸들러
+  const handleStepToggle = useCallback((step: number) => {
+    if (!setState) return;
+    
+    setState(prev => {
+      const currentSteps = prev.visibleSteps || [2, 3, 4, 5, 6];
+      const isVisible = currentSteps.includes(step);
+      
+      // 최소 1개는 선택되어야 함
+      if (isVisible && currentSteps.length === 1) {
+        console.log(`[AllTabWithLinks] 최소 1개 필요 - 토글 취소`);
+        return prev;
+      }
+      
+      const newSteps = isVisible
+        ? currentSteps.filter(s => s !== step)
+        : [...currentSteps, step].sort((a, b) => a - b);
+      
+      console.log(`[AllTabWithLinks] ${step}ST ${isVisible ? '숨김' : '표시'} → [${newSteps.join(',')}]`);
+      
+      return { ...prev, visibleSteps: newSteps };
+    });
+  }, [setState]);
   
   // 모달 훅 사용
   const {
@@ -163,11 +187,56 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
         <thead className={TW_CLASSES.stickyHead}>
           {/* 1행: 단계 대분류 */}
           <tr>
-            {visibleSteps.includes(2) && <th colSpan={4} style={headerCellStyle(COLORS.structure.main)}>P-FMEA 구조분석(2단계)</th>}
-            {visibleSteps.includes(3) && <th colSpan={8} style={headerCellStyle(COLORS.function.main)}>P-FMEA 기능분석(3단계)</th>}
-            {visibleSteps.includes(4) && <th colSpan={6} style={headerCellStyle('#f57c00')}>P-FMEA 고장분석(4단계)</th>}
-            {visibleSteps.includes(5) && <th colSpan={8} style={headerCellStyle(COLORS.risk.main)}>P-FMEA 리스크분석(5단계)</th>}
-            {visibleSteps.includes(6) && <th colSpan={14} style={headerCellStyle(COLORS.opt.main)}>P-FMEA 최적화(6단계)</th>}
+            {visibleSteps.includes(2) && (
+              <th 
+                colSpan={4} 
+                style={{ ...headerCellStyle(COLORS.structure.main), cursor: 'pointer' }}
+                onClick={() => handleStepToggle(2)}
+                title="2단계 클릭하여 숨기기/보이기"
+              >
+                P-FMEA 구조분석(2단계)
+              </th>
+            )}
+            {visibleSteps.includes(3) && (
+              <th 
+                colSpan={8} 
+                style={{ ...headerCellStyle(COLORS.function.main), cursor: 'pointer' }}
+                onClick={() => handleStepToggle(3)}
+                title="3단계 클릭하여 숨기기/보이기"
+              >
+                P-FMEA 기능분석(3단계)
+              </th>
+            )}
+            {visibleSteps.includes(4) && (
+              <th 
+                colSpan={6} 
+                style={{ ...headerCellStyle('#f57c00'), cursor: 'pointer' }}
+                onClick={() => handleStepToggle(4)}
+                title="4단계 클릭하여 숨기기/보이기"
+              >
+                P-FMEA 고장분석(4단계)
+              </th>
+            )}
+            {visibleSteps.includes(5) && (
+              <th 
+                colSpan={8} 
+                style={{ ...headerCellStyle(COLORS.risk.main), cursor: 'pointer' }}
+                onClick={() => handleStepToggle(5)}
+                title="5단계 클릭하여 숨기기/보이기"
+              >
+                P-FMEA 리스크분석(5단계)
+              </th>
+            )}
+            {visibleSteps.includes(6) && (
+              <th 
+                colSpan={14} 
+                style={{ ...headerCellStyle(COLORS.opt.main), cursor: 'pointer' }}
+                onClick={() => handleStepToggle(6)}
+                title="6단계 클릭하여 숨기기/보이기"
+              >
+                P-FMEA 최적화(6단계)
+              </th>
+            )}
           </tr>
           {/* 2행: 서브그룹 */}
           <tr>
