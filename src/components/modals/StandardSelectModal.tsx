@@ -201,6 +201,7 @@ export default function StandardSelectModal({
       <div 
         className="bg-white rounded-lg shadow-2xl w-[500px] flex flex-col overflow-hidden max-h-[calc(100vh-160px)]"
         onClick={e => e.stopPropagation()}
+        onKeyDown={e => e.stopPropagation()}
         style={{ maxHeight: 'calc(100vh - 120px)' }}
       >
         {/* ===== 헤더: 제목 ===== */}
@@ -285,7 +286,7 @@ export default function StandardSelectModal({
               setSearch(e.target.value);
               setNewValue(e.target.value);
             }}
-            onKeyDown={(e) => e.key === 'Enter' && onAdd && handleAddSave()}
+            onKeyDown={(e) => { if (e.key === 'Enter' && onAdd) { e.preventDefault(); e.stopPropagation(); handleAddSave(); } }}
             placeholder="검색 입력"
             className="flex-1 px-2 py-0.5 text-[10px] bg-[#00587a] text-white placeholder-white/60 rounded focus:outline-none"
           />

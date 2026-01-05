@@ -230,6 +230,7 @@ export default function WorkElementSelectModal({
       <div 
         className="bg-white rounded-lg shadow-2xl w-[500px] flex flex-col overflow-hidden max-h-[calc(100vh-120px)]"
         onClick={e => e.stopPropagation()}
+        onKeyDown={e => e.stopPropagation()}
       >
         {/* ===== 헤더: 제목 ===== */}
         <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
@@ -300,7 +301,7 @@ export default function WorkElementSelectModal({
             type="text"
             value={newValue}
             onChange={(e) => setNewValue(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAddSave()}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); handleAddSave(); } }}
             placeholder="작업요소명 입력..."
             className="flex-1 px-2 py-0.5 text-[10px] border rounded focus:outline-none focus:ring-1 focus:ring-green-500"
           />

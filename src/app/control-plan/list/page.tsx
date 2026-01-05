@@ -70,7 +70,7 @@ const DEFAULT_SAMPLE_DATA: CPProject[] = [
       cpResponsibleName: '신홍섭',
       cpProjectName: 'SDD NEW FMEA 개발'
     },
-    linkedFmeaId: 'pfm25-310',
+    linkedFmeaId: 'pfm26-P001',
     createdAt: '2025-12-01T09:00:00.000Z', 
     status: 'active', 
     revisionNo: 'Rev.01'

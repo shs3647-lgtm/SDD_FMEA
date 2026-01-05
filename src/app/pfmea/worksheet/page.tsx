@@ -466,7 +466,10 @@ function FMEAWorksheetPageContent() {
         >
           <TabMenu 
             state={state} 
-            setState={setState} 
+            setState={setState}
+            setDirty={setDirty}
+            saveToLocalStorage={saveToLocalStorage}
+            saveAtomicDB={saveAtomicDB} 
             onOpen5AP={() => setActivePanelId(prev => prev === '5ap' ? 'tree' : '5ap')}
             onOpen6AP={() => setActivePanelId(prev => prev === '6ap' ? 'tree' : '6ap')}
           />

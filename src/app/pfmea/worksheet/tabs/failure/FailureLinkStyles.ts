@@ -269,34 +269,31 @@ export const panelHeaderStyle = (bg: string): CSSProperties => ({
   textAlign: 'center',
 });
 
-export const thStyle = (bg: string, width?: string, options?: { whiteSpace?: string }): CSSProperties => ({
+export const thStyle = (bg: string, width?: string, options?: { whiteSpace?: string; fontWeight?: string; fontSize?: string }): CSSProperties => ({
   width,
   background: bg,
   padding: '4px',
   border: BORDER_GRAY,
   position: 'sticky',
   top: 0,
-  fontWeight: FONT_WEIGHTS.semibold,
+  fontWeight: options?.fontWeight || FONT_WEIGHTS.semibold,
   ...(options?.whiteSpace && { whiteSpace: options.whiteSpace }),
+  ...(options?.fontSize && { fontSize: options.fontSize }),
 });
 
-export const tdStyle = (bg: string, border: string, options?: { fontSize?: string; verticalAlign?: string; color?: string; fontWeight?: number; padding?: string }): CSSProperties => ({
+export const tdStyle = (bg: string, border: string, options?: Record<string, any>): CSSProperties => ({
   padding: options?.padding || '4px',
   border,
   background: bg,
-  ...(options?.fontSize && { fontSize: options.fontSize }),
-  ...(options?.verticalAlign && { verticalAlign: options.verticalAlign }),
-  ...(options?.color && { color: options.color }),
-  ...(options?.fontWeight && { fontWeight: options.fontWeight }),
+  ...options,
 });
 
-export const tdCenterStyle = (bg: string, border: string, color = 'inherit', options?: { fontSize?: string; whiteSpace?: string; verticalAlign?: string; padding?: string }): CSSProperties => ({
+export const tdCenterStyle = (bg: string, border: string, color = 'inherit', options?: Record<string, any>): CSSProperties => ({
   ...tdStyle(bg, border, options),
   textAlign: 'center',
-  fontWeight: FONT_WEIGHTS.semibold,
+  fontWeight: options?.fontWeight || FONT_WEIGHTS.semibold,
   color,
-  ...(options?.whiteSpace && { whiteSpace: options.whiteSpace }),
-  ...(options?.padding && { padding: options.padding }),
+  ...options,
 });
 
 /** Flex 컨테이너 스타일 */

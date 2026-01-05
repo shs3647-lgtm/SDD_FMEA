@@ -14,9 +14,9 @@ import {
   SPECIAL_CHAR_OPTIONS
 } from '../../pfmea/worksheet/types/pfd';
 
-// 기본 SDD 샘플 데이터 (소문자 ID)
+// 기본 SDD 샘플 데이터 (새 ID 형식)
 const DEFAULT_SDD_FMEA = {
-  id: 'pfm25-310',
+  id: 'pfm26-P001',
   project: { projectName: 'SDD NEW FMEA 개발', customer: 'SDD', productName: 'PCR 타이어' },
   fmeaInfo: { subject: 'SDD NEW FMEA 개발', customer: 'SDD' },
   l2: [
@@ -153,7 +153,7 @@ export default function PFDWorksheetPage() {
     
     try {
       let fmea: any = null;
-      if (fmeaId === DEFAULT_SDD_FMEA.id || fmeaId.toLowerCase() === 'pfm25-310') {
+      if (fmeaId === DEFAULT_SDD_FMEA.id || fmeaId.toLowerCase() === 'pfm26-p001') {
         fmea = DEFAULT_SDD_FMEA;
       }
       

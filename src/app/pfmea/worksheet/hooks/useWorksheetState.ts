@@ -52,6 +52,7 @@ interface UseWorksheetStateReturn {
   l1FuncSpans: number[];
   l2Spans: number[];
   saveToLocalStorage: () => void;
+  saveToLocalStorageOnly: () => void;  // DB 저장 없이 로컬만 저장
   handleInputKeyDown: (e: React.KeyboardEvent) => void;
   handleInputBlur: () => void;
   handleSelect: (type: 'L1' | 'L2' | 'L3', id: string | null) => void;
@@ -989,6 +990,9 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           tab: legacyTab,
           riskData: legacyRiskData,
           search: String(src.search || ''),
+          selected: src.selected || null,
+          levelView: src.levelView || 'L1',
+          visibleSteps: src.visibleSteps || { step2: true, step3: true, step4: true, step5: true, step6: true },
           ...normalizedConfirmed,
           failureLinks: src.failureLinks || [],  // ✅ 고장연결 데이터 복원
         };
@@ -1036,6 +1040,9 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           tab: legacyTab,
           riskData: legacyRiskData,
           search: '',
+          selected: localStorageLegacy.selected || null,
+          levelView: localStorageLegacy.levelView || 'L1',
+          visibleSteps: localStorageLegacy.visibleSteps || { step2: true, step3: true, step4: true, step5: true, step6: true },
           ...normalizedConfirmed,
           failureLinks: localStorageLegacy.failureLinks || [],  // ✅ 고장연결 데이터 복원
         };
@@ -1098,6 +1105,9 @@ export function useWorksheetState(): UseWorksheetStateReturn {
             tab: legacyTab,
             riskData: legacyRiskData,
             search: '',
+            selected: recoveredLegacy.selected || null,
+            levelView: recoveredLegacy.levelView || 'L1',
+            visibleSteps: recoveredLegacy.visibleSteps || { step2: true, step3: true, step4: true, step5: true, step6: true },
             ...normalizedConfirmed,
             failureLinks: recoveredLegacy.failureLinks || [],  // ✅ 고장연결 데이터 복원
           };
@@ -1154,6 +1164,9 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           tab: legacyTab,
           riskData: legacyRiskData,
           search: legacyDirect.search || '',  // ✅ 검색어 기본값 추가
+          selected: legacyDirect.selected || null,
+          levelView: legacyDirect.levelView || 'L1',
+          visibleSteps: legacyDirect.visibleSteps || { step2: true, step3: true, step4: true, step5: true, step6: true },
           ...normalizedConfirmed,
           failureLinks: legacyDirect.failureLinks || [],  // ✅ 고장연결 데이터 복원
         };

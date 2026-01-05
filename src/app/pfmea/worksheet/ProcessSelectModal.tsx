@@ -30,7 +30,25 @@ interface ProcessSelectModalProps {
   productLineName?: string;  // 완제품공정명 (상위항목)
 }
 
-// 기초정보에서 공정명 로드
+// DB에서 마스터 FMEA 공정 로드
+const loadMasterProcessesFromDB = async (): Promise<ProcessItem[]> => {
+  try {
+    // 마스터 FMEA (pfm26-M001) 공정 데이터 조회
+    const res = await fetch('/api/fmea/master-processes');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.processes && data.processes.length > 0) {
+        console.log('✅ DB에서 마스터 공정 로드:', data.processes.length, '개');
+        return data.processes;
+      }
+    }
+  } catch (e) {
+    console.error('마스터 공정 로드 실패:', e);
+  }
+  return [];
+};
+
+// 기초정보에서 공정명 로드 (localStorage 폴백)
 const loadProcessesFromBasicInfo = (): ProcessItem[] => {
   if (typeof window === 'undefined') return [];
   
@@ -57,21 +75,7 @@ const loadProcessesFromBasicInfo = (): ProcessItem[] => {
       if (processSet.size > 0) return Array.from(processSet.values());
     }
     
-    // 기본 샘플 데이터
-    return [
-      { id: 'p1', no: '10', name: '자재입고' },
-      { id: 'p2', no: '11', name: '가온' },
-      { id: 'p3', no: '20', name: '수입검사' },
-      { id: 'p4', no: '30', name: '믹싱' },
-      { id: 'p5', no: '40', name: '압출' },
-      { id: 'p6', no: '50', name: '재단' },
-      { id: 'p7', no: '60', name: '비드' },
-      { id: 'p8', no: '70', name: '성형' },
-      { id: 'p9', no: '80', name: '가류' },
-      { id: 'p10', no: '90', name: '검사' },
-      { id: 'p11', no: '100', name: '완성검사' },
-      { id: 'p12', no: '110', name: '포장' },
-    ];
+    return [];
   } catch (e) {
     console.error('Failed to load processes:', e);
     return [];
@@ -92,19 +96,32 @@ export default function ProcessSelectModal({
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [newNo, setNewNo] = useState('');
+  const [newName, setNewName] = useState('');
 
   useEffect(() => {
     if (isOpen) {
-      const loaded = loadProcessesFromBasicInfo();
-      setProcesses(loaded);
-      
-      const preSelected = new Set<string>();
-      loaded.forEach(p => {
-        if (existingProcessNames.includes(p.name)) {
-          preSelected.add(p.id);
+      // DB에서 마스터 공정 로드 (우선), 없으면 localStorage 폴백
+      const loadData = async () => {
+        let loaded = await loadMasterProcessesFromDB();
+        
+        // DB에 없으면 localStorage에서 로드
+        if (loaded.length === 0) {
+          loaded = loadProcessesFromBasicInfo();
         }
-      });
-      setSelectedIds(preSelected);
+        
+        setProcesses(loaded);
+        
+        const preSelected = new Set<string>();
+        loaded.forEach(p => {
+          if (existingProcessNames.includes(p.name)) {
+            preSelected.add(p.id);
+          }
+        });
+        setSelectedIds(preSelected);
+      };
+      
+      loadData();
       setSearch('');
       setEditingId(null);
     }
@@ -194,6 +211,53 @@ export default function ProcessSelectModal({
 
   const isCurrentlySelected = (name: string) => existingProcessNames.includes(name);
 
+  // 신규 공정 추가
+  const handleAddNew = () => {
+    if (!newName.trim()) {
+      alert('공정명을 입력해주세요.');
+      return;
+    }
+    
+    // 중복 확인
+    if (processes.some(p => p.name === newName.trim())) {
+      alert('이미 존재하는 공정명입니다.');
+      return;
+    }
+    
+    // 공정번호 자동 생성 (입력 안했으면)
+    const procNo = newNo.trim() || String((processes.length + 1) * 10);
+    
+    const newProc: ProcessItem = {
+      id: `proc_new_${Date.now()}`,
+      no: procNo,
+      name: newName.trim(),
+    };
+    
+    setProcesses(prev => [newProc, ...prev]);  // 최상단에 추가
+    setSelectedIds(prev => new Set([...prev, newProc.id]));
+    
+    // localStorage에도 저장
+    try {
+      const savedData = localStorage.getItem('pfmea_master_data') || '[]';
+      const masterData = JSON.parse(savedData);
+      masterData.push({
+        id: newProc.id,
+        code: 'A2',
+        value: newProc.name,
+        processNo: procNo,
+        createdAt: new Date().toISOString()
+      });
+      localStorage.setItem('pfmea_master_data', JSON.stringify(masterData));
+      console.log('✅ 신규 공정 저장:', newProc.name);
+    } catch (e) {
+      console.error('저장 오류:', e);
+    }
+    
+    setNewNo('');
+    setNewName('');
+    alert(`✅ "${newProc.name}" 공정이 추가되었습니다.`);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -204,6 +268,7 @@ export default function ProcessSelectModal({
       <div 
         className="bg-white rounded-lg shadow-2xl w-[500px] flex flex-col overflow-hidden max-h-[calc(100vh-120px)]"
         onClick={e => e.stopPropagation()}
+        onKeyDown={e => e.stopPropagation()}
       >
         {/* 헤더 */}
         <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
@@ -224,6 +289,33 @@ export default function ProcessSelectModal({
         {/* ===== 하위항목 라벨 ===== */}
         <div className="px-3 py-1 border-b bg-gradient-to-r from-green-50 to-emerald-50">
           <span className="text-[10px] font-bold text-green-700">▼ 하위항목: 메인공정명</span>
+        </div>
+
+        {/* ===== 신규 공정 추가 ===== */}
+        <div className="px-3 py-1.5 border-b bg-green-50 flex items-center gap-1">
+          <span className="text-[10px] font-bold text-green-700 shrink-0">+ 신규:</span>
+          <input
+            type="text"
+            value={newNo}
+            onChange={(e) => setNewNo(e.target.value)}
+            placeholder="No"
+            className="w-12 px-1 py-0.5 text-[10px] border rounded focus:outline-none focus:ring-1 focus:ring-green-500 text-center"
+          />
+          <input
+            type="text"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); handleAddNew(); } }}
+            placeholder="공정명 입력..."
+            className="flex-1 px-2 py-0.5 text-[10px] border rounded focus:outline-none focus:ring-1 focus:ring-green-500"
+          />
+          <button
+            onClick={handleAddNew}
+            disabled={!newName.trim()}
+            className="px-2 py-0.5 text-[10px] font-bold bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            추가
+          </button>
         </div>
 
         {/* 검색 + 버튼: [전체][해제][적용][삭제] */}
@@ -287,8 +379,8 @@ export default function ProcessSelectModal({
                           onChange={(e) => setEditValue(e.target.value)}
                           onBlur={handleEditSave}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleEditSave();
-                            if (e.key === 'Escape') setEditingId(null);
+                            if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); handleEditSave(); }
+                            if (e.key === 'Escape') { e.stopPropagation(); setEditingId(null); }
                           }}
                           autoFocus
                           className="w-full px-1 py-0.5 text-xs border border-blue-400 rounded focus:outline-none"

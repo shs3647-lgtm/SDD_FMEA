@@ -175,14 +175,19 @@ export default function WorkElementSelectModal({
   // 새 항목 저장 (DB)
   const handleAddSave = () => {
     if (!newValue.trim()) return;
+    
     const newElem: WorkElement = {
       id: `new_${Date.now()}`,
       m4: newM4,
       name: newValue.trim(),
       processNo: currentProcessNo,
     };
-    setElements(prev => [...prev, newElem]);
+    
+    setElements(prev => [newElem, ...prev]);  // 최상단에 추가
     setSelectedIds(prev => new Set([...prev, newElem.id]));
+    
+    // 필터를 'all'로 변경하여 추가된 항목이 보이게 함
+    setFilterM4('all');
     
     // localStorage에 영구 저장
     try {
@@ -202,6 +207,7 @@ export default function WorkElementSelectModal({
     }
     
     setNewValue('');
+    alert(`✅ "${newElem.name}" 작업요소가 추가되었습니다.`);
   };
 
   // 개별 삭제
@@ -230,6 +236,7 @@ export default function WorkElementSelectModal({
       <div 
         className="bg-white rounded-lg shadow-2xl w-[500px] flex flex-col overflow-hidden max-h-[calc(100vh-120px)]"
         onClick={e => e.stopPropagation()}
+        onKeyDown={e => e.stopPropagation()}
       >
         {/* ===== 헤더: 제목 ===== */}
         <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
@@ -300,7 +307,7 @@ export default function WorkElementSelectModal({
             type="text"
             value={newValue}
             onChange={(e) => setNewValue(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAddSave()}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); handleAddSave(); } }}
             placeholder="작업요소명 입력..."
             className="flex-1 px-2 py-0.5 text-[10px] border rounded focus:outline-none focus:ring-1 focus:ring-green-500"
           />

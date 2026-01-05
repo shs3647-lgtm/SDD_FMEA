@@ -59,6 +59,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
     title: string; 
     itemCode: string;
     parentProductChar: string;
+    parentCharName?: string;
     processName: string;
   } | null>(null);
 
@@ -215,7 +216,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
       saveToLocalStorage?.();
       // ✅ 확정 시 DB 저장 (명시적 호출)
       if (saveAtomicDB) {
-        saveAtomicDB().catch(e => console.error('[FailureL2Tab] DB 저장 오류:', e));
+        try { saveAtomicDB(); } catch (e) { console.error('[FailureL2Tab] DB 저장 오류:', e); }
       }
       console.log('[FailureL2Tab] 확정 후 localStorage 및 DB 저장 완료');
     }, 100);

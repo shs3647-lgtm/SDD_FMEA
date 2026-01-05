@@ -335,6 +335,7 @@ export default function DataSelectModal({
       <div 
         className="bg-white rounded-lg shadow-2xl w-[420px] flex flex-col overflow-hidden max-h-[calc(100vh-160px)]"
         onClick={e => e.stopPropagation()}
+        onKeyDown={e => e.stopPropagation()}
       >
         {/* ===== 헤더: 제목 + 닫기 ===== */}
         <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
@@ -424,7 +425,10 @@ export default function DataSelectModal({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && search.trim()) {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!search.trim()) return;
                 // 검색값이 목록에 없으면 추가
                 const trimmed = search.trim();
                 const exists = items.some(i => i.value === trimmed);
@@ -433,14 +437,17 @@ export default function DataSelectModal({
                   const newItem: DataItem = { id: `new_${Date.now()}`, value: trimmed, category: '추가' };
                   setItems(prev => [newItem, ...prev]); // 맨 위에 추가
                   setSelectedIds(prev => new Set([...prev, newItem.id]));
+                  // 필터를 초기화하여 추가된 항목이 보이게
+                  setCategoryFilter('All');
                   // localStorage에 저장
                   try {
                     const savedData = localStorage.getItem('pfmea_master_data');
                     const dataList = savedData ? JSON.parse(savedData) : [];
-                    dataList.unshift({ itemCode, value: trimmed, category: '추가', createdAt: new Date().toISOString() }); // 맨 위에
+                    dataList.unshift({ id: newItem.id, itemCode, value: trimmed, category: '추가', createdAt: new Date().toISOString() }); // 맨 위에
                     localStorage.setItem('pfmea_master_data', JSON.stringify(dataList));
                   } catch (err) { console.error(err); }
                   setSearch('');
+                  alert(`✅ "${trimmed}" 항목이 추가되었습니다.`);
                 } else {
                   // 이미 있으면 선택
                   const found = items.find(i => i.value === trimmed);
@@ -453,6 +460,7 @@ export default function DataSelectModal({
             }}
             placeholder={`🔍 ${itemInfo.label} 검색 또는 입력 후 Enter...`}
             className="flex-1 px-2 py-1 text-[10px] border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+            autoFocus
           />
 
           {/* 버튼들 */}

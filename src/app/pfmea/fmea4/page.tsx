@@ -5,13 +5,14 @@
  * @description PFMEA 7단계에서 FMEA 4판 형식으로 변환하여 표시
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { PFMEATopNav } from '@/components/layout';
 import { WorksheetState, createInitialState } from '../worksheet/constants';
 import { Fmea4Tab, convertToFmea4 } from '../worksheet/tabs/fmea4';
 
-export default function Fmea4Page() {
+// 실제 컨텐츠 컴포넌트
+function Fmea4Content() {
   const searchParams = useSearchParams();
   const fmeaId = searchParams.get('id');
   
@@ -162,3 +163,18 @@ export default function Fmea4Page() {
   );
 }
 
+// Suspense로 감싸서 export
+export default function Fmea4Page() {
+  return (
+    <Suspense fallback={
+      <div className="flex-1 flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">로딩 중...</p>
+        </div>
+      </div>
+    }>
+      <Fmea4Content />
+    </Suspense>
+  );
+}

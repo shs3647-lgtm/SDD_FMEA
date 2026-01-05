@@ -3,6 +3,8 @@
  * @description 기존 중첩 구조 → 원자성 DB 구조 마이그레이션
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import {
   FMEAWorksheetDB,
   L1Structure,
@@ -130,11 +132,11 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
   // 2. L1 기능분석 (구분 → 기능 → 요구사항)
   const l1FuncMap = new Map<string, L1Function>();
   const l1Types = oldData.l1?.types || [];
-  l1Types.forEach(type => {
+  l1Types.forEach((type: { name?: string; functions?: any[] }) => {
     const category = type.name as 'Your Plant' | 'Ship to Plant' | 'User';
     const functions = type.functions || [];
     
-    functions.forEach(func => {
+    functions.forEach((func: { name?: string; requirements?: any[] }) => {
       const requirements = func.requirements || [];
       
       if (requirements.length === 0) {
@@ -144,20 +146,20 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
           fmeaId: oldData.fmeaId,
           l1StructId: db.l1Structure?.id || '',
           category: category,
-          functionName: func.name,
+          functionName: func.name || '',
           requirement: '',
         };
         db.l1Functions.push(l1Func);
         l1FuncMap.set(l1Func.id, l1Func);
       } else {
-        requirements.forEach(req => {
+        requirements.forEach((req: { id?: string; name?: string; failureEffect?: string; severity?: number }) => {
           const l1Func: L1Function = {
             id: req.id || uid(),  // 요구사항 ID 유지 (FE와 연결용)
             fmeaId: oldData.fmeaId,
             l1StructId: db.l1Structure?.id || '',
             category: category,
-            functionName: func.name,
-            requirement: req.name,
+            functionName: func.name || '',
+            requirement: req.name || '',
           };
           db.l1Functions.push(l1Func);
           l1FuncMap.set(l1Func.id, l1Func);
@@ -181,7 +183,7 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
   // 2-1. L1 고장영향(failureScopes) → FailureEffect로 승격 (요구사항 FK 기준)
   const legacyScopes = oldData.l1?.failureScopes || [];
   console.log('[마이그레이션] failureScopes 변환 시작:', legacyScopes.length, '개');
-  legacyScopes.forEach(fs => {
+  legacyScopes.forEach((fs: { id?: string; reqId?: string; effect?: string; name?: string; severity?: number; scope?: string; requirement?: string }) => {
     // reqId로 l1Function 찾기
     let targetFunc = fs.reqId ? l1FuncMap.get(fs.reqId) : null;
     
@@ -217,7 +219,7 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
   
   // 3. L2 구조분석 (메인공정) + L2 기능분석 + L3 구조/기능분석
   const l2Data = oldData.l2 || [];
-  l2Data.forEach(proc => {
+  l2Data.forEach((proc: any) => {
     // 빈 공정 스킵
     if (!proc.name || proc.name.includes('클릭') || proc.name.includes('선택')) {
       return;
@@ -236,7 +238,7 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
     
     // L2 기능분석 (메인공정 기능 → 제품특성)
     const procFuncs = proc.functions || [];
-    procFuncs.forEach(func => {
+    procFuncs.forEach((func: any) => {
       const productChars = func.productChars || [];
       
       if (productChars.length === 0) {
@@ -248,7 +250,7 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
           productChar: '',
         });
       } else {
-        productChars.forEach(pc => {
+        productChars.forEach((pc: any) => {
           const l2Func: L2Function = {
             id: pc.id || uid(),  // 제품특성 ID 유지 (FM과 연결용)
             fmeaId: oldData.fmeaId,
@@ -287,7 +289,7 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
     
     // L3 구조분석 (작업요소) + L3 기능분석
     const l3Data = proc.l3 || [];
-    l3Data.forEach(we => {
+    l3Data.forEach((we: any) => {
       // 빈 작업요소 스킵
       if (!we.name || we.name.includes('클릭') || we.name.includes('추가')) {
         return;
@@ -307,7 +309,7 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
       
       // L3 기능분석 (작업요소 기능 → 공정특성)
       const weFuncs = we.functions || [];
-      weFuncs.forEach(func => {
+      weFuncs.forEach((func: any) => {
         const processChars = func.processChars || [];
         
         if (processChars.length === 0) {
@@ -320,7 +322,7 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
             processChar: '',
           });
         } else {
-          processChars.forEach(pc => {
+          processChars.forEach((pc: any) => {
             const l3Func: L3Function = {
               id: pc.id || uid(),  // 공정특성 ID 유지 (FC와 연결용)
               fmeaId: oldData.fmeaId,
@@ -339,7 +341,7 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
     // ✅ L3 고장원인 (FC) - proc.failureCauses에서 읽기 (FailureMode 패턴과 동일)
     // processCharId를 직접 저장하여 데이터 손실 방지
     const procFailureCauses = proc.failureCauses || [];
-    procFailureCauses.forEach(fc => {
+    procFailureCauses.forEach((fc: any) => {
       // processCharId가 있으면 해당 공정특성의 L3Function 연결
       let relatedL3Func = fc.processCharId 
         ? db.l3Functions.find(f => f.id === fc.processCharId)
@@ -362,7 +364,7 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
     });
     
     // ✅ 하위 호환: we.failureCauses도 확인 (기존 데이터 마이그레이션용)
-    l3Data.forEach(we => {
+    l3Data.forEach((we: any) => {
       if (we.failureCauses && we.failureCauses.length > 0) {
         console.warn('[마이그레이션] 하위 호환: we.failureCauses 발견, proc.failureCauses로 마이그레이션:', we.failureCauses.length, '개');
         // l3Struct 찾기
@@ -390,7 +392,7 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
   
   // 4. 기존 고장연결 데이터 마이그레이션
   const oldLinks = oldData.failureLinks || [];
-  oldLinks.forEach(oldLink => {
+  oldLinks.forEach((oldLink: any) => {
     // FM 찾기
     const fm = db.failureModes.find(m => m.id === oldLink.fmId || m.mode === oldLink.fmText);
     if (!fm) return;
@@ -490,7 +492,7 @@ export function convertToLegacyFormat(db: FMEAWorksheetDB): OldWorksheetData {
   
   // FE를 다시 failureScopes로 역변환 (요구사항 기준)
   const l1FuncMap = new Map<string, { reqName: string; category: string }>();
-  db.l1Functions.forEach(f => {
+  db.l1Functions.forEach((f: any) => {
     l1FuncMap.set(f.id, { reqName: f.requirement, category: f.category });
   });
   const failureScopes = (db.failureEffects || []).map(fe => ({
@@ -507,7 +509,7 @@ export function convertToLegacyFormat(db: FMEAWorksheetDB): OldWorksheetData {
 
   // L1 기능 → types 구조로 변환
   const categoryGroups = new Map<string, Map<string, L1Function[]>>();
-  db.l1Functions.forEach(f => {
+  db.l1Functions.forEach((f: any) => {
     if (!categoryGroups.has(f.category)) {
       categoryGroups.set(f.category, new Map());
     }
@@ -554,7 +556,7 @@ export function convertToLegacyFormat(db: FMEAWorksheetDB): OldWorksheetData {
     // L2 기능 그룹화
     const l2Funcs = db.l2Functions.filter(f => f.l2StructId === l2.id);
     const funcGroups = new Map<string, L2Function[]>();
-    l2Funcs.forEach(f => {
+    l2Funcs.forEach((f: any) => {
       if (!funcGroups.has(f.functionName)) {
         funcGroups.set(f.functionName, []);
       }
@@ -597,7 +599,7 @@ export function convertToLegacyFormat(db: FMEAWorksheetDB): OldWorksheetData {
       // L3 기능 그룹화
       const l3Funcs = db.l3Functions.filter(f => f.l3StructId === l3.id);
       const l3FuncGroups = new Map<string, L3Function[]>();
-      l3Funcs.forEach(f => {
+      l3Funcs.forEach((f: any) => {
         if (!l3FuncGroups.has(f.functionName)) {
           l3FuncGroups.set(f.functionName, []);
         }
@@ -633,7 +635,7 @@ export function convertToLegacyFormat(db: FMEAWorksheetDB): OldWorksheetData {
   });
   
   // FailureLinks 변환
-  db.failureLinks.forEach(link => {
+  db.failureLinks.forEach((link: any) => {
     result.failureLinks!.push({
       fmId: link.fmId,
       fmText: link.cache?.fmText || '',

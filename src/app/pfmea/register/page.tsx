@@ -133,29 +133,44 @@ function PFMEARegisterPageContent() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved'>('idle');
   const [cftSaveStatus, setCftSaveStatus] = useState<'idle' | 'saved'>('idle');
   
-  // FMEA 선택 모달 열기
-  const openFmeaSelectModal = (type: 'M' | 'F' | 'P') => {
-    const stored = localStorage.getItem('pfmea-projects');
-    if (stored) {
-      try {
-        const projects = JSON.parse(stored);
-        const filtered = projects.filter((p: any) => {
-          const match = p.id.match(/pfm\d{2}-([MFP])/i);
-          return match && match[1].toUpperCase() === type;
-        }).map((p: any) => ({
-          id: p.id,
-          subject: p.fmeaInfo?.subject || p.project?.productName || '제목 없음',
-          type: type
-        }));
-        setAvailableFmeas(filtered);
-        setFmeaSelectType(type);
-        setFmeaSelectModalOpen(true);
-      } catch (e) {
-        console.error('FMEA 목록 로드 실패:', e);
-        alert('FMEA 목록을 불러올 수 없습니다.');
+  // FMEA 선택 모달 열기 (DB에서 로드)
+  const openFmeaSelectModal = async (type: 'M' | 'F' | 'P') => {
+    try {
+      // DB에서 FMEA 프로젝트 목록 가져오기
+      const res = await fetch('/api/fmea/projects');
+      if (!res.ok) throw new Error('DB 로드 실패');
+      
+      const data = await res.json();
+      const projects = data.projects || data || [];
+      
+      // 타입별 필터링 (fmeaType 필드 우선 사용)
+      const filtered = projects.filter((p: any) => {
+        // fmeaType 필드가 있으면 사용
+        if (p.fmeaType) {
+          return p.fmeaType.toUpperCase() === type;
+        }
+        // 없으면 ID에서 추출
+        const match = p.id.match(/pfm\d{2}-([MFP])/i);
+        return match && match[1].toUpperCase() === type;
+      }).map((p: any) => ({
+        id: p.id,
+        subject: p.fmeaInfo?.subject || p.project?.productName || p.name || '제목 없음',
+        type: type
+      }));
+      
+      console.log(`[FMEA 선택] 타입: ${type}, 필터링 결과:`, filtered);
+      
+      if (filtered.length === 0) {
+        alert(`등록된 ${type === 'M' ? 'Master' : type === 'F' ? 'Family' : 'Part'} FMEA가 없습니다.`);
+        return;
       }
-    } else {
-      alert(`등록된 ${type === 'M' ? 'Master' : type === 'F' ? 'Family' : 'Part'} FMEA가 없습니다.`);
+      
+      setAvailableFmeas(filtered);
+      setFmeaSelectType(type);
+      setFmeaSelectModalOpen(true);
+    } catch (e) {
+      console.error('FMEA 목록 로드 실패:', e);
+      alert('FMEA 목록을 불러올 수 없습니다. DB 연결을 확인하세요.');
     }
   };
   
@@ -309,69 +324,82 @@ function PFMEARegisterPageContent() {
     }
   };
 
-  // 저장 (신규 등록 또는 수정)
-  const handleSave = () => {
+  // 저장 (신규 등록 또는 수정) - DB API 호출
+  const handleSave = async () => {
     if (!fmeaInfo.subject.trim()) {
       alert('FMEA명을 입력해주세요.');
       return;
     }
 
-    const existing = JSON.parse(localStorage.getItem('pfmea-projects') || '[]');
-
-    if (isEditMode) {
-      // 수정 모드: 기존 데이터 업데이트
-      const updatedProjects = existing.map((p: { id: string; createdAt?: string; step?: number; revisionNo?: string }) => {
-        if (p.id === fmeaId) {
-          return {
-            ...p,
-            project: {
-              projectName: fmeaInfo.fmeaProjectName || '',
-              customer: fmeaInfo.customerName,
-              productName: fmeaInfo.subject,
-              partNo: '',
-              department: fmeaInfo.designResponsibility,
-              leader: fmeaInfo.fmeaResponsibleName,
-              startDate: fmeaInfo.fmeaStartDate,
-              endDate: '',
-            },
-            fmeaInfo,
-            cftMembers,
-            updatedAt: new Date().toISOString(),
-          };
-        }
-        return p;
+    setSaveStatus('saving' as any);
+    
+    try {
+      const projectData = {
+        projectName: fmeaInfo.fmeaProjectName || fmeaInfo.subject,
+        customer: fmeaInfo.customerName,
+        productName: fmeaInfo.subject,
+        partNo: '',
+        department: fmeaInfo.designResponsibility,
+        leader: fmeaInfo.fmeaResponsibleName,
+        startDate: fmeaInfo.fmeaStartDate,
+        endDate: '',
+      };
+      
+      // 1. DB에 프로젝트 생성/수정
+      const response = await fetch('/api/fmea/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fmeaId,
+          fmeaType: fmeaInfo.fmeaType,
+          project: projectData,
+          fmeaInfo,
+        }),
       });
-      localStorage.setItem('pfmea-projects', JSON.stringify(updatedProjects));
-    } else {
-      // 신규 등록 모드
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || '저장 실패');
+      }
+      
+      // 2. localStorage에도 백업 저장
+      const existing = JSON.parse(localStorage.getItem('pfmea-projects') || '[]');
       const data = { 
         id: fmeaId, 
-        project: {
-          projectName: fmeaInfo.fmeaProjectName || '',
-          customer: fmeaInfo.customerName,
-          productName: fmeaInfo.subject,
-          partNo: '',
-          department: fmeaInfo.designResponsibility,
-          leader: fmeaInfo.fmeaResponsibleName,
-          startDate: fmeaInfo.fmeaStartDate,
-          endDate: '',
-        },
+        project: projectData,
         fmeaInfo,
         cftMembers, 
         createdAt: new Date().toISOString(),
-        status: 'draft',
+        status: 'active',
         step: 1,
         revisionNo: 'Rev.00',
       };
-      existing.unshift(data);
+      
+      const existingIndex = existing.findIndex((p: any) => p.id === fmeaId);
+      if (existingIndex >= 0) {
+        existing[existingIndex] = { ...existing[existingIndex], ...data, updatedAt: new Date().toISOString() };
+      } else {
+        existing.unshift(data);
+      }
       localStorage.setItem('pfmea-projects', JSON.stringify(existing));
-    }
-    
-    setSaveStatus('saved');
-    setTimeout(() => {
+      
+      // 3. 저장 완료 이벤트 발생
+      window.dispatchEvent(new Event('fmea-projects-updated'));
+      
+      setSaveStatus('saved');
+      console.log('✅ FMEA DB 저장 완료:', fmeaId);
+      
+      setTimeout(() => {
+        setSaveStatus('idle');
+        window.location.href = '/pfmea/list';
+      }, 1500);
+      
+    } catch (error: any) {
+      console.error('❌ FMEA 저장 실패:', error);
+      alert('저장에 실패했습니다: ' + error.message);
       setSaveStatus('idle');
-      window.location.href = '/pfmea/list';
-    }, 1500);
+    }
   };
 
   // 새로고침 (새로 등록과 동일)
@@ -430,6 +458,7 @@ function PFMEARegisterPageContent() {
       </div>
 
       {/* ===== 기획 및 준비 (1단계) ===== */}
+      <form autoComplete="off" onSubmit={(e) => e.preventDefault()}>
       <div className="bg-white rounded border border-gray-300 mb-3">
         <div className="bg-[#e3f2fd] px-3 py-1.5 border-b border-gray-300">
           <h2 className="text-xs font-bold text-gray-700">기획 및 준비 (1단계)</h2>
@@ -441,12 +470,12 @@ function PFMEARegisterPageContent() {
             <tr className="bg-[#e3f2fd] h-8">
               <td className={`${headerCell} w-[10%]`}>회사 명</td>
               <td className={`${inputCell} w-[15%]`}>
-                <input type="text" value={fmeaInfo.companyName} onChange={(e) => updateField('companyName', e.target.value)}
+                <input type="text" name="fmea-company-name-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.companyName} onChange={(e) => updateField('companyName', e.target.value)}
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="공정 FMEA에 책임이 있는 회사 명" />
               </td>
               <td className={`${headerCell} w-[8%]`}>FMEA명</td>
               <td className={`${inputCell} w-[20%]`}>
-                <input type="text" value={fmeaInfo.subject} onChange={(e) => updateField('subject', e.target.value)}
+                <input type="text" name="fmea-subject-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.subject} onChange={(e) => updateField('subject', e.target.value)}
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="시스템, 서브시스템 및/또는 구성품" />
               </td>
               <td className={`${headerCell} w-[8%]`}>FMEA ID</td>
@@ -460,20 +489,20 @@ function PFMEARegisterPageContent() {
             <tr className="bg-white h-8">
               <td className={headerCell}>엔지니어링 위치</td>
               <td className={`${inputCell}`}>
-                <input type="text" value={fmeaInfo.engineeringLocation} onChange={(e) => updateField('engineeringLocation', e.target.value)}
+                <input type="text" name="fmea-location-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.engineeringLocation} onChange={(e) => updateField('engineeringLocation', e.target.value)}
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="지리적 위치" />
               </td>
               <td className={headerCell}>시작 일자</td>
               <td className={`${inputCell}`}>
-                <input type="date" value={fmeaInfo.fmeaStartDate} onChange={(e) => updateField('fmeaStartDate', e.target.value)}
+                <input type="date" name="fmea-start-date-x1" autoComplete="new-password" value={fmeaInfo.fmeaStartDate} onChange={(e) => updateField('fmeaStartDate', e.target.value)}
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none" />
               </td>
               <td className={headerCell}>공정 책임</td>
               <td className={`${inputCell}`} colSpan={2}>
                 <div className="flex items-center gap-2">
-                  <input type="text" value={fmeaInfo.designResponsibility} onChange={(e) => updateField('designResponsibility', e.target.value)}
+                  <input type="text" name="fmea-dept-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.designResponsibility} onChange={(e) => updateField('designResponsibility', e.target.value)}
                     className="w-20 h-7 px-2 text-xs border border-gray-300 rounded bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="부서" />
-                  <input type="text" value={fmeaInfo.fmeaResponsibleName} onChange={(e) => updateField('fmeaResponsibleName', e.target.value)}
+                  <input type="text" name="fmea-responsible-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.fmeaResponsibleName} onChange={(e) => updateField('fmeaResponsibleName', e.target.value)}
                     className="flex-1 h-7 px-2 text-xs border border-gray-300 rounded bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="책임자 성명" />
                   <button onClick={() => { setUserModalTarget('responsible'); setUserModalOpen(true); }} className="text-blue-500 hover:text-blue-700 px-1">🔍</button>
                 </div>
@@ -485,14 +514,14 @@ function PFMEARegisterPageContent() {
               <td className={headerCell}>고객 명</td>
               <td className={`${inputCell}`}>
                 <div className="flex items-center gap-1">
-                  <input type="text" value={fmeaInfo.customerName} onChange={(e) => updateField('customerName', e.target.value)}
+                  <input type="text" name="fmea-customer-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.customerName} onChange={(e) => updateField('customerName', e.target.value)}
                     className="flex-1 h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="고객(들) 또는 제품 패밀리 명" />
                   <button onClick={() => setBizInfoModalOpen(true)} className="text-blue-500 hover:text-blue-700" title="고객정보 검색">🔍</button>
                 </div>
               </td>
               <td className={headerCell}>개정 일자</td>
               <td className={`${inputCell}`}>
-                <input type="date" value={fmeaInfo.fmeaRevisionDate} onChange={(e) => updateField('fmeaRevisionDate', e.target.value)}
+                <input type="date" name="fmea-revision-date-x1" autoComplete="new-password" value={fmeaInfo.fmeaRevisionDate} onChange={(e) => updateField('fmeaRevisionDate', e.target.value)}
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none" />
               </td>
               <td className={headerCell}>기밀유지 수준</td>
@@ -511,7 +540,7 @@ function PFMEARegisterPageContent() {
             <tr className="bg-white h-8">
               <td className={headerCell}>모델 연식 / 플랫폼</td>
               <td className={`${inputCell}`}>
-                <input type="text" value={fmeaInfo.modelYear} onChange={(e) => updateField('modelYear', e.target.value)}
+                <input type="text" name="fmea-model-year-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.modelYear} onChange={(e) => updateField('modelYear', e.target.value)}
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="고객 어플리케이션 또는 회사 모델/스타일" />
               </td>
               <td className={headerCell}>FMEA 유형</td>
@@ -533,14 +562,23 @@ function PFMEARegisterPageContent() {
               </td>
               <td className={headerCell}>상호기능팀</td>
               <td className={`${inputCell}`} colSpan={2}>
-                <span className="text-xs text-gray-500 px-2">
-                  {cftNames || '팀 명단이 요구됨'}
-                </span>
+                {cftNames ? (
+                  <span className="text-xs text-gray-700 px-2">{cftNames}</span>
+                ) : (
+                  <span 
+                    className="text-xs text-blue-600 px-2 cursor-pointer hover:underline hover:text-blue-800"
+                    onClick={() => window.location.href = '/pfmea/cft'}
+                    title="CFT 리스트로 이동"
+                  >
+                    📋 CFT 리스트 참조
+                  </span>
+                )}
               </td>
             </tr>
           </tbody>
         </table>
       </div>
+      </form>
 
       {/* ===== FMEA 기초정보 등록 옵션 (테이블) ===== */}
       <div className="mb-3 mt-4">
@@ -704,10 +742,10 @@ function PFMEARegisterPageContent() {
         </p>
       </div>
 
-      {/* ===== CFT 등록 (표준 컴포넌트) ===== */}
-      <div className="mt-6">
+      {/* ===== CFT 리스트 (표준 컴포넌트) ===== */}
+      <div id="cft-section" className="mt-6 scroll-mt-20">
         <CFTRegistrationTable
-          title="CFT 등록"
+          title="CFT 리스트"
           members={cftMembers}
           onMembersChange={setCftMembers}
           onUserSearch={handleCftUserSearch}

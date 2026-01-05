@@ -95,28 +95,8 @@ function formatFmeaId(id: string, index: number): string {
   return `pfm${year}-P${seq}`;
 }
 
-// 기본 샘플 데이터 - SDD FMEA (새 ID 형식: pfm{YY}-{T}{NNN})
-// Master → Family → Part 순서로 정렬됨
-const DEFAULT_SAMPLE_DATA: FMEAProject[] = [
-  {
-    id: 'pfm25-M001',  // M = Master FMEA (1행 고정)
-    project: { projectName: 'PCR 타이어 마스터', customer: 'SDD', productName: 'PCR 타이어 전체', partNo: 'PCR-MASTER', department: '품질팀', leader: '신홍섭', startDate: '2025-01-01', endDate: '2026-12-31' },
-    fmeaInfo: { subject: 'PCR 타이어 마스터 FMEA', fmeaStartDate: '2025-01-01', fmeaRevisionDate: '2025-12-29', modelYear: 'MY2025', designResponsibility: '품질팀', fmeaResponsibleName: '신홍섭' },
-    createdAt: '2025-01-01T09:00:00.000Z', status: 'active', step: 6, revisionNo: 'Rev.03'
-  },
-  {
-    id: 'pfm25-F001',  // F = Family FMEA (2행 고정)
-    project: { projectName: 'PCR 승용차 타이어', customer: 'SDD', productName: 'PCR 승용차용', partNo: 'PCR-FAMILY-01', department: '품질팀', leader: '김철수', startDate: '2025-03-01', endDate: '2026-06-30' },
-    fmeaInfo: { subject: 'PCR 승용차 타이어 Family FMEA', fmeaStartDate: '2025-03-01', fmeaRevisionDate: '2025-12-20', modelYear: 'MY2025', designResponsibility: '품질팀', fmeaResponsibleName: '김철수' },
-    createdAt: '2025-03-01T09:00:00.000Z', status: 'active', step: 5, revisionNo: 'Rev.02'
-  },
-  {
-    id: 'pfm25-P310',  // P = Part FMEA
-    project: { projectName: 'SDD NEW FMEA 개발', customer: 'SDD', productName: 'PCR 타이어', partNo: 'PCR-2025-001', department: '품질팀', leader: '신홍섭', startDate: '2025-12-01', endDate: '2026-06-30' },
-    fmeaInfo: { subject: 'SDD NEW FMEA 개발', fmeaStartDate: '2025-12-01', fmeaRevisionDate: '2025-12-29', modelYear: 'MY2025', designResponsibility: '품질팀', fmeaResponsibleName: '신홍섭' },
-    createdAt: '2025-12-01T09:00:00.000Z', status: 'active', step: 4, revisionNo: 'Rev.01'
-  },
-];
+// 온프레미스 운영 모드 - 샘플 데이터 없음
+// 모든 데이터는 DB에서 조회하거나 신규 등록으로 생성
 
 // 단계 배지 렌더링
 function renderStepBadge(step?: number): React.ReactNode {
@@ -152,56 +132,52 @@ export default function FMEAListPage() {
   // 저장 상태
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
-  // 데이터 로드
-  const loadData = useCallback(() => {
+  // 로딩 상태
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // 데이터 로드 (DB API 호출)
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
     try {
-      // PFMEA 프로젝트 로드
-      const storedPfmea = localStorage.getItem('pfmea-projects');
-      const pfmeaProjects = storedPfmea ? JSON.parse(storedPfmea) : [];
+      // 1. DB에서 프로젝트 목록 조회
+      const response = await fetch('/api/fmea/projects');
+      const result = await response.json();
       
-      // 기존 FMEA 프로젝트 로드 (하위 호환)
-      const storedFmea = localStorage.getItem('fmea-projects');
-      const fmeaProjects = storedFmea ? JSON.parse(storedFmea) : [];
-
-      // 병합
-      let allProjects = [...pfmeaProjects, ...fmeaProjects];
-      
-      // 데이터가 없으면 기본 샘플 데이터 저장
-      if (!Array.isArray(allProjects) || allProjects.length === 0) {
-        localStorage.setItem('pfmea-projects', JSON.stringify(DEFAULT_SAMPLE_DATA));
-        allProjects = DEFAULT_SAMPLE_DATA;
-      }
-
-      // 중복 제거 (ID 기준)
-      const uniqueProjects = allProjects.reduce((acc: FMEAProject[], curr) => {
-        if (!acc.find(p => p.id === curr.id)) {
-          acc.push(curr);
-        }
-        return acc;
-      }, []);
-
-      // 유형별 우선순위 (M=1, F=2, P=3) + 최신순 정렬
-      // Master → Family → Part 순서로 고정 표시
-      const typeOrder: Record<string, number> = { 'M': 1, 'F': 2, 'P': 3 };
-      const getTypeOrder = (id: string) => {
-        const match = id.match(/pfm\d{2}-([MFP])/i);
-        return match ? typeOrder[match[1].toUpperCase()] || 3 : 3;
-      };
-      
-      const sorted = uniqueProjects.sort((a: FMEAProject, b: FMEAProject) => {
-        // 1차: 유형 순서 (M → F → P)
-        const typeA = getTypeOrder(a.id);
-        const typeB = getTypeOrder(b.id);
-        if (typeA !== typeB) return typeA - typeB;
+      if (result.success && result.projects.length > 0) {
+        // DB 데이터 사용
+        console.log('✅ DB에서 FMEA 목록 로드:', result.projects.length, '건');
+        setProjects(result.projects);
+      } else {
+        // DB에 데이터 없으면 localStorage 확인 (마이그레이션 용)
+        const storedPfmea = localStorage.getItem('pfmea-projects');
+        const localProjects = storedPfmea ? JSON.parse(storedPfmea) : [];
         
-        // 2차: 같은 유형 내에서 최신순
-        return (b.createdAt || '').localeCompare(a.createdAt || '');
-      });
-
-      setProjects(sorted);
+        if (localProjects.length > 0) {
+          console.log('📦 localStorage에서 FMEA 목록 로드:', localProjects.length, '건');
+          // ID 소문자 정규화
+          const normalized = localProjects.map((p: FMEAProject) => ({
+            ...p,
+            id: p.id.toLowerCase()
+          }));
+          setProjects(normalized);
+        } else {
+          // 데이터 없음 - 빈 리스트
+          console.log('📭 FMEA 프로젝트 없음 - 신규 등록 필요');
+          setProjects([]);
+        }
+      }
     } catch (error) {
       console.error('❌ FMEA 리스트 로드 실패:', error);
-      setProjects([]);
+      // API 실패 시 localStorage fallback
+      try {
+        const storedPfmea = localStorage.getItem('pfmea-projects');
+        const localProjects = storedPfmea ? JSON.parse(storedPfmea) : [];
+        setProjects(localProjects);
+      } catch {
+        setProjects([]);
+      }
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -308,7 +284,12 @@ export default function FMEAListPage() {
         <div className="flex items-center gap-2 mb-4">
           <span className="text-lg">📋</span>
           <h1 className="text-base font-bold text-gray-800">FMEA 리스트</h1>
-        <span className="text-xs text-gray-500 ml-2">총 {filteredProjects.length}건</span>
+          {isLoading ? (
+            <span className="text-xs text-blue-500 ml-2">⏳ 로딩 중...</span>
+          ) : (
+            <span className="text-xs text-gray-500 ml-2">총 {filteredProjects.length}건</span>
+          )}
+          <span className="text-[10px] text-green-600 ml-2 bg-green-100 px-2 py-0.5 rounded">🔗 DB 연동</span>
       </div>
 
       {/* 검색 및 액션 바 */}
@@ -331,6 +312,19 @@ export default function FMEAListPage() {
             className="px-4 py-2 bg-gray-100 border border-gray-400 text-gray-700 text-xs rounded hover:bg-gray-200 flex items-center gap-1"
           >
             🔄 새로고침
+          </button>
+          <button
+            onClick={() => {
+              if (confirm('로컬 캐시를 삭제하시겠습니까?\nDB 데이터는 유지됩니다.')) {
+                localStorage.removeItem('pfmea-projects');
+                localStorage.removeItem('fmea-projects');
+                loadData();
+                alert('✅ 로컬 캐시가 삭제되었습니다.');
+              }
+            }}
+            className="px-4 py-2 bg-orange-100 border border-orange-400 text-orange-700 text-xs rounded hover:bg-orange-200 flex items-center gap-1"
+          >
+            🗑️ 캐시 삭제
           </button>
           <button
             onClick={handleSave}

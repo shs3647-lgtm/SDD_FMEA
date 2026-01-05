@@ -1,0 +1,216 @@
+/**
+ * FMEA 프로젝트 목록 API
+ * - GET: DB에서 FMEA 프로젝트 목록 조회
+ * - POST: 새 FMEA 프로젝트 생성
+ */
+import { NextRequest, NextResponse } from 'next/server';
+import { Pool } from 'pg';
+
+export const runtime = 'nodejs';
+
+// DB 연결
+function getPool() {
+  return new Pool({ connectionString: process.env.DATABASE_URL });
+}
+
+// GET: FMEA 프로젝트 목록 조회
+export async function GET() {
+  const pool = getPool();
+  
+  try {
+    // 1. 모든 FMEA 스키마 조회
+    const schemasResult = await pool.query(`
+      SELECT schema_name 
+      FROM information_schema.schemata 
+      WHERE schema_name LIKE 'pfmea_pfm%' 
+      ORDER BY schema_name
+    `);
+    
+    const projects: any[] = [];
+    
+    for (const row of schemasResult.rows) {
+      const schemaName = row.schema_name;
+      // pfmea_pfm26_m001 → pfm26-M001
+      const fmeaId = schemaName
+        .replace('pfmea_', '')
+        .replace(/_/g, '-')
+        .replace(/pfm(\d+)-([mfp])(\d+)/i, (_match: string, year: string, type: string, num: string) => 
+          `pfm${year}-${type.toUpperCase()}${num}`
+        );
+      
+      try {
+        // FmeaInfo 테이블에서 정보 조회
+        const infoResult = await pool.query(`
+          SELECT * FROM "${schemaName}"."FmeaInfo" LIMIT 1
+        `);
+        
+        if (infoResult.rows.length > 0) {
+          const info = infoResult.rows[0];
+          projects.push({
+            id: fmeaId,
+            project: info.project || {},
+            fmeaInfo: info.fmeaInfo || {},
+            fmeaType: info.fmeaType || 'P',
+            structureConfirmed: info.structureConfirmed || false,
+            createdAt: info.createdAt,
+            updatedAt: info.updatedAt,
+            status: 'active',
+            step: calculateStep(info),
+            revisionNo: 'Rev.01'
+          });
+        } else {
+          // FmeaInfo 없으면 스키마만으로 기본 정보 생성
+          projects.push({
+            id: fmeaId,
+            project: { projectName: fmeaId },
+            fmeaInfo: { subject: fmeaId },
+            fmeaType: extractType(fmeaId),
+            createdAt: new Date().toISOString(),
+            status: 'active',
+            step: 1,
+            revisionNo: 'Rev.01'
+          });
+        }
+      } catch (e) {
+        // 테이블이 없으면 스키마만으로 기본 정보 생성
+        projects.push({
+          id: fmeaId,
+          project: { projectName: fmeaId },
+          fmeaInfo: { subject: fmeaId },
+          fmeaType: extractType(fmeaId),
+          createdAt: new Date().toISOString(),
+          status: 'active',
+          step: 1,
+          revisionNo: 'Rev.01'
+        });
+      }
+    }
+    
+    // 유형별 정렬 (M → F → P)
+    const typeOrder: Record<string, number> = { 'M': 1, 'F': 2, 'P': 3 };
+    projects.sort((a, b) => {
+      const orderA = typeOrder[a.fmeaType] || 3;
+      const orderB = typeOrder[b.fmeaType] || 3;
+      if (orderA !== orderB) return orderA - orderB;
+      return (b.createdAt || '').localeCompare(a.createdAt || '');
+    });
+    
+    return NextResponse.json({ success: true, projects });
+    
+  } catch (error: any) {
+    console.error('❌ FMEA 목록 조회 실패:', error.message);
+    return NextResponse.json({ success: false, error: error.message, projects: [] }, { status: 500 });
+  } finally {
+    await pool.end();
+  }
+}
+
+// POST: 새 FMEA 프로젝트 생성
+export async function POST(req: NextRequest) {
+  const pool = getPool();
+  
+  try {
+    const body = await req.json();
+    const { fmeaId, fmeaType, project, fmeaInfo } = body;
+    
+    if (!fmeaId) {
+      return NextResponse.json({ success: false, error: 'fmeaId is required' }, { status: 400 });
+    }
+    
+    // 스키마 이름 생성: pfm26-M001 → pfmea_pfm26_m001
+    const schemaName = `pfmea_${fmeaId.replace(/-/g, '_').toLowerCase()}`;
+    
+    // 1. 스키마 생성
+    await pool.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
+    
+    // 2. FmeaInfo 테이블 생성
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}"."FmeaInfo" (
+        id TEXT PRIMARY KEY,
+        "fmeaId" TEXT NOT NULL,
+        "fmeaType" TEXT,
+        project JSONB,
+        "fmeaInfo" JSONB,
+        "structureConfirmed" BOOLEAN DEFAULT FALSE,
+        "createdAt" TIMESTAMP DEFAULT NOW(),
+        "updatedAt" TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // 3. 기본 테이블들 생성
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}"."L1Structure" (
+        id TEXT PRIMARY KEY,
+        "fmeaId" TEXT NOT NULL,
+        "processNo" TEXT,
+        "processName" TEXT,
+        "fourM" TEXT,
+        "createdAt" TIMESTAMP DEFAULT NOW(),
+        "updatedAt" TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}"."L2Structure" (
+        id TEXT PRIMARY KEY,
+        "fmeaId" TEXT NOT NULL,
+        "l1Id" TEXT,
+        "processNo" TEXT,
+        "processName" TEXT,
+        "processFunction" TEXT,
+        "createdAt" TIMESTAMP DEFAULT NOW(),
+        "updatedAt" TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // 4. FmeaInfo 저장
+    await pool.query(`
+      INSERT INTO "${schemaName}"."FmeaInfo" (id, "fmeaId", "fmeaType", project, "fmeaInfo")
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (id) DO UPDATE SET
+        "fmeaType" = $3,
+        project = $4,
+        "fmeaInfo" = $5,
+        "updatedAt" = NOW()
+    `, [
+      `info-${fmeaId}`,
+      fmeaId,
+      fmeaType || 'P',
+      JSON.stringify(project || {}),
+      JSON.stringify(fmeaInfo || {})
+    ]);
+    
+    console.log(`✅ FMEA 프로젝트 생성: ${fmeaId} (스키마: ${schemaName})`);
+    
+    return NextResponse.json({ 
+      success: true, 
+      fmeaId, 
+      schemaName,
+      message: 'FMEA 프로젝트가 생성되었습니다.' 
+    });
+    
+  } catch (error: any) {
+    console.error('❌ FMEA 프로젝트 생성 실패:', error.message);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } finally {
+    await pool.end();
+  }
+}
+
+// 유틸: ID에서 유형 추출
+function extractType(id: string): string {
+  const match = id.match(/pfm\d{2}-([MFP])/i);
+  return match ? match[1].toUpperCase() : 'P';
+}
+
+// 유틸: 단계 계산
+function calculateStep(info: any): number {
+  if (info.optConfirmed) return 7;
+  if (info.riskConfirmed) return 6;
+  if (info.failureLinkConfirmed) return 5;
+  if (info.l3Confirmed) return 4;
+  if (info.l2Confirmed) return 3;
+  if (info.l1Confirmed || info.structureConfirmed) return 2;
+  return 1;
+}
+

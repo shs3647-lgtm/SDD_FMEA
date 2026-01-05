@@ -204,6 +204,7 @@ export default function ProcessSelectModal({
       <div 
         className="bg-white rounded-lg shadow-2xl w-[500px] flex flex-col overflow-hidden max-h-[calc(100vh-120px)]"
         onClick={e => e.stopPropagation()}
+        onKeyDown={e => e.stopPropagation()}
       >
         {/* 헤더 */}
         <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
@@ -287,8 +288,8 @@ export default function ProcessSelectModal({
                           onChange={(e) => setEditValue(e.target.value)}
                           onBlur={handleEditSave}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleEditSave();
-                            if (e.key === 'Escape') setEditingId(null);
+                            if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); handleEditSave(); }
+                            if (e.key === 'Escape') { e.stopPropagation(); setEditingId(null); }
                           }}
                           autoFocus
                           className="w-full px-1 py-0.5 text-xs border border-blue-400 rounded focus:outline-none"

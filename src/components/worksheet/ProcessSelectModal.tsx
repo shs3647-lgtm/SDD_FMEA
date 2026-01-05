@@ -70,8 +70,8 @@ export const ProcessSelectModal: React.FC<ProcessSelectModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-lg shadow-xl w-[500px] max-h-[80vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+      <div className="bg-white rounded-lg shadow-xl w-[500px] max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
         {/* 헤더 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-[#00587a] text-white rounded-t-lg">
           <h3 className="text-sm font-bold">🔍 {title}</h3>

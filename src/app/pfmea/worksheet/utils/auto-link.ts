@@ -14,7 +14,7 @@
  * @codefreeze 2026-01-04
  */
 
-import { WorksheetState } from '../schema';
+import { WorksheetState } from '../constants';
 
 /**
  * 1L 기능분석: 동일한 유형에 연결된 기능들 찾기
