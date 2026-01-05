@@ -344,40 +344,63 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     chainAreaRef, fmNodeRef, feColRef, fcColRef, linkedFEs, linkedFCs, currentFM
   );
 
-  // ========== 현재 FM의 FE 개별 해제 ==========
+  // ========== FE 더블클릭 (연결 해제) - FC와 동일한 패턴 ==========
   const unlinkFE = useCallback((id: string) => {
     const fe = feData.find(f => f.id === id);
     if (!fe) {
       console.log('[unlinkFE] FE를 찾을 수 없음:', id);
       return;
     }
-    if (!currentFMId) {
-      alert('⚠️ 고장형태(FM)를 먼저 선택해주세요.');
-      return;
-    }
-
-    const filtered = savedLinks.filter(l =>
-      !(l.fmId === currentFMId && (l.feId === id || l.feText === fe.text))
-    );
-    if (filtered.length === savedLinks.length) {
-      console.log('[unlinkFE] 현재 FM과 연결 없음');
-      return;
-    }
-
-    setSavedLinks(filtered);
+    
+    console.log('[unlinkFE 시작]', { feId: id, feText: fe.text, currentFMId });
+    
+    // 1. 먼저 linkedFEs (미저장 상태)에서 제거 시도
+    let removedFromLinked = false;
     setLinkedFEs(prev => {
-      if (!prev.has(id)) return prev;
-      const next = new Map(prev);
-      next.delete(id);
-      return next;
+      if (prev.has(id)) {
+        const next = new Map(prev);
+        next.delete(id);
+        console.log('[FE 선택 해제] linkedFEs에서 제거:', fe.text);
+        removedFromLinked = true;
+        return next;
+      }
+      return prev;
     });
-    setState((prev: any) => ({ ...prev, failureLinks: filtered }));
-    setDirty(true);
-    requestAnimationFrame(() => {
-      saveToLocalStorage?.();
-      saveAtomicDB?.();
-    });
-    alert(`✅ \"${fe.text}\" 연결이 해제되었습니다.`);
+    
+    // 2. savedLinks에서 해당 FE와 관련된 연결 모두 찾기 (현재 FM 기준)
+    if (currentFMId) {
+      const existingLinks = savedLinks.filter(l => 
+        l.fmId === currentFMId && (l.feId === id || l.feText === fe.text)
+      );
+      
+      console.log('[unlinkFE] 기존 연결 검색:', existingLinks.length, '개 발견');
+      
+      if (existingLinks.length > 0) {
+        // 연결 해제 (ID 또는 텍스트 기반)
+        const filtered = savedLinks.filter(l => 
+          !(l.fmId === currentFMId && (l.feId === id || l.feText === fe.text))
+        );
+        
+        console.log('[FE 연결 해제 (더블클릭)]', fe.text, 'from FM:', currentFMId, '| 제거:', existingLinks.length, '개');
+        
+        setSavedLinks(filtered);
+        setState((prev: any) => ({ ...prev, failureLinks: filtered }));
+        setDirty(true);
+        requestAnimationFrame(() => {
+          saveToLocalStorage?.();
+          saveAtomicDB?.();  // ✅ PostgreSQL DB 저장
+        });
+        
+        alert(`✅ "${fe.text}" 연결이 해제되었습니다.`);
+      } else if (!removedFromLinked) {
+        console.log('[unlinkFE] 현재 FM과 연결 없음');
+      }
+    } else {
+      if (!removedFromLinked) {
+        alert('⚠️ 고장형태(FM)를 먼저 선택해주세요.');
+      }
+    }
+    
     setTimeout(drawLines, 50);
   }, [currentFMId, feData, savedLinks, setState, setDirty, saveToLocalStorage, saveAtomicDB, drawLines]);
 
