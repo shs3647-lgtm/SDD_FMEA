@@ -344,6 +344,43 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     chainAreaRef, fmNodeRef, feColRef, fcColRef, linkedFEs, linkedFCs, currentFM
   );
 
+  // ========== 현재 FM의 FE 개별 해제 ==========
+  const unlinkFE = useCallback((id: string) => {
+    const fe = feData.find(f => f.id === id);
+    if (!fe) {
+      console.log('[unlinkFE] FE를 찾을 수 없음:', id);
+      return;
+    }
+    if (!currentFMId) {
+      alert('⚠️ 고장형태(FM)를 먼저 선택해주세요.');
+      return;
+    }
+
+    const filtered = savedLinks.filter(l =>
+      !(l.fmId === currentFMId && (l.feId === id || l.feText === fe.text))
+    );
+    if (filtered.length === savedLinks.length) {
+      console.log('[unlinkFE] 현재 FM과 연결 없음');
+      return;
+    }
+
+    setSavedLinks(filtered);
+    setLinkedFEs(prev => {
+      if (!prev.has(id)) return prev;
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
+    });
+    setState((prev: any) => ({ ...prev, failureLinks: filtered }));
+    setDirty(true);
+    requestAnimationFrame(() => {
+      saveToLocalStorage?.();
+      saveAtomicDB?.();
+    });
+    alert(`✅ \"${fe.text}\" 연결이 해제되었습니다.`);
+    setTimeout(drawLines, 50);
+  }, [currentFMId, feData, savedLinks, setState, setDirty, saveToLocalStorage, saveAtomicDB, drawLines]);
+
   // ========== 현재 FM 연결 해제 ==========
   const unlinkCurrentFM = useCallback(() => {
     if (!currentFMId) {
@@ -1146,6 +1183,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
         onSelectFM={selectFM}
         onToggleFE={toggleFE}
         onToggleFC={toggleFC}
+        onUnlinkFE={unlinkFE}
         onUnlinkFC={unlinkFC}
         onProcessChange={setSelectedProcess}
         onFcScopeChange={setFcLinkScope}

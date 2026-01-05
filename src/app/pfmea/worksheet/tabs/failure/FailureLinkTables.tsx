@@ -39,6 +39,7 @@ interface FailureLinkTablesProps {
   onSelectFM: (id: string) => void;
   onToggleFE: (id: string) => void;
   onToggleFC: (id: string) => void;
+  onUnlinkFE: (id: string) => void;
   onUnlinkFC: (id: string) => void;  // 더블클릭 연결 해제
   onProcessChange: (process: string) => void;
   onFcScopeChange: (scope: 'current' | 'all') => void;
@@ -97,6 +98,7 @@ export default function FailureLinkTables({
     onSelectFM,
     onToggleFE,
     onToggleFC,
+    onUnlinkFE,
     onUnlinkFC,
     onProcessChange,
     onFcScopeChange,
@@ -151,7 +153,13 @@ export default function FailureLinkTables({
                   const cellBg = isLinkedInSaved ? '#c8e6c9' : (idx % 2 === 1 ? '#bbdefb' : '#e3f2fd');  // 연결된 셀은 녹색 배경
                   const severityColor = fe.severity && fe.severity >= 8 ? '#f57c00' : fe.severity && fe.severity >= 5 ? '#f57f17' : COLORS.structure.text;
                   return (
-                    <tr key={fe.id} onClick={() => onToggleFE(fe.id)} className={currentFMId ? 'cursor-pointer' : ''}>
+                    <tr
+                      key={fe.id}
+                      onClick={() => onToggleFE(fe.id)}
+                      onDoubleClick={() => onUnlinkFE(fe.id)}
+                      className={currentFMId ? 'cursor-pointer' : ''}
+                      title="클릭: 연결 / 더블클릭: 연결 해제"
+                    >
                       <td style={tdCenterStyle(noBg, BORDER_BLUE, '#fff')}>{fe.feNo}</td>
                       <td style={tdStyle(cellBg, BORDER_BLUE, { color: COLORS.structure.text })}>
                         {isLinkedInSaved && <span className="mr-1 text-green-700 font-bold">●</span>}
