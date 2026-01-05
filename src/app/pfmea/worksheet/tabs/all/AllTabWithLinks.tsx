@@ -171,18 +171,71 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
     <div style={{ width: '100%', minWidth: '1350px', overflowX: 'visible' }}>
       <table className={`${TW_CLASSES.table} min-w-[1350px] w-full`} style={{ minWidth: '1350px' }}>
         <colgroup>
-          <col style={{ width: '100px' }} />
-          <col style={{ width: '40px' }} />
-          <col style={{ width: '20px' }} />
-          <col style={{ width: '120px' }} />
-          <col style={{ width: '30px' }} />
-          <col style={{ width: '200px' }} />
-          <col style={{ width: '140px' }} />
-          <col style={{ width: '200px' }} />
-          <col style={{ width: '100px' }} />
-          <col style={{ width: '30px' }} />
-          <col style={{ width: '190px' }} />
-          <col style={{ width: '80px' }} />
+          {/* 구조분석 4열 */}
+          {visibleSteps.includes(2) && (
+            <>
+              <col style={{ width: '100px' }} />
+              <col style={{ width: '40px' }} />
+              <col style={{ width: '20px' }} />
+              <col style={{ width: '120px' }} />
+            </>
+          )}
+          {/* 기능분석 8열 */}
+          {visibleSteps.includes(3) && (
+            <>
+              <col style={{ width: '30px' }} />
+              <col style={{ width: '200px' }} />
+              <col style={{ width: '140px' }} />
+              <col style={{ width: '200px' }} />
+              <col style={{ width: '100px' }} />
+              <col style={{ width: '30px' }} />
+              <col style={{ width: '190px' }} />
+              <col style={{ width: '80px' }} />
+            </>
+          )}
+          {/* 고장분석 6열 */}
+          {visibleSteps.includes(4) && (
+            <>
+              <col style={{ width: '90px' }} />
+              <col style={{ width: '120px' }} />
+              <col style={{ width: '30px' }} />
+              <col style={{ width: '120px' }} />
+              <col style={{ width: '100px' }} />
+              <col style={{ width: '130px' }} />
+            </>
+          )}
+          {/* 리스크분석 8열 */}
+          {visibleSteps.includes(5) && (
+            <>
+              <col style={{ width: '90px' }} />
+              <col style={{ width: '30px' }} />
+              <col style={{ width: '90px' }} />
+              <col style={{ width: '25px' }} />
+              <col style={{ width: '25px' }} />
+              <col style={{ width: '30px' }} />
+              <col style={{ width: '60px' }} />
+              <col style={{ width: '80px' }} />
+            </>
+          )}
+          {/* 최적화 14열 */}
+          {visibleSteps.includes(6) && (
+            <>
+              <col style={{ width: '70px' }} />
+              <col style={{ width: '70px' }} />
+              <col style={{ width: '50px' }} />
+              <col style={{ width: '50px' }} />
+              <col style={{ width: '35px' }} />
+              <col style={{ width: '60px' }} />
+              <col style={{ width: '50px' }} />
+              <col style={{ width: '25px' }} />
+              <col style={{ width: '25px' }} />
+              <col style={{ width: '25px' }} />
+              <col style={{ width: '40px' }} />
+              <col style={{ width: '25px' }} />
+              <col style={{ width: '30px' }} />
+              <col style={{ width: '50px' }} />
+            </>
+          )}
         </colgroup>
         <thead className={TW_CLASSES.stickyHead}>
           {/* 1행: 단계 대분류 */}
