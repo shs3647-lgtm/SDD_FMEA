@@ -55,7 +55,6 @@ export default function FailureLinkTables({
   // 클릭 타이머 관리 (더블클릭과 싱글클릭 구분)
   ...restProps
 }: FailureLinkTablesProps) {
-  const { linkStats } = restProps;
   const clickTimerRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   
   // FC 싱글클릭 핸들러 (200ms 딜레이)
