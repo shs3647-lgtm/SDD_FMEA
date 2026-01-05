@@ -381,37 +381,37 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
           <tr>
             {visibleSteps.includes(2) && (
               <>
-                <th style={stickyHeaderCellStyle(COLORS.structure.main, HEADER_ROW_H, '#fff', 59, '10px', 600)}>1. 완제품 공정명</th>
-                <th style={stickyHeaderCellStyle(COLORS.structure.main, HEADER_ROW_H, '#fff', 59, '10px', 600)}>2. 메인 공정명</th>
-                <th colSpan={2} style={stickyHeaderCellStyle(COLORS.structure.main, HEADER_ROW_H, '#fff', 59, '10px', 600)}>3. 작업 요소명</th>
+                <th style={stickyHeaderCellStyle(COLORS.structure.main, HEADER_ROW_H, '#fff', 59, '9px', 600)}>1.완제품<br/>공정명</th>
+                <th style={stickyHeaderCellStyle(COLORS.structure.main, HEADER_ROW_H, '#fff', 59, '9px', 600)}>2.메인<br/>공정명</th>
+                <th colSpan={2} style={stickyHeaderCellStyle(COLORS.structure.main, HEADER_ROW_H, '#fff', 59, '9px', 600)}>3.작업<br/>요소명</th>
               </>
             )}
             {visibleSteps.includes(3) && (
               <>
-                <th colSpan={3} style={stickyHeaderCellStyle(COLORS.function.main, HEADER_ROW_H, '#fff', 59, '10px', 600)}>1. 완제품 공정기능/요구사항</th>
-                <th colSpan={2} style={stickyHeaderCellStyle(COLORS.function.main, HEADER_ROW_H, '#fff', 59, '10px', 600)}>2. 메인공정기능 및 제품특성</th>
-                <th colSpan={3} style={stickyHeaderCellStyle(COLORS.function.main, HEADER_ROW_H, '#fff', 59, '10px', 600)}>3. 작업요소의 기능 및 공정특성</th>
+                <th colSpan={3} style={stickyHeaderCellStyle(COLORS.function.main, HEADER_ROW_H, '#fff', 59, '9px', 600)}>1.완제품공정기능<br/>/요구사항</th>
+                <th colSpan={2} style={stickyHeaderCellStyle(COLORS.function.main, HEADER_ROW_H, '#fff', 59, '9px', 600)}>2.메인공정기능<br/>및 제품특성</th>
+                <th colSpan={3} style={stickyHeaderCellStyle(COLORS.function.main, HEADER_ROW_H, '#fff', 59, '9px', 600)}>3.작업요소기능<br/>및 공정특성</th>
               </>
             )}
             {visibleSteps.includes(4) && (
               <>
-                <th colSpan={2} style={stickyHeaderCellStyle(COLORS.failure.main, HEADER_ROW_H, '#fff', 59, '10px', 600)}>1. 자사/고객/사용자 고장영향(FE)</th>
-                <th style={stickyHeaderCellStyle(COLORS.failure.main, HEADER_ROW_H, '#fff', 59, '10px', 600)}>2. 메인공정 고장형태(FM)</th>
-                <th colSpan={2} style={stickyHeaderCellStyle(COLORS.failure.main, HEADER_ROW_H, '#fff', 59, '10px', 600)}>3. 작업요소 고장원인(FC)</th>
+                <th colSpan={2} style={stickyHeaderCellStyle(COLORS.failure.main, HEADER_ROW_H, '#fff', 59, '9px', 600)}>1.자사/고객/사용자<br/>고장영향(FE)</th>
+                <th style={stickyHeaderCellStyle(COLORS.failure.main, HEADER_ROW_H, '#fff', 59, '9px', 600)}>2.메인공정<br/>고장형태(FM)</th>
+                <th colSpan={2} style={stickyHeaderCellStyle(COLORS.failure.main, HEADER_ROW_H, '#fff', 59, '9px', 600)}>3.작업요소<br/>고장원인(FC)</th>
               </>
             )}
             {visibleSteps.includes(5) && (
               <>
-                <th colSpan={2} style={stickyHeaderCellStyle(COLORS.risk.main, HEADER_ROW_H, '#fff', 59, '10px', 600)}>현재 예방관리</th>
-                <th colSpan={2} style={stickyHeaderCellStyle(COLORS.risk.main, HEADER_ROW_H, '#fff', 59, '10px', 600)}>현재 검출관리</th>
-                <th colSpan={4} style={stickyHeaderCellStyle(COLORS.risk.main, HEADER_ROW_H, '#fff', 59, '10px', 600)}>리스크 평가</th>
+                <th colSpan={2} style={stickyHeaderCellStyle(COLORS.risk.main, HEADER_ROW_H, '#fff', 59, '9px', 600)}>현재<br/>예방관리</th>
+                <th colSpan={2} style={stickyHeaderCellStyle(COLORS.risk.main, HEADER_ROW_H, '#fff', 59, '9px', 600)}>현재<br/>검출관리</th>
+                <th colSpan={4} style={stickyHeaderCellStyle(COLORS.risk.main, HEADER_ROW_H, '#fff', 59, '9px', 600)}>리스크<br/>평가</th>
               </>
             )}
             {visibleSteps.includes(6) && (
               <>
-                <th colSpan={4} style={stickyHeaderCellStyle(COLORS.opt.main, HEADER_ROW_H, '#fff', 59, '10px', 600)}>계획</th>
-                <th colSpan={3} style={stickyHeaderCellStyle(COLORS.opt.main, HEADER_ROW_H, '#fff', 59, '10px', 600)}>결과 모니터링</th>
-                <th colSpan={8} style={stickyHeaderCellStyle(COLORS.opt.main, HEADER_ROW_H, '#fff', 59, '10px', 600)}>효과 평가</th>
+                <th colSpan={4} style={stickyHeaderCellStyle(COLORS.opt.main, HEADER_ROW_H, '#fff', 59, '9px', 600)}>계획</th>
+                <th colSpan={3} style={stickyHeaderCellStyle(COLORS.opt.main, HEADER_ROW_H, '#fff', 59, '9px', 600)}>결과<br/>모니터링</th>
+                <th colSpan={8} style={stickyHeaderCellStyle(COLORS.opt.main, HEADER_ROW_H, '#fff', 59, '9px', 600)}>효과<br/>평가</th>
               </>
             )}
           </tr>
