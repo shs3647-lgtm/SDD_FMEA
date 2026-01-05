@@ -120,6 +120,39 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     }
   }, [stateFailureLinksJson]); // ✅ JSON 문자열로 깊은 비교
 
+  // ========== savedLinks 변경 시 자동 동기화 + 저장 ==========
+  const savedLinksJson = JSON.stringify(savedLinks);
+  const prevSavedLinksRef = useRef<string>('[]');
+  useEffect(() => {
+    // 초기 로드 시에는 스킵 (무한 루프 방지)
+    if (isInitialLoad.current) return;
+    
+    // 이전 값과 동일하면 스킵
+    if (savedLinksJson === prevSavedLinksRef.current) return;
+    prevSavedLinksRef.current = savedLinksJson;
+    
+    // savedLinks가 변경되면 state에 동기화
+    console.log('[FailureLinkTab] 🔄 savedLinks 변경 감지:', savedLinks.length, '건 → state 동기화');
+    setState((prev: any) => {
+      // 이미 동일하면 업데이트 안 함
+      const currentLinks = prev.failureLinks || [];
+      if (JSON.stringify(currentLinks) === savedLinksJson) {
+        return prev;
+      }
+      return { ...prev, failureLinks: savedLinks };
+    });
+    
+    // ✅ 변경 시 자동 저장 (debounce)
+    const saveTimer = setTimeout(() => {
+      setDirty(true);
+      saveToLocalStorage?.();
+      saveAtomicDB?.();
+      console.log('[FailureLinkTab] ✅ 자동 저장 완료:', savedLinks.length, '건');
+    }, 300);
+    
+    return () => clearTimeout(saveTimer);
+  }, [savedLinksJson, setState, setDirty, saveToLocalStorage, saveAtomicDB]);
+
   // ========== FE 데이터 추출 (확정된 것만 사용 + 중복 제거) ==========
   const isL1Confirmed = state.failureL1Confirmed || false;
   
