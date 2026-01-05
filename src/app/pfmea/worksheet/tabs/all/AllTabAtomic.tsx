@@ -547,7 +547,7 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
                   </>
                 )}
                 
-                {/* 최적화 */}
+                {/* 최적화 15열 */}
                 {visibleSteps.includes(6) && (
                   <>
                     <td style={cellStyle('#fff', 'center')}></td>
@@ -564,6 +564,7 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
                     <td style={cellStyle('#fff', 'center')}></td>
                     <td style={cellStyle('#fff', 'center')}></td>
                     <td style={cellStyle('#fff', 'center')}>{r.optRemarks || ''}</td>
+                    <td style={cellStyle('#fff', 'center')}></td>
                   </>
                 )}
               </tr>
