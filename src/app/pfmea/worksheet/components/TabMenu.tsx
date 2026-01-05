@@ -16,15 +16,21 @@ import StepToggleButtons from './StepToggleButtons';
 interface TabMenuProps {
   state: WorksheetState;
   setState: React.Dispatch<React.SetStateAction<WorksheetState>>;
+  setStateSynced?: (updater: React.SetStateAction<WorksheetState>) => void;
+  setDirty: (dirty: boolean) => void;
+  saveToLocalStorage?: () => void;
+  saveAtomicDB?: () => void;
   onOpen5AP?: () => void;
   onOpen6AP?: () => void;
 }
 
-export default function TabMenu({ state, setState }: TabMenuProps) {
+export default function TabMenu({ state, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB }: TabMenuProps) {
   const structureConfirmed = (state as any).structureConfirmed || false;
   const failureLinks = (state as any).failureLinks || [];
   const failureLinkConfirmed = (state as any).failureLinkConfirmed || false;
   const hasFailureLinks = failureLinks.length > 0;
+  const riskConfirmed = (state as any).riskConfirmed || false;
+  const optConfirmed = (state as any).optConfirmed || false;
   
   // 탭 활성화 조건
   const isTabEnabled = (tabId: string) => {
@@ -89,6 +95,53 @@ export default function TabMenu({ state, setState }: TabMenuProps) {
           })}
         </div>
 
+        {/* 구분선 */}
+        <div className="hidden sm:block w-px h-5 bg-white/30 mx-1 lg:mx-2 shrink-0" />
+        
+        {/* 5단계/6단계 확정 버튼 */}
+        <div className="flex gap-1 shrink-0">
+          {failureLinkConfirmed && (
+            <button
+              onClick={() => {
+                if (riskConfirmed) {
+                  alert('이미 확정되었습니다.');
+                  return;
+                }
+                setState(prev => ({ ...prev, tab: 'risk' }));
+              }}
+              className={`
+                px-2 py-1 text-[10px] sm:text-xs rounded whitespace-nowrap
+                ${riskConfirmed 
+                  ? 'bg-green-600 text-white cursor-default' 
+                  : 'bg-yellow-500 text-black hover:bg-yellow-400 cursor-pointer'
+                }
+              `}
+            >
+              {riskConfirmed ? '✓ 5단계확정' : '5단계확정'}
+            </button>
+          )}
+          {riskConfirmed && (
+            <button
+              onClick={() => {
+                if (optConfirmed) {
+                  alert('이미 확정되었습니다.');
+                  return;
+                }
+                setState(prev => ({ ...prev, tab: 'opt' }));
+              }}
+              className={`
+                px-2 py-1 text-[10px] sm:text-xs rounded whitespace-nowrap
+                ${optConfirmed 
+                  ? 'bg-green-600 text-white cursor-default' 
+                  : 'bg-yellow-500 text-black hover:bg-yellow-400 cursor-pointer'
+                }
+              `}
+            >
+              {optConfirmed ? '✓ 6단계확정' : '6단계확정'}
+            </button>
+          )}
+        </div>
+        
         {/* 구분선 */}
         <div className="hidden sm:block w-px h-5 bg-white/30 mx-1 lg:mx-2 shrink-0" />
         

@@ -8,7 +8,9 @@ import { COLORS } from '../constants';
 import { 
   StructureTab, StructureColgroup, StructureHeader, StructureRow,
   RiskHeader, RiskRow,
+  RiskTabConfirmable,
   OptHeader, OptRow,
+  OptTabConfirmable,
   DocHeader, DocRow,
 } from '../tabs';
 import { FunctionTab } from '../tabs';
@@ -54,39 +56,14 @@ export function FailureTabFull(props: any) {
   return <FailureTabNew {...props} />;
 }
 
-// 리스크분석 탭
+// 리스크분석 탭 - 확정 기능 포함
 export function RiskTabFull(props: any) {
-  const { rows, onAPClick } = props;
-  
-  return (
-    <>
-      <thead style={stickyTheadStyle}><RiskHeader onAPClick={onAPClick} /></thead>
-      <tbody>
-        {rows.map((row: any, idx: number) => (
-          <tr key={`risk-${idx}-${row.l3Id}`} className="h-6">
-            <RiskRow />
-          </tr>
-        ))}
-      </tbody>
-    </>
-  );
+  return <RiskTabConfirmable {...props} />;
 }
 
-// 최적화 탭
+// 최적화 탭 - 확정 기능 포함
 export function OptTabFull(props: any) {
-  const { rows } = props;
-  return (
-    <>
-      <thead style={stickyTheadStyle}><OptHeader /></thead>
-      <tbody>
-        {rows.map((row: any, idx: number) => (
-          <tr key={`opt-${idx}-${row.l3Id}`} className="h-6">
-            <OptRow row={row} />
-          </tr>
-        ))}
-      </tbody>
-    </>
-  );
+  return <OptTabConfirmable {...props} />;
 }
 
 // 문서화 탭

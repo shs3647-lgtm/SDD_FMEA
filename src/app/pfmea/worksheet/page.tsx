@@ -416,7 +416,10 @@ function FMEAWorksheetPageContent() {
           importMessage={importMessage}
           fileInputRef={fileInputRef}
           onFmeaChange={handleFmeaChange}
-          onSave={saveToLocalStorage}
+          onSave={() => {
+            saveToLocalStorage();
+            saveAtomicDB();
+          }}
           onNavigateToList={() => router.push('/pfmea/list')}
           onExport={() => {
             const fmeaName = currentFmea?.fmeaInfo?.subject || 'PFMEA';
