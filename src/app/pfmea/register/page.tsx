@@ -123,9 +123,49 @@ function PFMEARegisterPageContent() {
   const [selectedMemberIndex, setSelectedMemberIndex] = useState<number | null>(null);
   const [userModalTarget, setUserModalTarget] = useState<'responsible' | 'cft'>('cft');
   
+  // FMEA 선택 모달 상태
+  const [fmeaSelectModalOpen, setFmeaSelectModalOpen] = useState(false);
+  const [fmeaSelectType, setFmeaSelectType] = useState<'M' | 'F' | 'P'>('M');
+  const [availableFmeas, setAvailableFmeas] = useState<Array<{id: string; subject: string; type: string}>>([]);
+  const [selectedBaseFmea, setSelectedBaseFmea] = useState<string | null>(null);
+  
   // 저장 상태
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved'>('idle');
   const [cftSaveStatus, setCftSaveStatus] = useState<'idle' | 'saved'>('idle');
+  
+  // FMEA 선택 모달 열기
+  const openFmeaSelectModal = (type: 'M' | 'F' | 'P') => {
+    const stored = localStorage.getItem('pfmea-projects');
+    if (stored) {
+      try {
+        const projects = JSON.parse(stored);
+        const filtered = projects.filter((p: any) => {
+          const match = p.id.match(/pfm\d{2}-([MFP])/i);
+          return match && match[1].toUpperCase() === type;
+        }).map((p: any) => ({
+          id: p.id,
+          subject: p.fmeaInfo?.subject || p.project?.productName || '제목 없음',
+          type: type
+        }));
+        setAvailableFmeas(filtered);
+        setFmeaSelectType(type);
+        setFmeaSelectModalOpen(true);
+      } catch (e) {
+        console.error('FMEA 목록 로드 실패:', e);
+        alert('FMEA 목록을 불러올 수 없습니다.');
+      }
+    } else {
+      alert(`등록된 ${type === 'M' ? 'Master' : type === 'F' ? 'Family' : 'Part'} FMEA가 없습니다.`);
+    }
+  };
+  
+  // FMEA 선택 완료
+  const handleFmeaSelect = (selectedId: string) => {
+    setSelectedBaseFmea(selectedId);
+    setFmeaSelectModalOpen(false);
+    // 선택한 FMEA 기반으로 워크시트 이동
+    window.location.href = `/pfmea/worksheet?id=${fmeaId}&baseId=${selectedId}&mode=inherit`;
+  };
 
   // 초기화 및 수정 모드 데이터 로드
   useEffect(() => {
@@ -405,33 +445,15 @@ function PFMEARegisterPageContent() {
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="공정 FMEA에 책임이 있는 회사 명" />
               </td>
               <td className={`${headerCell} w-[8%]`}>FMEA명</td>
-              <td className={`${inputCell} w-[17%]`}>
+              <td className={`${inputCell} w-[20%]`}>
                 <input type="text" value={fmeaInfo.subject} onChange={(e) => updateField('subject', e.target.value)}
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="시스템, 서브시스템 및/또는 구성품" />
               </td>
-              <td className={`${headerCell} w-[10%]`}>FMEA ID 번호</td>
-              <td className={`${inputCell} w-[10%]`}>
+              <td className={`${headerCell} w-[8%]`}>FMEA ID</td>
+              <td className={`${inputCell} w-[12%]`}>
                 <span className="px-2 text-xs font-semibold text-blue-600">{fmeaId}</span>
               </td>
-              <td className={`${headerCell} w-[12%]`}>
-                <div className="flex flex-col items-center gap-0.5">
-                  <span>FMEA 유형</span>
-                  <select 
-                    value={fmeaInfo.fmeaType} 
-                    onChange={(e) => {
-                      const newType = e.target.value as FMEAType;
-                      updateField('fmeaType', newType);
-                      // 유형 변경 시 ID 재생성
-                      setFmeaId(generateFMEAId(newType));
-                    }}
-                    className="w-full h-6 px-1 text-[10px] border border-white/50 bg-[#00587a] text-yellow-300 font-bold rounded focus:outline-none cursor-pointer"
-                  >
-                    <option value="M">M - Master FMEA</option>
-                    <option value="F">F - Family FMEA</option>
-                    <option value="P">P - Part FMEA</option>
-                  </select>
-                </div>
-              </td>
+              <td className={`${headerCell} w-[10%]`}>자동생성</td>
             </tr>
             
             {/* 2행 - 흰색 */}
@@ -447,15 +469,13 @@ function PFMEARegisterPageContent() {
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none" />
               </td>
               <td className={headerCell}>공정 책임</td>
-              <td className={`${inputCell}`}>
-                <input type="text" value={fmeaInfo.designResponsibility} onChange={(e) => updateField('designResponsibility', e.target.value)}
-                  className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="부서" />
-              </td>
-              <td className={`${inputCell}`}>
-                <div className="flex items-center gap-1">
+              <td className={`${inputCell}`} colSpan={2}>
+                <div className="flex items-center gap-2">
+                  <input type="text" value={fmeaInfo.designResponsibility} onChange={(e) => updateField('designResponsibility', e.target.value)}
+                    className="w-20 h-7 px-2 text-xs border border-gray-300 rounded bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="부서" />
                   <input type="text" value={fmeaInfo.fmeaResponsibleName} onChange={(e) => updateField('fmeaResponsibleName', e.target.value)}
-                    className="flex-1 h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="FMEA 책임자 성명" />
-                  <button onClick={() => { setUserModalTarget('responsible'); setUserModalOpen(true); }} className="text-blue-500 hover:text-blue-700">🔍</button>
+                    className="flex-1 h-7 px-2 text-xs border border-gray-300 rounded bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="책임자 성명" />
+                  <button onClick={() => { setUserModalTarget('responsible'); setUserModalOpen(true); }} className="text-blue-500 hover:text-blue-700 px-1">🔍</button>
                 </div>
               </td>
             </tr>
@@ -494,8 +514,25 @@ function PFMEARegisterPageContent() {
                 <input type="text" value={fmeaInfo.modelYear} onChange={(e) => updateField('modelYear', e.target.value)}
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="고객 어플리케이션 또는 회사 모델/스타일" />
               </td>
+              <td className={headerCell}>FMEA 유형</td>
+              <td className={`${inputCell}`}>
+                <select 
+                  value={fmeaInfo.fmeaType} 
+                  onChange={(e) => {
+                    const newType = e.target.value as FMEAType;
+                    updateField('fmeaType', newType);
+                    // 유형 변경 시 ID 재생성
+                    setFmeaId(generateFMEAId(newType));
+                  }}
+                  className="w-full h-7 px-2 text-xs border border-gray-300 bg-white text-gray-700 font-semibold rounded focus:outline-none focus:border-blue-500 cursor-pointer"
+                >
+                  <option value="M">M - Master FMEA</option>
+                  <option value="F">F - Family FMEA</option>
+                  <option value="P">P - Part FMEA</option>
+                </select>
+              </td>
               <td className={headerCell}>상호기능팀</td>
-              <td className={`${inputCell}`} colSpan={4}>
+              <td className={`${inputCell}`} colSpan={2}>
                 <span className="text-xs text-gray-500 px-2">
                   {cftNames || '팀 명단이 요구됨'}
                 </span>
@@ -514,16 +551,31 @@ function PFMEARegisterPageContent() {
                 FMEA 기초 정보등록
               </td>
               <td 
-                onClick={() => window.location.href = `/pfmea/import?id=${fmeaId}&mode=master`}
-                className="px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-blue-200 whitespace-nowrap font-semibold text-blue-700 bg-[#e3f2fd]"
+                onClick={() => openFmeaSelectModal('M')}
+                className="px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-purple-200 whitespace-nowrap font-semibold text-purple-700 bg-purple-100"
+                title="Master FMEA를 선택하여 기초정보 사용"
               >
-                Master Data 사용
+                🟣 Master Data 사용
+              </td>
+              <td 
+                onClick={() => openFmeaSelectModal('F')}
+                className="px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-blue-200 whitespace-nowrap font-semibold text-blue-700 bg-[#e3f2fd]"
+                title="Family FMEA를 선택하여 기초정보 사용"
+              >
+                🔵 Family Data 사용
+              </td>
+              <td 
+                onClick={() => openFmeaSelectModal('P')}
+                className="px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-green-200 whitespace-nowrap font-semibold text-green-700 bg-[#e8f5e9]"
+                title="기존 Part FMEA를 선택하여 기초정보 사용"
+              >
+                🟢 Part FMEA 사용
               </td>
               <td 
                 onClick={() => window.location.href = `/pfmea/import?id=${fmeaId}&mode=new`}
-                className="px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-green-200 whitespace-nowrap font-semibold text-green-700 bg-[#e8f5e9]"
+                className="px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-amber-200 whitespace-nowrap font-semibold text-amber-700 bg-amber-100"
               >
-                신규 기초정보 Data 입력
+                ✏️ 신규 기초정보 입력
               </td>
               <td 
                 onClick={() => window.location.href = `/pfmea/worksheet?id=${fmeaId}`}
@@ -531,16 +583,76 @@ function PFMEARegisterPageContent() {
               >
                 기초 정보 없이 사용
               </td>
-              <td 
-                onClick={() => window.location.href = `/pfmea/import?id=${fmeaId}`}
-                className="px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-yellow-300 whitespace-nowrap font-semibold bg-yellow-100 text-red-600"
-              >
-                ➡️ 기초정보 입력창으로 이동
-              </td>
             </tr>
           </tbody>
         </table>
+        {selectedBaseFmea && (
+          <div className="mt-2 text-xs text-blue-600">
+            📌 선택된 기반 FMEA: <span className="font-bold">{selectedBaseFmea}</span>
+          </div>
+        )}
       </div>
+      
+      {/* FMEA 선택 모달 */}
+      {fmeaSelectModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-[600px] max-h-[500px] overflow-hidden">
+            <div className={`px-4 py-3 flex justify-between items-center ${
+              fmeaSelectType === 'M' ? 'bg-purple-600' : fmeaSelectType === 'F' ? 'bg-blue-600' : 'bg-green-600'
+            } text-white`}>
+              <h3 className="font-bold">
+                {fmeaSelectType === 'M' ? '🟣 Master FMEA 선택' : 
+                 fmeaSelectType === 'F' ? '🔵 Family FMEA 선택' : '🟢 Part FMEA 선택'}
+              </h3>
+              <button onClick={() => setFmeaSelectModalOpen(false)} className="text-white hover:text-gray-200">✕</button>
+            </div>
+            <div className="p-4 max-h-[400px] overflow-y-auto">
+              {availableFmeas.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  등록된 {fmeaSelectType === 'M' ? 'Master' : fmeaSelectType === 'F' ? 'Family' : 'Part'} FMEA가 없습니다.
+                </div>
+              ) : (
+                <table className="w-full border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border border-gray-300 px-3 py-2 text-left">FMEA ID</th>
+                      <th className="border border-gray-300 px-3 py-2 text-left">FMEA명</th>
+                      <th className="border border-gray-300 px-3 py-2 text-center w-20">선택</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {availableFmeas.map((fmea, idx) => (
+                      <tr key={fmea.id} className={`hover:bg-blue-50 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                        <td className="border border-gray-300 px-3 py-2 font-semibold text-blue-600">{fmea.id}</td>
+                        <td className="border border-gray-300 px-3 py-2">{fmea.subject}</td>
+                        <td className="border border-gray-300 px-3 py-2 text-center">
+                          <button
+                            onClick={() => handleFmeaSelect(fmea.id)}
+                            className={`px-3 py-1 rounded text-white text-xs font-bold ${
+                              fmeaSelectType === 'M' ? 'bg-purple-500 hover:bg-purple-600' :
+                              fmeaSelectType === 'F' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-green-500 hover:bg-green-600'
+                            }`}
+                          >
+                            선택
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="px-4 py-3 bg-gray-100 flex justify-end gap-2">
+              <button
+                onClick={() => setFmeaSelectModalOpen(false)}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded text-xs font-semibold hover:bg-gray-400"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ===== AI 기반 FMEA 예측 시스템 ===== */}
       <div className="mb-3">
