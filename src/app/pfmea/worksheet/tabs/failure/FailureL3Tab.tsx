@@ -30,7 +30,7 @@ import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
 import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
-import { getZebraColors } from '@/styles/level-colors';
+import { getZebra, getZebraColors } from '@/styles/level-colors';
 import { handleEnterBlur } from '../../utils/keyboard';
 import { findLinkedFailureCausesForProcessChar, getAutoLinkMessage } from '../../utils/auto-link';
 
@@ -715,52 +715,84 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
         
         <tbody>
           {flatRows.length === 0 ? (
-            <tr>
-              <td className="border border-[#ccc] p-2.5 text-center bg-[#e3f2fd] font-semibold">
-                {!isUpstreamConfirmed ? '⚠️ 기능분석(3L) 확정 필요' : '(구조분석에서 공정 입력)'}
-              </td>
-              <td className="border border-[#ccc] p-2.5 text-center bg-[#e3f2fd] font-semibold">
-                {!isUpstreamConfirmed ? '하위 단계는 상위 단계 확정 후 활성화됩니다.' : '(작업요소 입력)'}
-              </td>
-              <td className="border border-[#ccc] p-2.5 text-center bg-[#c8e6c9]">
-                {!isUpstreamConfirmed ? '-' : '(기능분석에서 입력)'}
-              </td>
-              <td className="border border-[#ccc] p-2.5 text-center bg-[#c8e6c9]">
-                -
-              </td>
-              <td className={cellP0}>
-                <SelectableCell value="" placeholder="고장원인 선택" bgColor={FAIL_COLORS.cell} onClick={() => {}} />
-              </td>
-            </tr>
-          ) : flatRows.map((row, idx) => {
+            (() => {
+              const zebra = getZebraColors(0);
+              return (
+                <tr>
+                  <td className="border border-[#ccc] p-2.5 text-center font-semibold" style={{ background: zebra.structure }}>
+                    {!isUpstreamConfirmed ? '⚠️ 기능분석(3L) 확정 필요' : '(구조분석에서 공정 입력)'}
+                  </td>
+                  <td className="border border-[#ccc] p-2.5 text-center font-semibold" style={{ background: zebra.structure }}>
+                    {!isUpstreamConfirmed ? '하위 단계는 상위 단계 확정 후 활성화됩니다.' : '(작업요소 입력)'}
+                  </td>
+                  <td className="border border-[#ccc] p-2.5 text-center" style={{ background: zebra.function }}>
+                    {!isUpstreamConfirmed ? '-' : '(기능분석에서 입력)'}
+                  </td>
+                  <td className="border border-[#ccc] p-2.5 text-center" style={{ background: zebra.function }}>
+                    -
+                  </td>
+                  <td className={cellP0} style={{ background: zebra.failure }}>
+                    <SelectableCell value="" placeholder="고장원인 선택" bgColor={zebra.failure} onClick={() => {}} />
+                  </td>
+                </tr>
+              );
+            })()
+          ) : (() => {
+            // ✅ 시각우선: rowSpan(병합) 셀은 "그룹 인덱스" 기준으로 번갈아 보이게 처리
+            const procIdxMap = new Map<string, number>();
+            const weIdxMap = new Map<string, number>();
+            const charIdxMap = new Map<string, number>();
+            let procIdx = 0;
+            let weIdx = 0;
+            let charIdx = 0;
+
+            for (const r of flatRows as any[]) {
+              const pId = r.proc?.id;
+              const wId = r.we?.id;
+              const cId = r.processChar?.id;
+              if (r.showProc && pId && !procIdxMap.has(pId)) procIdxMap.set(pId, procIdx++);
+              if (r.showWe && pId && wId) {
+                const wKey = `${pId}:${wId}`;
+                if (!weIdxMap.has(wKey)) weIdxMap.set(wKey, weIdx++);
+              }
+              if (r.showChar && pId && wId && cId) {
+                const cKey = `${pId}:${wId}:${cId}`;
+                if (!charIdxMap.has(cKey)) charIdxMap.set(cKey, charIdx++);
+              }
+            }
+
+            return flatRows.map((row, idx) => {
             // ✅ CASCADE 구조: processChar가 직접 flatRows에 포함됨
             const zebra = getZebraColors(idx); // 표준화된 색상
+            const procStripeIdx = procIdxMap.get(row.proc?.id) ?? 0;
+            const weStripeIdx = weIdxMap.get(`${row.proc?.id || ''}:${row.we?.id || ''}`) ?? 0;
+            const charStripeIdx = charIdxMap.get(`${row.proc?.id || ''}:${row.we?.id || ''}:${row.processChar?.id || ''}`) ?? 0;
             
             return (
               <tr key={`${row.proc.id}-${row.we?.id || 'empty'}-${row.processChar?.id || 'nochar'}-${row.cause?.id || idx}`}>
                 {/* 공정 셀: showProc && procRowSpan > 0 (파란색) */}
                 {row.showProc && row.procRowSpan > 0 && (
-                  <td rowSpan={row.procRowSpan} className="border border-[#ccc] p-1.5 text-center font-semibold align-middle text-xs" style={{ background: zebra.structure }}>
+                  <td rowSpan={row.procRowSpan} className="border border-[#ccc] p-1.5 text-center font-semibold align-middle text-xs" style={{ background: getZebra('structure', procStripeIdx) }}>
                     {row.proc.no}. {row.proc.name}
                   </td>
                 )}
                 
                 {/* 작업요소 셀: showWe && weRowSpan > 0 (파란색) */}
                 {row.showWe && row.weRowSpan > 0 && (
-                  <td rowSpan={row.weRowSpan} className="border border-[#ccc] p-1.5 text-center align-middle text-xs" style={{ background: zebra.structure }}>
+                  <td rowSpan={row.weRowSpan} className="border border-[#ccc] p-1.5 text-center align-middle text-xs" style={{ background: getZebra('structure', weStripeIdx) }}>
                     {row.we?.name || '(작업요소 없음)'}
                   </td>
                 )}
                 
                 {/* ✅ 공정특성 셀: showChar && charRowSpan > 0 (녹색) */}
                 {row.showChar && row.charRowSpan > 0 && (
-                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-1.5 text-center align-middle text-xs" style={{ background: zebra.function }}>
+                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-1.5 text-center align-middle text-xs" style={{ background: getZebra('function', charStripeIdx) }}>
                     {row.processChar?.name || '(기능분석에서 입력)'}
                   </td>
                 )}
                 {/* 특별특성 셀 (녹색) */}
                 {row.showChar && row.charRowSpan > 0 && (
-                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] p-1 text-center align-middle text-xs" style={{ background: zebra.function }}>
+                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] p-1 text-center align-middle text-xs" style={{ background: getZebra('function', charStripeIdx) }}>
                     {row.processChar?.specialChar ? (
                       <span className={`px-1.5 py-0.5 rounded text-white text-[10px] font-bold ${
                         row.processChar.specialChar === 'CC' ? 'bg-red-600' : 
@@ -798,7 +830,8 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
                 </td>
               </tr>
             );
-          })}
+          });
+        })()}
         </tbody>
       </table>
 

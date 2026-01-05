@@ -34,7 +34,7 @@ import SODSelectModal from '@/components/modals/SODSelectModal';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
 import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
 import { findLinkedFailureEffectsForRequirement, getAutoLinkMessage } from '../../utils/auto-link';
-import { L1_TYPE_COLORS, getL1TypeColor, getZebraColors } from '@/styles/level-colors';
+import { L1_TYPE_COLORS, getL1TypeColor, getZebraColors, getZebra } from '@/styles/level-colors';
 import { handleEnterBlur } from '../../utils/keyboard';
 
 // 색상 정의
@@ -658,20 +658,39 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
               </td>
             </tr>
           ) : (
-            renderRows.map((row, idx) => {
-              const zebra = getZebraColors(idx); // 표준화된 색상
-              return (
-              <tr key={row.key}>
-                {/* ✅ 완제품 공정명 컬럼 복구 */}
-                {row.showProduct && (
-                  <td 
-                    rowSpan={row.productRowSpan} 
-                    className="border border-[#ccc] p-1 text-center text-xs font-medium align-middle"
-                    style={{ background: zebra.structure }}
-                  >
-                    {state.l1?.name || '(완제품명 없음)'}
-                  </td>
-                )}
+            (() => {
+              // ✅ 3L기능 스타일: 블록 단위 줄무늬 (완제품공정명=productIdx, 완제품기능=funcIdx)
+              let productIdx = 0;
+              let funcIdx = 0;
+              let reqIdx = 0;
+              // 블록 인덱스 맵 생성
+              const productIdxMap = new Map<string, number>();
+              const funcIdxMap = new Map<string, number>();
+              const reqIdxMap = new Map<string, number>();
+              for (const r of renderRows) {
+                if (r.showProduct) productIdxMap.set(r.key, productIdx++);
+                if (r.showFunc) funcIdxMap.set(r.key, funcIdx++);
+                if (r.showReq) reqIdxMap.set(r.key, reqIdx++);
+              }
+              
+              return renderRows.map((row, idx) => {
+                const zebra = getZebraColors(idx); // 행 기준 (고장영향/심각도용)
+                // ✅ 블록 기준 줄무늬
+                const productZebra = getZebra('structure', productIdxMap.get(row.key) ?? 0);
+                const funcZebra = getZebra('function', funcIdxMap.get(row.key) ?? 0);
+                const reqZebra = getZebra('failure', reqIdxMap.get(row.key) ?? idx);
+                return (
+                <tr key={row.key}>
+                  {/* ✅ 완제품 공정명 - productIdx 기준 줄무늬 */}
+                  {row.showProduct && (
+                    <td 
+                      rowSpan={row.productRowSpan} 
+                      className="border border-[#ccc] p-1 text-center text-xs font-medium align-middle"
+                      style={{ background: productZebra }}
+                    >
+                      {state.l1?.name || '(완제품명 없음)'}
+                    </td>
+                  )}
                 
                 {/* 구분 (자동) - 구분별 색상 적용 */}
                 {row.showType && (
@@ -692,7 +711,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                   </td>
                 )}
                 
-                {/* 완제품기능 (기능분석에서 연결) - 같은 기능 병합 - 녹색 줄무늬 */}
+                {/* 완제품기능 - funcIdx 기준 줄무늬 */}
                 {row.showFunc && (
                   <td 
                     rowSpan={row.funcRowSpan}
@@ -700,7 +719,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                       border: `1px solid #ccc`, 
                       padding: '2px 4px', 
                       textAlign: 'left', 
-                      background: zebra.function, 
+                      background: funcZebra, 
                       fontSize: FONT_SIZES.cell,
                       verticalAlign: 'middle',
                       whiteSpace: 'nowrap',
@@ -713,14 +732,14 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                   </td>
                 )}
                 
-                {/* 요구사항 (자동) - 주황색 줄무늬 (failure 타입) */}
+                {/* 요구사항 - reqIdx 기준 줄무늬 */}
                 {row.showReq && (
                   <td 
                     rowSpan={row.reqRowSpan} 
                     style={{ 
                       border: `1px solid #ccc`, 
                       padding: '2px 4px', 
-                      background: zebra.failure, 
+                      background: reqZebra, 
                       verticalAlign: 'middle',
                       textAlign: 'center',
                       fontSize: FONT_SIZES.cell
@@ -730,8 +749,8 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                   </td>
                 )}
                 
-                {/* 고장영향(FE) */}
-                <td className={cellP0}>
+                {/* 고장영향(FE) - 행 기준 줄무늬 */}
+                <td className={cellP0} style={{ background: zebra.failure }}>
                   <SelectableCell 
                     value={row.effect} 
                     placeholder="고장영향 선택" 
@@ -783,7 +802,8 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                 </td>
               </tr>
               );
-            })
+              });
+            })()
           )}
         </tbody>
       </table>

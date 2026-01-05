@@ -34,7 +34,7 @@ import { handleEnterBlur } from '../../utils/keyboard';
 import { findLinkedFunctionsForType, findLinkedRequirementsForFunction, getAutoLinkMessage } from '../../utils/auto-link';
 
 // 구분(Type)별 색상 정의 - 공통 색상 사용
-import { L1_TYPE_COLORS, getL1TypeColor, getZebra } from '@/styles/level-colors';
+import { L1_TYPE_COLORS, getL1TypeColor, getZebra, getZebraColors } from '@/styles/level-colors';
 const getTypeColor = getL1TypeColor;
 
 // 스타일 함수
@@ -564,20 +564,25 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
         
         <tbody>
           {state.l1.types.length === 0 ? (
-            <tr className="bg-[#e8f5e9]">
-              <td className="border border-[#ccc] p-2.5 text-center bg-[#e3f2fd] font-semibold">
+            (() => {
+              const zebra = getZebraColors(0);
+              return (
+            <tr>
+              <td className="border border-[#ccc] p-2.5 text-center font-semibold" style={{ background: zebra.structure }}>
                 {state.l1.name || '(구조분석에서 입력)'}
               </td>
               <td className="border border-[#ccc] p-0">
-                <SelectableCell value="" placeholder="구분 선택" bgColor={COLORS.function.light} onClick={() => handleCellClick({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
+                <SelectableCell value="" placeholder="구분 선택" bgColor={zebra.function} onClick={() => handleCellClick({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
               </td>
               <td className="border border-[#ccc] p-0">
-                <SelectableCell value="" placeholder="기능 선택" bgColor={COLORS.function.light} onClick={() => handleCellClick({ type: 'l1Function', id: '', title: '완제품 기능 선택', itemCode: 'C2' })} />
+                <SelectableCell value="" placeholder="기능 선택" bgColor={zebra.function} onClick={() => handleCellClick({ type: 'l1Function', id: '', title: '완제품 기능 선택', itemCode: 'C2' })} />
               </td>
               <td className="border border-[#ccc] p-0">
-                <SelectableCell value="" placeholder="요구사항 선택" bgColor={COLORS.failure.light} textColor={COLORS.failure.text} onClick={() => handleCellClick({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
+                <SelectableCell value="" placeholder="요구사항 선택" bgColor={zebra.failure} textColor={COLORS.failure.text} onClick={() => handleCellClick({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
               </td>
             </tr>
+              );
+            })()
           ) : (() => {
             let globalRowIdx = 0;
             // ✅ 빈 타입 필터링 (이름이 없거나 "클릭하여" 포함하는 타입 제외)
@@ -589,25 +594,30 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
             // 빈 타입이 없으면 첫 번째 빈 행만 표시
             if (meaningfulTypes.length === 0 && state.l1.types.length > 0) {
               const firstEmptyType = state.l1.types[0];
+              const zebra = getZebraColors(0);
               return (
-                <tr key={firstEmptyType.id} className="bg-[#e8f5e9]">
-                  <td className="border border-[#ccc] p-2.5 text-center bg-[#e3f2fd] font-semibold">
+                <tr key={firstEmptyType.id}>
+                  <td className="border border-[#ccc] p-2.5 text-center font-semibold" style={{ background: zebra.structure }}>
                     {state.l1.name || '(구조분석에서 입력)'}
                   </td>
                   <td className="border border-[#ccc] p-0">
-                    <SelectableCell value="" placeholder="구분 선택" bgColor={COLORS.function.light} onClick={() => handleCellClick({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
+                    <SelectableCell value="" placeholder="구분 선택" bgColor={zebra.function} onClick={() => handleCellClick({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
                   </td>
                   <td className="border border-[#ccc] p-0">
-                    <SelectableCell value="" placeholder="기능 선택" bgColor={COLORS.function.light} onClick={() => handleCellClick({ type: 'l1Function', id: '', title: '완제품 기능 선택', itemCode: 'C2' })} />
+                    <SelectableCell value="" placeholder="기능 선택" bgColor={zebra.function} onClick={() => handleCellClick({ type: 'l1Function', id: '', title: '완제품 기능 선택', itemCode: 'C2' })} />
                   </td>
                   <td className="border border-[#ccc] p-0">
-                    <SelectableCell value="" placeholder="요구사항 선택" bgColor={COLORS.failure.light} textColor={COLORS.failure.text} onClick={() => handleCellClick({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
+                    <SelectableCell value="" placeholder="요구사항 선택" bgColor={zebra.failure} textColor={COLORS.failure.text} onClick={() => handleCellClick({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
                   </td>
                 </tr>
               );
             }
             
+            // ✅ 3L기능 스타일: 블록 단위 줄무늬 (완제품공정명=tIdx, 완제품기능=funcCounter)
+            let funcCounter = 0;
             return meaningfulTypes.map((t, tIdx) => {
+              // ✅ 완제품공정명(rowSpan): tIdx 기준으로 번갈아
+              const typeZebra = getZebra('structure', tIdx);
               // ✅ 빈 기능 필터링
               const meaningfulFunctions = (t.functions || []).filter((f: any) => {
                 const name = f.name || '';
@@ -625,26 +635,32 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
               }, 0);
               
               return meaningfulFunctions.length === 0 ? (() => {
-                const rowIdx = globalRowIdx++; // ✅ 줄무늬용 인덱스 캡처
-                const funcZebraBg = getZebra('function', rowIdx);
+                const rowIdx = globalRowIdx++;
+                const currentFuncIdx = funcCounter++;
+                const funcZebraBg = getZebra('function', currentFuncIdx);
+                const failZebraBg = getZebra('failure', rowIdx);
                 return (
                   <tr key={t.id} style={{ background: funcZebraBg }}>
-                    {/* 완제품 공정명 - 각 구분과 1:1 매칭 */}
-                    <td rowSpan={typeRowSpan} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: getZebra('structure', tIdx) }}>
+                    {/* 완제품 공정명 - tIdx 기준 줄무늬 */}
+                    <td rowSpan={typeRowSpan} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: typeZebra }}>
                       {state.l1.name || '(구조분석에서 입력)'}
                     </td>
                     <td rowSpan={typeRowSpan} className={`border border-[#ccc] p-1 align-middle text-center font-bold text-xs cursor-pointer hover:bg-opacity-80`} style={{ background: getTypeColor(t.name).light, color: getTypeColor(t.name).text }} onClick={() => handleCellClick({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })}>
                       {getTypeColor(t.name).short || t.name}
                     </td>
-                    <td className="border border-[#ccc] p-0">
+                    {/* 완제품기능 - funcCounter 기준 줄무늬 */}
+                    <td className="border border-[#ccc] p-0" style={{ background: funcZebraBg }}>
                       <SelectableCell value="" placeholder="기능 선택" bgColor={funcZebraBg} onClick={() => handleCellClick({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} />
                     </td>
-                    <td className="border border-[#ccc] p-0">
-                      <SelectableCell value="" placeholder="요구사항 선택" bgColor={COLORS.failure.light} textColor={COLORS.failure.text} onClick={() => handleCellClick({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
+                    <td className="border border-[#ccc] p-0" style={{ background: failZebraBg }}>
+                      <SelectableCell value="" placeholder="요구사항 선택" bgColor={failZebraBg} textColor={COLORS.failure.text} onClick={() => handleCellClick({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
                     </td>
                   </tr>
                 );
               })() : meaningfulFunctions.map((f, fIdx) => {
+                // ✅ 완제품기능(rowSpan): funcCounter 기준 번갈아
+                const currentFuncIdx = funcCounter++;
+                const funcBlockZebra = getZebra('function', currentFuncIdx);
                 // ✅ 빈 요구사항 필터링
                 const meaningfulReqs = (f.requirements || []).filter((r: any) => {
                   const name = r.name || '';
@@ -654,13 +670,13 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
                 const funcRowSpan = Math.max(1, meaningfulReqs.length);
                 
                 return meaningfulReqs.length === 0 ? (() => {
-                  const rowIdx = globalRowIdx++; // ✅ 줄무늬용 인덱스 캡처
-                  const funcZebraBg = getZebra('function', rowIdx);
+                  const rowIdx = globalRowIdx++;
+                  const failZebraBg = getZebra('failure', rowIdx);
                   return (
-                    <tr key={f.id} style={{ background: funcZebraBg }}>
-                      {/* 완제품 공정명 - 각 구분의 첫 행에서만 표시 (1:1 매칭) */}
+                    <tr key={f.id} style={{ background: funcBlockZebra }}>
+                      {/* 완제품 공정명 - tIdx 기준 줄무늬 */}
                       {fIdx === 0 && (
-                        <td rowSpan={typeRowSpan} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: getZebra('structure', tIdx) }}>
+                        <td rowSpan={typeRowSpan} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: typeZebra }}>
                           {state.l1.name || '(구조분석에서 입력)'}
                         </td>
                       )}
@@ -669,22 +685,23 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
                           <SelectableCell value={getTypeColor(t.name).short} placeholder="구분" bgColor={getTypeColor(t.name).light} textColor={getTypeColor(t.name).text} textAlign="center" onClick={() => handleCellClick({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
                         </td>
                       )}
-                      <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle">
-                        <SelectableCell value={f.name} placeholder="기능" bgColor={funcZebraBg} textColor="#000000" onClick={() => handleCellClick({ type: 'l1Function', id: t.id, funcId: f.id, title: '완제품 기능 선택', itemCode: 'C2' })} onDoubleClickEdit={(newValue) => handleInlineEditFunction(t.id, f.id, newValue)} />
+                      {/* 완제품기능 - funcCounter 기준 줄무늬 */}
+                      <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle" style={{ background: funcBlockZebra }}>
+                        <SelectableCell value={f.name} placeholder="기능" bgColor={funcBlockZebra} textColor="#000000" onClick={() => handleCellClick({ type: 'l1Function', id: t.id, funcId: f.id, title: '완제품 기능 선택', itemCode: 'C2' })} onDoubleClickEdit={(newValue) => handleInlineEditFunction(t.id, f.id, newValue)} />
                       </td>
-                      <td className="border border-[#ccc] p-0" style={{ background: getZebra('failure', rowIdx) }}>
-                        <SelectableCell value="" placeholder="요구사항 선택" bgColor={getZebra('failure', rowIdx)} textColor={COLORS.failure.text} onClick={() => handleCellClick({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} />
+                      <td className="border border-[#ccc] p-0" style={{ background: failZebraBg }}>
+                        <SelectableCell value="" placeholder="요구사항 선택" bgColor={failZebraBg} textColor={COLORS.failure.text} onClick={() => handleCellClick({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} />
                       </td>
                     </tr>
                   );
                 })() : meaningfulReqs.map((r, rIdx) => {
-                  const rowIdx = globalRowIdx++; // ✅ 줄무늬용 인덱스 캡처
-                  const funcZebraBg = getZebra('function', rowIdx);
+                  const rowIdx = globalRowIdx++;
+                  const failZebraBg = getZebra('failure', rowIdx);
                   return (
-                    <tr key={r.id} style={{ background: funcZebraBg }}>
-                      {/* 완제품 공정명 - 각 구분의 첫 행에서만 표시 (1:1 매칭) */}
+                    <tr key={r.id} style={{ background: funcBlockZebra }}>
+                      {/* 완제품 공정명 - tIdx 기준 줄무늬 */}
                       {fIdx === 0 && rIdx === 0 && (
-                        <td rowSpan={typeRowSpan} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: getZebra('structure', tIdx) }}>
+                        <td rowSpan={typeRowSpan} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: typeZebra }}>
                           {state.l1.name || '(구조분석에서 입력)'}
                         </td>
                       )}
@@ -693,16 +710,17 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
                           <SelectableCell value={getTypeColor(t.name).short} placeholder="구분" bgColor={getTypeColor(t.name).light} textColor={getTypeColor(t.name).text} textAlign="center" onClick={() => handleCellClick({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
                         </td>
                       )}
+                      {/* 완제품기능 - funcCounter 기준 줄무늬 */}
                       {rIdx === 0 && (
-                        <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle">
-                          <SelectableCell value={f.name} placeholder="기능" bgColor={funcZebraBg} textColor="#000000" onClick={() => handleCellClick({ type: 'l1Function', id: t.id, funcId: f.id, title: '완제품 기능 선택', itemCode: 'C2' })} onDoubleClickEdit={(newValue) => handleInlineEditFunction(t.id, f.id, newValue)} />
+                        <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle" style={{ background: funcBlockZebra }}>
+                          <SelectableCell value={f.name} placeholder="기능" bgColor={funcBlockZebra} textColor="#000000" onClick={() => handleCellClick({ type: 'l1Function', id: t.id, funcId: f.id, title: '완제품 기능 선택', itemCode: 'C2' })} onDoubleClickEdit={(newValue) => handleInlineEditFunction(t.id, f.id, newValue)} />
                         </td>
                       )}
-                      <td className="border border-[#ccc] p-0" style={{ background: getZebra('failure', rowIdx) }}>
+                      <td className="border border-[#ccc] p-0" style={{ background: failZebraBg }}>
                         <SelectableCell 
                           value={r.name} 
                           placeholder="요구사항" 
-                          bgColor={getZebra('failure', rowIdx)} 
+                          bgColor={failZebraBg} 
                           textColor={COLORS.failure.text} 
                           onClick={() => handleCellClick({ type: 'l1Requirement', id: f.id, reqId: r.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} 
                           onDoubleClickEdit={(newValue) => handleInlineEditRequirement(t.id, f.id, r.id, newValue)}

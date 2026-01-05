@@ -774,61 +774,48 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       const loadedAtomicDB = await loadWorksheetDBAtomic(selectedFmeaId);
       console.log('[로드] 원자성(강제) DB 응답:', loadedAtomicDB ? '데이터 있음' : 'null');
       
-      // ★★★ 1단계: localStorage에서 모든 가능한 키 검색 ★★★
-      const legacyKeys = [
-        `pfmea_worksheet_${selectedFmeaId}`,
-        `fmea-worksheet-${selectedFmeaId}`,
-        `pfmea_atomic_${selectedFmeaId}`,  // 원자성 DB 백업
-      ];
+      // ✅ 정책 변경: "프로젝트별 DB"가 단일 진실 소스
+      // - DB 응답이 있으면(local legacy/atomic 포함) localStorage 스캔/복구를 절대 수행하지 않음
+      // - localStorage는 DB가 완전히 불가(오프라인/연결실패)일 때만 비상 복구용으로 사용
       let localStorageLegacy: any = null;
       let legacyTab = 'structure';
       let legacyRiskData: { [key: string]: number | string } = {};
-      
-      // 모든 localStorage 키 출력 (디버깅)
-      const allFmeaKeys = Object.keys(localStorage).filter(k => 
-        k.includes('pfmea') || k.includes('fmea') || k.includes('PFM')
-      );
-      console.log('[로드] localStorage FMEA 관련 키:', allFmeaKeys);
-      
-      for (const key of legacyKeys) {
-        const saved = localStorage.getItem(key);
-        if (saved) {
+
+      const hasDbResponse = Boolean(loadedDB) || Boolean(loadedAtomicDB);
+      if (!hasDbResponse) {
+        const legacyKeys = [
+          `pfmea_worksheet_${selectedFmeaId}`,
+          `fmea-worksheet-${selectedFmeaId}`,
+          `pfmea_atomic_${selectedFmeaId}`, // 원자성 DB 백업
+        ];
+
+        for (const key of legacyKeys) {
+          const saved = localStorage.getItem(key);
+          if (!saved) continue;
           try {
             const parsed = JSON.parse(saved);
-            // l1과 l2가 있는지 확인 (레거시 형식)
             if (parsed.l1 || parsed.l2) {
               localStorageLegacy = parsed;
               legacyTab = parsed.tab || 'structure';
               legacyRiskData = parsed.riskData || {};
-              console.log('[로드] ✅ localStorage에서 레거시 데이터 발견:', key, {
-                l1Name: parsed.l1?.name,
-                l2Count: parsed.l2?.length,
-              });
+              console.warn('[로드] ⚠️ DB 없음 → localStorage 레거시로 비상 복구:', key);
               break;
             }
-            // 원자성 DB 형식인 경우 (l2Structures가 있음)
             if (parsed.l2Structures) {
-              console.log('[로드] 원자성 DB 백업 발견:', key);
-              // 역변환하여 사용
               const legacy = convertToLegacyFormat(parsed);
               localStorageLegacy = {
                 ...legacy,
                 structureConfirmed: parsed.l1Structure?.confirmed ?? false,
               };
               legacyTab = 'structure';
-              console.log('[로드] ✅ 원자성 DB에서 레거시 형식으로 변환:', {
-                l1Name: localStorageLegacy.l1?.name,
-                l2Count: localStorageLegacy.l2?.length,
-              });
+              console.warn('[로드] ⚠️ DB 없음 → localStorage 원자성 백업으로 비상 복구:', key);
               break;
             }
-          } catch (e) { 
-            console.warn('[로드] localStorage 파싱 오류:', key, e);
+          } catch {
+            // ignore
           }
         }
       }
-      
-      console.log('[로드] localStorage 레거시 데이터:', localStorageLegacy ? '발견' : '없음');
       
       // ✅ 후보 스냅샷 중 “가장 완성도 높은 것” 선택 (복구 핵심)
       const scoreLegacy = (cand: any): number => {
@@ -871,11 +858,29 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         }
       }
 
-      const candidates: Array<{ label: string; data: any; score: number }> = [
-        { label: 'localStorageLegacy', data: localStorageLegacy, score: scoreLegacy(localStorageLegacy) },
-        { label: 'dbLegacy', data: dbLegacyCandidate, score: scoreLegacy(dbLegacyCandidate) },
-        { label: 'atomicAsLegacy', data: atomicAsLegacy, score: scoreLegacy(atomicAsLegacy) },
-      ].sort((a, b) => b.score - a.score);
+      // ✅ 정책: DB 레거시가 있으면 DB가 단일 진실 소스
+      // - localStorage가 동일 점수/동일 데이터량이어도, confirmed 플래그/정합성은 DB를 신뢰해야 함
+      const dbScore = scoreLegacy(dbLegacyCandidate);
+      const localScore = scoreLegacy(localStorageLegacy);
+      const atomicScore = scoreLegacy(atomicAsLegacy);
+
+      // ✅ 정책: DB(프로젝트 스키마)가 있으면 localStorage 후보는 제외
+      const baseCandidates: Array<{ label: string; data: any; score: number }> = [
+        { label: 'dbLegacy', data: dbLegacyCandidate, score: dbScore },
+        { label: 'atomicAsLegacy', data: atomicAsLegacy, score: atomicScore },
+      ];
+
+      const candidates: Array<{ label: string; data: any; score: number }> = (hasDbResponse
+        ? baseCandidates
+        : [
+            ...baseCandidates,
+            { label: 'localStorageLegacy', data: localStorageLegacy, score: localScore },
+          ]).sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        // tie-breaker: dbLegacy > atomicAsLegacy > localStorageLegacy
+        const rank = (label: string) => (label === 'dbLegacy' ? 3 : label === 'atomicAsLegacy' ? 2 : 1);
+        return rank(b.label) - rank(a.label);
+      });
 
       console.log('[복구] 후보 스냅샷 점수:', candidates.map(c => ({ label: c.label, score: c.score })));
 
@@ -886,15 +891,18 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         console.log('═══════════════════════════════════════════════════════');
 
         const src = best.data;
+
+        // ✅ confirmed는 DB 값을 우선으로 병합 (localStorage가 false로 덮어쓰는 문제 방지)
+        const dbConfirmed = dbLegacyCandidate?.confirmed || {};
         const confirmedFlags = {
-          structureConfirmed: Boolean(src.structureConfirmed ?? src.confirmed?.structure ?? false),
-          l1Confirmed: Boolean(src.l1Confirmed ?? src.confirmed?.l1Function ?? false),
-          l2Confirmed: Boolean(src.l2Confirmed ?? src.confirmed?.l2Function ?? false),
-          l3Confirmed: Boolean(src.l3Confirmed ?? src.confirmed?.l3Function ?? false),
-          failureL1Confirmed: Boolean(src.failureL1Confirmed ?? src.confirmed?.l1Failure ?? false),
-          failureL2Confirmed: Boolean(src.failureL2Confirmed ?? src.confirmed?.l2Failure ?? false),
-          failureL3Confirmed: Boolean(src.failureL3Confirmed ?? src.confirmed?.l3Failure ?? false),
-          failureLinkConfirmed: Boolean(src.failureLinkConfirmed ?? src.confirmed?.failureLink ?? false),
+          structureConfirmed: Boolean(dbConfirmed.structure ?? src.structureConfirmed ?? src.confirmed?.structure ?? false),
+          l1Confirmed: Boolean(dbConfirmed.l1Function ?? src.l1Confirmed ?? src.confirmed?.l1Function ?? false),
+          l2Confirmed: Boolean(dbConfirmed.l2Function ?? src.l2Confirmed ?? src.confirmed?.l2Function ?? false),
+          l3Confirmed: Boolean(dbConfirmed.l3Function ?? src.l3Confirmed ?? src.confirmed?.l3Function ?? false),
+          failureL1Confirmed: Boolean(dbConfirmed.l1Failure ?? src.failureL1Confirmed ?? src.confirmed?.l1Failure ?? false),
+          failureL2Confirmed: Boolean(dbConfirmed.l2Failure ?? src.failureL2Confirmed ?? src.confirmed?.l2Failure ?? false),
+          failureL3Confirmed: Boolean(dbConfirmed.l3Failure ?? src.failureL3Confirmed ?? src.confirmed?.l3Failure ?? false),
+          failureLinkConfirmed: Boolean(dbConfirmed.failureLink ?? src.failureLinkConfirmed ?? src.confirmed?.failureLink ?? false),
         };
         const normalizedConfirmed = normalizeConfirmedFlags(confirmedFlags);
 

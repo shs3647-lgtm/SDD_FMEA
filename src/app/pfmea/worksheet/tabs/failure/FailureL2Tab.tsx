@@ -37,7 +37,7 @@ import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS } from '../../constants';
 import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
-import { getZebraColors } from '@/styles/level-colors';
+import { getZebra, getZebraColors } from '@/styles/level-colors';
 import { findLinkedFailureModesForProductChar, getAutoLinkMessage } from '../../utils/auto-link';
 import { handleEnterBlur } from '../../utils/keyboard';
 
@@ -607,37 +607,56 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
         
         <tbody>
           {buildFlatRows.length === 0 ? (
-            <tr>
-              <td className="border border-[#ccc] p-2.5 text-center bg-[#e3f2fd] font-semibold">
-                {!isUpstreamConfirmed ? '⚠️ 기능분석(2L) 확정 필요' : '(구조분석에서 공정 입력)'}
-              </td>
-              <td className="border border-[#ccc] p-2.5 text-center bg-[#c8e6c9]">
-                {!isUpstreamConfirmed ? '하위 단계는 상위 단계 확정 후 활성화됩니다.' : '(기능분석에서 공정기능 입력)'}
-              </td>
-              <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-2.5 text-center bg-[#c8e6c9]">
-                {!isUpstreamConfirmed ? '-' : '(기능분석에서 제품특성 입력)'}
-              </td>
-              <td className="border border-[#ccc] border-l-0 p-1 text-center bg-orange-100 text-xs">
-                -
-              </td>
-              <td className={cellP0}>
-                <SelectableCell value="" placeholder="고장형태 선택" bgColor={FAIL_COLORS.cell} onClick={() => {}} />
-              </td>
-            </tr>
-          ) : buildFlatRows.map((row, idx) => {
+            (() => {
+              const zebra = getZebraColors(0);
+              return (
+                <tr>
+                  <td className="border border-[#ccc] p-2.5 text-center font-semibold" style={{ background: zebra.structure }}>
+                    {!isUpstreamConfirmed ? '⚠️ 기능분석(2L) 확정 필요' : '(구조분석에서 공정 입력)'}
+                  </td>
+                  <td className="border border-[#ccc] p-2.5 text-center" style={{ background: zebra.function }}>
+                    {!isUpstreamConfirmed ? '하위 단계는 상위 단계 확정 후 활성화됩니다.' : '(기능분석에서 공정기능 입력)'}
+                  </td>
+                  <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-2.5 text-center" style={{ background: zebra.failure }}>
+                    {!isUpstreamConfirmed ? '-' : '(기능분석에서 제품특성 입력)'}
+                  </td>
+                  <td className="border border-[#ccc] border-l-0 p-1 text-center text-xs" style={{ background: zebra.failure }}>
+                    -
+                  </td>
+                  <td className={cellP0} style={{ background: zebra.failure }}>
+                    <SelectableCell value="" placeholder="고장형태 선택" bgColor={zebra.failure} onClick={() => {}} />
+                  </td>
+                </tr>
+              );
+            })()
+          ) : (() => {
+            // ✅ 시각우선: rowSpan(병합) 셀은 "그룹 인덱스" 기준으로 번갈아 보이게 처리
+            const procIdxMap = new Map<string, number>();
+            const funcIdxMap = new Map<string, number>();
+            let procIdx = 0;
+            let funcIdx = 0;
+            for (const r of buildFlatRows as any[]) {
+              if (r.showProc && !procIdxMap.has(r.procId)) procIdxMap.set(r.procId, procIdx++);
+              const fKey = `${r.procId}:${r.funcId || ''}`;
+              if (r.showFunc && r.funcId && !funcIdxMap.has(fKey)) funcIdxMap.set(fKey, funcIdx++);
+            }
+
+            return buildFlatRows.map((row, idx) => {
             const zebra = getZebraColors(idx); // 표준화된 색상
+            const procStripeIdx = procIdxMap.get(row.procId) ?? 0;
+            const funcStripeIdx = funcIdxMap.get(`${row.procId}:${row.funcId || ''}`) ?? 0;
             
             return (
               <tr key={`row-${idx}`}>
                 {/* 공정명 - rowSpan (파란색) */}
                 {row.showProc && (
-                  <td rowSpan={row.procRowSpan} className="border border-[#ccc] p-2 text-center font-semibold align-middle" style={{ background: zebra.structure }}>
+                  <td rowSpan={row.procRowSpan} className="border border-[#ccc] p-2 text-center font-semibold align-middle" style={{ background: getZebra('structure', procStripeIdx) }}>
                     {row.procNo}. {row.procName}
                   </td>
                 )}
                 {/* 기능명 - rowSpan (녹색) */}
                 {row.showFunc && (
-                  <td rowSpan={row.funcRowSpan} className="border border-[#ccc] p-2 text-left text-xs align-middle" style={{ background: zebra.function }}>
+                  <td rowSpan={row.funcRowSpan} className="border border-[#ccc] p-2 text-left text-xs align-middle" style={{ background: getZebra('function', funcStripeIdx) }}>
                     {row.funcName || '(기능분석에서 입력)'}
                   </td>
                 )}
@@ -686,7 +705,8 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
                 </td>
               </tr>
             );
-          })}
+          });
+        })()}
         </tbody>
       </table>
 
