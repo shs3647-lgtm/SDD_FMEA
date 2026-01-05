@@ -923,8 +923,10 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           riskData: legacyRiskData,
           search: String(src.search || ''),
           ...normalizedConfirmed,
+          failureLinks: src.failureLinks || [],  // ✅ 고장연결 데이터 복원
         };
 
+        console.log('[로드] ✅ failureLinks 복원:', (newState as any).failureLinks?.length || 0, '건');
         setStateSynced(newState);
 
         // atomic도 확보/동기화
@@ -968,6 +970,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           riskData: legacyRiskData,
           search: '',
           ...normalizedConfirmed,
+          failureLinks: localStorageLegacy.failureLinks || [],  // ✅ 고장연결 데이터 복원
         };
         
         console.log('[로드] localStorage 데이터 적용:', {
@@ -976,8 +979,10 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           structureConfirmed: newState.structureConfirmed,
           failureModesCount: newState.l2.flatMap((p: any) => p.failureModes || []).length,
           failureCausesCount: newState.l2.flatMap((p: any) => p.failureCauses || []).length,
+          failureLinksCount: (newState as any).failureLinks?.length || 0,  // ✅ 로그 추가
         });
         
+        console.log('[로드] ✅ failureLinks 복원:', (newState as any).failureLinks?.length || 0, '건');
         setStateSynced(newState);
         
         // 원자성 DB 생성 및 DB에도 저장 (동기화)
@@ -1027,14 +1032,17 @@ export function useWorksheetState(): UseWorksheetStateReturn {
             riskData: legacyRiskData,
             search: '',
             ...normalizedConfirmed,
+            failureLinks: recoveredLegacy.failureLinks || [],  // ✅ 고장연결 데이터 복원
           };
           
           console.log('[복구] localStorage에서 복구된 데이터:', {
             l1Name: newState.l1.name,
             l2Count: newState.l2.length,
             structureConfirmed: newState.structureConfirmed,
+            failureLinksCount: (newState as any).failureLinks?.length || 0,  // ✅ 로그 추가
           });
           
+          console.log('[복구] ✅ failureLinks 복원:', (newState as any).failureLinks?.length || 0, '건');
           setStateSynced(newState);
           
           // DB에도 저장 (복구 데이터 동기화)
@@ -1080,6 +1088,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           riskData: legacyRiskData,
           search: legacyDirect.search || '',  // ✅ 검색어 기본값 추가
           ...normalizedConfirmed,
+          failureLinks: legacyDirect.failureLinks || [],  // ✅ 고장연결 데이터 복원
         };
         
         console.log('[로드] 레거시 데이터 직접 적용:', {
@@ -1087,9 +1096,11 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           l2Count: newState.l2.length,
           failureModesCount: newState.l2.flatMap((p: any) => p.failureModes || []).length,
           failureCausesCount: newState.l2.flatMap((p: any) => p.failureCauses || []).length,
+          failureLinksCount: (newState as any).failureLinks?.length || 0,  // ✅ 로그 추가
           tab: newState.tab,
         });
         
+        console.log('[로드] ✅ failureLinks 복원:', (newState as any).failureLinks?.length || 0, '건');
         setStateSynced(newState);
         
         // 원자성 DB 생성 (PFD/CP/WS/PM 연동용)
