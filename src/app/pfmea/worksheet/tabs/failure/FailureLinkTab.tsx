@@ -105,16 +105,20 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
   const isInitialLoad = useRef(true);
 
   // ========== 초기 데이터 로드 (화면 전환 시에도 항상 복원) ==========
+  const stateFailureLinksJson = JSON.stringify((state as any).failureLinks || []);
   useEffect(() => {
     const stateLinks = (state as any).failureLinks || [];
-    // ✅ 수정: isInitialLoad 조건 제거 - state.failureLinks가 있으면 항상 복원
-    if (stateLinks.length > 0) {
-      console.log('[FailureLinkTab] 데이터 복원: state.failureLinks →', stateLinks.length, '개');
+    // ✅ 수정: state.failureLinks가 있으면 항상 복원 (savedLinks와 비교하여 중복 방지)
+    if (stateLinks.length > 0 && stateLinks.length !== savedLinks.length) {
+      console.log('[FailureLinkTab] ✅ 데이터 복원: state.failureLinks →', stateLinks.length, '개');
       setSavedLinks(stateLinks);
-      // ✅ 고장사슬을 기본값으로 유지 (result 화면으로 자동 전환하지 않음)
+      isInitialLoad.current = false;
+    } else if (stateLinks.length > 0 && isInitialLoad.current) {
+      console.log('[FailureLinkTab] ✅ 초기 로드: state.failureLinks →', stateLinks.length, '개');
+      setSavedLinks(stateLinks);
       isInitialLoad.current = false;
     }
-  }, [(state as any).failureLinks]);
+  }, [stateFailureLinksJson]); // ✅ JSON 문자열로 깊은 비교
 
   // ========== FE 데이터 추출 (확정된 것만 사용 + 중복 제거) ==========
   const isL1Confirmed = state.failureL1Confirmed || false;
