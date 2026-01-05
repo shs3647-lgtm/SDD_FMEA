@@ -174,9 +174,9 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6] }:
     whiteSpace: 'nowrap',
   });
 
-  const cellStyle = (bg: string): React.CSSProperties => ({
+  const cellStyle = (bg: string, textAlign: 'left' | 'center' = 'center'): React.CSSProperties => ({
     background: bg, border: BORDER, padding: '4px 6px',
-    fontSize: '11px', verticalAlign: 'middle'
+    fontSize: '11px', verticalAlign: 'middle', textAlign
   });
 
   if (loading) {
@@ -218,21 +218,21 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6] }:
         </div>
       )}
       
-      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 2400 }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 1800 }}>
         <colgroup>
           <col style={{ width: '120px' }} />
-          <col style={{ width: '80px' }} />
+          <col style={{ width: '20px' }} />
+          <col style={{ width: '100px' }} />
+          <col style={{ width: '20px' }} />
           <col style={{ width: '200px' }} />
-          <col style={{ width: '50px' }} />
-          <col style={{ width: '200px' }} />
-          <col style={{ width: '80px' }} />
+          <col style={{ width: '30px' }} />
           <col style={{ width: '220px' }} />
           <col style={{ width: '200px' }} />
           <col style={{ width: '280px' }} />
-          <col style={{ width: '220px' }} />
-          <col style={{ width: '180px' }} />
+          <col style={{ width: '100px' }} />
+          <col style={{ width: '30px' }} />
           <col style={{ width: '280px' }} />
-          <col style={{ width: '290px' }} />
+          <col style={{ width: '100px' }} />
           <col style={{ width: '200px' }} />
           <col style={{ width: '40px' }} />
           <col style={{ width: '200px' }} />
@@ -267,7 +267,7 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6] }:
             <th style={stickyHeaderCellStyle(COLORS.special.m4.h3, HEADER_ROW_H, '#000', 59)}>4M</th>
             <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H, '#000', 59)}>작업요소</th>
             {/* 기능분석 */}
-            <th style={stickyHeaderCellStyle(COLORS.special.scope.h3, HEADER_ROW_H, '#000', 59)}>범위</th>
+            <th style={stickyHeaderCellStyle(COLORS.special.scope.h3, HEADER_ROW_H, '#000', 59)}>구분</th>
             <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>완제품기능</th>
             <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>요구사항</th>
             <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H, '#000', 59)}>공정기능</th>
@@ -317,58 +317,58 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6] }:
                 {/* 구조분석 */}
                 {pr.showProcess && (
                   <>
-                    <td rowSpan={pr.processRowSpan} style={cellStyle(zebra.structure)}>{r.l1StructName}</td>
-                    <td rowSpan={pr.processRowSpan} style={cellStyle(zebra.structure)}>{r.l2StructNo}</td>
-                    <td rowSpan={pr.processRowSpan} style={cellStyle(zebra.structure)}>{r.l2StructName}</td>
+                    <td rowSpan={pr.processRowSpan} style={cellStyle(zebra.structure, 'center')}>{r.l1StructName}</td>
+                    <td rowSpan={pr.processRowSpan} style={cellStyle(zebra.structure, 'center')}>{r.l2StructNo}</td>
+                    <td rowSpan={pr.processRowSpan} style={cellStyle(zebra.structure, 'center')}>{r.l2StructName}</td>
                   </>
                 )}
-                <td style={cellStyle(zebra.structure)}>{r.l3M4}</td>
-                <td style={cellStyle(zebra.structure)}>{r.l3Name}</td>
+                <td style={cellStyle(zebra.structure, 'center')}>{r.l3M4}</td>
+                <td style={cellStyle(zebra.structure, 'center')}>{r.l3Name}</td>
                 
                 {/* 기능분석 */}
                 {pr.showFe && (
                   <>
-                    <td rowSpan={pr.feRowSpan} style={cellStyle(zebra.function)}>{r.l1FuncCategory}</td>
-                    <td rowSpan={pr.feRowSpan} style={cellStyle(zebra.function)}>{r.l1FuncName}</td>
-                    <td rowSpan={pr.feRowSpan} style={cellStyle(zebra.function)}>{r.l1Requirement}</td>
+                    <td rowSpan={pr.feRowSpan} style={cellStyle(zebra.function, 'center')}>{r.l1FuncCategory}</td>
+                    <td rowSpan={pr.feRowSpan} style={cellStyle(zebra.function, 'left')}>{r.l1FuncName}</td>
+                    <td rowSpan={pr.feRowSpan} style={cellStyle(zebra.function, 'center')}>{r.l1Requirement}</td>
                   </>
                 )}
                 {pr.showFm && (
                   <>
-                    <td rowSpan={pr.fmRowSpan} style={cellStyle(zebra.function)}>{r.l2FuncName}</td>
-                    <td rowSpan={pr.fmRowSpan} style={cellStyle(zebra.function)}>{r.l2ProductChar}</td>
-                    <td rowSpan={pr.fmRowSpan} style={cellStyle(zebra.function)}>{r.l2SpecialChar}</td>
+                    <td rowSpan={pr.fmRowSpan} style={cellStyle(zebra.function, 'left')}>{r.l2FuncName}</td>
+                    <td rowSpan={pr.fmRowSpan} style={cellStyle(zebra.function, 'center')}>{r.l2ProductChar}</td>
+                    <td rowSpan={pr.fmRowSpan} style={cellStyle(zebra.function, 'center')}>{r.l2SpecialChar}</td>
                   </>
                 )}
-                <td style={cellStyle(zebra.function)}>{r.l3FuncName}</td>
-                <td style={cellStyle(zebra.function)}>{r.l3ProcessChar}</td>
+                <td style={cellStyle(zebra.function, 'left')}>{r.l3FuncName}</td>
+                <td style={cellStyle(zebra.function, 'center')}>{r.l3ProcessChar}</td>
                 
                 {/* 고장분석 */}
                 {pr.showFe && (
                   <>
-                    <td rowSpan={pr.feRowSpan} style={cellStyle(zebra.failure)}>{r.feEffect}</td>
-                    <td rowSpan={pr.feRowSpan} style={{ ...cellStyle(zebra.failure), textAlign: 'center', fontWeight: 600 }}>{r.feSeverity || ''}</td>
+                    <td rowSpan={pr.feRowSpan} style={cellStyle(zebra.failure, 'center')}>{r.feEffect}</td>
+                    <td rowSpan={pr.feRowSpan} style={{ ...cellStyle(zebra.failure, 'center'), fontWeight: 600 }}>{r.feSeverity || ''}</td>
                   </>
                 )}
                 {pr.showFm && (
-                  <td rowSpan={pr.fmRowSpan} style={cellStyle(zebra.failure)}>{r.fmMode}</td>
+                  <td rowSpan={pr.fmRowSpan} style={cellStyle(zebra.failure, 'center')}>{r.fmMode}</td>
                 )}
-                <td style={cellStyle(zebra.failure)}>{r.fcCause}</td>
-                <td style={{ ...cellStyle(zebra.failure), textAlign: 'center' }}>{r.fcOccurrence || ''}</td>
+                <td style={cellStyle(zebra.failure, 'center')}>{r.fcCause}</td>
+                <td style={cellStyle(zebra.failure, 'center')}>{r.fcOccurrence || ''}</td>
                 
                 {/* 리스크분석 */}
-                <td style={{ ...cellStyle('#fff'), textAlign: 'center' }}>{r.riskSeverity || ''}</td>
-                <td style={{ ...cellStyle('#fff'), textAlign: 'center' }}>{r.riskOccurrence || ''}</td>
-                <td style={{ ...cellStyle('#fff'), textAlign: 'center' }}>{r.riskDetection || ''}</td>
-                <td style={{ ...cellStyle('#fff'), textAlign: 'center', fontWeight: 600, color: r.riskAP === 'H' ? '#d32f2f' : r.riskAP === 'M' ? '#f57c00' : '#388e3c' }}>{r.riskAP || ''}</td>
-                <td style={cellStyle('#fff')}>{r.preventionControl || ''}</td>
-                <td style={cellStyle('#fff')}>{r.detectionControl || ''}</td>
+                <td style={cellStyle('#fff', 'center')}>{r.riskSeverity || ''}</td>
+                <td style={cellStyle('#fff', 'center')}>{r.riskOccurrence || ''}</td>
+                <td style={cellStyle('#fff', 'center')}>{r.riskDetection || ''}</td>
+                <td style={{ ...cellStyle('#fff', 'center'), fontWeight: 600, color: r.riskAP === 'H' ? '#d32f2f' : r.riskAP === 'M' ? '#f57c00' : '#388e3c' }}>{r.riskAP || ''}</td>
+                <td style={cellStyle('#fff', 'center')}>{r.preventionControl || ''}</td>
+                <td style={cellStyle('#fff', 'center')}>{r.detectionControl || ''}</td>
                 
                 {/* 최적화 */}
-                <td style={cellStyle('#fff')}>{r.optAction || ''}</td>
-                <td style={cellStyle('#fff')}>{r.optResponsible || ''}</td>
-                <td style={cellStyle('#fff')}>{r.optTargetDate || ''}</td>
-                <td style={{ ...cellStyle('#fff'), textAlign: 'center' }}>{r.optStatus || ''}</td>
+                <td style={cellStyle('#fff', 'center')}>{r.optAction || ''}</td>
+                <td style={cellStyle('#fff', 'center')}>{r.optResponsible || ''}</td>
+                <td style={cellStyle('#fff', 'center')}>{r.optTargetDate || ''}</td>
+                <td style={cellStyle('#fff', 'center')}>{r.optStatus || ''}</td>
               </tr>
             );
           })}

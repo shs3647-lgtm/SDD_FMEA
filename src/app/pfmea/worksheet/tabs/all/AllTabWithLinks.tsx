@@ -144,21 +144,22 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
   }
   
   return (
-    <div style={{ width: '100%', minWidth: '2400px', overflowX: 'visible' }}>
-      <table className={`${TW_CLASSES.table} min-w-[2400px] w-full`} style={{ minWidth: '2400px' }}>
+    <div style={{ width: '100%', minWidth: '1800px', overflowX: 'visible' }}>
+      <table className={`${TW_CLASSES.table} min-w-[1800px] w-full`} style={{ minWidth: '1800px' }}>
         <colgroup>
           <col style={{ width: '120px' }} />
+          <col style={{ width: '20px' }} />
+          <col style={{ width: '100px' }} />
+          <col style={{ width: '20px' }} />
           <col style={{ width: '200px' }} />
-          <col style={{ width: '50px' }} />
-          <col style={{ width: '280px' }} />
-          <col style={{ width: '80px' }} />
+          <col style={{ width: '30px' }} />
           <col style={{ width: '220px' }} />
           <col style={{ width: '200px' }} />
           <col style={{ width: '280px' }} />
-          <col style={{ width: '220px' }} />
-          <col style={{ width: '50px' }} />
+          <col style={{ width: '100px' }} />
+          <col style={{ width: '30px' }} />
           <col style={{ width: '280px' }} />
-          <col style={{ width: '420px' }} />
+          <col style={{ width: '100px' }} />
         </colgroup>
         <thead className={TW_CLASSES.stickyHead}>
           {/* 1행: 단계 대분류 */}
@@ -199,23 +200,24 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
           </tr>
           {/* 3행: 컬럼명 */}
           <tr>
-            {/* 구조분석 4열: 650px */}
+            {/* 구조분석 4열 */}
             {visibleSteps.includes(2) && <>
               <th style={colHeaderStyle('120px', COLORS.structure.l1.h3)}>제품명</th>
-              <th style={colHeaderStyle('200px', COLORS.structure.l2.h3)}>NO+공정명</th>
-              <th style={colHeaderStyleWithOptions('50px', COLORS.special.m4.h3, '#fff', { fontWeight: FONT_WEIGHTS.bold })}>4M</th>
-              <th style={colHeaderStyle('280px', COLORS.structure.l3.h3)}>부품</th>
+              <th style={colHeaderStyle('20px', COLORS.structure.l2.h3)}>NO</th>
+              <th style={colHeaderStyle('100px', COLORS.structure.l2.h3)}>공정명</th>
+              <th style={colHeaderStyleWithOptions('20px', COLORS.special.m4.h3, '#fff', { fontWeight: FONT_WEIGHTS.bold })}>4M</th>
+              <th style={colHeaderStyle('200px', COLORS.structure.l3.h3)}>부품</th>
             </>}
-            {/* 기능분석 8열: 1750px */}
+            {/* 기능분석 8열 */}
             {visibleSteps.includes(3) && <>
-              <th style={colHeaderStyle('80px', COLORS.special.scope.h3, '#fff')}>구분</th>
+              <th style={colHeaderStyle('30px', COLORS.special.scope.h3, '#fff')}>구분</th>
               <th style={colHeaderStyle('220px', COLORS.function.l1.h3)}>제품 기능</th>
               <th style={colHeaderStyle('200px', COLORS.function.l1.h3)}>요구사항</th>
               <th style={colHeaderStyle('280px', COLORS.function.l2.h3)}>초점요소 기능</th>
-              <th style={colHeaderStyleWithOptions('220px', COLORS.function.l2.h3, undefined, { whiteSpace: 'nowrap' })}>제품특성</th>
-              <th style={colHeaderStyleWithOptions('50px', COLORS.special.m4.h3, '#fff', { fontWeight: FONT_WEIGHTS.bold })}>4M</th>
+              <th style={colHeaderStyleWithOptions('100px', COLORS.function.l2.h3, undefined, { whiteSpace: 'nowrap' })}>제품특성</th>
+              <th style={colHeaderStyleWithOptions('30px', COLORS.special.m4.h3, '#fff', { fontWeight: FONT_WEIGHTS.bold })}>특별특성</th>
               <th style={colHeaderStyle('280px', COLORS.function.l3.h3)}>부품 기능</th>
-              <th style={colHeaderStyleWithOptions('420px', COLORS.function.l3.h3, undefined, { whiteSpace: 'nowrap' })}>설계특성</th>
+              <th style={colHeaderStyleWithOptions('100px', COLORS.function.l3.h3, undefined, { whiteSpace: 'nowrap' })}>공정특성</th>
             </>}
             {/* 고장분석 6열 */}
             {visibleSteps.includes(4) && <>
@@ -291,20 +293,30 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
                 {/* 구조분석 4열 */}
                 {visibleSteps.includes(2) && <>
                   {idx === 0 && <td rowSpan={allRows.length} className="text-center font-semibold" style={structureCellStyle(COLORS.structure.l1.cell, 0, COLORS.structure.l1.cell, { textAlign: 'center', fontWeight: FONT_WEIGHTS.semibold })}>{state.l1?.name || ''}</td>}
-                  {row.showProcess && row.processRowSpan > 0 && <td rowSpan={row.processRowSpan} style={structureCellStyle(COLORS.structure.l2.cell, idx, zebraBg, { textAlign: 'center' })}>{row.processName}</td>}
+                  {row.showProcess && row.processRowSpan > 0 && (() => {
+                    const processParts = row.processName.split(/\s+/);
+                    const processNo = processParts[0] || '';
+                    const processName = processParts.slice(1).join(' ') || '';
+                    return (
+                      <>
+                        <td rowSpan={row.processRowSpan} style={structureCellStyle(COLORS.structure.l2.cell, idx, zebraBg, { textAlign: 'center' })}>{processNo}</td>
+                        <td rowSpan={row.processRowSpan} style={structureCellStyle(COLORS.structure.l2.cell, idx, zebraBg, { textAlign: 'center' })}>{processName}</td>
+                      </>
+                    );
+                  })()}
                   {row.showFc && <td rowSpan={row.fcRowSpan} style={structureCellStyle(COLORS.special.m4.cell, idx, zebraBg, { textAlign: 'center', fontWeight: FONT_WEIGHTS.bold })}>{structureM4 || ''}</td>}
-                  {row.showFc && <td rowSpan={row.fcRowSpan} style={structureCellStyle(COLORS.structure.l3.cell, idx, zebraBg)}>{row.fc?.workElem || ''}</td>}
+                  {row.showFc && <td rowSpan={row.fcRowSpan} style={structureCellStyle(COLORS.structure.l3.cell, idx, zebraBg, { textAlign: 'center' })}>{row.fc?.workElem || ''}</td>}
                 </>}
                 
                 {/* 기능분석 8열 */}
                 {visibleSteps.includes(3) && <>
                   {row.showFm && <td rowSpan={row.fmRowSpan} style={structureCellStyle(COLORS.special.scope.cell, idx, zebraBg, { textAlign: 'center' })}>{row.fe?.funcData?.typeName || (row.fe ? getScopeAbbr(row.fe.scope) : '')}</td>}
-                  {row.showFm && <td rowSpan={row.fmRowSpan} style={functionCellStyle(COLORS.function.l1.cell, idx, zebraBg, !!row.fe?.funcData)}>{row.fe?.funcData?.funcName || '(미연결)'}</td>}
+                  {row.showFm && <td rowSpan={row.fmRowSpan} style={functionCellStyle(COLORS.function.l1.cell, idx, zebraBg, !!row.fe?.funcData, { textAlign: 'left' })}>{row.fe?.funcData?.funcName || '(미연결)'}</td>}
                   {row.showFm && <td rowSpan={row.fmRowSpan} style={functionCellStyle(COLORS.function.l1.cell, idx, zebraBg, !!row.fe?.funcData, { textAlign: 'center', fontWeight: 600 })}>{row.fe?.funcData?.reqName || '(미연결)'}</td>}
-                  {row.showFm && <td rowSpan={row.fmRowSpan} style={functionCellStyle(COLORS.function.l2.cell, idx, zebraBg, !!row.l2FuncData)}>{row.l2FuncData?.funcName || '(미연결)'}</td>}
+                  {row.showFm && <td rowSpan={row.fmRowSpan} style={functionCellStyle(COLORS.function.l2.cell, idx, zebraBg, !!row.l2FuncData, { textAlign: 'left' })}>{row.l2FuncData?.funcName || '(미연결)'}</td>}
                   {row.showFm && <td rowSpan={row.fmRowSpan} style={functionCellStyle(COLORS.function.l2.cell, idx, zebraBg, !!row.l2FuncData, { textAlign: 'center', fontWeight: 600 })}>{row.l2FuncData?.productCharName || '(미연결)'}</td>}
                   {row.showFc && <td rowSpan={row.fcRowSpan} style={structureCellStyle(COLORS.special.m4.cell, idx, zebraBg, { textAlign: 'center', fontWeight: FONT_WEIGHTS.bold })}>{structureM4 || ''}</td>}
-                  {row.showFc && <td rowSpan={row.fcRowSpan} style={functionCellStyle(COLORS.function.l3.cell, idx, zebraBg, !!row.fc?.funcData)}>{row.fc?.funcData?.funcName || (row.fc ? '(미연결)' : '')}</td>}
+                  {row.showFc && <td rowSpan={row.fcRowSpan} style={functionCellStyle(COLORS.function.l3.cell, idx, zebraBg, !!row.fc?.funcData, { textAlign: 'left' })}>{row.fc?.funcData?.funcName || (row.fc ? '(미연결)' : '')}</td>}
                   {row.showFc && <td rowSpan={row.fcRowSpan} style={functionCellStyle(COLORS.function.l3.cell, idx, zebraBg, !!row.fc?.funcData, { textAlign: 'center', fontWeight: 600 })}>{row.fc?.funcData?.processCharName || (row.fc ? '(미연결)' : '')}</td>}
                 </>}
                 
@@ -341,8 +353,8 @@ export default function AllTabWithLinks({ state, setState, failureLinks, visible
                     );
                   })()}
                   {row.showFm && <td rowSpan={row.fmRowSpan} style={failureCellStyle(COLORS.failure.l2.cell, idx, zebraBg, { textAlign: 'center', fontWeight: FONT_WEIGHTS.semibold })}>{row.fmText}</td>}
-                  {row.showFc && <td rowSpan={row.fcRowSpan} style={failureCellStyle(COLORS.failure.l3.cell, idx, zebraBg)}>{row.fc?.workElem || ''}</td>}
-                  {row.showFc && <td rowSpan={row.fcRowSpan} style={failureCellStyle(COLORS.failure.l3.cell, idx, zebraBg)}>{row.fc?.text || ''}</td>}
+                  {row.showFc && <td rowSpan={row.fcRowSpan} style={failureCellStyle(COLORS.failure.l3.cell, idx, zebraBg, { textAlign: 'center' })}>{row.fc?.workElem || ''}</td>}
+                  {row.showFc && <td rowSpan={row.fcRowSpan} style={failureCellStyle(COLORS.failure.l3.cell, idx, zebraBg, { textAlign: 'center' })}>{row.fc?.text || ''}</td>}
                 </>}
                 
                 {/* 리스크분석 8열 */}
