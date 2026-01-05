@@ -139,37 +139,51 @@ const structureBg = getZebra('structure', rowIdx);
 
 ---
 
-## 5. 탭별 적용 가이드
+## 5. 탭별 적용 가이드 (3L기능 스타일 v2.1)
 
-### 구조분석 (StructureTab)
-- 완제품공정명: `zebra.structure`
-- 메인공정명: `zebra.structure`
-- 4M: `zebra.structure`
-- 작업요소: `zebra.structure`
+> **⭐ 2026-01-05 업데이트**: 블록 단위 줄무늬 적용
+> 
+> rowSpan(병합) 셀은 **블록 인덱스** 기준, 일반 셀은 **행 인덱스** 기준으로 줄무늬 적용
 
 ### 기능분석 1L (FunctionL1Tab)
-- 완제품공정명: `zebra.structure`
-- 구분(YP/SP/User): 타입별 고유 색상 유지
-- 완제품기능: `zebra.function`
-- 요구사항: `zebra.failure`
+| 열 | 병합 | 줄무늬 기준 | 색상 타입 |
+|---|---|---|---|
+| 완제품공정명 | rowSpan | `tIdx` (타입 블록) | structure |
+| 구분(YP/SP/User) | rowSpan | 타입별 고유 색상 | - |
+| 완제품기능 | rowSpan | `funcCounter` (기능 블록) | function |
+| 요구사항 | 개별 행 | `rowIdx` | failure |
 
 ### 기능분석 2L (FunctionL2Tab)
-- 메인공정명: `zebra.structure`
-- 메인공정기능: `zebra.function`
-- 제품특성: `zebra.failure`
-- 특별특성: 고정 주황색 유지
+| 열 | 병합 | 줄무늬 기준 | 색상 타입 |
+|---|---|---|---|
+| 공정NO+공정명 | rowSpan | `pIdx` (공정 블록) | structure |
+| 메인공정기능 | rowSpan | `funcCounter` (기능 블록) | function |
+| 제품특성 | 개별 행 | `rowIdx` | failure |
+| 특별특성 | 개별 행 | `rowIdx` | failure (고정 주황) |
 
-### 기능분석 3L (FunctionL3Tab)
-- 메인공정명: `zebra.structure`
-- 4M: `zebra.structure`
-- 작업요소: `zebra.structure`
-- 작업요소기능: `zebra.function`
-- 공정특성: `zebra.failure`
-- 특별특성: 고정 주황색 유지
+### 기능분석 3L (FunctionL3Tab) - 표준 모델
+| 열 | 병합 | 줄무늬 기준 | 색상 타입 |
+|---|---|---|---|
+| 메인공정명 | rowSpan | `pIdx` (공정 블록) | structure |
+| 4M | rowSpan | 블록 기준 | structure |
+| 작업요소 | rowSpan | `weIdx` (작업요소 블록) | structure |
+| 작업요소기능 | 개별 행 | `rowIdx` | function |
+| 공정특성 | 개별 행 | `rowIdx` | failure |
+| 특별특성 | 개별 행 | `rowIdx` | failure (고정 주황) |
 
-### 고장분석 (FailureL1/L2/L3Tab)
-- 상위 구조/기능 열: `zebra.structure` 또는 `zebra.function`
-- 고장영향/형태/원인: `zebra.failure`
+### 고장영향 1L (FailureL1Tab)
+| 열 | 병합 | 줄무늬 기준 | 색상 타입 |
+|---|---|---|---|
+| 완제품공정명 | rowSpan | `productIdx` (블록) | structure |
+| 구분 | rowSpan | 타입별 고유 색상 | - |
+| 완제품기능 | rowSpan | `funcIdx` (블록) | function |
+| 요구사항 | rowSpan | `reqIdx` (블록) | failure |
+| 고장영향 | 개별 행 | `idx` | failure |
+| 심각도 | 개별 행 | `idx` | failure |
+
+### 고장분석 2L/3L (FailureL2/L3Tab)
+- 상위 구조/기능 열: `zebra.structure` 또는 `zebra.function` (블록 기준)
+- 고장형태/원인: `zebra.failure` (행 기준)
 
 ---
 
@@ -201,6 +215,7 @@ const structureBg = getZebra('structure', rowIdx);
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-01-05 | v2.1 | **3L기능 스타일 적용**: 블록 단위 줄무늬 (rowSpan 셀은 블록 인덱스 기준) |
 | 2026-01-05 | v2.0 | 글로벌 줄무늬 시스템 구축, 문서화 |
 | 2026-01-03 | v1.0 | 초기 줄무늬 색상 정의 |
 
