@@ -1045,12 +1045,25 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       // 계속 진행하면 아래로 흘러감
     }
     
-    setState((prev: any) => ({ ...prev, failureLinkConfirmed: true }));
+    // ✅ 강화: failureLinks와 failureLinkConfirmed 모두 저장
+    setState((prev: any) => ({ 
+      ...prev, 
+      failureLinkConfirmed: true,
+      failureLinks: savedLinks,  // ✅ 고장연결 데이터도 state에 저장
+    }));
     setDirty(true);
-    requestAnimationFrame(() => {
+    
+    // ✅ 강화: 즉시 저장 + 지연 저장 (이중 안전장치)
+    console.log('[고장연결 전체확정] ✅ DB 저장 시작:', savedLinks.length, '건');
+    saveToLocalStorage?.();
+    saveAtomicDB?.();
+    
+    // ✅ 추가: 500ms 후 재저장 (비동기 state 업데이트 반영)
+    setTimeout(() => {
       saveToLocalStorage?.();
-      saveAtomicDB?.();  // ✅ PostgreSQL DB 저장
-    });
+      saveAtomicDB?.();
+      console.log('[고장연결 전체확정] ✅ DB 재저장 완료 (지연)');
+    }, 500);
     
     // ===== AI 학습 데이터 저장 =====
     // 확정된 고장연결 데이터를 AI 시스템에 저장하여 학습
@@ -1078,7 +1091,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       ? `\n\n⚠️ 누락: ${missingCount}개\n💡 ALL(전체보기) 화면에서 수동 입력 가능` 
       : '';
     alert(`✅ 고장연결이 확정되었습니다!\n\nFM: ${fmData.length}개\nFE: ${linkStats.feLinkedCount}개\nFC: ${linkStats.fcLinkedCount}개${missingMsg}\n\n🤖 AI 학습 데이터 ${savedLinks.length}건 저장됨`);
-  }, [fmData, linkStats, savedLinks, state.l1, setState, setDirty, saveToLocalStorage]);
+  }, [fmData, linkStats, savedLinks, state.l1, setState, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   // ========== 고장연결 수정 모드 ==========
   const handleEditMode = useCallback(() => {
