@@ -225,6 +225,7 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
   }, [state.l2, isL2Confirmed]);
 
   // ========== FC 데이터 추출 (확정된 것만 사용 + 중복 제거) ==========
+  // ✅ FailureL3Tab.tsx의 flatRows 로직과 동일하게 공정특성 기준으로 추출
   const isL3Confirmed = state.failureL3Confirmed || false;
   
   const fcData: FCItem[] = useMemo(() => {
@@ -238,32 +239,69 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     const seen = new Set<string>(); // 공정명+작업요소+고장원인 조합으로 중복 체크
     let counter = 1;
     
-    (state.l2 || []).forEach((proc: any) => {
-      if (!proc.name || proc.name.includes('클릭')) return;
+    // ✅ 의미 있는 이름인지 확인하는 헬퍼 함수
+    const isMeaningful = (name: string) => {
+      if (!name || name.trim() === '') return false;
+      const placeholders = ['클릭', '선택', '입력', '추가', '필요', '기능분석에서'];
+      return !placeholders.some(p => name.includes(p));
+    };
+    
+    const processes = (state.l2 || []).filter((p: any) => p.name && !p.name.includes('클릭'));
+    
+    processes.forEach((proc: any) => {
+      const allCauses = proc.failureCauses || [];  // 공정 레벨에 저장된 고장원인
+      const workElements = (proc.l3 || []).filter((we: any) => we.name && !we.name.includes('클릭'));
       
-      // ✅ 수정: proc.failureCauses (공정 레벨에 저장됨) 우선 확인
-      // CASCADE 구조: 고장원인은 공정 레벨에 저장되고, processCharId로 공정특성과 연결됨
-      const procFailureCauses = proc.failureCauses || [];
-      
-      if (procFailureCauses.length > 0) {
-        // proc.failureCauses 사용 (새로운 CASCADE 구조)
-        procFailureCauses.forEach((fc: any) => {
-          if (!fc.name || fc.name.includes('클릭') || fc.name.includes('추가')) return;
-          if (!fc.id) fc.id = uid();
-          
-          // 작업요소 정보 찾기
-          let weName = '';
-          let m4 = 'MN';
-          (proc.l3 || []).forEach((we: any) => {
-            (we.functions || []).forEach((fn: any) => {
-              (fn.processChars || []).forEach((pc: any) => {
-                if (pc.id === fc.processCharId) {
-                  weName = we.name || '';
-                  m4 = we.m4 || we.fourM || 'MN';
-                }
-              });
-            });
+      // ✅ 공정특성 기준으로 순회 (FailureL3Tab.tsx와 동일)
+      workElements.forEach((we: any) => {
+        const weName = we.name || '';
+        const m4 = we.m4 || we.fourM || 'MN';
+        
+        // 의미 있는 공정특성 수집
+        const functions = we.functions || [];
+        const allProcessChars: any[] = [];
+        
+        functions.forEach((f: any) => {
+          if (!isMeaningful(f.name)) return;
+          (f.processChars || []).forEach((pc: any) => {
+            if (!isMeaningful(pc.name)) return;
+            allProcessChars.push({ ...pc, funcId: f.id, funcName: f.name });
           });
+        });
+        
+        // 각 공정특성에 연결된 고장원인 추출
+        allProcessChars.forEach((pc: any) => {
+          const linkedCauses = allCauses.filter((c: any) => c.processCharId === pc.id);
+          
+          linkedCauses.forEach((fc: any) => {
+            if (!isMeaningful(fc.name)) return;
+            if (!fc.id) fc.id = uid();
+            
+            const key = `${proc.name}|${weName}|${fc.name}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            
+            items.push({ 
+              id: fc.id, 
+              fcNo: `C${counter}`, 
+              processName: proc.name, 
+              m4, 
+              workElem: weName, 
+              text: fc.name 
+            });
+            counter++;
+          });
+        });
+      });
+      
+      // ✅ 하위호환: processCharId가 없는 고장원인 (기존 we.failureCauses 구조)
+      workElements.forEach((we: any) => {
+        const weName = we.name || '';
+        const m4 = we.m4 || we.fourM || 'MN';
+        
+        (we.failureCauses || []).forEach((fc: any) => {
+          if (!isMeaningful(fc.name)) return;
+          if (!fc.id) fc.id = uid();
           
           const key = `${proc.name}|${weName}|${fc.name}`;
           if (seen.has(key)) return;
@@ -278,32 +316,6 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
             text: fc.name 
           });
           counter++;
-        });
-      } else {
-        // 하위호환: we.failureCauses 사용 (기존 구조)
-        (proc.l3 || []).forEach((we: any) => {
-          if (!we.name || we.name.includes('클릭') || we.name.includes('추가')) return;
-          
-          const m4 = we.m4 || we.fourM || 'MN';
-          
-          (we.failureCauses || []).forEach((fc: any) => {
-            if (!fc.name || fc.name.includes('클릭') || fc.name.includes('추가')) return;
-            if (!fc.id) fc.id = uid();
-            
-            const key = `${proc.name}|${we.name}|${fc.name}`;
-            if (seen.has(key)) return;
-            seen.add(key);
-            
-            items.push({ 
-              id: fc.id, 
-              fcNo: `C${counter}`, 
-              processName: proc.name, 
-              m4, 
-              workElem: we.name, 
-              text: fc.name 
-            });
-            counter++;
-          });
         });
       }
     });
