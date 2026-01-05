@@ -681,11 +681,15 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     }
     
     // 현재 FM과의 연결만 확인 (다른 FM과의 연결은 유지)
-    const existingLink = savedLinks.find(l => l.fmId === currentFMId && l.feId === id);
+    const existingLink = savedLinks.find(l => 
+      l.fmId === currentFMId && (l.feId === id || l.feText === fe.text)
+    );
     
     if (existingLink) {
       // 현재 FM과의 연결만 해제 (다른 FM과의 연결은 유지됨)
-      const filtered = savedLinks.filter(l => !(l.fmId === currentFMId && l.feId === id));
+      const filtered = savedLinks.filter(l => 
+        !(l.fmId === currentFMId && (l.feId === id || l.feText === fe.text))
+      );
       
       console.log('[FE 연결 해제]', fe.text, 'from FM:', currentFMId, '(다른 FM 연결 유지)');
       
