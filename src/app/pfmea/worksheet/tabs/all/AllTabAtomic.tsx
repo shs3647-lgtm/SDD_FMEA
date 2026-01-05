@@ -420,63 +420,63 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
           <tr>
             {visibleSteps.includes(2) && (
               <>
-                <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>완제품 공정명</th>
-                <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>NO+공정명</th>
-                <th style={stickyHeaderCellStyle(COLORS.special.m4.h3, HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>4M</th>
-                <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>작업요소</th>
+                <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>완제품<br/>공정명</th>
+                <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>NO+<br/>공정명</th>
+                <th style={stickyHeaderCellStyle(COLORS.special.m4.h3, HEADER_ROW_H * 2, '#000', 58, '8px', 700)}>4M</th>
+                <th style={stickyHeaderCellStyle(COLORS.structure.header, HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>작업<br/>요소</th>
               </>
             )}
             {visibleSteps.includes(3) && (
               <>
-                <th style={stickyHeaderCellStyle(COLORS.special.scope.h3, HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>구분</th>
-                <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>완제품기능</th>
-                <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>요구사항</th>
-                <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>공정 기능</th>
-                <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>제품특성</th>
-                <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>작업요소</th>
-                <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>작업요소 기능</th>
-                <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>공정특성</th>
+                <th style={stickyHeaderCellStyle(COLORS.special.scope.h3, HEADER_ROW_H * 2, '#000', 58, '8px', 700)}>구분</th>
+                <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>완제품<br/>기능</th>
+                <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>요구<br/>사항</th>
+                <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>공정<br/>기능</th>
+                <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>제품<br/>특성</th>
+                <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>작업<br/>요소</th>
+                <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>작업요소<br/>기능</th>
+                <th style={stickyHeaderCellStyle(COLORS.function.header, HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>공정<br/>특성</th>
               </>
             )}
             {visibleSteps.includes(4) && (
               <>
-                <th style={stickyHeaderCellStyle(COLORS.special.scope.h3, HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>구분</th>
-                <th style={stickyHeaderCellStyle(COLORS.failure.header, HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>고장영향(FE)</th>
-                <th style={stickyHeaderCellStyle(COLORS.indicator.severity.bg, HEADER_ROW_H * 2, COLORS.indicator.severity.text, 58, '10px', 600)}>심각도</th>
-                <th style={stickyHeaderCellStyle(COLORS.failure.header, HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>고장형태(FM)</th>
-                <th style={stickyHeaderCellStyle(COLORS.failure.header, HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>작업요소</th>
-                <th style={stickyHeaderCellStyle(COLORS.failure.header, HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>고장원인(FC)</th>
+                <th style={stickyHeaderCellStyle(COLORS.special.scope.h3, HEADER_ROW_H * 2, '#000', 58, '8px', 700)}>구분</th>
+                <th style={stickyHeaderCellStyle(COLORS.failure.header, HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>고장영향<br/>(FE)</th>
+                <th style={stickyHeaderCellStyle(COLORS.indicator.severity.bg, HEADER_ROW_H * 2, COLORS.indicator.severity.text, 58, '8px', 700)}>심각<br/>도</th>
+                <th style={stickyHeaderCellStyle(COLORS.failure.header, HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>고장형태<br/>(FM)</th>
+                <th style={stickyHeaderCellStyle(COLORS.failure.header, HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>작업<br/>요소</th>
+                <th style={stickyHeaderCellStyle(COLORS.failure.header, HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>고장원인<br/>(FC)</th>
               </>
             )}
             {visibleSteps.includes(5) && (
               <>
-                <th style={stickyHeaderCellStyle(COLORS.risk.prevention.header, HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>예방관리(PC)</th>
-                <th style={stickyHeaderCellStyle(COLORS.indicator.occurrence.bg, HEADER_ROW_H * 2, COLORS.indicator.occurrence.text, 58, '10px', 600)}>발생도</th>
-                <th style={stickyHeaderCellStyle(COLORS.risk.detection.header, HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>검출관리(DC)</th>
-                <th style={stickyHeaderCellStyle(COLORS.indicator.detection.bg, HEADER_ROW_H * 2, COLORS.indicator.detection.text, 58, '10px', 600)}>검출도</th>
-                <th style={stickyHeaderCellStyle(COLORS.indicator.ap.bg, HEADER_ROW_H * 2, COLORS.indicator.ap.text, 58, '10px', 600)}>AP</th>
-                <th style={stickyHeaderCellStyle(COLORS.risk.evaluation.header, HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>RPN</th>
-                <th style={stickyHeaderCellStyle(COLORS.risk.evaluation.header, HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>특별특성</th>
-                <th style={stickyHeaderCellStyle('#f97316', HEADER_ROW_H * 2, '#fff', 58, '10px', 600)}>습득교훈</th>
+                <th style={stickyHeaderCellStyle(COLORS.risk.prevention.header, HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>예방관리<br/>(PC)</th>
+                <th style={stickyHeaderCellStyle(COLORS.indicator.occurrence.bg, HEADER_ROW_H * 2, COLORS.indicator.occurrence.text, 58, '8px', 700)}>발생<br/>도</th>
+                <th style={stickyHeaderCellStyle(COLORS.risk.detection.header, HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>검출관리<br/>(DC)</th>
+                <th style={stickyHeaderCellStyle(COLORS.indicator.detection.bg, HEADER_ROW_H * 2, COLORS.indicator.detection.text, 58, '8px', 700)}>검출<br/>도</th>
+                <th style={stickyHeaderCellStyle(COLORS.indicator.ap.bg, HEADER_ROW_H * 2, COLORS.indicator.ap.text, 58, '8px', 700)}>AP</th>
+                <th style={stickyHeaderCellStyle(COLORS.risk.evaluation.header, HEADER_ROW_H * 2, '#000', 58, '8px', 700)}>RPN</th>
+                <th style={stickyHeaderCellStyle(COLORS.risk.evaluation.header, HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>특별<br/>특성</th>
+                <th style={stickyHeaderCellStyle('#f97316', HEADER_ROW_H * 2, '#fff', 58, '9px', 600)}>습득<br/>교훈</th>
               </>
             )}
             {visibleSteps.includes(6) && (
               <>
-                <th style={stickyHeaderCellStyle('#bbdefb', HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>예방관리개선</th>
-                <th style={stickyHeaderCellStyle('#bbdefb', HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>검출관리개선</th>
-                <th style={stickyHeaderCellStyle('#bbdefb', HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>책임자성명</th>
-                <th style={stickyHeaderCellStyle('#bbdefb', HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>목표완료일자</th>
-                <th style={stickyHeaderCellStyle('#ffccbc', HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>상태</th>
-                <th style={stickyHeaderCellStyle('#ffccbc', HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>개선결과근거</th>
-                <th style={stickyHeaderCellStyle('#ffccbc', HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>완료일자</th>
-                <th style={stickyHeaderCellStyle('#c8e6c9', HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>심각도</th>
-                <th style={stickyHeaderCellStyle('#c8e6c9', HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>발생도</th>
-                <th style={stickyHeaderCellStyle('#c8e6c9', HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>검출도</th>
-                <th style={stickyHeaderCellStyle('#c8e6c9', HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>특별특성</th>
-                <th style={stickyHeaderCellStyle('#c8e6c9', HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>AP</th>
-                <th style={stickyHeaderCellStyle('#c8e6c9', HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>RPN</th>
-                <th style={stickyHeaderCellStyle('#c8e6c9', HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>비고</th>
-                <th style={stickyHeaderCellStyle('#c8e6c9', HEADER_ROW_H * 2, '#000', 58, '10px', 600)}></th>
+                <th style={stickyHeaderCellStyle('#bbdefb', HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>예방관리<br/>개선</th>
+                <th style={stickyHeaderCellStyle('#bbdefb', HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>검출관리<br/>개선</th>
+                <th style={stickyHeaderCellStyle('#bbdefb', HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>책임자<br/>성명</th>
+                <th style={stickyHeaderCellStyle('#bbdefb', HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>목표완료<br/>일자</th>
+                <th style={stickyHeaderCellStyle('#ffccbc', HEADER_ROW_H * 2, '#000', 58, '8px', 700)}>상태</th>
+                <th style={stickyHeaderCellStyle('#ffccbc', HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>개선결과<br/>근거</th>
+                <th style={stickyHeaderCellStyle('#ffccbc', HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>완료<br/>일자</th>
+                <th style={stickyHeaderCellStyle('#c8e6c9', HEADER_ROW_H * 2, '#000', 58, '8px', 700)}>심각<br/>도</th>
+                <th style={stickyHeaderCellStyle('#c8e6c9', HEADER_ROW_H * 2, '#000', 58, '8px', 700)}>발생<br/>도</th>
+                <th style={stickyHeaderCellStyle('#c8e6c9', HEADER_ROW_H * 2, '#000', 58, '8px', 700)}>검출<br/>도</th>
+                <th style={stickyHeaderCellStyle('#c8e6c9', HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>특별<br/>특성</th>
+                <th style={stickyHeaderCellStyle('#c8e6c9', HEADER_ROW_H * 2, '#000', 58, '8px', 700)}>AP</th>
+                <th style={stickyHeaderCellStyle('#c8e6c9', HEADER_ROW_H * 2, '#000', 58, '8px', 700)}>RPN</th>
+                <th style={stickyHeaderCellStyle('#c8e6c9', HEADER_ROW_H * 2, '#000', 58, '8px', 700)}>비고</th>
+                <th style={stickyHeaderCellStyle('#c8e6c9', HEADER_ROW_H * 2, '#000', 58, '8px', 700)}></th>
               </>
             )}
           </tr>
