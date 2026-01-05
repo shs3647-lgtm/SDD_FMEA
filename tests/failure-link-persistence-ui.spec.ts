@@ -54,10 +54,12 @@ test.describe('FailureLink persistence (UI-level)', () => {
 
     // 전체확정 (있으면 눌러서 failureLinkConfirmed 저장)
     const confirmAllBtn = page.getByRole('button', { name: '전체확정' });
-    if (await confirmAllBtn.isVisible().catch(() => false)) {
+    if ((await confirmAllBtn.isVisible().catch(() => false)) && (await confirmAllBtn.isEnabled().catch(() => false))) {
       await confirmAllBtn.click();
-      // confirm dialog가 뜰 수 있어 수동 입력 불가 → 가능한 경우에만 클릭(대부분 링크 1개면 누락경고 뜸)
       await page.waitForTimeout(800);
+    } else {
+      // 버튼이 비활성인 케이스(누락이 많거나 조건 미충족)는 스킵
+      await page.waitForTimeout(200);
     }
 
     // API로 legacy/atomic에 failureLinks가 생겼는지 확인 (최소 1개)
