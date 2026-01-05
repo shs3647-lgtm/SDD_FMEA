@@ -381,30 +381,6 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     setTimeout(drawLines, 50);
   }, [currentFMId, feData, savedLinks, setState, setDirty, saveToLocalStorage, saveAtomicDB, drawLines]);
 
-  // ========== 현재 FM 연결 해제 ==========
-  const unlinkCurrentFM = useCallback(() => {
-    if (!currentFMId) {
-      alert('⚠️ 고장형태(FM)를 먼저 선택해주세요.');
-      return;
-    }
-    const before = savedLinks.length;
-    const filtered = savedLinks.filter(l => l.fmId !== currentFMId);
-    if (filtered.length === before) {
-      alert('⚠️ 현재 FM에 저장된 연결이 없습니다.');
-      return;
-    }
-    setSavedLinks(filtered);
-    setLinkedFEs(new Map());
-    setLinkedFCs(new Map());
-    setState((prev: any) => ({ ...prev, failureLinks: filtered }));
-    setDirty(true);
-    requestAnimationFrame(() => {
-      saveToLocalStorage?.();
-      saveAtomicDB?.();
-    });
-    alert('✅ 현재 FM의 연결이 모두 해제되었습니다.');
-  }, [currentFMId, savedLinks, setState, setDirty, saveToLocalStorage, saveAtomicDB]);
-
   // ========== viewMode 변경 시 화살표 다시 그리기 ==========
   useEffect(() => {
     if (viewMode === 'diagram') {
