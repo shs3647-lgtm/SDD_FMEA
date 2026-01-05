@@ -47,6 +47,7 @@ interface AllViewRow {
   optResponsible: string | null;
   optTargetDate: string | null;
   optStatus: string | null;
+  optRemarks: string | null;
   linkId: string;
   fmId: string;
   feId: string;
@@ -569,7 +570,7 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
                     <td style={cellStyle('#fff', 'center')}></td>
                     <td style={cellStyle('#fff', 'center')}></td>
                     <td style={cellStyle('#fff', 'center')}></td>
-                    <td style={cellStyle('#fff', 'center')}></td>
+                    <td style={cellStyle('#fff', 'center')}>{r.optRemarks || ''}</td>
                   </>
                 )}
               </tr>
