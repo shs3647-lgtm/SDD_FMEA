@@ -234,12 +234,7 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
       {/* 통계 정보 */}
       {stats && (
         <div style={{ padding: '8px 16px', background: '#f5f5f5', borderBottom: '1px solid #ddd', fontSize: 12 }}>
-          <span style={{ marginRight: 16 }}>📊 원자성 DB 기반</span>
-          <span style={{ marginRight: 16 }}>공정: {stats.processCount}개</span>
-          <span style={{ marginRight: 16 }}>고장형태: {stats.fmCount}개</span>
-          <span style={{ marginRight: 16 }}>고장영향: {stats.feCount}개</span>
-          <span style={{ marginRight: 16 }}>고장원인: {stats.fcCount}개</span>
-          <span style={{ marginRight: 16 }}>연결: {stats.totalLinks}개</span>
+          <span>공정: {stats.processCount}, FM: {stats.fmCount}, FE: {stats.feCount}, FC: {stats.fcCount}</span>
         </div>
       )}
       
