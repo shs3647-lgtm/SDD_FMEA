@@ -293,7 +293,7 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
               <col style={{ width: '80px' }} />
             </>
           )}
-          {/* 최적화 14열 */}
+          {/* 최적화 15열 */}
           {visibleSteps.includes(6) && (
             <>
               <col style={{ width: '70px' }} />
@@ -309,6 +309,7 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
               <col style={{ width: '40px' }} />
               <col style={{ width: '25px' }} />
               <col style={{ width: '30px' }} />
+              <col style={{ width: '50px' }} />
               <col style={{ width: '50px' }} />
             </>
           )}
@@ -358,7 +359,7 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
             )}
             {visibleSteps.includes(6) && (
               <th 
-                colSpan={14} 
+                colSpan={15} 
                 style={{ ...stickyHeaderCellStyle(COLORS.opt.main, 0, '#fff', 60), cursor: 'pointer', fontSize: '11px', fontWeight: 800 }}
                 onClick={() => handleStepToggle(6)}
                 title="6단계 클릭하여 숨기기/보이기"
@@ -402,7 +403,7 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
               <>
                 <th colSpan={4} style={stickyHeaderCellStyle(COLORS.opt.main, HEADER_ROW_H, '#fff', 59, '10px', 600)}>계획</th>
                 <th colSpan={3} style={stickyHeaderCellStyle(COLORS.opt.main, HEADER_ROW_H, '#fff', 59, '10px', 600)}>결과 모니터링</th>
-                <th colSpan={7} style={stickyHeaderCellStyle(COLORS.opt.main, HEADER_ROW_H, '#fff', 59, '10px', 600)}>효과 평가</th>
+                <th colSpan={8} style={stickyHeaderCellStyle(COLORS.opt.main, HEADER_ROW_H, '#fff', 59, '10px', 600)}>효과 평가</th>
               </>
             )}
           </tr>
@@ -467,6 +468,7 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
                 <th style={stickyHeaderCellStyle('#c8e6c9', HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>AP</th>
                 <th style={stickyHeaderCellStyle('#c8e6c9', HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>RPN</th>
                 <th style={stickyHeaderCellStyle('#c8e6c9', HEADER_ROW_H * 2, '#000', 58, '10px', 600)}>비고</th>
+                <th style={stickyHeaderCellStyle('#c8e6c9', HEADER_ROW_H * 2, '#000', 58, '10px', 600)}></th>
               </>
             )}
           </tr>
