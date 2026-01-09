@@ -508,12 +508,12 @@ function PFMEARegisterPageContent() {
                 <input type="text" name="fmea-location-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.engineeringLocation} onChange={(e) => updateField('engineeringLocation', e.target.value)}
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="지리적 위치" />
               </td>
-              <td className={headerCell}>시작 일자</td>
+              <td className={`${headerCell} whitespace-nowrap`}>시작 일자</td>
               <td className={`${inputCell}`}>
                 <input type="date" name="fmea-start-date-x1" autoComplete="new-password" value={fmeaInfo.fmeaStartDate} onChange={(e) => updateField('fmeaStartDate', e.target.value)}
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none" />
               </td>
-              <td className={headerCell}>공정 책임</td>
+              <td className={`${headerCell} whitespace-nowrap`}>공정 책임</td>
               <td className={`${inputCell}`} colSpan={3}>
                 <div className="flex items-center gap-2">
                   <input type="text" name="fmea-dept-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.designResponsibility} onChange={(e) => updateField('designResponsibility', e.target.value)}
@@ -535,12 +535,12 @@ function PFMEARegisterPageContent() {
                   <button onClick={() => setBizInfoModalOpen(true)} className="text-blue-500 hover:text-blue-700" title="고객정보 검색">🔍</button>
                 </div>
               </td>
-              <td className={headerCell}>개정 일자</td>
+              <td className={`${headerCell} whitespace-nowrap`}>개정 일자</td>
               <td className={`${inputCell}`}>
                 <input type="date" name="fmea-revision-date-x1" autoComplete="new-password" value={fmeaInfo.fmeaRevisionDate} onChange={(e) => updateField('fmeaRevisionDate', e.target.value)}
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none" />
               </td>
-              <td className={headerCell}>기밀유지 수준</td>
+              <td className={`${headerCell} whitespace-nowrap`}>기밀유지 수준</td>
               <td className={`${inputCell}`} colSpan={3}>
                 <select value={fmeaInfo.confidentialityLevel} onChange={(e) => updateField('confidentialityLevel', e.target.value)}
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none text-gray-600">
@@ -559,7 +559,7 @@ function PFMEARegisterPageContent() {
                 <input type="text" name="fmea-model-year-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.modelYear} onChange={(e) => updateField('modelYear', e.target.value)}
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="고객 어플리케이션 또는 회사 모델/스타일" />
               </td>
-              <td className={headerCell}>FMEA 유형</td>
+              <td className={`${headerCell} whitespace-nowrap`}>FMEA 유형</td>
               <td className={`${inputCell}`}>
                 <select 
                   value={fmeaInfo.fmeaType} 
@@ -576,7 +576,7 @@ function PFMEARegisterPageContent() {
                   <option value="P">P - Part FMEA</option>
                 </select>
               </td>
-              <td className={headerCell}>상호기능팀</td>
+              <td className={`${headerCell} whitespace-nowrap`}>상호기능팀</td>
               <td className={`${inputCell}`} colSpan={3}>
                 {cftNames ? (
                   <span className="text-xs text-gray-700 px-2">{cftNames}</span>
