@@ -7,6 +7,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { WorksheetState } from '../constants';
 import { btnConfirm, btnEdit, badgeConfirmed, badgeOk, badgeMissing } from '@/styles/worksheet';
 
@@ -67,6 +68,7 @@ export default function OptTabConfirmable({
   saveToLocalStorage,
   saveAtomicDB 
 }: OptTabProps) {
+  const router = useRouter();
   
   // 확정 상태
   const isConfirmed = (state as any).optConfirmed || false;
@@ -161,8 +163,23 @@ export default function OptTabConfirmable({
       console.log('[OptTab] 확정 후 localStorage + DB 저장 완료');
     }, 50);
     
-    alert('✅ 6단계 최적화가 확정되었습니다.');
-  }, [isUpstreamConfirmed, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
+    // 🚀 FMEA 완성 후 승인 확인
+    setTimeout(() => {
+      const fmeaId = state.fmeaId || '';
+      if (confirm('🎉 FMEA 작성이 완료되었습니다!\n\nFMEA를 승인하시겠습니까?\n\n[확인] → 개정관리 화면으로 이동\n[취소] → 현재 화면 유지')) {
+        console.log('[OptTab] FMEA 승인 → 개정관리 화면 이동');
+        router.push(`/pfmea/revision?id=${fmeaId}`);
+      }
+    }, 200);
+  }, [isUpstreamConfirmed, state.fmeaId, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB, router]);
+  
+  // 승인 버튼 클릭 핸들러 (개정관리 화면 이동)
+  const handleApproval = useCallback(() => {
+    const fmeaId = state.fmeaId || '';
+    if (confirm('🔏 FMEA 승인 프로세스를 시작합니다.\n\n개정관리 화면으로 이동하시겠습니까?')) {
+      router.push(`/pfmea/revision?id=${fmeaId}`);
+    }
+  }, [state.fmeaId, router]);
   
   // 수정 핸들러
   const handleEdit = useCallback(() => {
@@ -191,7 +208,17 @@ export default function OptTabConfirmable({
               <span className="flex-1 text-center">P-FMEA 최적화(6단계)</span>
               <div className="flex gap-1 absolute right-2">
                 {isConfirmed ? (
-                  <span className={badgeConfirmed}>✓ 확정됨</span>
+                  <>
+                    <span className={badgeConfirmed}>✓ 확정됨</span>
+                    <button 
+                      type="button" 
+                      onClick={handleApproval} 
+                      className="px-2 py-0.5 text-xs font-bold bg-green-500 text-white rounded border border-green-600 hover:bg-green-600 flex items-center gap-1"
+                      title="개정관리 화면으로 이동하여 FMEA 승인"
+                    >
+                      📋 승인
+                    </button>
+                  </>
                 ) : (
                   <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
                 )}

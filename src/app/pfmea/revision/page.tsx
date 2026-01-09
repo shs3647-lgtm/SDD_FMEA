@@ -9,6 +9,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { BizInfoSelectModal } from '@/components/modals/BizInfoSelectModal';
 import { MeetingMinutesTable } from '@/components/tables/MeetingMinutesTable';
 import { BizInfoProject } from '@/types/bizinfo';
@@ -51,24 +52,39 @@ interface RevisionRecord {
 }
 
 // =====================================================
-// 초기 개정 이력 생성
+// FMEA 등록정보 타입
 // =====================================================
-const createDefaultRevisions = (projectId: string): RevisionRecord[] => 
+interface FMEAInfoData {
+  fmeaResponsibleName?: string;
+  fmeaResponsiblePosition?: string;
+  reviewResponsibleName?: string;
+  reviewResponsiblePosition?: string;
+  approvalResponsibleName?: string;
+  approvalResponsiblePosition?: string;
+}
+
+// =====================================================
+// 초기 개정 이력 생성 (FMEA 등록정보 자동 반영)
+// =====================================================
+const createDefaultRevisions = (projectId: string, fmeaInfo?: FMEAInfoData | null): RevisionRecord[] => 
   Array.from({ length: 10 }, (_, index) => ({
     id: `REV-${projectId}-${index}`,
     projectId: projectId,
     revisionNumber: `Rev.${index.toString().padStart(2, '0')}`,
     revisionHistory: index === 0 ? '신규 프로젝트 등록' : '',
-    createPosition: '',
-    createName: '',
+    // 작성 (FMEA 등록정보에서 자동 채움)
+    createPosition: index === 0 ? (fmeaInfo?.fmeaResponsiblePosition || '') : '',
+    createName: index === 0 ? (fmeaInfo?.fmeaResponsibleName || '') : '',
     createDate: index === 0 ? new Date().toISOString().split('T')[0] : '',
     createStatus: index === 0 ? '진행' : '',
-    reviewPosition: '',
-    reviewName: '',
+    // 검토 (FMEA 등록정보에서 자동 채움)
+    reviewPosition: index === 0 ? (fmeaInfo?.reviewResponsiblePosition || '') : '',
+    reviewName: index === 0 ? (fmeaInfo?.reviewResponsibleName || '') : '',
     reviewDate: '',
     reviewStatus: '',
-    approvePosition: '',
-    approveName: '',
+    // 승인 (FMEA 등록정보에서 자동 채움)
+    approvePosition: index === 0 ? (fmeaInfo?.approvalResponsiblePosition || '') : '',
+    approveName: index === 0 ? (fmeaInfo?.approvalResponsibleName || '') : '',
     approveDate: '',
     approveStatus: '',
   }));
@@ -77,9 +93,12 @@ const createDefaultRevisions = (projectId: string): RevisionRecord[] =>
 // 메인 컴포넌트
 // =====================================================
 export default function RevisionManagementPage() {
+  const searchParams = useSearchParams();
+  const idFromUrl = searchParams.get('id') || '';
+  
   // 프로젝트 상태
   const [projectList, setProjectList] = useState<FMEAProject[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(idFromUrl);
   const [searchQuery, setSearchQuery] = useState('');
 
   // 개정 데이터
@@ -105,6 +124,76 @@ export default function RevisionManagementPage() {
     productName: '',
     partNo: '',
   });
+
+  // FMEA 등록정보에서 작성자 정보 자동 채우기
+  const [fmeaInfo, setFmeaInfo] = useState<{
+    fmeaResponsibleName?: string;
+    fmeaResponsiblePosition?: string;
+    reviewResponsibleName?: string;
+    reviewResponsiblePosition?: string;
+    approvalResponsibleName?: string;
+    approvalResponsiblePosition?: string;
+  } | null>(null);
+
+  // URL 파라미터로 전달된 FMEA ID 처리
+  useEffect(() => {
+    if (idFromUrl && idFromUrl !== selectedProjectId) {
+      setSelectedProjectId(idFromUrl);
+    }
+  }, [idFromUrl, selectedProjectId]);
+
+  // FMEA 등록정보 로드 (작성자 정보 자동 채움)
+  useEffect(() => {
+    if (!selectedProjectId) return;
+    
+    const loadFmeaInfo = async () => {
+      try {
+        // DB에서 FMEA Info 조회
+        const response = await fetch(`/api/fmea/info?fmeaId=${selectedProjectId}`);
+        const result = await response.json();
+        
+        if (result.success && result.fmeaInfo) {
+          console.log('✅ [개정관리] FMEA 등록정보 로드:', result.fmeaInfo);
+          setFmeaInfo(result.fmeaInfo);
+          
+          // 프로젝트 정보도 업데이트
+          setSelectedInfo(prev => ({
+            ...prev,
+            customer: result.fmeaInfo.customer || prev.customer,
+            projectName: result.fmeaInfo.subject || prev.projectName,
+            productName: result.fmeaInfo.subject || prev.productName,
+          }));
+          
+          // 🚀 Rev.00에 FMEA 등록정보 자동 반영
+          setRevisions(prev => {
+            const rev00 = prev.find(r => r.revisionNumber === 'Rev.00');
+            if (rev00 && !rev00.createName) {
+              // 작성자 정보가 비어있으면 자동 채움
+              return prev.map(r => {
+                if (r.revisionNumber === 'Rev.00') {
+                  return {
+                    ...r,
+                    createPosition: result.fmeaInfo.fmeaResponsiblePosition || r.createPosition,
+                    createName: result.fmeaInfo.fmeaResponsibleName || r.createName,
+                    reviewPosition: result.fmeaInfo.reviewResponsiblePosition || r.reviewPosition,
+                    reviewName: result.fmeaInfo.reviewResponsibleName || r.reviewName,
+                    approvePosition: result.fmeaInfo.approvalResponsiblePosition || r.approvePosition,
+                    approveName: result.fmeaInfo.approvalResponsibleName || r.approveName,
+                  };
+                }
+                return r;
+              });
+            }
+            return prev;
+          });
+        }
+      } catch (error) {
+        console.warn('⚠️ [개정관리] FMEA 등록정보 로드 실패:', error);
+      }
+    };
+    
+    loadFmeaInfo();
+  }, [selectedProjectId]);
 
   // 프로젝트 목록 로드 (DB API 우선)
   useEffect(() => {
@@ -150,7 +239,7 @@ export default function RevisionManagementPage() {
   // 선택된 프로젝트의 개정 이력 로드 (DB API 우선)
   useEffect(() => {
     if (!selectedProjectId) {
-      setRevisions(createDefaultRevisions(''));
+      setRevisions(createDefaultRevisions('', null));
       return;
     }
 
@@ -177,7 +266,7 @@ export default function RevisionManagementPage() {
         let projectRevisions = allRevisions.filter((r: RevisionRecord) => r.projectId === selectedProjectId);
 
         if (projectRevisions.length === 0) {
-          projectRevisions = createDefaultRevisions(selectedProjectId);
+          projectRevisions = createDefaultRevisions(selectedProjectId, fmeaInfo);
           localStorage.setItem('fmea-revisions', JSON.stringify([...allRevisions, ...projectRevisions]));
         }
 
