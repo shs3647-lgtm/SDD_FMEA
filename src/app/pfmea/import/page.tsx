@@ -291,9 +291,11 @@ function PFMEAImportPageContent() {
     setPendingData,
     setFlatData,
     setIsImporting,
+    setMasterDatasetId,
     flatData,
     pendingData,
     parseMultiSheetExcel,
+    saveToMaster: true, // ✅ Master FMEA에 자동 저장
   });
 
   return (

@@ -5,6 +5,7 @@
 
 import { ParseResult } from '../excel-parser';
 import { ImportedFlatData } from '../types';
+import { saveMasterDataset } from '../utils/master-api';
 
 interface UseImportFileHandlersProps {
   setFileName: (name: string) => void;
@@ -14,9 +15,11 @@ interface UseImportFileHandlersProps {
   setPendingData: React.Dispatch<React.SetStateAction<ImportedFlatData[]>>;
   setFlatData: React.Dispatch<React.SetStateAction<ImportedFlatData[]>>;
   setIsImporting: (importing: boolean) => void;
+  setMasterDatasetId?: (id: string | null) => void;
   flatData: ImportedFlatData[];
   pendingData: ImportedFlatData[];
   parseMultiSheetExcel: (file: File) => Promise<ParseResult>;
+  saveToMaster?: boolean; // Master FMEA에 자동 저장 여부
 }
 
 export function useImportFileHandlers({
@@ -27,9 +30,11 @@ export function useImportFileHandlers({
   setPendingData,
   setFlatData,
   setIsImporting,
+  setMasterDatasetId,
   flatData,
   pendingData,
   parseMultiSheetExcel,
+  saveToMaster = true, // 기본값: Master FMEA에 저장
 }: UseImportFileHandlersProps) {
   
   /** 파일 선택 핸들러 (파싱 후 pendingData에 저장) */
@@ -114,9 +119,39 @@ export function useImportFileHandlers({
 
       setFlatData(mergedData);
       setPendingData([]);
-      setImportSuccess(true);
 
-      console.log(`Import 완료: 추가 ${addedCount}건, 업데이트 ${updatedCount}건`);
+      // ✅ Master FMEA에 자동 저장
+      if (saveToMaster) {
+        console.log('📦 Master FMEA에 저장 중...');
+        
+        // 1. localStorage에 저장 (폴백)
+        localStorage.setItem('pfmea_master_data', JSON.stringify(mergedData));
+        localStorage.setItem('pfmea_saved_at', new Date().toISOString());
+        
+        // 2. DB에 저장 (Master Dataset)
+        try {
+          const res = await saveMasterDataset({
+            name: 'MASTER',
+            setActive: true,
+            replace: true,
+            flatData: mergedData,
+          });
+          
+          if (res.ok) {
+            console.log('✅ Master FMEA DB 저장 완료:', res.datasetId);
+            if (setMasterDatasetId && res.datasetId) {
+              setMasterDatasetId(res.datasetId);
+            }
+          } else {
+            console.warn('⚠️ Master FMEA DB 저장 실패 (localStorage 유지)');
+          }
+        } catch (dbError) {
+          console.warn('⚠️ Master FMEA DB 저장 오류:', dbError);
+        }
+      }
+
+      setImportSuccess(true);
+      console.log(`✅ Import 완료: 추가 ${addedCount}건, 업데이트 ${updatedCount}건`);
       
       setTimeout(() => setImportSuccess(false), 3000);
     } catch (error) {
