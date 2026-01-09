@@ -106,71 +106,114 @@ export default function RevisionManagementPage() {
     partNo: '',
   });
 
-  // 프로젝트 목록 로드
+  // 프로젝트 목록 로드 (DB API 우선)
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('fmea-projects');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          setProjectList(parsed);
-          if (parsed.length > 0 && !selectedProjectId) {
-            setSelectedProjectId(parsed[0].id);
+    const loadProjects = async () => {
+      try {
+        // 1. DB에서 프로젝트 목록 조회
+        const response = await fetch('/api/fmea/projects');
+        const result = await response.json();
+        
+        if (result.success && result.projects.length > 0) {
+          console.log('✅ [개정관리] DB에서 FMEA 목록 로드:', result.projects.length, '건');
+          setProjectList(result.projects);
+          if (result.projects.length > 0 && !selectedProjectId) {
+            setSelectedProjectId(result.projects[0].id);
+          }
+          return;
+        }
+      } catch (error) {
+        console.warn('⚠️ [개정관리] DB API 호출 실패, localStorage 폴백:', error);
+      }
+      
+      // 2. localStorage 폴백
+      try {
+        const stored = localStorage.getItem('fmea-projects') || localStorage.getItem('pfmea-projects');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            console.log('📦 [개정관리] localStorage에서 FMEA 목록 로드:', parsed.length, '건');
+            setProjectList(parsed);
+            if (parsed.length > 0 && !selectedProjectId) {
+              setSelectedProjectId(parsed[0].id);
+            }
           }
         }
+      } catch (error) {
+        console.error('❌ 프로젝트 목록 로드 실패:', error);
       }
-    } catch (error) {
-      console.error('❌ 프로젝트 목록 로드 실패:', error);
-    }
+    };
+    
+    loadProjects();
   }, [selectedProjectId]);
 
-  // 선택된 프로젝트의 개정 이력 로드
+  // 선택된 프로젝트의 개정 이력 로드 (DB API 우선)
   useEffect(() => {
     if (!selectedProjectId) {
       setRevisions(createDefaultRevisions(''));
       return;
     }
 
-    try {
-      const allRevisions = JSON.parse(localStorage.getItem('fmea-revisions') || '[]');
-      let projectRevisions = allRevisions.filter((r: RevisionRecord) => r.projectId === selectedProjectId);
-
-      if (projectRevisions.length === 0) {
-        projectRevisions = createDefaultRevisions(selectedProjectId);
-        // 저장
-        localStorage.setItem('fmea-revisions', JSON.stringify([...allRevisions, ...projectRevisions]));
+    const loadRevisions = async () => {
+      try {
+        // 1. DB에서 개정 이력 조회
+        const response = await fetch(`/api/fmea/revisions?projectId=${selectedProjectId}`);
+        const result = await response.json();
+        
+        if (result.success && result.revisions.length > 0) {
+          console.log('✅ [개정관리] DB에서 개정 이력 로드:', result.revisions.length, '건');
+          setRevisions(result.revisions.sort((a: RevisionRecord, b: RevisionRecord) => 
+            a.revisionNumber.localeCompare(b.revisionNumber)
+          ));
+          return;
+        }
+      } catch (error) {
+        console.warn('⚠️ [개정관리] DB API 호출 실패, localStorage 폴백:', error);
       }
+      
+      // 2. localStorage 폴백
+      try {
+        const allRevisions = JSON.parse(localStorage.getItem('fmea-revisions') || '[]');
+        let projectRevisions = allRevisions.filter((r: RevisionRecord) => r.projectId === selectedProjectId);
 
-      // 최소 5개 행 보장
-      while (projectRevisions.length < 5) {
-        const nextNumber = projectRevisions.length.toString().padStart(2, '0');
-        projectRevisions.push({
-          id: `REV-${selectedProjectId}-${Date.now()}-${projectRevisions.length}`,
-          projectId: selectedProjectId,
-          revisionNumber: `Rev.${nextNumber}`,
-          revisionHistory: '',
-          createPosition: '',
-          createName: '',
-          createDate: '',
-          createStatus: '',
-          reviewPosition: '',
-          reviewName: '',
-          reviewDate: '',
-          reviewStatus: '',
-          approvePosition: '',
-          approveName: '',
-          approveDate: '',
-          approveStatus: '',
-        });
+        if (projectRevisions.length === 0) {
+          projectRevisions = createDefaultRevisions(selectedProjectId);
+          localStorage.setItem('fmea-revisions', JSON.stringify([...allRevisions, ...projectRevisions]));
+        }
+
+        // 최소 5개 행 보장
+        while (projectRevisions.length < 5) {
+          const nextNumber = projectRevisions.length.toString().padStart(2, '0');
+          projectRevisions.push({
+            id: `REV-${selectedProjectId}-${Date.now()}-${projectRevisions.length}`,
+            projectId: selectedProjectId,
+            revisionNumber: `Rev.${nextNumber}`,
+            revisionHistory: '',
+            createPosition: '',
+            createName: '',
+            createDate: '',
+            createStatus: '',
+            reviewPosition: '',
+            reviewName: '',
+            reviewDate: '',
+            reviewStatus: '',
+            approvePosition: '',
+            approveName: '',
+            approveDate: '',
+            approveStatus: '',
+          });
+        }
+
+        setRevisions(projectRevisions.sort((a: RevisionRecord, b: RevisionRecord) => 
+          a.revisionNumber.localeCompare(b.revisionNumber)
+        ));
+      } catch (error) {
+        console.error('❌ 개정 이력 로드 실패:', error);
+        setRevisions(createDefaultRevisions(selectedProjectId));
       }
-
-      setRevisions(projectRevisions.sort((a: RevisionRecord, b: RevisionRecord) => 
-        a.revisionNumber.localeCompare(b.revisionNumber)
-      ));
-    } catch (error) {
-      console.error('❌ 개정 이력 로드 실패:', error);
-      setRevisions(createDefaultRevisions(selectedProjectId));
-    }
+    };
+    
+    loadRevisions();
   }, [selectedProjectId]);
 
   // 기초정보 선택 처리
@@ -211,13 +254,33 @@ export default function RevisionManagementPage() {
     setRevisions(updated);
   };
 
-  // 저장
-  const handleSave = () => {
+  // 저장 (DB API 우선 + localStorage 폴백)
+  const handleSave = async () => {
     if (!selectedProjectId) {
       alert('프로젝트를 선택해주세요.');
       return;
     }
 
+    try {
+      // 1. DB에 저장 시도
+      const response = await fetch('/api/fmea/revisions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: selectedProjectId, revisions })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('✅ [개정관리] DB 저장 완료:', result.savedCount, '건');
+      } else {
+        console.warn('⚠️ [개정관리] DB 저장 실패, localStorage 폴백');
+      }
+    } catch (error) {
+      console.warn('⚠️ [개정관리] DB API 호출 실패, localStorage 폴백:', error);
+    }
+    
+    // 2. localStorage에도 저장 (폴백 & 동기화)
     try {
       const allRevisions = JSON.parse(localStorage.getItem('fmea-revisions') || '[]');
       const otherRevisions = allRevisions.filter((r: RevisionRecord) => r.projectId !== selectedProjectId);
