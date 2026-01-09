@@ -90,7 +90,7 @@ const createSubItems = (basePath: string) => [
   { label: '개정관리', href: `${basePath}/revision` },
 ];
 
-// PFMEA 전용 하위 메뉴 (New FMEA + FMEA4판 추가)
+// PFMEA 전용 하위 메뉴 (등록화면에 CFT 포함)
 const pfmeaSubItems = [
   { label: '등록', href: '/pfmea/register' },
   { label: '리스트', href: '/pfmea/list' },
@@ -172,7 +172,7 @@ const menuItems = [
   },
 ];
 
-// 하단 메뉴
+// 하단 메뉴 (기초정보 - 개발 완료된 화면만 연결)
 const bottomMenuItems = [
   {
     id: 'master',
@@ -183,8 +183,7 @@ const bottomMenuItems = [
       { label: '고객사정보', href: '/master/customer' },
       { label: '사용자정보', href: '/master/user' },
       { label: 'PFMEA 임포트', href: '/pfmea/import' },
-      { label: 'DFMEA 임포트', href: '/master/dfmea-import' },
-      { label: 'CP 임포트', href: '/master/cp-import' },
+      { label: 'DFMEA 임포트', href: '/dfmea/import' },
     ],
   },
 ];
