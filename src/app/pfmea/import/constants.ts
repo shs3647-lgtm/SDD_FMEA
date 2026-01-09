@@ -6,22 +6,23 @@
 import { ImportedFlatData } from './types';
 
 // 드롭다운 항목 (L2: 공정/고장형태, L3: 작업요소/고장원인, L1: 완제품/고장영향)
+// value는 기존 A1/B1/C1 형식 유지 (내부 로직 호환), label은 L2-1/L3-1/L1-1 형식
 export const PREVIEW_OPTIONS = [
-  { value: 'A1', label: 'L2-1 공정번호' },
-  { value: 'A2', label: 'L2-2 공정명' },
-  { value: 'A3', label: 'L2-3 공정기능' },
-  { value: 'A4', label: 'L2-4 제품특성' },
-  { value: 'A5', label: 'L2-5 고장형태' },
-  { value: 'A6', label: 'L2-6 검출관리' },
-  { value: 'B1', label: 'L3-1 작업요소' },
-  { value: 'B2', label: 'L3-2 요소기능' },
-  { value: 'B3', label: 'L3-3 공정특성' },
-  { value: 'B4', label: 'L3-4 고장원인' },
-  { value: 'B5', label: 'L3-5 예방관리' },
-  { value: 'C1', label: 'L1-1 구분' },
-  { value: 'C2', label: 'L1-2 제품기능' },
-  { value: 'C3', label: 'L1-3 요구사항' },
-  { value: 'C4', label: 'L1-4 고장영향' },
+  { value: 'A1', label: 'L2-1 공정번호', sheetName: 'L2-1 공정번호' },
+  { value: 'A2', label: 'L2-2 공정명', sheetName: 'L2-1 공정번호' },  // A1 시트에 포함
+  { value: 'A3', label: 'L2-3 공정기능', sheetName: 'L2-3 공정기능' },
+  { value: 'A4', label: 'L2-4 제품특성', sheetName: 'L2-4 제품특성' },
+  { value: 'A5', label: 'L2-5 고장형태', sheetName: 'L2-5 고장형태' },
+  { value: 'A6', label: 'L2-6 검출관리', sheetName: 'L2-6 검출관리' },
+  { value: 'B1', label: 'L3-1 작업요소', sheetName: 'L3-1 작업요소' },
+  { value: 'B2', label: 'L3-2 요소기능', sheetName: 'L3-2 요소기능' },
+  { value: 'B3', label: 'L3-3 공정특성', sheetName: 'L3-3 공정특성' },
+  { value: 'B4', label: 'L3-4 고장원인', sheetName: 'L3-4 고장원인' },
+  { value: 'B5', label: 'L3-5 예방관리', sheetName: 'L3-5 예방관리' },
+  { value: 'C1', label: 'L1-1 구분', sheetName: 'L1-1 구분' },
+  { value: 'C2', label: 'L1-2 제품기능', sheetName: 'L1-2 제품기능' },
+  { value: 'C3', label: 'L1-3 요구사항', sheetName: 'L1-3 요구사항' },
+  { value: 'C4', label: 'L1-4 고장영향', sheetName: 'L1-4 고장영향' },
 ];
 
 // 테이블 디자인 표준

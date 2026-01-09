@@ -18,20 +18,20 @@ import ExcelJS from 'exceljs';
 const HEADER_COLOR = '00587A';  // 디자인 표준 네이비 색상
 
 const SHEET_DEFINITIONS = [
-  { name: 'A1', headers: ['A1.공정번호', 'A2.공정명'], color: HEADER_COLOR, required: [true, true] },
-  { name: 'A3', headers: ['A1.공정번호', 'A3.공정기능(설명)'], color: HEADER_COLOR, required: [true, false] },
-  { name: 'A4', headers: ['A1.공정번호', 'A4.제품특성'], color: HEADER_COLOR, required: [true, false] },
-  { name: 'A5', headers: ['A1.공정번호', 'A5.고장형태'], color: HEADER_COLOR, required: [true, false] },
-  { name: 'A6', headers: ['A1.공정번호', 'A6.검출관리'], color: HEADER_COLOR, required: [true, false] },
-  { name: 'B1', headers: ['A1.공정번호', 'B1.작업요소(설비)'], color: HEADER_COLOR, required: [true, false] },
-  { name: 'B2', headers: ['A1.공정번호', 'B2.요소기능'], color: HEADER_COLOR, required: [true, false] },
-  { name: 'B3', headers: ['A1.공정번호', 'B3.공정특성'], color: HEADER_COLOR, required: [true, false] },
-  { name: 'B4', headers: ['A1.공정번호', 'B4.고장원인'], color: HEADER_COLOR, required: [true, false] },
-  { name: 'B5', headers: ['A1.공정번호', 'B5.예방관리'], color: HEADER_COLOR, required: [true, false] },
-  { name: 'C1', headers: ['C1.구분'], color: HEADER_COLOR, required: [true] },  // YOUR PLANT, SHIP TO PLANT, USER
-  { name: 'C2', headers: ['C1.구분', 'C2.제품(반)기능'], color: HEADER_COLOR, required: [true, false] },
-  { name: 'C3', headers: ['C1.구분', 'C3.제품(반)요구사항'], color: HEADER_COLOR, required: [true, false] },
-  { name: 'C4', headers: ['C1.구분', 'C4.고장영향'], color: HEADER_COLOR, required: [true, false] },
+  { name: 'L2-1 공정번호', headers: ['L2-1.공정번호', 'L2-2.공정명'], color: HEADER_COLOR, required: [true, true], legacyName: 'A1' },
+  { name: 'L2-3 공정기능', headers: ['L2-1.공정번호', 'L2-3.공정기능(설명)'], color: HEADER_COLOR, required: [true, false], legacyName: 'A3' },
+  { name: 'L2-4 제품특성', headers: ['L2-1.공정번호', 'L2-4.제품특성'], color: HEADER_COLOR, required: [true, false], legacyName: 'A4' },
+  { name: 'L2-5 고장형태', headers: ['L2-1.공정번호', 'L2-5.고장형태'], color: HEADER_COLOR, required: [true, false], legacyName: 'A5' },
+  { name: 'L2-6 검출관리', headers: ['L2-1.공정번호', 'L2-6.검출관리'], color: HEADER_COLOR, required: [true, false], legacyName: 'A6' },
+  { name: 'L3-1 작업요소', headers: ['L2-1.공정번호', 'L3-1.작업요소(설비)'], color: HEADER_COLOR, required: [true, false], legacyName: 'B1' },
+  { name: 'L3-2 요소기능', headers: ['L2-1.공정번호', 'L3-2.요소기능'], color: HEADER_COLOR, required: [true, false], legacyName: 'B2' },
+  { name: 'L3-3 공정특성', headers: ['L2-1.공정번호', 'L3-3.공정특성'], color: HEADER_COLOR, required: [true, false], legacyName: 'B3' },
+  { name: 'L3-4 고장원인', headers: ['L2-1.공정번호', 'L3-4.고장원인'], color: HEADER_COLOR, required: [true, false], legacyName: 'B4' },
+  { name: 'L3-5 예방관리', headers: ['L2-1.공정번호', 'L3-5.예방관리'], color: HEADER_COLOR, required: [true, false], legacyName: 'B5' },
+  { name: 'L1-1 구분', headers: ['L1-1.구분'], color: HEADER_COLOR, required: [true], legacyName: 'C1' },  // YOUR PLANT, SHIP TO PLANT, USER
+  { name: 'L1-2 제품기능', headers: ['L1-1.구분', 'L1-2.제품(반)기능'], color: HEADER_COLOR, required: [true, false], legacyName: 'C2' },
+  { name: 'L1-3 요구사항', headers: ['L1-1.구분', 'L1-3.제품(반)요구사항'], color: HEADER_COLOR, required: [true, false], legacyName: 'C3' },
+  { name: 'L1-4 고장영향', headers: ['L1-1.구분', 'L1-4.고장영향'], color: HEADER_COLOR, required: [true, false], legacyName: 'C4' },
 ];
 
 /** 공통 셀 스타일 적용 */
@@ -122,7 +122,7 @@ export async function downloadEmptyTemplate() {
 
 /** 샘플 데이터 (다중 시트용) - 타이어 제조 공정 기반 */
 const SAMPLE_DATA: Record<string, string[][]> = {
-  'A1': [
+  'L2-1 공정번호': [
     ['10', '자재입고'],
     ['20', '수입검사'],
     ['30', 'MB Mixing'],
@@ -136,7 +136,7 @@ const SAMPLE_DATA: Record<string, string[][]> = {
     ['110', '포장'],
     ['120', '출하'],
   ],
-  'A3': [
+  'L2-3 공정기능': [
     ['10', '입고된 원자재를 검수하여 지정된 창고로 입고'],
     ['20', '원부자재 샘플링 수입검사'],
     ['30', '컴파운드 종류에 맞는 마스터배치 조건에 따라 혼련'],
@@ -150,7 +150,7 @@ const SAMPLE_DATA: Record<string, string[][]> = {
     ['110', '완성품 포장'],
     ['120', '완성품 출하'],
   ],
-  'A4': [
+  'L2-4 제품특성': [
     ['10', '이물질'],
     ['10', '보관상태'],
     ['20', 'Mooney Viscosity'],
@@ -166,7 +166,7 @@ const SAMPLE_DATA: Record<string, string[][]> = {
     ['90', '가류도'],
     ['100', '외관'],
   ],
-  'A5': [
+  'L2-5 고장형태': [
     ['10', '이물입 오염'],
     ['10', '포장,제품 손상'],
     ['20', 'Mooney 불만족'],
@@ -180,7 +180,7 @@ const SAMPLE_DATA: Record<string, string[][]> = {
     ['90', '가류 불량'],
     ['100', '외관 불량'],
   ],
-  'A6': [
+  'L2-6 검출관리': [
     ['20', 'Mooney Viscometer'],
     ['20', '인장시험기'],
     ['30', 'Rheometer'],
@@ -192,7 +192,7 @@ const SAMPLE_DATA: Record<string, string[][]> = {
     ['90', '가류도 측정'],
     ['100', 'X-ray 검사'],
   ],
-  'B1': [
+  'L3-1 작업요소': [
     ['00', '셋업엔지니어'],
     ['00', '작업자'],
     ['00', '운반원'],
@@ -210,7 +210,7 @@ const SAMPLE_DATA: Record<string, string[][]> = {
     ['80', '비드 드럼'],
     ['90', '가류기'],
   ],
-  'B2': [
+  'L3-2 요소기능': [
     ['00', '설비 조건을 셋업하고 공정 파라미터를 설정하며 초기품을 승인한다'],
     ['00', '작업을 수행하고 기준서를 준수하며 생산품을 이송한다'],
     ['00', '자재 및 제품을 운반한다'],
@@ -224,7 +224,7 @@ const SAMPLE_DATA: Record<string, string[][]> = {
     ['80', '카카스 드럼 회전 및 반제품 부착'],
     ['90', '가열 가압'],
   ],
-  'B3': [
+  'L3-3 공정특성': [
     ['00', '설비 초기 조건 설정 정확도'],
     ['00', '표준작업방법 준수도'],
     ['30', '혼련 온도'],
@@ -238,7 +238,7 @@ const SAMPLE_DATA: Record<string, string[][]> = {
     ['90', '가류 온도'],
     ['90', '가류 시간'],
   ],
-  'B4': [
+  'L3-4 고장원인': [
     ['00', '작업 표준서 미숙지로 인한 절차 누락'],
     ['00', '과도한 작업속도로 인한 조립 불량'],
     ['00', '교육훈련 부족으로 인한 품질 이상'],
@@ -250,7 +250,7 @@ const SAMPLE_DATA: Record<string, string[][]> = {
     ['80', '작업지침서 미준수'],
     ['90', '온도 이탈'],
   ],
-  'B5': [
+  'L3-5 예방관리': [
     ['10', '입고품 점검 체크시트 운영'],
     ['20', '업체 성적서 검증'],
     ['30', '온도 모니터링'],
@@ -260,24 +260,24 @@ const SAMPLE_DATA: Record<string, string[][]> = {
     ['80', 'PDA 확인'],
     ['90', '온도 기록계'],
   ],
-  'C1': [
+  'L1-1 구분': [
     ['Your Plant'],
     ['Ship to Plant'],
     ['User'],
   ],
-  'C2': [
+  'L1-2 제품기능': [
     ['Your Plant', '규격에 맞는 재료 투입과 배합 일관성을 확보할 수 있도록 기능을 제공한다'],
     ['Your Plant', '설비 조건 및 작업 수행 정확도를 유지할 수 있도록 기능을 제공한다'],
     ['Ship to Plant', '완제품 품질 및 성능을 확보할 수 있도록 기능을 제공한다'],
     ['User', '차량 운행 시 안전성과 내구성을 확보한다'],
   ],
-  'C3': [
+  'L1-3 요구사항': [
     ['Your Plant', '이종고무, 코드 투입, 셋업실수'],
     ['Your Plant', '설비, 작업자 실수'],
     ['Ship to Plant', '완제품 품질 규격'],
     ['User', '안전 기준, 내구 기준'],
   ],
-  'C4': [
+  'L1-4 고장영향': [
     ['Your Plant', '이종 재료 혼입, 물성 불균일, 접착 불량으로 일부 폐기'],
     ['Your Plant', '공정 조건 이탈, 품질 불균일로 일부 재작업'],
     ['Ship to Plant', '완제품 성능 불량, 반품'],
