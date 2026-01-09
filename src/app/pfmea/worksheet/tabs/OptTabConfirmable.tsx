@@ -207,24 +207,33 @@ export default function OptTabConfirmable({
             <div className="flex items-center justify-between">
               <span className="flex-1 text-center">P-FMEA 최적화(6단계)</span>
               <div className="flex gap-1 absolute right-2">
+                {/* 확정/수정 버튼 */}
                 {isConfirmed ? (
-                  <>
-                    <span className={badgeConfirmed}>✓ 확정됨</span>
-                    <button 
-                      type="button" 
-                      onClick={handleApproval} 
-                      className="px-2 py-0.5 text-xs font-bold bg-green-500 text-white rounded border border-green-600 hover:bg-green-600 flex items-center gap-1"
-                      title="개정관리 화면으로 이동하여 FMEA 승인"
-                    >
-                      📋 승인
-                    </button>
-                  </>
+                  <span className={badgeConfirmed}>✓ 확정됨</span>
                 ) : (
                   <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
                 )}
                 {isConfirmed && (
                   <button type="button" onClick={handleEdit} className={btnEdit}>수정</button>
                 )}
+                
+                {/* 승인 버튼: 항상 표시, 6ST 확정 후 활성화 */}
+                <button 
+                  type="button" 
+                  onClick={isConfirmed ? handleApproval : undefined}
+                  disabled={!isConfirmed}
+                  className={`px-2 py-0.5 text-xs font-bold rounded border flex items-center gap-1 ${
+                    isConfirmed 
+                      ? 'bg-green-500 text-white border-green-600 hover:bg-green-600 cursor-pointer' 
+                      : 'bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed opacity-60'
+                  }`}
+                  title={isConfirmed 
+                    ? "개정관리 화면으로 이동하여 FMEA 승인" 
+                    : "6ST 확정 후 활성화됩니다"
+                  }
+                >
+                  📋 승인
+                </button>
               </div>
             </div>
           </th>
