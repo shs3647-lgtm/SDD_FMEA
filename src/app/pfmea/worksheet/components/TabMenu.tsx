@@ -9,7 +9,8 @@
 
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { WorksheetState, ANALYSIS_TABS } from '../constants';
 import StepToggleButtons from './StepToggleButtons';
 
@@ -25,12 +26,21 @@ interface TabMenuProps {
 }
 
 export default function TabMenu({ state, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB }: TabMenuProps) {
+  const router = useRouter();
   const structureConfirmed = (state as any).structureConfirmed || false;
   const failureLinks = (state as any).failureLinks || [];
   const failureLinkConfirmed = (state as any).failureLinkConfirmed || false;
   const hasFailureLinks = failureLinks.length > 0;
   const riskConfirmed = (state as any).riskConfirmed || false;
   const optConfirmed = (state as any).optConfirmed || false;
+  
+  // 승인 버튼 핸들러 (개정관리 화면 이동)
+  const handleApproval = useCallback(() => {
+    const fmeaId = state.fmeaId || '';
+    if (confirm('🔏 FMEA 승인 프로세스를 시작합니다.\n\n개정관리 화면으로 이동하시겠습니까?')) {
+      router.push(`/pfmea/revision?id=${fmeaId}`);
+    }
+  }, [state.fmeaId, router]);
   
   // 탭 활성화 조건
   const isTabEnabled = (tabId: string) => {
@@ -147,6 +157,25 @@ export default function TabMenu({ state, setState, setStateSynced, setDirty, sav
             `}
           >
             {optConfirmed ? '✓ 6ST확정' : '6ST확정'}
+          </button>
+          
+          {/* 🚀 승인 버튼: 항상 표시, 6ST 확정 후 활성화 */}
+          <button
+            onClick={optConfirmed ? handleApproval : undefined}
+            disabled={!optConfirmed}
+            className={`
+              px-2 py-1 text-[10px] sm:text-xs rounded whitespace-nowrap border flex items-center gap-1
+              ${optConfirmed 
+                ? 'bg-emerald-500 text-white border-emerald-400 hover:bg-emerald-400 cursor-pointer font-bold' 
+                : 'bg-gray-600 text-gray-400 border-gray-500 cursor-not-allowed opacity-60'
+              }
+            `}
+            title={optConfirmed 
+              ? '개정관리 화면으로 이동하여 FMEA 승인' 
+              : '6ST 확정 후 활성화됩니다'
+            }
+          >
+            📋 {optConfirmed ? '승인' : '승인'}
           </button>
         </div>
         
