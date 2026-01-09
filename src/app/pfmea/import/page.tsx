@@ -216,23 +216,50 @@ function PFMEAImportPageContent() {
 
   // 페이지 로드 시 FMEA 목록 및 저장된 데이터 불러오기
   useEffect(() => {
-    // FMEA 목록 로드
-    const storedProjects = localStorage.getItem('pfmea-projects');
-    if (storedProjects) {
+    // ✅ FMEA 목록 로드 - DB API 우선 (FMEA 리스트와 동일한 소스)
+    const loadFmeaList = async () => {
       try {
-        const projects: FMEAProject[] = JSON.parse(storedProjects);
-        setFmeaList(projects);
-        // URL에서 id 파라미터가 있으면 해당 FMEA 선택 (등록화면에서 넘어온 경우)
-        if (idFromUrl) {
-          setSelectedFmeaId(idFromUrl);
-        } else if (!selectedFmeaId && projects.length > 0) {
-          // URL 파라미터 없고, 선택된 FMEA도 없으면 첫 번째 선택
-          setSelectedFmeaId(projects[0].id);
+        // 1. DB에서 프로젝트 목록 조회
+        const response = await fetch('/api/fmea/projects');
+        const result = await response.json();
+        
+        if (result.success && result.projects.length > 0) {
+          // DB 데이터 사용
+          console.log('✅ [Import] DB에서 FMEA 목록 로드:', result.projects.length, '건');
+          setFmeaList(result.projects);
+          
+          // URL에서 id 파라미터가 있으면 해당 FMEA 선택
+          if (idFromUrl) {
+            setSelectedFmeaId(idFromUrl);
+          } else if (!selectedFmeaId && result.projects.length > 0) {
+            setSelectedFmeaId(result.projects[0].id);
+          }
+          return;
         }
-      } catch (e) {
-        console.error('FMEA 목록 로드 실패:', e);
+      } catch (error) {
+        console.warn('⚠️ [Import] DB API 호출 실패, localStorage 폴백:', error);
       }
-    }
+      
+      // 2. DB에 데이터 없으면 localStorage 확인 (폴백)
+      const storedProjects = localStorage.getItem('pfmea-projects');
+      if (storedProjects) {
+        try {
+          const projects: FMEAProject[] = JSON.parse(storedProjects);
+          console.log('📦 [Import] localStorage에서 FMEA 목록 로드:', projects.length, '건');
+          setFmeaList(projects);
+          
+          if (idFromUrl) {
+            setSelectedFmeaId(idFromUrl);
+          } else if (!selectedFmeaId && projects.length > 0) {
+            setSelectedFmeaId(projects[0].id);
+          }
+        } catch (e) {
+          console.error('FMEA 목록 로드 실패:', e);
+        }
+      }
+    };
+    
+    loadFmeaList();
     
     // ✅ mode=new: 자동 로드 금지 (빈 상태로 시작)
     if (mode === 'new') {
