@@ -442,7 +442,7 @@ export default function FMEAListPage() {
                       })()}
                     </a>
                   ) : (
-                    <span className="text-gray-300">-</span>
+                    <span className="text-orange-400 text-[10px]">미입력</span>
                   )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-left align-middle">
@@ -455,51 +455,57 @@ export default function FMEAListPage() {
                       {p.project.projectName}
                     </a>
                   ) : (
-                    <span className="text-gray-400">-</span>
+                    <span className="text-orange-400 text-[10px]">미입력</span>
                   )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-left align-middle">
-                  {p.fmeaInfo?.subject || p.project?.productName ? (
-                    <a 
-                      href={`/pfmea/worksheet?id=${p.id}`} 
-                      className="text-blue-600 hover:underline font-semibold cursor-pointer"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {p.fmeaInfo?.subject || p.project?.productName}
-                    </a>
-                  ) : (
-                    <span className="text-gray-400">-</span>
-                  )}
+                  {/* FMEA명: ID와 동일하거나 비어있으면 미입력 */}
+                  {(() => {
+                    const fmeaName = p.fmeaInfo?.subject || p.project?.productName;
+                    // FMEA명이 ID와 동일하면 미입력 처리
+                    if (!fmeaName || fmeaName === p.id || fmeaName.toLowerCase() === p.id.toLowerCase()) {
+                      return <span className="text-orange-400 text-[10px]">미입력</span>;
+                    }
+                    return (
+                      <a 
+                        href={`/pfmea/worksheet?id=${p.id}`} 
+                        className="text-blue-600 hover:underline font-semibold cursor-pointer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {fmeaName}
+                      </a>
+                    );
+                  })()}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                  {p.project?.customer ? p.project.customer : <span className="text-gray-400">-</span>}
+                  {p.project?.customer ? p.project.customer : <span className="text-orange-400 text-[10px]">미입력</span>}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                  {p.fmeaInfo?.modelYear ? p.fmeaInfo.modelYear : <span className="text-gray-400">-</span>}
+                  {p.fmeaInfo?.modelYear ? p.fmeaInfo.modelYear : <span className="text-orange-400 text-[10px]">미입력</span>}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
                   {p.fmeaInfo?.designResponsibility || p.project?.department ? (
                     p.fmeaInfo?.designResponsibility || p.project?.department
                   ) : (
-                    <span className="text-gray-400">-</span>
+                    <span className="text-orange-400 text-[10px]">미입력</span>
                   )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
                   {p.fmeaInfo?.fmeaResponsibleName || p.project?.leader ? (
                     p.fmeaInfo?.fmeaResponsibleName || p.project?.leader
                   ) : (
-                    <span className="text-gray-400">-</span>
+                    <span className="text-orange-400 text-[10px]">미입력</span>
                   )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
                   {p.fmeaInfo?.fmeaStartDate || p.project?.startDate ? (
                     p.fmeaInfo?.fmeaStartDate || p.project?.startDate
                   ) : (
-                    <span className="text-gray-400">-</span>
+                    <span className="text-orange-400 text-[10px]">미입력</span>
                   )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                  {p.fmeaInfo?.fmeaRevisionDate ? p.fmeaInfo.fmeaRevisionDate : <span className="text-gray-400">-</span>}
+                  {p.fmeaInfo?.fmeaRevisionDate ? p.fmeaInfo.fmeaRevisionDate : <span className="text-orange-400 text-[10px]">미입력</span>}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">{p.revisionNo || 'Rev.00'}</td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
