@@ -71,6 +71,8 @@ export function useWorksheetState(): UseWorksheetStateReturn {
   const searchParams = useSearchParams();
   const router = useRouter();
   const selectedFmeaId = searchParams.get('id');
+  const baseId = searchParams.get('baseId');  // ✅ 상속 원본 FMEA ID
+  const mode = searchParams.get('mode');  // ✅ 상속 모드 ('inherit')
   
   // ✅ 초기 상태는 항상 동일 (Hydration 오류 방지)
   const [state, setState] = useState<WorksheetState>(createInitialState);
@@ -814,9 +816,109 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     }
   }, [selectedFmeaId, router]);
 
+  // ✅ 상속 모드 처리 (baseId가 있고 mode=inherit일 때)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!selectedFmeaId || !baseId || mode !== 'inherit') return;
+    
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🔵 [상속 모드] 시작:', { selectedFmeaId, baseId, mode });
+    console.log('═══════════════════════════════════════════════════════');
+    
+    (async () => {
+      try {
+        // 1. 상속 API 호출 (데이터 조회)
+        const getRes = await fetch(`/api/fmea/inherit?sourceId=${baseId}&targetId=${selectedFmeaId}`);
+        const getData = await getRes.json();
+        
+        if (!getData.success) {
+          console.error('[상속] 데이터 조회 실패:', getData.error);
+          alert(`상속 실패: ${getData.error}`);
+          return;
+        }
+        
+        console.log('[상속] 데이터 조회 성공:', getData.stats);
+        
+        // 2. 상속 데이터 저장 (POST)
+        const postRes = await fetch('/api/fmea/inherit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sourceId: baseId,
+            targetId: selectedFmeaId,
+            inherited: getData.inherited,
+          }),
+        });
+        const postData = await postRes.json();
+        
+        if (!postData.success) {
+          console.error('[상속] 저장 실패:', postData.error);
+          alert(`상속 저장 실패: ${postData.error}`);
+          return;
+        }
+        
+        console.log('[상속] ✅ 저장 완료:', postData.message);
+        
+        // 3. State 업데이트
+        const inherited = getData.inherited;
+        setState(prev => ({
+          ...prev,
+          l1: inherited.l1 || prev.l1,
+          l2: inherited.l2 || prev.l2,
+          failureLinks: inherited.failureLinks || [],
+          structureConfirmed: false,
+          l1Confirmed: false,
+          l2Confirmed: false,
+          l3Confirmed: false,
+          failureL1Confirmed: false,
+          failureL2Confirmed: false,
+          failureL3Confirmed: false,
+          failureLinkConfirmed: false,
+        }));
+        
+        // 4. localStorage에도 저장
+        const worksheetData = {
+          fmeaId: selectedFmeaId,
+          l1: inherited.l1,
+          l2: inherited.l2,
+          failureLinks: inherited.failureLinks || [],
+          tab: 'structure',
+          structureConfirmed: false,
+          _inherited: true,
+          _inheritedFrom: baseId,
+          _inheritedAt: new Date().toISOString(),
+        };
+        localStorage.setItem(`pfmea_worksheet_${selectedFmeaId}`, JSON.stringify(worksheetData));
+        
+        // 5. URL에서 상속 파라미터 제거 (새로고침 시 중복 상속 방지)
+        const newUrl = `/pfmea/worksheet?id=${selectedFmeaId}`;
+        window.history.replaceState({}, '', newUrl);
+        
+        // 6. 알림
+        alert(`✅ ${getData.source.subject}에서 데이터를 상속받았습니다.\n\n` +
+          `- 공정: ${getData.stats.processes}개\n` +
+          `- 작업요소: ${getData.stats.workElements}개\n` +
+          `- 고장형태: ${getData.stats.failureModes}개\n\n` +
+          `이제 필요에 따라 수정하실 수 있습니다.`);
+        
+        console.log('🔵 [상속 모드] 완료');
+        
+      } catch (e: any) {
+        console.error('[상속] 오류:', e);
+        alert(`상속 중 오류가 발생했습니다: ${e.message}`);
+      }
+    })();
+  }, [selectedFmeaId, baseId, mode, setState]);
+  
   // 워크시트 데이터 로드 (FMEA ID 변경 시) - 원자성 DB 우선
   useEffect(() => {
     if (typeof window === 'undefined' || !selectedFmeaId) return;
+    
+    // ✅ 상속 모드일 때는 로드 스킵 (상속 useEffect에서 처리)
+    if (baseId && mode === 'inherit') {
+      console.log('[워크시트] 상속 모드 - 일반 로드 스킵');
+      return;
+    }
     
     console.log('[워크시트] 데이터 로드 시작:', selectedFmeaId);
     

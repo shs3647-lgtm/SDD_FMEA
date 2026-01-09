@@ -479,10 +479,26 @@ function PFMEARegisterPageContent() {
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="시스템, 서브시스템 및/또는 구성품" />
               </td>
               <td className={`${headerCell} w-[8%]`}>FMEA ID</td>
-              <td className={`${inputCell} w-[12%]`}>
+              <td className={`${inputCell} w-[8%]`}>
                 <span className="px-2 text-xs font-semibold text-blue-600">{fmeaId}</span>
               </td>
-              <td className={`${headerCell} w-[10%]`}>자동생성</td>
+              <td className={`${headerCell} w-[8%]`}>상위 FMEA</td>
+              <td className={`${inputCell} w-[10%]`}>
+                {selectedBaseFmea ? (
+                  <a 
+                    href={`/pfmea/worksheet?id=${selectedBaseFmea}`}
+                    className="flex items-center gap-1 px-2 text-xs font-semibold text-purple-600 hover:underline"
+                    title="상위 FMEA 보기"
+                  >
+                    <span className="px-1 py-0 rounded text-[9px] font-bold text-white bg-purple-500">
+                      {selectedBaseFmea.match(/pfm\d{2}-([MFP])/i)?.[1] || 'M'}
+                    </span>
+                    <span>{selectedBaseFmea}</span>
+                  </a>
+                ) : (
+                  <span className="px-2 text-xs text-gray-400">-</span>
+                )}
+              </td>
             </tr>
             
             {/* 2행 - 흰색 */}
@@ -498,10 +514,10 @@ function PFMEARegisterPageContent() {
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none" />
               </td>
               <td className={headerCell}>공정 책임</td>
-              <td className={`${inputCell}`} colSpan={2}>
+              <td className={`${inputCell}`} colSpan={3}>
                 <div className="flex items-center gap-2">
                   <input type="text" name="fmea-dept-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.designResponsibility} onChange={(e) => updateField('designResponsibility', e.target.value)}
-                    className="w-20 h-7 px-2 text-xs border border-gray-300 rounded bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="부서" />
+                    className="w-24 h-7 px-2 text-xs border border-gray-300 rounded bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="부서" />
                   <input type="text" name="fmea-responsible-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.fmeaResponsibleName} onChange={(e) => updateField('fmeaResponsibleName', e.target.value)}
                     className="flex-1 h-7 px-2 text-xs border border-gray-300 rounded bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="책임자 성명" />
                   <button onClick={() => { setUserModalTarget('responsible'); setUserModalOpen(true); }} className="text-blue-500 hover:text-blue-700 px-1">🔍</button>
@@ -525,7 +541,7 @@ function PFMEARegisterPageContent() {
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none" />
               </td>
               <td className={headerCell}>기밀유지 수준</td>
-              <td className={`${inputCell}`} colSpan={2}>
+              <td className={`${inputCell}`} colSpan={3}>
                 <select value={fmeaInfo.confidentialityLevel} onChange={(e) => updateField('confidentialityLevel', e.target.value)}
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none text-gray-600">
                   <option value="">선택</option>
@@ -561,7 +577,7 @@ function PFMEARegisterPageContent() {
                 </select>
               </td>
               <td className={headerCell}>상호기능팀</td>
-              <td className={`${inputCell}`} colSpan={2}>
+              <td className={`${inputCell}`} colSpan={3}>
                 {cftNames ? (
                   <span className="text-xs text-gray-700 px-2">{cftNames}</span>
                 ) : (

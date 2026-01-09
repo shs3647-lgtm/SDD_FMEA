@@ -51,6 +51,8 @@ export async function GET() {
             project: info.project || {},
             fmeaInfo: info.fmeaInfo || {},
             fmeaType: info.fmeaType || 'P',
+            parentFmeaId: info.parentFmeaId || null,  // ✅ 상위 FMEA ID
+            parentFmeaType: info.parentFmeaType || null,  // ✅ 상위 FMEA 유형
             structureConfirmed: info.structureConfirmed || false,
             createdAt: info.createdAt,
             updatedAt: info.updatedAt,

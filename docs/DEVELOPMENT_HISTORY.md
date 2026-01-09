@@ -1,7 +1,63 @@
 # 📋 FMEA On-Premise 개발 히스토리
 
-> **최종 업데이트**: 2026-01-06  
-> **현재 버전**: 2.5.1
+> **최종 업데이트**: 2026-01-10  
+> **현재 버전**: 2.6.0
+
+---
+
+## 📅 2026-01-10
+
+### v2.6.0 - 마스터/패밀리/파트 FMEA 상속 기능
+
+**핵심 변경사항**:
+
+1. ✅ **상속 API 생성** (`/api/fmea/inherit`)
+   - GET: 원본 FMEA 데이터 조회 (구조분석/기능분석/고장분석 전체)
+   - POST: 상속 데이터를 대상 FMEA에 저장
+   - parentFmeaId, parentFmeaType 메타데이터 저장
+
+2. ✅ **리스트 화면 '상위 FMEA' 컬럼 추가**
+   - 상속받은 FMEA의 원본 ID 표시
+   - 유형 배지(M/F/P) + ID로 시각화
+   - 클릭 시 원본 FMEA 워크시트로 이동
+
+3. ✅ **워크시트 상속 모드 처리**
+   - URL 파라미터: `?id={newId}&baseId={sourceId}&mode=inherit`
+   - 상속 API 호출 → 데이터 복사 → state 업데이트
+   - 상속 완료 후 URL 파라미터 자동 제거 (중복 방지)
+
+4. ✅ **워크시트 상속 배너**
+   - 상속된 FMEA인 경우 파란색 배너 표시
+   - "기반 FMEA: pfm26-M001" 정보 표시
+   - [원본 보기] / [상속 해제] 버튼
+
+5. ✅ **등록 화면 상속 정보 표시**
+   - FMEA ID 옆 "← M001 기반" 표시
+   - 선택한 기반 FMEA 정보 유지
+
+**생성된 파일**:
+- `src/app/api/fmea/inherit/route.ts` - 상속 API
+- `docs/MASTER_FAMILY_PART_FMEA_INHERITANCE.md` - 상속 관계 설계 문서
+
+**수정된 파일**:
+- `src/app/pfmea/list/page.tsx` - 상위 FMEA 컬럼 추가
+- `src/app/pfmea/register/page.tsx` - 상속 정보 표시
+- `src/app/pfmea/worksheet/page.tsx` - 상속 배너 UI
+- `src/app/pfmea/worksheet/hooks/useWorksheetState.ts` - 상속 모드 처리
+- `src/app/api/fmea/projects/route.ts` - parentFmeaId 반환
+
+**상속 흐름**:
+```
+등록 화면 → "Master Data 사용" 클릭
+    ↓
+Master FMEA 선택 모달
+    ↓
+선택 완료 → 워크시트 이동 (?mode=inherit&baseId=pfm26-M001)
+    ↓
+상속 API 호출 → 데이터 복사
+    ↓
+워크시트 표시 (상속 배너 + 복사된 데이터)
+```
 
 ---
 

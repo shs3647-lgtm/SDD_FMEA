@@ -72,6 +72,13 @@ import { CPTab } from './tabs/cp';
 function FMEAWorksheetPageContent() {
   const router = useRouter();
   
+  // ✅ 상속 정보 상태
+  const [inheritInfo, setInheritInfo] = React.useState<{
+    parentFmeaId: string;
+    parentSubject: string;
+    inheritedAt: string;
+  } | null>(null);
+  
   // 워크시트 상태 관리 Hook
   const {
     state,
@@ -134,6 +141,29 @@ function FMEAWorksheetPageContent() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importMessage, setImportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  
+  // ✅ 상속 정보 로드 (localStorage에서)
+  React.useEffect(() => {
+    if (!selectedFmeaId) return;
+    
+    try {
+      const worksheetKey = `pfmea_worksheet_${selectedFmeaId}`;
+      const saved = localStorage.getItem(worksheetKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed._inherited && parsed._inheritedFrom) {
+          setInheritInfo({
+            parentFmeaId: parsed._inheritedFrom,
+            parentSubject: parsed._inheritedFrom,
+            inheritedAt: parsed._inheritedAt || '',
+          });
+          console.log('[상속 정보] 로드:', parsed._inheritedFrom);
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [selectedFmeaId]);
 
   // 구조분석 Import 핸들러
   const handleImportFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -460,9 +490,50 @@ function FMEAWorksheetPageContent() {
           state={state}
         />
 
+        {/* ✅ 상속 모드 배너 */}
+        {inheritInfo && (
+          <div 
+            className="fixed top-16 left-[50px] right-0 h-7 z-[99] bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 border-b border-blue-800 flex items-center justify-center gap-4 text-white text-xs"
+          >
+            <span className="font-bold">
+              🔵 상속 모드
+            </span>
+            <span>|</span>
+            <span>
+              기반 FMEA: <span className="font-semibold text-yellow-200">{inheritInfo.parentFmeaId}</span>
+            </span>
+            <a 
+              href={`/pfmea/worksheet?id=${inheritInfo.parentFmeaId}`}
+              className="px-2 py-0.5 bg-white/20 rounded hover:bg-white/30 transition-colors"
+            >
+              원본 보기
+            </a>
+            <button 
+              onClick={() => {
+                if (confirm('상속 정보를 해제하시겠습니까?\n데이터는 유지되지만, 상속 표시가 사라집니다.')) {
+                  // localStorage에서 상속 정보 제거
+                  const worksheetKey = `pfmea_worksheet_${selectedFmeaId}`;
+                  const saved = localStorage.getItem(worksheetKey);
+                  if (saved) {
+                    const parsed = JSON.parse(saved);
+                    delete parsed._inherited;
+                    delete parsed._inheritedFrom;
+                    delete parsed._inheritedAt;
+                    localStorage.setItem(worksheetKey, JSON.stringify(parsed));
+                  }
+                  setInheritInfo(null);
+                }
+              }}
+              className="px-2 py-0.5 bg-red-500/50 rounded hover:bg-red-500/70 transition-colors"
+            >
+              상속 해제
+            </button>
+          </div>
+        )}
+
         {/* ===== 탭 메뉴 (고정, top-16 = 64px) ===== */}
         <div 
-          className="fixed top-16 left-[50px] right-0 h-9 z-[98] bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-900 border-b-[2px] border-[#1a237e]"
+          className={`fixed ${inheritInfo ? 'top-[92px]' : 'top-16'} left-[50px] right-0 h-9 z-[98] bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-900 border-b-[2px] border-[#1a237e]`}
         >
           <TabMenu 
             state={state} 
@@ -475,8 +546,8 @@ function FMEAWorksheetPageContent() {
           />
         </div>
 
-        {/* ========== 메인 레이아웃 (메뉴 아래, top-[100px]) ========== */}
-        <div className="fixed top-[100px] left-[50px] right-0 bottom-0 flex flex-row overflow-hidden">
+        {/* ========== 메인 레이아웃 (메뉴 아래, 상속 배너 고려) ========== */}
+        <div className={`fixed ${inheritInfo ? 'top-[128px]' : 'top-[100px]'} left-[50px] right-0 bottom-0 flex flex-row overflow-hidden`}>
           
           {/* ===== 좌측: 워크시트 영역 ===== */}
           <div className="flex-1 flex flex-col min-w-0 bg-white overflow-hidden">

@@ -1,17 +1,24 @@
-http://localhost:3001/pfmea/worksheet?id=PFM26-001
+http://localhost:3000/pfmea/list
 
 === VERSION INFO ===
-Version: 2.3.0
-Last Updated: 2026-01-05
-Changes: 원자성 DB 기반 전체화면 CASCADE 역전개 (AI 분석 기반)
+Version: 2.6.0
+Last Updated: 2026-01-10
+Changes: 마스터/패밀리/파트 FMEA 상속 기능
 Status: PRODUCTION READY
-Cache Busting: v=2.3.0-20260105-atomic-db
+Cache Busting: v=2.6.0-20260110-inheritance
+
+=== 주요 URL ===
+- FMEA 리스트: http://localhost:3000/pfmea/list
+- FMEA 등록: http://localhost:3000/pfmea/register
+- 워크시트: http://localhost:3000/pfmea/worksheet?id=pfm26-M001
+- 상속 테스트: http://localhost:3000/pfmea/register (→ Master Data 사용 클릭)
+- 웰컴보드: http://localhost:3000/welcomeboard
 
 === 신규 기능 ===
-1. 프로젝트별 원자성 관계형 DB
-2. 전체화면 API (/api/fmea/all-view)
-3. AllTabAtomic 컴포넌트
-4. AI 분석/고장예측 기반 구축
+1. 상속 API (/api/fmea/inherit)
+2. 리스트 '상위 FMEA' 컬럼
+3. 워크시트 상속 배너
+4. 등록 화면 상속 정보 표시
 
 === 코드프리즈 태그 ===
-codefreeze-20260105-atomic-db
+codefreeze-20260110-inheritance

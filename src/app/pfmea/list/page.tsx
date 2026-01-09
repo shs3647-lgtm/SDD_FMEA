@@ -38,6 +38,9 @@ interface FMEAProject {
   status?: string;
   step?: number;  // 단계 (1~7)
   revisionNo?: string;  // 개정번호
+  fmeaType?: string;  // M=Master, F=Family, P=Part
+  parentFmeaId?: string;  // 상위 FMEA ID (상속 시)
+  parentFmeaType?: string;  // 상위 FMEA 유형
 }
 
 // =====================================================
@@ -47,6 +50,7 @@ const COLUMN_HEADERS = [
   'No',
   'FMEA ID',
   'TYPE',  // M=Master, F=Family, P=Part
+  '상위 FMEA',  // 상속받은 FMEA ID
   '프로젝트명',
   'FMEA명',
   '고객사',
@@ -416,6 +420,31 @@ export default function FMEAListPage() {
                     );
                   })()}
                 </td>
+                {/* 상위 FMEA 컬럼 */}
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle">
+                  {p.parentFmeaId ? (
+                    <a 
+                      href={`/pfmea/worksheet?id=${p.parentFmeaId}`} 
+                      className="text-blue-600 hover:underline text-[10px] font-semibold"
+                      onClick={(e) => e.stopPropagation()}
+                      title={`상위 FMEA: ${p.parentFmeaId}`}
+                    >
+                      {(() => {
+                        const parentType = extractFmeaType(p.parentFmeaId);
+                        return (
+                          <span className="flex items-center justify-center gap-0.5">
+                            <span className={`px-1 py-0 rounded text-[9px] font-bold ${parentType.color}`}>
+                              {parentType.code}
+                            </span>
+                            <span>{p.parentFmeaId.split('-').pop()}</span>
+                          </span>
+                        );
+                      })()}
+                    </a>
+                  ) : (
+                    <span className="text-gray-300">-</span>
+                  )}
+                </td>
                 <td className="border border-gray-400 px-2 py-1 text-left align-middle">
                   {p.project?.projectName ? (
                     <a
@@ -485,6 +514,7 @@ export default function FMEAListPage() {
                   <input type="checkbox" disabled className="w-3.5 h-3.5 opacity-30" />
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">{filteredProjects.length + idx + 1}</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
