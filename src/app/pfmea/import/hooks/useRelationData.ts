@@ -40,10 +40,10 @@ export function useRelationData(flatData: ImportedFlatData[], relationTab: 'A' |
   const stats = useMemo<Stats>(() => ({
     total: flatData.length,
     processCount: new Set(flatData.filter(d => d.itemCode === 'A1').map(d => d.processNo)).size,
-    aCount: flatData.filter(d => d.itemCode.startsWith('A')).length,
-    bCount: flatData.filter(d => d.itemCode.startsWith('B')).length,
-    cCount: flatData.filter(d => d.itemCode.startsWith('C')).length,
-    missing: flatData.filter(d => !d.value || d.value.trim() === '').length,
+    aCount: flatData.filter(d => d.itemCode?.startsWith('A')).length,
+    bCount: flatData.filter(d => d.itemCode?.startsWith('B')).length,
+    cCount: flatData.filter(d => d.itemCode?.startsWith('C')).length,
+    missing: flatData.filter(d => !d.value || d.value?.trim() === '').length,
   }), [flatData]);
 
   // 관계형 데이터 필터링

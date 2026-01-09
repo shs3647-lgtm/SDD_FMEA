@@ -182,7 +182,7 @@ const bottomMenuItems = [
     subItems: [
       { label: '고객사정보', href: '/master/customer' },
       { label: '사용자정보', href: '/master/user' },
-      { label: 'PFMEA 임포트', href: '/master/pfmea-import' },
+      { label: 'PFMEA 임포트', href: '/pfmea/import' },
       { label: 'DFMEA 임포트', href: '/master/dfmea-import' },
       { label: 'CP 임포트', href: '/master/cp-import' },
     ],
