@@ -466,24 +466,24 @@ function PFMEARegisterPageContent() {
         
         <table className="w-full border-collapse text-xs">
           <tbody>
-            {/* 1행 - 파란색 */}
+            {/* 1행 - 파란색 (총 100%) */}
             <tr className="bg-[#e3f2fd] h-8">
-              <td className={`${headerCell} w-[10%]`}>회사 명</td>
-              <td className={`${inputCell} w-[15%]`}>
+              <td className={`${headerCell} w-[11%] whitespace-nowrap`}>회사 명</td>
+              <td className={`${inputCell} w-[14%]`}>
                 <input type="text" name="fmea-company-name-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.companyName} onChange={(e) => updateField('companyName', e.target.value)}
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="공정 FMEA에 책임이 있는 회사 명" />
               </td>
-              <td className={`${headerCell} w-[8%]`}>FMEA명</td>
-              <td className={`${inputCell} w-[20%]`}>
+              <td className={`${headerCell} w-[7%] whitespace-nowrap`}>FMEA명</td>
+              <td className={`${inputCell} w-[23%]`}>
                 <input type="text" name="fmea-subject-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.subject} onChange={(e) => updateField('subject', e.target.value)}
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="시스템, 서브시스템 및/또는 구성품" />
               </td>
-              <td className={`${headerCell} w-[8%]`}>FMEA ID</td>
-              <td className={`${inputCell} w-[8%]`}>
+              <td className={`${headerCell} w-[7%] whitespace-nowrap`}>FMEA ID</td>
+              <td className={`${inputCell} w-[10%]`}>
                 <span className="px-2 text-xs font-semibold text-blue-600">{fmeaId}</span>
               </td>
-              <td className={`${headerCell} w-[8%]`}>상위 FMEA</td>
-              <td className={`${inputCell} w-[10%]`}>
+              <td className={`${headerCell} w-[8%] whitespace-nowrap`}>상위 FMEA</td>
+              <td className={`${inputCell} w-[20%]`}>
                 {selectedBaseFmea ? (
                   <a 
                     href={`/pfmea/worksheet?id=${selectedBaseFmea}`}
@@ -503,7 +503,7 @@ function PFMEARegisterPageContent() {
             
             {/* 2행 - 흰색 */}
             <tr className="bg-white h-8">
-              <td className={headerCell}>엔지니어링 위치</td>
+              <td className={`${headerCell} whitespace-nowrap`}>엔지니어링 위치</td>
               <td className={`${inputCell}`}>
                 <input type="text" name="fmea-location-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.engineeringLocation} onChange={(e) => updateField('engineeringLocation', e.target.value)}
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="지리적 위치" />
@@ -527,7 +527,7 @@ function PFMEARegisterPageContent() {
             
             {/* 3행 - 파란색 */}
             <tr className="bg-[#e3f2fd] h-8">
-              <td className={headerCell}>고객 명</td>
+              <td className={`${headerCell} whitespace-nowrap`}>고객 명</td>
               <td className={`${inputCell}`}>
                 <div className="flex items-center gap-1">
                   <input type="text" name="fmea-customer-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.customerName} onChange={(e) => updateField('customerName', e.target.value)}
@@ -554,7 +554,7 @@ function PFMEARegisterPageContent() {
             
             {/* 4행 - 흰색 */}
             <tr className="bg-white h-8">
-              <td className={headerCell}>모델 연식 / 플랫폼</td>
+              <td className={`${headerCell} whitespace-nowrap`}>모델 연식 / 플랫폼</td>
               <td className={`${inputCell}`}>
                 <input type="text" name="fmea-model-year-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.modelYear} onChange={(e) => updateField('modelYear', e.target.value)}
                   className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="고객 어플리케이션 또는 회사 모델/스타일" />
@@ -596,46 +596,40 @@ function PFMEARegisterPageContent() {
       </div>
       </form>
 
-      {/* ===== FMEA 기초정보 등록 옵션 (테이블) ===== */}
+      {/* ===== FMEA 기초정보 등록 옵션 (테이블) - AI 예측과 동일한 5컬럼 ===== */}
       <div className="mb-3 mt-4">
-        <table className="border-collapse text-xs table-auto">
+        <table className="w-full border-collapse text-xs">
           <tbody>
             <tr className="h-8">
-              <td className="bg-[#00587a] text-white px-3 py-1.5 border border-gray-400 font-bold text-center whitespace-nowrap">
+              <td className="w-[12%] bg-[#00587a] text-white px-3 py-1.5 border border-gray-400 font-bold text-center whitespace-nowrap">
                 FMEA 기초 정보등록
               </td>
               <td 
                 onClick={() => openFmeaSelectModal('M')}
-                className="px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-purple-200 whitespace-nowrap font-semibold text-purple-700 bg-purple-100"
+                className="w-[18%] px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-purple-200 whitespace-nowrap font-semibold text-purple-700 bg-purple-100"
                 title="Master FMEA를 선택하여 기초정보 사용"
               >
                 🟣 Master Data 사용
               </td>
               <td 
                 onClick={() => openFmeaSelectModal('F')}
-                className="px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-blue-200 whitespace-nowrap font-semibold text-blue-700 bg-[#e3f2fd]"
+                className="w-[25%] px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-blue-200 whitespace-nowrap font-semibold text-blue-700 bg-[#e3f2fd]"
                 title="Family FMEA를 선택하여 기초정보 사용"
               >
                 🔵 Family Data 사용
               </td>
               <td 
                 onClick={() => openFmeaSelectModal('P')}
-                className="px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-green-200 whitespace-nowrap font-semibold text-green-700 bg-[#e8f5e9]"
+                className="w-[30%] px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-green-200 whitespace-nowrap font-semibold text-green-700 bg-[#e8f5e9]"
                 title="기존 Part FMEA를 선택하여 기초정보 사용"
               >
                 🟢 Part FMEA 사용
               </td>
               <td 
                 onClick={() => window.location.href = `/pfmea/import?id=${fmeaId}&mode=new`}
-                className="px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-amber-200 whitespace-nowrap font-semibold text-amber-700 bg-amber-100"
+                className="w-[15%] px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-amber-200 whitespace-nowrap font-semibold text-amber-700 bg-amber-100"
               >
-                ✏️ 신규 기초정보 입력
-              </td>
-              <td 
-                onClick={() => window.location.href = `/pfmea/worksheet?id=${fmeaId}`}
-                className="px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-gray-200 whitespace-nowrap font-semibold text-gray-700 bg-gray-100"
-              >
-                기초 정보 없이 사용
+                ✏️ 신규 입력
               </td>
             </tr>
           </tbody>
@@ -710,15 +704,15 @@ function PFMEARegisterPageContent() {
 
       {/* ===== AI 기반 FMEA 예측 시스템 ===== */}
       <div className="mb-3">
-        <table className="border-collapse text-xs table-auto">
+        <table className="w-full border-collapse text-xs">
           <tbody>
             <tr className="h-8">
-              <td className="bg-gradient-to-r from-purple-700 to-indigo-700 text-white px-3 py-1.5 border border-gray-400 font-bold text-center whitespace-nowrap">
+              <td className="w-[12%] bg-gradient-to-r from-purple-700 to-indigo-700 text-white px-3 py-1.5 border border-gray-400 font-bold text-center whitespace-nowrap">
                 🤖 AI 예측 FMEA
               </td>
               <td 
                 onClick={() => window.location.href = `/pfmea/worksheet?id=${fmeaId}&mode=ai`}
-                className={`px-3 py-1.5 border border-gray-400 text-center cursor-pointer whitespace-nowrap font-semibold ${
+                className={`w-[18%] px-3 py-1.5 border border-gray-400 text-center cursor-pointer whitespace-nowrap font-semibold ${
                   aiStatus?.isReady 
                     ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' 
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -727,12 +721,12 @@ function PFMEARegisterPageContent() {
               >
                 {aiStatus?.isReady ? '✨ AI 추천 시작' : '⏳ 학습 중...'}
               </td>
-              <td className="px-3 py-1.5 border border-gray-400 text-center whitespace-nowrap bg-indigo-50">
+              <td className="w-[25%] px-3 py-1.5 border border-gray-400 text-center whitespace-nowrap bg-indigo-50">
                 <span className="text-indigo-700 font-semibold">
                   📊 학습 데이터: {aiStatus?.historyCount || 0}건
                 </span>
               </td>
-              <td className="px-3 py-1.5 border border-gray-400 text-center whitespace-nowrap bg-indigo-50">
+              <td className="w-[30%] px-3 py-1.5 border border-gray-400 text-center whitespace-nowrap bg-indigo-50">
                 <span className="text-indigo-600 text-[10px]">
                   FM({aiStatus?.stats?.uniqueModes || 0}) | FC({aiStatus?.stats?.uniqueCauses || 0}) | FE({aiStatus?.stats?.uniqueEffects || 0})
                 </span>
@@ -746,7 +740,7 @@ function PFMEARegisterPageContent() {
                     alert('AI 학습 데이터가 초기화되었습니다.');
                   }
                 }}
-                className="px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-red-100 whitespace-nowrap font-semibold text-red-500 bg-red-50"
+                className="w-[15%] px-3 py-1.5 border border-gray-400 text-center cursor-pointer hover:bg-red-100 whitespace-nowrap font-semibold text-red-500 bg-red-50"
               >
                 🗑️ 초기화
               </td>
