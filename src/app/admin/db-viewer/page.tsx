@@ -22,6 +22,7 @@ interface DbData {
 // 주요 FMEA 테이블 목록
 const IMPORTANT_TABLES = [
   { name: 'fmea_legacy_data', label: '📦 레거시 데이터', desc: 'FMEA 전체 JSON' },
+  { name: 'fmea_confirmed_states', label: '✅ 확정상태', desc: '탭별 확정' },
   { name: 'l1_structures', label: '🏭 1L 구조', desc: '완제품' },
   { name: 'l2_structures', label: '⚙️ 2L 구조', desc: '메인공정' },
   { name: 'l3_structures', label: '🔧 3L 구조', desc: '작업요소' },
@@ -55,12 +56,23 @@ export default function DbViewerPage() {
       const res = await fetch('/api/admin/db/schemas');
       const data = await res.json();
       if (data.success) {
-        setSchemas(data.schemas);
-        // new_fmea 스키마 우선 선택
-        if (data.schemas.includes('new_fmea')) {
+        // pfmea_ 프로젝트 스키마를 상단에 정렬
+        const sorted = [...data.schemas].sort((a, b) => {
+          const aIsFmea = a.startsWith('pfmea_');
+          const bIsFmea = b.startsWith('pfmea_');
+          if (aIsFmea && !bIsFmea) return -1;
+          if (!aIsFmea && bIsFmea) return 1;
+          return a.localeCompare(b);
+        });
+        setSchemas(sorted);
+        // pfmea_ 스키마 우선 선택 (프로젝트 데이터가 여기 있음)
+        const fmeaSchema = sorted.find(s => s.startsWith('pfmea_'));
+        if (fmeaSchema) {
+          setSelectedSchema(fmeaSchema);
+        } else if (data.schemas.includes('new_fmea')) {
           setSelectedSchema('new_fmea');
-        } else if (data.schemas.length > 0) {
-          setSelectedSchema(data.schemas[0]);
+        } else if (sorted.length > 0) {
+          setSelectedSchema(sorted[0]);
         }
       } else {
         setError(data.error || '스키마 로드 실패');
@@ -230,10 +242,21 @@ export default function DbViewerPage() {
                 className="w-full px-3 py-2 border rounded"
               >
                 <option value="">선택하세요</option>
-                {schemas.map(schema => (
-                  <option key={schema} value={schema}>{schema}</option>
-                ))}
+                {schemas.map(schema => {
+                  const isFmea = schema.startsWith('pfmea_');
+                  return (
+                    <option key={schema} value={schema}>
+                      {isFmea ? '🔷 ' : ''}{schema}
+                      {isFmea ? ' (FMEA 프로젝트)' : ''}
+                    </option>
+                  );
+                })}
               </select>
+              {selectedSchema?.startsWith('pfmea_') && (
+                <div className="mt-1 text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                  💡 이 스키마는 FMEA 프로젝트 전용입니다. 확정상태는 <code>fmea_confirmed_states</code> 테이블에서 확인하세요.
+                </div>
+              )}
             </div>
 
             <div className="mb-4">

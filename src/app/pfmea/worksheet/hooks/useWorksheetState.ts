@@ -140,14 +140,14 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     stateRef.current = state;
   }, [state]);
   
-  // 방법 2: setState 래퍼 함수 - stateRef도 동시에 업데이트
+  // 방법 2: setState 래퍼 함수 - stateRef를 동기적으로 먼저 업데이트
+  // ⚠️ 중요: React의 setState 콜백은 비동기이므로, stateRef 업데이트를 setState 호출 전에 수행
   const setStateSynced = useCallback((updater: React.SetStateAction<WorksheetState>) => {
     if (typeof updater === 'function') {
-      setState(prev => {
-        const newState = updater(prev);
-        stateRef.current = newState; // 동기적으로 ref 업데이트
-        return newState;
-      });
+      // ✅ stateRef.current를 기준으로 새 상태 계산 (동기적)
+      const newState = updater(stateRef.current);
+      stateRef.current = newState; // ✅ 동기적으로 ref 먼저 업데이트
+      setState(newState); // 그 후 React state 업데이트
     } else {
       stateRef.current = updater; // 동기적으로 ref 업데이트
       setState(updater);
@@ -218,14 +218,16 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         failureL3Confirmed: legacyData.failureL3Confirmed,
         failureLinkConfirmed: legacyData.failureLinkConfirmed,
       });
-      console.log('[원자성 DB 저장] l1.name:', legacyData.l1.name); // ✅ 디버깅 로그 추가
+      console.log('[원자성 DB 저장] l1.name:', legacyData.l1.name);
       
       const newAtomicDB = migrateToAtomicDB(legacyData);
-      console.log('[원자성 DB 저장] l1Structure.name:', newAtomicDB.l1Structure?.name); // ✅ 디버깅 로그 추가
+      console.log('[원자성 DB 저장] 확정(변환후):', newAtomicDB.confirmed);
+      console.log('[원자성 DB 저장] l1Structure.name:', newAtomicDB.l1Structure?.name);
       
       // ★★★ 레거시 데이터를 Single Source of Truth로 함께 저장 ★★★
       // 원자성 DB 변환 과정에서의 데이터 손실 방지를 위해 레거시 데이터도 DB에 저장
-      saveWorksheetDB(newAtomicDB, legacyData).catch(e => console.error('[원자성 DB 저장] 오류:', e));
+      // ✅ await 추가하여 DB 저장 완료까지 대기
+      await saveWorksheetDB(newAtomicDB, legacyData);
       setAtomicDB(newAtomicDB);
       
       console.log('[원자성 DB 저장] 완료:', {
