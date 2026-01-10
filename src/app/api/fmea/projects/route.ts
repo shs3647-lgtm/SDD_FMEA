@@ -21,6 +21,27 @@ export async function GET(request: NextRequest) {
   const targetId = searchParams.get('id')?.toUpperCase() || null; // 특정 ID로 조회
   
   try {
+    // ★ public 스키마의 fmea_legacy_data 테이블에서 등록정보 조회 (SSOT)
+    const legacyMap = new Map<string, any>();
+    try {
+      const legacyQuery = targetId 
+        ? `SELECT "fmeaId", data FROM public.fmea_legacy_data WHERE UPPER("fmeaId") = $1`
+        : `SELECT "fmeaId", data FROM public.fmea_legacy_data`;
+      const legacyResult = targetId 
+        ? await pool.query(legacyQuery, [targetId])
+        : await pool.query(legacyQuery);
+      
+      for (const row of legacyResult.rows) {
+        const fmeaId = row.fmeaId?.toUpperCase();
+        if (fmeaId && row.data) {
+          legacyMap.set(fmeaId, row.data);
+        }
+      }
+      console.log(`[API] public.fmea_legacy_data에서 ${legacyMap.size}개 프로젝트 로드`);
+    } catch (e) {
+      console.warn('[API] public.fmea_legacy_data 조회 실패 (테이블 없을 수 있음):', e);
+    }
+    
     // 1. 모든 FMEA 스키마 조회 (또는 특정 ID의 스키마만)
     let schemasQuery = `
       SELECT schema_name 
@@ -50,6 +71,9 @@ export async function GET(request: NextRequest) {
         .replace(/_/g, '-')
         .toUpperCase(); // ★ 완전 대문자로 변환
       
+      // ★ public.fmea_legacy_data에서 등록정보 가져오기 (우선)
+      const legacyData = legacyMap.get(fmeaId);
+      
       try {
         // FmeaInfo 테이블에서 정보 조회
         const infoResult = await pool.query(`
@@ -58,19 +82,46 @@ export async function GET(request: NextRequest) {
         
         if (infoResult.rows.length > 0) {
           const info = infoResult.rows[0];
+          // ★ public.fmea_legacy_data에서 등록정보 병합 (SSOT - 우선순위 높음)
+          const legacyFmeaInfo = legacyData?.fmeaInfo || {};
+          const legacyCftMembers = legacyData?.cftMembers || [];
+          
+          // 스키마별 FmeaInfo와 legacyData 병합 (legacyData 우선)
+          const mergedFmeaInfo = {
+            ...info.fmeaInfo,
+            ...legacyFmeaInfo,  // legacyData가 있으면 덮어씀
+          };
+          const mergedCftMembers = legacyCftMembers.length > 0 ? legacyCftMembers : (info.cftMembers || []);
+          
           projects.push({
             id: fmeaId,
-            project: info.project || {},
-            fmeaInfo: info.fmeaInfo || {},
+            project: info.project || legacyData?.project || {},
+            fmeaInfo: mergedFmeaInfo,  // ★ 병합된 정보
             fmeaType: info.fmeaType || 'P',
             parentFmeaId: info.parentFmeaId || null,  // ✅ 상위 FMEA ID
             parentFmeaType: info.parentFmeaType || null,  // ✅ 상위 FMEA 유형
-            cftMembers: info.cftMembers || [],  // ✅ CFT 멤버
+            cftMembers: mergedCftMembers,  // ★ 병합된 CFT 멤버
             structureConfirmed: info.structureConfirmed || false,
             createdAt: info.createdAt,
             updatedAt: info.updatedAt,
             status: 'active',
             step: calculateStep(info),
+            revisionNo: 'Rev.01'
+          });
+        } else if (legacyData) {
+          // ★ 스키마별 FmeaInfo 없으면 legacyData에서 가져옴
+          const type = extractType(fmeaId);
+          projects.push({
+            id: fmeaId,
+            project: legacyData.project || { projectName: fmeaId },
+            fmeaInfo: legacyData.fmeaInfo || { subject: fmeaId },
+            fmeaType: type,
+            parentFmeaId: type === 'M' ? fmeaId : null,
+            parentFmeaType: type === 'M' ? 'M' : null,
+            cftMembers: legacyData.cftMembers || [],
+            createdAt: new Date().toISOString(),
+            status: 'active',
+            step: 1,
             revisionNo: 'Rev.01'
           });
         } else {
@@ -90,13 +141,14 @@ export async function GET(request: NextRequest) {
           });
         }
       } catch (e) {
-        // 테이블이 없으면 스키마만으로 기본 정보 생성
+        // 테이블이 없으면 legacyData 또는 기본 정보 사용
         const type = extractType(fmeaId);
         projects.push({
           id: fmeaId,
-          project: { projectName: fmeaId },
-          fmeaInfo: { subject: fmeaId },
+          project: legacyData?.project || { projectName: fmeaId },
+          fmeaInfo: legacyData?.fmeaInfo || { subject: fmeaId },
           fmeaType: type,
+          cftMembers: legacyData?.cftMembers || [],
           parentFmeaId: type === 'M' ? fmeaId : null,  // ✅ Master는 본인 ID
           parentFmeaType: type === 'M' ? 'M' : null,
           createdAt: new Date().toISOString(),
