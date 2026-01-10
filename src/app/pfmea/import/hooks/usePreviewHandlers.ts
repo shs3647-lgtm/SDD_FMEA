@@ -3,6 +3,7 @@
  * @description 미리보기 핸들러 훅
  */
 
+import { useRef } from 'react';
 import { ImportedFlatData } from '../types';
 
 export interface UsePreviewHandlersProps {
@@ -34,6 +35,9 @@ export function usePreviewHandlers(props: UsePreviewHandlersProps) {
     setDirty,
     externalPersist,
   } = props;
+
+  // ✅ 중복 저장 방지용 ref
+  const isSavingRef = useRef(false);
 
   /** 전체 삭제 */
   const handleAllDelete = () => {
@@ -101,14 +105,25 @@ export function usePreviewHandlers(props: UsePreviewHandlersProps) {
 
   /** 미리보기 데이터 저장 */
   const handleSavePreview = async () => {
+    // ✅ 중복 저장 방지
+    if (isSavingRef.current) {
+      console.warn('⚠️ 저장 진행 중입니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+    
+    isSavingRef.current = true;
     setIsSaving(true);
 
     try {
-      localStorage.setItem('pfmea_master_data', JSON.stringify(flatData));
+      // ✅ 빈 값 제외 (DB 저장 기준과 동일하게 localStorage도 동기화)
+      const validData = flatData.filter((d) => d.value && d.value.trim() !== '');
+      
+      localStorage.setItem('pfmea_master_data', JSON.stringify(validData));
       localStorage.setItem('pfmea_saved_at', new Date().toISOString());
       setIsSaved(true);
       setDirty(false);
-      console.log('✅ 데이터 저장 완료:', flatData.length, '건 (LocalStorage)');
+      console.log('✅ 데이터 저장 완료:', validData.length, '건 (LocalStorage + DB)');
+      
       if (externalPersist) {
         await externalPersist(flatData);
       }
@@ -117,6 +132,7 @@ export function usePreviewHandlers(props: UsePreviewHandlersProps) {
       console.error('저장 오류:', error);
       alert('저장 중 오류가 발생했습니다.');
     } finally {
+      isSavingRef.current = false;
       setIsSaving(false);
     }
   };

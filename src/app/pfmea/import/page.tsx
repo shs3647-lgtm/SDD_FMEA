@@ -138,24 +138,29 @@ function PFMEAImportPageContent() {
     setIsSaved,
     setIsSaving,
     setDirty,
-    externalPersist:
-      mode === 'master'
-        ? async (data: ImportedFlatData[]) => {
-            const res = await saveMasterDataset({
-              datasetId: masterDatasetId,
-              name: masterDatasetName,
-              setActive: true,
-              replace: true,
-              relationData: null,
-              flatData: data,
-            });
-            if (!res.ok) {
-              console.warn('[PFMEA Import] DB master save failed (localStorage kept)');
-              return;
-            }
-            if (res.datasetId) setMasterDatasetId(res.datasetId);
-          }
-        : undefined,
+    // ✅ 항상 DB에 저장 (mode 무관)
+    externalPersist: async (data: ImportedFlatData[]) => {
+      try {
+        const res = await saveMasterDataset({
+          datasetId: masterDatasetId,
+          name: masterDatasetName || 'MASTER',
+          setActive: true,
+          replace: true,
+          relationData: null,
+          flatData: data,
+        });
+        if (!res.ok) {
+          console.warn('[PFMEA Import] DB master save failed (localStorage kept)');
+          alert('⚠️ DB 저장 실패! 로컬에만 저장되었습니다. 새로고침 시 데이터가 복원되지 않을 수 있습니다.');
+          return;
+        }
+        if (res.datasetId) setMasterDatasetId(res.datasetId);
+        console.log('✅ DB 저장 완료:', data.length, '건');
+      } catch (error) {
+        console.error('[PFMEA Import] DB save error:', error);
+        alert('⚠️ DB 저장 오류! 로컬에만 저장되었습니다.');
+      }
+    },
   });
 
   // 관계형 핸들러 (훅에서 가져옴)
@@ -709,8 +714,13 @@ function PFMEAImportPageContent() {
                     <th className={tw.headerCell}>NO</th>
                     <th className={tw.headerCell}>순서</th>
                     <th className={tw.headerCell}>공정번호</th>
-                    {/* 선택된 항목명 동적 표시 */}
-                    <th className={tw.headerCell}>{PREVIEW_OPTIONS.find(o => o.value === previewColumn)?.label.split(' ')[1] || '항목'}</th>
+                    {/* 선택된 항목명 동적 표시 + 데이터 개수 */}
+                    <th className={tw.headerCell}>
+                      {PREVIEW_OPTIONS.find(o => o.value === previewColumn)?.label.split(' ')[1] || '항목'}
+                      <span className="text-yellow-300 ml-1">
+                        ({flatData.filter(d => d.itemCode === previewColumn && d.value && d.value.trim() !== '').length})
+                      </span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
