@@ -69,7 +69,10 @@ interface FCItem {
   processName: string; 
   m4: string; 
   workElem: string; 
-  text: string; 
+  text: string;
+  // ★ 역전개 정보 (작업요소 기능, 공정특성)
+  workFunction?: string;  // 작업요소 기능
+  processChar?: string;   // 공정특성
 }
 
 interface LinkResult { 
@@ -79,7 +82,7 @@ interface LinkResult {
   feScope: string; 
   feText: string; 
   severity: number; 
-  // ★ 역전개 정보
+  // ★ FE 역전개 정보
   feFunctionName?: string;
   feRequirement?: string;
   fmText: string; 
@@ -89,7 +92,10 @@ interface LinkResult {
   fcProcess: string; 
   fcM4: string; 
   fcWorkElem: string; 
-  fcText: string; 
+  fcText: string;
+  // ★ FC 역전개 정보
+  fcWorkFunction?: string;  // 작업요소 기능
+  fcProcessChar?: string;   // 공정특성
 }
 
 export default function FailureLinkTab({ state, setState, setStateSynced, setDirty, saveToLocalStorage, saveToLocalStorageOnly, saveAtomicDB }: FailureTabProps) {
@@ -371,7 +377,10 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
               processName: proc.name, 
               m4, 
               workElem: weName, 
-              text: fc.name 
+              text: fc.name,
+              // ★ 역전개 정보
+              workFunction: pc.funcName || '',  // 작업요소 기능
+              processChar: pc.name || '',       // 공정특성
             });
             counter++;
           });
@@ -1036,7 +1045,10 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
           fcProcess: fc.processName,
           fcM4: fc.m4,
           fcWorkElem: fc.workElem,
-          fcText: fc.text
+          fcText: fc.text,
+          // ★ FC 역전개 정보 저장
+          fcWorkFunction: fc.workFunction || '',
+          fcProcessChar: fc.processChar || '',
         });
       });
     });

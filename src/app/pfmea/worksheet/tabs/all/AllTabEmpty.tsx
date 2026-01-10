@@ -301,6 +301,9 @@ interface FailureLinkRow {
   feCategory?: string;        // 구분 (Your Plant / Ship to Plant / User)
   feFunctionName?: string;    // 완제품기능
   feRequirement?: string;     // 요구사항
+  // ★ FC 역전개 데이터 (고장원인 → 3L 기능분석)
+  fcWorkFunction?: string;    // 작업요소 기능
+  fcProcessChar?: string;     // 공정특성
 }
 
 interface ProcessedFMGroup {
@@ -325,6 +328,9 @@ interface ProcessedFMGroup {
     feCategory: string;       // 구분
     feFunctionName: string;   // 완제품기능
     feRequirement: string;    // 요구사항
+    // ★ FC 역전개 데이터 (3L 기능분석)
+    fcWorkFunction: string;   // 작업요소 기능
+    fcProcessChar: string;    // 공정특성
   }[];
 }
 
@@ -344,6 +350,11 @@ function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[] {
     functionName: string;
     requirement: string;
   }
+  interface FCData {
+    text: string;
+    workFunction: string;  // 작업요소 기능
+    processChar: string;   // 공정특성
+  }
   interface FMData {
     fmText: string;
     // ★ FM 역전개 데이터
@@ -352,7 +363,7 @@ function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[] {
     fmProcessFunction: string;
     fmProductChar: string;
     fes: Map<string, FEData>;
-    fcs: Map<string, string>;
+    fcs: Map<string, FCData>;
   }
   const fmMap = new Map<string, FMData>();
   
@@ -380,7 +391,11 @@ function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[] {
       });
     }
     if (link.fcId && link.fcText) {
-      group.fcs.set(link.fcId, link.fcText);
+      group.fcs.set(link.fcId, {
+        text: link.fcText,
+        workFunction: link.fcWorkFunction || '',
+        processChar: link.fcProcessChar || '',
+      });
     }
   });
   
@@ -389,7 +404,7 @@ function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[] {
   
   fmMap.forEach((group, fmId) => {
     const feList = Array.from(group.fes.entries()).map(([id, data]) => ({ id, ...data }));
-    const fcList = Array.from(group.fcs.entries()).map(([id, text]) => ({ id, text }));
+    const fcList = Array.from(group.fcs.entries()).map(([id, data]) => ({ id, ...data }));
     
     // ★ 최대 심각도 및 해당 FE 텍스트 계산
     let maxSeverity = 0;
@@ -426,10 +441,13 @@ function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[] {
         feRowSpan,
         fcRowSpan,
         isFirstRow: i === 0,
-        // ★ 역전개 데이터 (기능분석)
+        // ★ FE 역전개 데이터 (1L 기능분석)
         feCategory: fe?.category || '',
         feFunctionName: fe?.functionName || '',
         feRequirement: fe?.requirement || '',
+        // ★ FC 역전개 데이터 (3L 기능분석)
+        fcWorkFunction: fc?.workFunction || '',
+        fcProcessChar: fc?.processChar || '',
       });
     }
     
@@ -809,6 +827,54 @@ export default function AllTabEmpty({
                                 }}
                               >
                                 {fmGroup.fmProductChar || ''}
+                              </td>
+                            );
+                          }
+                          return null;
+                        }
+                        
+                        // ★ 작업요소 기능 컬럼 (FC 역전개)
+                        if (col.name === '작업요소 기능') {
+                          if (rowInFM === 0 || (rowInFM > 0 && fmGroup.rows[rowInFM - 1].fcRowSpan === 1)) {
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.fcRowSpan}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                }}
+                              >
+                                {row.fcWorkFunction || ''}
+                              </td>
+                            );
+                          }
+                          return null;
+                        }
+                        
+                        // ★ 공정특성 컬럼 (FC 역전개)
+                        if (col.name === '공정특성') {
+                          if (rowInFM === 0 || (rowInFM > 0 && fmGroup.rows[rowInFM - 1].fcRowSpan === 1)) {
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.fcRowSpan}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                }}
+                              >
+                                {row.fcProcessChar || ''}
                               </td>
                             );
                           }

@@ -191,6 +191,9 @@ export default function AllTabRenderer({
       feCategory,        // 구분 (Your Plant / Ship to Plant / User)
       feFunctionName,    // 완제품기능
       feRequirement,     // 요구사항
+      // ★ FC 역전개 데이터 (고장원인 → 3L 기능분석)
+      fcWorkFunction: link.fcWorkFunction || '',  // 작업요소 기능
+      fcProcessChar: link.fcProcessChar || '',    // 공정특성
     };
   });
   
