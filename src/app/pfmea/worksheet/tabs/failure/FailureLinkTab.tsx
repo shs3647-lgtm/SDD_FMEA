@@ -1366,6 +1366,7 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
             
             {/* 전체 확정/수정 버튼 */}
             {!isConfirmed ? (
+              // 미확정 상태: 전체확정 버튼 표시
               <button 
                 onClick={handleConfirmAll} 
                 disabled={savedLinks.length === 0}
@@ -1385,7 +1386,25 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
               >
                 {linkStats.fmMissingCount === 0 && savedLinks.length > 0 ? '🎉 전체확정' : '✅ 전체확정'}
               </button>
+            ) : linkStats.fmMissingCount === 0 ? (
+              // 확정 + 모든 FM 연결됨: 완료 상태 표시
+              <button 
+                disabled
+                style={{
+                  ...actionButtonStyle({ 
+                    bg: '#1b5e20', 
+                    color: '#fff',
+                    opacity: 1
+                  }),
+                  boxShadow: '0 0 12px rgba(27, 94, 32, 0.8)',
+                  fontWeight: 700,
+                  cursor: 'default'
+                }}
+              >
+                🎉 고장연결 완료
+              </button>
             ) : (
+              // 확정 + 일부 FM 미연결: 수정 버튼 표시
               <button 
                 onClick={handleEditMode}
                 style={actionButtonStyle({ 
