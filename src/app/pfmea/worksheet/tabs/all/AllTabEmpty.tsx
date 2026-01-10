@@ -10,10 +10,13 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { L1, L2, L3, border } from '@/styles/worksheet';
 import DataSelectModal from '@/components/modals/DataSelectModal';
+import SODSelectModal from '@/components/modals/SODSelectModal';
+import APResultModal from '@/components/modals/APResultModal';
 import { useAllTabModals } from './hooks/useAllTabModals';
+import { calculateAP } from './apCalculator';
 import type { WorksheetState } from '../../constants';
 
 // ============ 색상 정의 (구조분석 기준 통일) ============
@@ -515,10 +518,34 @@ export default function AllTabEmpty({
 }: AllTabEmptyProps) {
   // 모달 관리 훅
   const {
+    sodModal,
     controlModal,
     setControlModal,
     closeControlModal,
+    closeSodModal,
+    handleSODClick,
+    handleSODSelect,
   } = useAllTabModals(setState);
+  
+  // AP 모달 상태 (5AP/6AP 결과)
+  const [apModal, setApModal] = useState<{
+    isOpen: boolean;
+    stage: 5 | 6;
+    data: Array<{
+      id: string;
+      processName: string;
+      failureMode: string;
+      failureCause: string;
+      severity: number;
+      occurrence: number;
+      detection: number;
+      ap: 'H' | 'M' | 'L';
+    }>;
+  }>({
+    isOpen: false,
+    stage: 5,
+    data: [],
+  });
   
   // 고장연결 데이터 처리
   const processedFMGroups = React.useMemo(() => processFailureLinks(failureLinks), [failureLinks]);
@@ -1102,6 +1129,484 @@ export default function AllTabEmpty({
                             );
                           }
                           
+                          // ★ 발생도 셀 (리스크분석 또는 최적화)
+                          if (col.name === '발생도') {
+                            const targetType = col.step === '리스크분석' ? 'risk' : 'opt';
+                            const key = `${targetType}-${globalRowIdx}-O`;
+                            const currentValue = state?.riskData?.[key] as number | undefined;
+                            
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.fcRowSpan}
+                                onClick={() => handleSODClick('O', targetType, globalRowIdx, currentValue)}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                  cursor: 'pointer',
+                                  fontWeight: currentValue ? 700 : 400,
+                                }}
+                              >
+                                {currentValue || ''}
+                              </td>
+                            );
+                          }
+                          
+                          // ★ 검출도 셀 (리스크분석 또는 최적화)
+                          if (col.name === '검출도') {
+                            const targetType = col.step === '리스크분석' ? 'risk' : 'opt';
+                            const key = `${targetType}-${globalRowIdx}-D`;
+                            const currentValue = state?.riskData?.[key] as number | undefined;
+                            
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.fcRowSpan}
+                                onClick={() => handleSODClick('D', targetType, globalRowIdx, currentValue)}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                  cursor: 'pointer',
+                                  fontWeight: currentValue ? 700 : 400,
+                                }}
+                              >
+                                {currentValue || ''}
+                              </td>
+                            );
+                          }
+                          
+                          // ★ AP 셀 (리스크분석 또는 최적화)
+                          if (col.name === 'AP') {
+                            const targetType = col.step === '리스크분석' ? 'risk' : 'opt';
+                            const stage = col.step === '리스크분석' ? 5 : 6;
+                            
+                            // AP 계산: S, O, D 값 가져오기
+                            const sKey = `${targetType}-${globalRowIdx}-S`;
+                            const oKey = `${targetType}-${globalRowIdx}-O`;
+                            const dKey = `${targetType}-${globalRowIdx}-D`;
+                            const s = (state?.riskData?.[sKey] as number) || 0;
+                            const o = (state?.riskData?.[oKey] as number) || 0;
+                            const d = (state?.riskData?.[dKey] as number) || 0;
+                            const apValue = calculateAP(s, o, d);
+                            
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.fcRowSpan}
+                                onClick={() => {
+                                  // 현재 행의 AP 데이터로 모달 열기
+                                  if (apValue && fmGroup && row.fcText) {
+                                    const apData = [{
+                                      id: `ap-${globalRowIdx}`,
+                                      processName: fmGroup.fmProcessName || '',
+                                      failureMode: fmGroup.fmText || '',
+                                      failureCause: row.fcText || '',
+                                      severity: s,
+                                      occurrence: o,
+                                      detection: d,
+                                      ap: apValue,
+                                    }];
+                                    setApModal({ isOpen: true, stage, data: apData });
+                                  } else {
+                                    // 전체 AP 결과 표시 (모든 행 데이터 수집)
+                                    const allApData: typeof apModal.data = [];
+                                    processedFMGroups.forEach((group, gIdx) => {
+                                      group.rows.forEach((r, rIdx) => {
+                                        const gRowIdx = processedFMGroups.slice(0, gIdx).reduce((acc, g) => acc + g.rows.length, 0) + rIdx;
+                                        const gSKey = `${targetType}-${gRowIdx}-S`;
+                                        const gOKey = `${targetType}-${gRowIdx}-O`;
+                                        const gDKey = `${targetType}-${gRowIdx}-D`;
+                                        const gS = (state?.riskData?.[gSKey] as number) || 0;
+                                        const gO = (state?.riskData?.[gOKey] as number) || 0;
+                                        const gD = (state?.riskData?.[gDKey] as number) || 0;
+                                        const gAp = calculateAP(gS, gO, gD);
+                                        if (gAp && gS > 0 && gO > 0 && gD > 0) {
+                                          allApData.push({
+                                            id: `ap-${gRowIdx}`,
+                                            processName: group.fmProcessName || '',
+                                            failureMode: group.fmText || '',
+                                            failureCause: r.fcText || '',
+                                            severity: gS,
+                                            occurrence: gO,
+                                            detection: gD,
+                                            ap: gAp,
+                                          });
+                                        }
+                                      });
+                                    });
+                                    setApModal({ isOpen: true, stage, data: allApData });
+                                  }
+                                }}
+                                style={{
+                                  background: apValue === 'H' ? '#ef5350' : apValue === 'M' ? '#ffeb3b' : apValue === 'L' ? '#66bb6a' : (globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor),
+                                  color: apValue ? '#000' : 'inherit',
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                  cursor: 'pointer',
+                                  fontWeight: apValue ? 700 : 400,
+                                }}
+                              >
+                                {apValue || ''}
+                              </td>
+                            );
+                          }
+                          
+                          // ★ 습득교훈 셀 (텍스트 입력)
+                          if (col.name === '습득교훈') {
+                            const key = `lesson-${globalRowIdx}`;
+                            const value = state?.riskData?.[key] as string || '';
+                            
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.fcRowSpan}
+                                onClick={() => {
+                                  if (!setState) {
+                                    console.error('setState가 없습니다.');
+                                    return;
+                                  }
+                                  const newValue = prompt('습득교훈을 입력하세요:', value);
+                                  if (newValue !== null) {
+                                    setState((prev: WorksheetState) => ({
+                                      ...prev,
+                                      riskData: { ...(prev.riskData || {}), [key]: newValue }
+                                    }));
+                                  }
+                                }}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {value}
+                              </td>
+                            );
+                          }
+                          
+                          // ★ 개선결과근거 셀 (텍스트 입력)
+                          if (col.name === '개선결과근거') {
+                            const key = `result-${globalRowIdx}`;
+                            const value = state?.riskData?.[key] as string || '';
+                            
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.fcRowSpan}
+                                onClick={() => {
+                                  if (!setState) {
+                                    console.error('setState가 없습니다.');
+                                    return;
+                                  }
+                                  const newValue = prompt('개선결과근거를 입력하세요:', value);
+                                  if (newValue !== null) {
+                                    setState((prev: WorksheetState) => ({
+                                      ...prev,
+                                      riskData: { ...(prev.riskData || {}), [key]: newValue }
+                                    }));
+                                  }
+                                }}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {value}
+                              </td>
+                            );
+                          }
+                          
+                          // ★ 완료일자 셀 (날짜 입력)
+                          if (col.name === '완료일자') {
+                            const key = `completeDate-${globalRowIdx}`;
+                            const value = state?.riskData?.[key] as string || '';
+                            
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.fcRowSpan}
+                                onClick={() => {
+                                  if (!setState) {
+                                    console.error('setState가 없습니다.');
+                                    return;
+                                  }
+                                  const newValue = prompt('완료일자를 입력하세요 (YYYY-MM-DD):', value);
+                                  if (newValue !== null) {
+                                    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+                                    if (newValue && !dateRegex.test(newValue)) {
+                                      alert('날짜 형식이 올바르지 않습니다. (YYYY-MM-DD)');
+                                      return;
+                                    }
+                                    setState((prev: WorksheetState) => ({
+                                      ...prev,
+                                      riskData: { ...(prev.riskData || {}), [key]: newValue }
+                                    }));
+                                  }
+                                }}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {value}
+                              </td>
+                            );
+                          }
+                          
+                          // ★ 목표완료일자 셀 (날짜 입력)
+                          if (col.name === '목표완료일자') {
+                            const key = `targetDate-${globalRowIdx}`;
+                            const value = state?.riskData?.[key] as string || '';
+                            
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.fcRowSpan}
+                                onClick={() => {
+                                  if (!setState) {
+                                    console.error('setState가 없습니다.');
+                                    return;
+                                  }
+                                  const newValue = prompt('목표완료일자를 입력하세요 (YYYY-MM-DD):', value);
+                                  if (newValue !== null) {
+                                    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+                                    if (newValue && !dateRegex.test(newValue)) {
+                                      alert('날짜 형식이 올바르지 않습니다. (YYYY-MM-DD)');
+                                      return;
+                                    }
+                                    setState((prev: WorksheetState) => ({
+                                      ...prev,
+                                      riskData: { ...(prev.riskData || {}), [key]: newValue }
+                                    }));
+                                  }
+                                }}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {value}
+                              </td>
+                            );
+                          }
+                          
+                          // ★ 책임자성명 셀 (텍스트 입력)
+                          if (col.name === '책임자성명') {
+                            const key = `person-${globalRowIdx}`;
+                            const value = state?.riskData?.[key] as string || '';
+                            
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.fcRowSpan}
+                                onClick={() => {
+                                  if (!setState) {
+                                    console.error('setState가 없습니다.');
+                                    return;
+                                  }
+                                  const newValue = prompt('책임자성명을 입력하세요:', value);
+                                  if (newValue !== null) {
+                                    setState((prev: WorksheetState) => ({
+                                      ...prev,
+                                      riskData: { ...(prev.riskData || {}), [key]: newValue }
+                                    }));
+                                  }
+                                }}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {value}
+                              </td>
+                            );
+                          }
+                          
+                          // ★ 상태 셀 (상태 선택)
+                          if (col.name === '상태') {
+                            const key = `status-${globalRowIdx}`;
+                            const value = state?.riskData?.[key] as string || '';
+                            const statusOptions = ['대기', '진행중', '완료', '보류'];
+                            
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.fcRowSpan}
+                                onClick={() => {
+                                  if (!setState) {
+                                    console.error('setState가 없습니다.');
+                                    return;
+                                  }
+                                  const selected = prompt(`상태를 선택하세요:\n${statusOptions.map((opt, idx) => `${idx + 1}. ${opt}`).join('\n')}\n\n번호 입력:`, value ? String(statusOptions.indexOf(value) + 1) : '');
+                                  if (selected !== null) {
+                                    const idx = parseInt(selected) - 1;
+                                    if (idx >= 0 && idx < statusOptions.length) {
+                                      setState((prev: WorksheetState) => ({
+                                        ...prev,
+                                        riskData: { ...(prev.riskData || {}), [key]: statusOptions[idx] }
+                                      }));
+                                    } else {
+                                      alert('잘못된 번호입니다.');
+                                    }
+                                  }
+                                }}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {value}
+                              </td>
+                            );
+                          }
+                          
+                          // ★ 재평가 SOD (심각도, 발생도, 검출도) - 최적화 효과 평가
+                          if (col.name === '심각도(재평가)' || col.name === '심각도') {
+                            if (col.step === '최적화') {
+                              const key = `opt-${globalRowIdx}-S`;
+                              const currentValue = state?.riskData?.[key] as number | undefined;
+                              
+                              return (
+                                <td 
+                                  key={colIdx}
+                                  rowSpan={row.fcRowSpan}
+                                  onClick={() => handleSODClick('S', 'opt', globalRowIdx, currentValue)}
+                                  style={{
+                                    background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                    height: `${HEIGHTS.body}px`,
+                                    padding: '3px 4px',
+                                    border: '1px solid #ccc',
+                                    fontSize: '11px',
+                                    textAlign: col.align,
+                                    verticalAlign: 'middle',
+                                    cursor: 'pointer',
+                                    fontWeight: currentValue ? 700 : 400,
+                                  }}
+                                >
+                                  {currentValue || ''}
+                                </td>
+                              );
+                            }
+                          }
+                          
+                          // ★ 비고 셀 (텍스트 입력)
+                          if (col.name === '비고') {
+                            const key = `note-${globalRowIdx}`;
+                            const value = state?.riskData?.[key] as string || '';
+                            
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.fcRowSpan}
+                                onClick={() => {
+                                  if (!setState) {
+                                    console.error('setState가 없습니다.');
+                                    return;
+                                  }
+                                  const newValue = prompt('비고를 입력하세요:', value);
+                                  if (newValue !== null) {
+                                    setState((prev: WorksheetState) => ({
+                                      ...prev,
+                                      riskData: { ...(prev.riskData || {}), [key]: newValue }
+                                    }));
+                                  }
+                                }}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {value}
+                              </td>
+                            );
+                          }
+                          
+                          // ★ RPN 셀 (자동 계산 표시)
+                          if (col.name === 'RPN') {
+                            const targetType = col.step === '리스크분석' ? 'risk' : 'opt';
+                            const sKey = `${targetType}-${globalRowIdx}-S`;
+                            const oKey = `${targetType}-${globalRowIdx}-O`;
+                            const dKey = `${targetType}-${globalRowIdx}-D`;
+                            const s = (state?.riskData?.[sKey] as number) || 0;
+                            const o = (state?.riskData?.[oKey] as number) || 0;
+                            const d = (state?.riskData?.[dKey] as number) || 0;
+                            const rpn = s > 0 && o > 0 && d > 0 ? s * o * d : 0;
+                            
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.fcRowSpan}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                  fontWeight: rpn > 0 ? 700 : 400,
+                                }}
+                              >
+                                {rpn > 0 ? rpn : ''}
+                              </td>
+                            );
+                          }
+                          
                           // 다른 리스크/최적화 컬럼
                           return (
                             <td 
@@ -1205,6 +1710,25 @@ export default function AllTabEmpty({
           currentValues={[(state.riskData || {})[`${controlModal.type}-${controlModal.rowIndex}`] || ''].filter(Boolean).map(String)}
         />
       )}
+      
+      {/* SOD 선택 모달 (심각도/발생도/검출도) */}
+      <SODSelectModal
+        isOpen={sodModal.isOpen}
+        onClose={closeSodModal}
+        onSelect={handleSODSelect}
+        category={sodModal.category}
+        fmeaType="P-FMEA"
+        currentValue={sodModal.currentValue}
+        scope={sodModal.scope}
+      />
+      
+      {/* AP 결과 모달 (5AP/6AP) */}
+      <APResultModal
+        isOpen={apModal.isOpen}
+        onClose={() => setApModal(prev => ({ ...prev, isOpen: false }))}
+        stage={apModal.stage}
+        data={apModal.data}
+      />
     </div>
   );
 }
