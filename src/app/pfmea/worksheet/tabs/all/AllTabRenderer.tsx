@@ -59,6 +59,24 @@ export default function AllTabRenderer({
   };
   const visibleStepNames = visibleStepsNumbers.map(num => stepNameMap[num] || '').filter(Boolean);
 
+  // ★ 고장연결 데이터 추출 (state.failureLinks에서)
+  const rawFailureLinks = (state as any).failureLinks || [];
+  const failureLinks = rawFailureLinks.map((link: any) => ({
+    fmId: link.fmId || '',
+    fmText: link.fmText || link.cache?.fmText || '',
+    feId: link.feId || '',
+    feText: link.feText || link.cache?.feText || '',
+    // ★ 심각도: severity 또는 feSeverity 둘 다 확인
+    feSeverity: link.severity || link.feSeverity || link.cache?.feSeverity || 0,
+    fcId: link.fcId || '',
+    fcText: link.fcText || link.cache?.fcText || '',
+  }));
+  
+  console.log('🔵 AllTabRenderer: 고장연결 데이터', { 
+    count: failureLinks.length,
+    sample: failureLinks[0] || null,
+  });
+
   // ★★★ 새로운 ALL 화면: AllTabEmpty 사용 ★★★
   // 사이드바, 제목, 메인메뉴, 탭 메뉴는 상위 컴포넌트에서 유지
   // 워크시트 영역만 새로운 시트로 대체
@@ -67,6 +85,7 @@ export default function AllTabRenderer({
       rowCount={30} 
       showRPN={showRPN}
       visibleSteps={visibleStepNames}
+      failureLinks={failureLinks}
     />
   );
 }

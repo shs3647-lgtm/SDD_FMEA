@@ -10,8 +10,8 @@
 
 'use client';
 
-import React, { useState } from 'react';
-import { L1, L2, L3, border, btnConfirm, btnEdit, badgeConfirmed, badgeOk, badgeMissing } from '@/styles/worksheet';
+import React from 'react';
+import { L1, L2, L3, border } from '@/styles/worksheet';
 
 // ============ 색상 정의 (구조분석 기준 통일) ============
 const COLORS = {
@@ -283,28 +283,135 @@ function calculateGroupSpans(columns: ColumnDef[]): GroupSpan[] {
   return spans;
 }
 
+// ============ 고장연결 데이터 인터페이스 ============
+interface FailureLinkRow {
+  fmId: string;           // 고장형태 ID
+  fmText: string;         // 고장형태 텍스트
+  feId: string;           // 고장영향 ID
+  feText: string;         // 고장영향 텍스트
+  feSeverity: number;     // 심각도
+  fcId: string;           // 고장원인 ID
+  fcText: string;         // 고장원인 텍스트
+}
+
+interface ProcessedFMGroup {
+  fmId: string;
+  fmText: string;
+  fmRowSpan: number;      // FM 셀합치기 행 수
+  maxSeverity: number;    // 연결된 FE 중 최대 심각도
+  maxSeverityFeText: string; // 최대 심각도를 가진 FE 텍스트
+  rows: {
+    feText: string;
+    feSeverity: number;
+    fcText: string;
+    feRowSpan: number;    // FE 셀합치기 (마지막 행 병합용)
+    fcRowSpan: number;    // FC 셀합치기 (마지막 행 병합용)
+    isFirstRow: boolean;  // FM 첫 행 여부
+  }[];
+}
+
+/**
+ * 고장연결 데이터를 FM 중심으로 그룹핑하고 rowSpan 계산
+ * - 고장형태(FM)를 중심으로 고장영향(FE)과 고장원인(FC)을 매칭
+ * - FE/FC 갯수가 다를 때 마지막 행을 셀합치기
+ */
+function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[] {
+  if (!links || links.length === 0) return [];
+  
+  // FM별 그룹핑
+  const fmMap = new Map<string, { fmText: string; fes: Map<string, { text: string; severity: number }>; fcs: Map<string, string> }>();
+  
+  links.forEach(link => {
+    if (!fmMap.has(link.fmId)) {
+      fmMap.set(link.fmId, {
+        fmText: link.fmText,
+        fes: new Map(),
+        fcs: new Map(),
+      });
+    }
+    const group = fmMap.get(link.fmId)!;
+    if (link.feId && link.feText) {
+      group.fes.set(link.feId, { text: link.feText, severity: link.feSeverity || 0 });
+    }
+    if (link.fcId && link.fcText) {
+      group.fcs.set(link.fcId, link.fcText);
+    }
+  });
+  
+  // ProcessedFMGroup 생성
+  const result: ProcessedFMGroup[] = [];
+  
+  fmMap.forEach((group, fmId) => {
+    const feList = Array.from(group.fes.entries()).map(([id, data]) => ({ id, ...data }));
+    const fcList = Array.from(group.fcs.entries()).map(([id, text]) => ({ id, text }));
+    
+    // ★ 최대 심각도 및 해당 FE 텍스트 계산
+    let maxSeverity = 0;
+    let maxSeverityFeText = '';
+    feList.forEach(fe => {
+      if (fe.severity > maxSeverity) {
+        maxSeverity = fe.severity;
+        maxSeverityFeText = fe.text;
+      }
+    });
+    
+    const maxRows = Math.max(feList.length, fcList.length, 1);
+    const rows: ProcessedFMGroup['rows'] = [];
+    
+    for (let i = 0; i < maxRows; i++) {
+      const fe = feList[i];
+      const fc = fcList[i];
+      
+      // 마지막 행 셀합치기 계산: 더 짧은 쪽의 마지막 항목이 나머지 행 병합
+      let feRowSpan = 1;
+      let fcRowSpan = 1;
+      
+      if (feList.length < fcList.length && i === feList.length - 1 && feList.length > 0) {
+        feRowSpan = maxRows - i;
+      }
+      if (fcList.length < feList.length && i === fcList.length - 1 && fcList.length > 0) {
+        fcRowSpan = maxRows - i;
+      }
+      
+      rows.push({
+        feText: fe?.text || '',
+        feSeverity: fe?.severity || 0,
+        fcText: fc?.text || '',
+        feRowSpan,
+        fcRowSpan,
+        isFirstRow: i === 0,
+      });
+    }
+    
+    result.push({
+      fmId,
+      fmText: group.fmText,
+      fmRowSpan: maxRows,
+      maxSeverity,
+      maxSeverityFeText,
+      rows,
+    });
+  });
+  
+  return result;
+}
+
 // ============ 컴포넌트 ============
 interface AllTabEmptyProps {
   rowCount?: number;
   showRPN?: boolean;
-  isConfirmed?: boolean;
-  workElementCount?: number;
-  missingCount?: number;
-  onConfirm?: () => void;
-  onEdit?: () => void;
   visibleSteps?: string[];  // 표시할 단계명 목록 (예: ['구조분석', '기능분석'])
+  failureLinks?: FailureLinkRow[];  // 고장연결 데이터
 }
 
 export default function AllTabEmpty({ 
   rowCount = 10, 
   showRPN = false,
-  isConfirmed = false,
-  workElementCount = 0,
-  missingCount = 0,
-  onConfirm,
-  onEdit,
   visibleSteps,
+  failureLinks = [],
 }: AllTabEmptyProps) {
+  // 고장연결 데이터 처리
+  const processedFMGroups = React.useMemo(() => processFailureLinks(failureLinks), [failureLinks]);
   // visibleSteps가 지정되면 해당 단계만 필터링, 없으면 전체 표시
   const allColumns = showRPN ? getColumnsWithRPN() : COLUMNS_BASE;
   const columns = visibleSteps && visibleSteps.length > 0
@@ -359,35 +466,6 @@ export default function AllTabEmpty({
               >
                 <div className="flex items-center justify-center gap-3">
                   <span>{STEP_LABELS[span.step] || span.step}</span>
-                  {/* 첫 번째 단계(구조분석)에만 확정/수정 버튼 표시 */}
-                  {idx === 0 && (
-                    <div className="flex gap-1.5">
-                      {isConfirmed ? (
-                        <>
-                          <span className={badgeConfirmed}>✓ 확정됨({workElementCount})</span>
-                          {missingCount === 0 ? (
-                            <span className={badgeOk}>누락 0건</span>
-                          ) : (
-                            <span className={badgeMissing}>누락 {missingCount}건</span>
-                          )}
-                          {onEdit && (
-                            <button type="button" onClick={onEdit} className={btnEdit}>수정</button>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          {missingCount === 0 ? (
-                            <span className={badgeOk}>누락 0건</span>
-                          ) : (
-                            <span className={badgeMissing}>누락 {missingCount}건</span>
-                          )}
-                          {onConfirm && (
-                            <button type="button" onClick={onConfirm} className={btnConfirm}>확정</button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
                 </div>
               </th>
             ))}
@@ -440,27 +518,195 @@ export default function AllTabEmpty({
         </thead>
         
         <tbody>
-          {Array.from({ length: rowCount }, (_, rowIdx) => (
-            <tr key={rowIdx}>
-              {columns.map((col, colIdx) => (
-                <td 
-                  key={colIdx} 
-                  style={{
-                    background: rowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
-                    height: `${HEIGHTS.body}px`,
-                    padding: '3px 4px',
-                    border: '1px solid #ccc',
-                    fontSize: '11px',
-                    textAlign: col.align,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                </td>
-              ))}
-            </tr>
-          ))}
+          {processedFMGroups.length > 0 ? (
+            // ★ 고장연결 데이터가 있으면 FM 중심 셀합치기 렌더링
+            processedFMGroups.flatMap((fmGroup, fmIdx) => 
+              fmGroup.rows.map((row, rowInFM) => {
+                const globalRowIdx = processedFMGroups.slice(0, fmIdx).reduce((acc, g) => acc + g.rows.length, 0) + rowInFM;
+                const isLastRowOfFM = rowInFM === fmGroup.rows.length - 1;
+                
+                return (
+                  <tr 
+                    key={`fm-${fmGroup.fmId}-${rowInFM}`}
+                    style={isLastRowOfFM ? { borderBottom: '2px solid #1a237e' } : undefined}
+                  >
+                    {columns.map((col, colIdx) => {
+                      // 고장분석 컬럼 처리 (셀합치기 적용)
+                      if (col.step === '고장분석') {
+                        // 고장영향(FE) 컬럼 - "고장영향(S)" 형식 표시
+                        if (col.name === '고장영향(FE)') {
+                          // 첫 행이거나 rowSpan이 1인 경우에만 렌더링
+                          if (rowInFM === 0 || (rowInFM > 0 && fmGroup.rows[rowInFM - 1].feRowSpan === 1)) {
+                            // 고장영향 텍스트 + 심각도 조합
+                            const feDisplay = row.feText 
+                              ? (row.feSeverity > 0 ? `${row.feText}(${row.feSeverity})` : row.feText)
+                              : '';
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.feRowSpan}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                }}
+                              >
+                                {feDisplay}
+                              </td>
+                            );
+                          }
+                          return null; // rowSpan으로 병합된 셀
+                        }
+                        
+                        // 심각도 컬럼 - FM 전체 병합, 최대 숫자만 표시
+                        if (col.name === '심각도') {
+                          if (row.isFirstRow) {
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={fmGroup.fmRowSpan}
+                                style={{
+                                  background: fmIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '12px',
+                                  textAlign: 'center',
+                                  verticalAlign: 'middle',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                {fmGroup.maxSeverity > 0 ? fmGroup.maxSeverity : ''}
+                              </td>
+                            );
+                          }
+                          return null; // FM rowSpan으로 병합됨
+                        }
+                        
+                        // 고장형태(FM) 컬럼 - FM 전체 행 병합 (FM 인덱스 기준 줄무늬)
+                        if (col.name === '고장형태(FM)') {
+                          if (row.isFirstRow) {
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={fmGroup.fmRowSpan}
+                                style={{
+                                  background: fmIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: 'center',
+                                  verticalAlign: 'middle',
+                                  color: '#000',
+                                }}
+                              >
+                                {fmGroup.fmText}
+                              </td>
+                            );
+                          }
+                          return null; // FM rowSpan으로 병합됨
+                        }
+                        
+                        // 고장원인(FC) 컬럼
+                        if (col.name === '고장원인(FC)') {
+                          if (rowInFM === 0 || (rowInFM > 0 && fmGroup.rows[rowInFM - 1].fcRowSpan === 1)) {
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.fcRowSpan}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                }}
+                              >
+                                {row.fcText}
+                              </td>
+                            );
+                          }
+                          return null;
+                        }
+                      }
+                      
+                      // 리스크분석 / 최적화 컬럼 - FC와 동일한 rowSpan 적용
+                      if (col.step === '리스크분석' || col.step === '최적화') {
+                        if (rowInFM === 0 || (rowInFM > 0 && fmGroup.rows[rowInFM - 1].fcRowSpan === 1)) {
+                          return (
+                            <td 
+                              key={colIdx}
+                              rowSpan={row.fcRowSpan}
+                              style={{
+                                background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                height: `${HEIGHTS.body}px`,
+                                padding: '3px 4px',
+                                border: '1px solid #ccc',
+                                fontSize: '11px',
+                                textAlign: col.align,
+                                verticalAlign: 'middle',
+                              }}
+                            >
+                            </td>
+                          );
+                        }
+                        return null; // fcRowSpan으로 병합됨
+                      }
+                      
+                      // 다른 컬럼은 빈 셀로 렌더링
+                      return (
+                        <td 
+                          key={colIdx} 
+                          style={{
+                            background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                            height: `${HEIGHTS.body}px`,
+                            padding: '3px 4px',
+                            border: '1px solid #ccc',
+                            fontSize: '11px',
+                            textAlign: col.align,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })
+            )
+          ) : (
+            // ★ 고장연결 데이터가 없으면 빈 행 렌더링
+            Array.from({ length: rowCount }, (_, rowIdx) => (
+              <tr key={rowIdx}>
+                {columns.map((col, colIdx) => (
+                  <td 
+                    key={colIdx} 
+                    style={{
+                      background: rowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                      height: `${HEIGHTS.body}px`,
+                      padding: '3px 4px',
+                      border: '1px solid #ccc',
+                      fontSize: '11px',
+                      textAlign: col.align,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                  </td>
+                ))}
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>
