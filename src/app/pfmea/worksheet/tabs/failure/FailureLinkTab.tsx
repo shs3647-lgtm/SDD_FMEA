@@ -1005,8 +1005,7 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     }, 100);
     setTimeout(drawLines, 300);
     
-    // ✅ 연결 완료 알림 (자동 FM 이동 제거 - 상태 동기화 문제 방지)
-    // 사용자가 ▼다음 FM 버튼으로 직접 이동하도록 함
+    // ✅ 자동으로 다음 FM 이동
     const currentProcess = currentFM.processName;
     const currentProcessFMs = fmData.filter(fm => fm.processName === currentProcess);
     
@@ -1028,21 +1027,38 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     const currentIdx = allProcesses.indexOf(currentProcess);
     const nextProcess = allProcesses[currentIdx + 1];
     
-    // 메시지 표시 (FM 자동 이동 없음)
-    if (allLinkedInProcess && !nextProcess) {
-      // 모든 공정 완료
-      alert(`✅ ${currentFM.text} 연결 완료!\n\n🎉 모든 공정의 고장연결이 완료되었습니다!\n\n[전체확정] 버튼을 눌러 확정해주세요.`);
-    } else if (allLinkedInProcess && nextProcess) {
-      // 현재 공정 완료, 다음 공정 있음
+    // ✅ 자동 FM 이동 (setTimeout으로 상태 업데이트 대기)
+    if (allLinkedInProcess && nextProcess) {
+      // 현재 공정 완료 → 다음 공정의 첫 번째 FM으로 이동
       const nextFM = fmData.find(fm => fm.processName === nextProcess);
-      alert(`✅ ${currentFM.text} 연결 완료!\n\n🎯 ${currentProcess} 공정 완료!\n\n💡 ▼다음 FM 버튼을 눌러 ${nextProcess} 공정으로 이동하세요.`);
+      if (nextFM) {
+        setTimeout(() => {
+          setCurrentFMId(nextFM.id);
+          setSelectedProcess(nextProcess);
+          setLinkedFEs(new Map());
+          setLinkedFCs(new Map());
+        }, 200);
+        alert(`✅ ${currentFM.text} 연결 완료!\n\n🎯 ${currentProcess} 공정 완료!\n\n➡️ 다음 공정: ${nextProcess}`);
+        return;
+      }
+    } else if (allLinkedInProcess && !nextProcess) {
+      // 모든 공정 완료
+      setViewMode('result');
+      alert(`✅ ${currentFM.text} 연결 완료!\n\n🎉 모든 공정의 고장연결이 완료되었습니다!\n\n[전체확정] 버튼을 눌러 확정해주세요.`);
+      return;
     } else if (nextFMInProc) {
-      // 같은 공정 내 다음 FM 있음
-      alert(`✅ ${currentFM.text} 연결 완료!\n\n💡 ▼다음 FM 버튼을 눌러 ${nextFMInProc.fmNo}: ${nextFMInProc.text}로 이동하세요.`);
-    } else {
-      // 현재 공정의 마지막 FM
-      alert(`✅ ${currentFM.text} 연결 완료!\n\nFE: ${feArray.length}개, FC: ${fcArray.length}개`);
+      // 같은 공정 내 다음 FM으로 이동
+      setTimeout(() => {
+        setCurrentFMId(nextFMInProc.id);
+        setLinkedFEs(new Map());
+        setLinkedFCs(new Map());
+      }, 200);
+      alert(`✅ ${currentFM.text} 연결 완료!\n\n➡️ 다음 FM: ${nextFMInProc.fmNo}: ${nextFMInProc.text}`);
+      return;
     }
+    
+    // 현재 공정의 마지막 FM
+    alert(`✅ ${currentFM.text} 연결 완료!\n\nFE: ${feArray.length}개, FC: ${fcArray.length}개`);
   }, [currentFMId, currentFM, linkedFEs, linkedFCs, savedLinks, fmData, setState, setStateSynced, setDirty, saveToLocalStorage, drawLines]);
 
   // ========== 엔터키로 연결확정 ==========
