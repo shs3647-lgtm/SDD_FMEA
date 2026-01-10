@@ -464,11 +464,25 @@ export async function POST(request: NextRequest) {
               optimizationConfirmed: db.confirmed.optimization || false,
             },
           });
+          console.log('[API] ✅ fmeaConfirmedState 저장:', db.confirmed);
         } catch (e: any) {
           // 테이블이 없으면 스킵 (마이그레이션 전)
           if (e?.code !== 'P2021') {
             console.warn('[API] 확정 상태 저장 오류 (무시):', e.message);
           }
+        }
+        
+        // ✅ FmeaInfo 테이블의 structureConfirmed도 업데이트 (raw SQL)
+        try {
+          await tx.$executeRawUnsafe(`
+            UPDATE "FmeaInfo" 
+            SET "structureConfirmed" = $1, "updatedAt" = NOW()
+            WHERE "fmeaId" = $2
+          `, db.confirmed.structure || false, db.fmeaId);
+          console.log('[API] ✅ FmeaInfo.structureConfirmed 업데이트:', db.confirmed.structure);
+        } catch (e: any) {
+          // 테이블이 없으면 스킵
+          console.warn('[API] FmeaInfo 업데이트 오류 (무시):', e.message);
         }
       }
       
