@@ -233,24 +233,25 @@ export default function AllTabEmpty({
                       }
                       
                       // ★ 리스크분석 / 최적화 컬럼 - RiskOptCellRenderer 사용 (모듈화)
+                      // ★ 중요: rowSpan 병합 체크는 FailureCellRenderer와 동일한 조건 사용
                       if (col.step === '리스크분석' || col.step === '최적화') {
-                        // ★ FC 셀 병합 조건: 이전 행들의 fcRowSpan 누적 범위 체크
-                        // rowInFM이 이전 행의 rowSpan 범위 안에 있으면 렌더링하지 않음
-                        let shouldRenderFC = true;
-                        for (let prevIdx = 0; prevIdx < rowInFM; prevIdx++) {
-                          const prevRow = fmGroup.rows[prevIdx];
-                          if (prevRow && prevRow.fcRowSpan > 1) {
-                            // 이전 행의 rowSpan이 현재 행까지 영향을 미치는지 확인
-                            if (prevIdx + prevRow.fcRowSpan > rowInFM) {
-                              shouldRenderFC = false;
-                              break;
+                        // ★ FC별 rowSpan 조건: FailureCellRenderer와 동일
+                        const isInMergedRange = (): boolean => {
+                          for (let prevIdx = 0; prevIdx < rowInFM; prevIdx++) {
+                            const prevRow = fmGroup.rows[prevIdx];
+                            if (!prevRow) continue;
+                            if (prevRow.fcRowSpan > 1 && prevIdx + prevRow.fcRowSpan > rowInFM) {
+                              return true;
                             }
                           }
+                          return false;
+                        };
+                        
+                        // ★ 이전 행의 rowSpan에 포함되면 null 반환
+                        if (rowInFM > 0 && isInMergedRange()) {
+                          return null;
                         }
-                        if (!shouldRenderFC) {
-                          return null; // 이전 행의 rowSpan으로 병합됨
-                        }
-                        const prevFcRowSpan = rowInFM > 0 ? (fmGroup.rows[rowInFM - 1]?.fcRowSpan ?? 1) : 1;
+                        
                         return (
                           <RiskOptCellRenderer
                             key={colIdx}
@@ -259,7 +260,7 @@ export default function AllTabEmpty({
                             globalRowIdx={globalRowIdx}
                             fcRowSpan={row.fcRowSpan}
                             rowInFM={rowInFM}
-                            prevFcRowSpan={prevFcRowSpan}
+                            prevFcRowSpan={1}
                             fmId={fmGroup.fmId}
                             fcId={row.fcId}
                             state={state}
