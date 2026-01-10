@@ -43,7 +43,7 @@
 |------|----------------|
 | `src/app/pfmea/register/page.tsx` | codefreeze-20260110-register-final |
 | `src/app/pfmea/list/page.tsx` | codefreeze-20260110-full-system |
-| `src/app/pfmea/worksheet/page.tsx` | codefreeze-20260110-all-ui-freeze |
+| `src/app/pfmea/worksheet/page.tsx` | codefreeze-20260110-all-ui-freeze<br/>codefreeze-20260111-worksheet-110percent (110% 배율) |
 | `src/app/pfmea/import/page.tsx` | codefreeze-20260110-pfmea-import |
 | `src/app/pfmea/revision/page.tsx` | codefreeze-20260110-revision-approval |
 
@@ -141,9 +141,22 @@
 ## 🏷️ 마스터 코드프리즈 태그
 
 ```
-codefreeze-20260110-all-ui-freeze
+codefreeze-20260110-all-ui-freeze  (전체 UI 코드프리즈)
+codefreeze-20260111-worksheet-110percent  (워크시트 110% 배율 확정)
 ```
 
 ---
 
-## 📅 마지막 업데이트: 2026-01-10
+## ✅ 최근 코드프리즈 내역 (2026-01-11)
+
+### 1. 워크시트 기본 배율 110% 확정
+- `src/app/pfmea/worksheet/page.tsx` - 워크시트 영역 zoom: 1.1 고정
+- 구조분석 화면과 동일한 배율 유지
+
+### 2. 작업요소 돋보기 표시 로직 표준화
+- `src/app/pfmea/worksheet/tabs/StructureTab.tsx` - SelectableCell과 동일하게 value 있을 때 돋보기 숨김
+- 메인공정기능과 일관성 유지
+
+---
+
+## 📅 마지막 업데이트: 2026-01-11
