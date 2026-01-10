@@ -639,9 +639,13 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
             </tr>
           ) : (() => {
             let globalRowIdx = 0;
-            return state.l2.flatMap((proc) => {
+            return state.l2.flatMap((proc, procIdx) => {
               const l3List = proc.l3 || [];
               if (l3List.length === 0) return [];
+              
+              // ✅ 메인공정명 줄무늬: 공정 인덱스 기준 (홀수/짝수)
+              const procZebra = getZebraColors(procIdx);
+              const procZebraBg = procZebra.structure; // 구조분석 색상 (파란색 계열)
               
               const procRowSpan = getProcRowSpan(proc);
               let isFirstProcRow = true;
@@ -657,7 +661,7 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
                   const row = (
                     <tr key={we.id}>
                       {isFirstProcRow && (
-                        <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: zebra.structure }}>
+                        <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: procZebraBg }}>
                           {proc.no}. {proc.name}
                         </td>
                       )}
@@ -694,7 +698,7 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
                     const row = (
                       <tr key={f.id}>
                         {isFirstProcRow && (
-                          <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: zebra.structure }}>
+                          <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: procZebraBg }}>
                             {proc.no}. {proc.name}
                           </td>
                         )}
@@ -735,7 +739,7 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
                     const row = (
                       <tr key={c.id}>
                         {isFirstProcRow && (
-                          <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: zebra.structure }}>
+                          <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: procZebraBg }}>
                             {proc.no}. {proc.name}
                           </td>
                         )}
