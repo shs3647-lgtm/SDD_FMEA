@@ -432,12 +432,12 @@ export function StructureRow({
   
   return (
     <>
-      {/* 완제품 공정명: 메인 공정명과 동일하게 l2Spans 기준 병합 (1:1 매칭) */}
+      {/* 완제품 공정명: 메인 공정명과 동일하게 l2Spans 기준 병합 (1:1 매칭) + 공정 인덱스 기준 줄무늬 */}
       {showMergedCells && (
         <td 
           rowSpan={spanCount || 1} 
           className="text-center text-xs border border-[#ccc] p-1 align-middle break-words"
-          style={{ background: zebraBg }}
+          style={{ background: l2ZebraBg }}  {/* ✅ 메인공정명과 동일한 공정 인덱스 기준 줄무늬 */}
         >
           <input
             type="text" value={state.l1.name}
