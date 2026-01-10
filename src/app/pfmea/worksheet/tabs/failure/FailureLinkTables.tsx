@@ -106,23 +106,47 @@ export default function FailureLinkTables({
   const filteredFmData = selectedProcess === 'all' ? fmData : fmData.filter(fm => fm.processName === selectedProcess);
   const filteredFcData = fcLinkScope === 'all' ? fcData : (selectedProcess === 'all' ? fcData : fcData.filter(fc => fc.processName === selectedProcess));
 
+  // 공정 목록 추출
+  const processNames = Array.from(new Set(fmData.map(fm => fm.processName)));
+  
   return (
     <div className="bg-white flex flex-col min-w-0" style={flexContainerStyle('60', `2px solid #ccc`)}>
-      <div className="flex justify-center items-center py-2 px-3 relative" style={headerStyle('#fff3e0', `1px solid #ccc`, FONT_SIZES.pageHeader)}>
+      <div className="flex justify-between items-center py-2 px-3" style={headerStyle('#fff3e0', `1px solid #ccc`, FONT_SIZES.pageHeader)}>
         <span className="font-semibold">P-FMEA 고장 분석(4단계) - 고장연결</span>
-        <div className="absolute right-3 flex items-center gap-1.5">
-          <select 
-            value={selectedProcess} 
-            onChange={(e) => {
-              onProcessChange(e.target.value);
-            }}
-            className="px-2 py-0.5 text-xs rounded border border-yellow-500 bg-yellow-50 font-semibold text-orange-600"
+        
+        {/* 공정 필터 버튼 (2ST, 3ST, ... ALL) */}
+        <div className="flex items-center gap-1">
+          {processNames.map((proc, idx) => {
+            const isActive = selectedProcess === proc;
+            const stNo = idx + 2; // 2ST부터 시작
+            return (
+              <button
+                key={proc}
+                onClick={() => onProcessChange(proc)}
+                className={`px-2 py-0.5 text-[10px] rounded border font-semibold transition-all ${
+                  isActive
+                    ? 'bg-orange-500 text-white border-orange-400'
+                    : 'bg-white text-orange-600 border-orange-300 hover:bg-orange-50'
+                }`}
+                title={`${proc} 공정 보기`}
+              >
+                {stNo}ST
+              </button>
+            );
+          })}
+          
+          {/* ALL 버튼 */}
+          <button
+            onClick={() => onProcessChange('all')}
+            className={`px-2 py-0.5 text-[10px] rounded border font-semibold transition-all ${
+              selectedProcess === 'all'
+                ? 'bg-purple-600 text-white border-purple-500'
+                : 'bg-white text-purple-600 border-purple-300 hover:bg-purple-50'
+            }`}
+            title="모든 공정 보기"
           >
-            <option value="all">모든공정</option>
-            {Array.from(new Set(fmData.map(fm => fm.processName))).map(proc => (
-              <option key={proc} value={proc}>{proc}</option>
-            ))}
-          </select>
+            ALL
+          </button>
         </div>
       </div>
       
