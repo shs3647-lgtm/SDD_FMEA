@@ -60,8 +60,10 @@ export default function DbViewerPage() {
       const res = await fetch('/api/admin/db/schemas');
       const data = await res.json();
       if (data.success) {
-        // pfmea_ 프로젝트 스키마를 상단에 정렬
+        // public 스키마를 최상단에, 그 다음 pfmea_ 스키마, 나머지 순
         const sorted = [...data.schemas].sort((a, b) => {
+          if (a === 'public') return -1;
+          if (b === 'public') return 1;
           const aIsFmea = a.startsWith('pfmea_');
           const bIsFmea = b.startsWith('pfmea_');
           if (aIsFmea && !bIsFmea) return -1;
@@ -69,14 +71,16 @@ export default function DbViewerPage() {
           return a.localeCompare(b);
         });
         setSchemas(sorted);
-        // pfmea_ 스키마 우선 선택 (프로젝트 데이터가 여기 있음)
-        const fmeaSchema = sorted.find(s => s.startsWith('pfmea_'));
-        if (fmeaSchema) {
-          setSelectedSchema(fmeaSchema);
-        } else if (data.schemas.includes('new_fmea')) {
-          setSelectedSchema('new_fmea');
-        } else if (sorted.length > 0) {
-          setSelectedSchema(sorted[0]);
+        // ✅ public 스키마 우선 선택 (Prisma 데이터가 여기 있음)
+        if (data.schemas.includes('public')) {
+          setSelectedSchema('public');
+        } else {
+          const fmeaSchema = sorted.find(s => s.startsWith('pfmea_'));
+          if (fmeaSchema) {
+            setSelectedSchema(fmeaSchema);
+          } else if (sorted.length > 0) {
+            setSelectedSchema(sorted[0]);
+          }
         }
       } else {
         setError(data.error || '스키마 로드 실패');
@@ -248,19 +252,20 @@ export default function DbViewerPage() {
                 <option value="">선택하세요</option>
                 {schemas.map(schema => {
                   const isFmea = schema.startsWith('pfmea_');
+                  const isPublic = schema === 'public';
                   return (
                     <option key={schema} value={schema}>
-                      {isFmea ? '🔷 ' : ''}{schema}
-                      {isFmea ? ' (FMEA 프로젝트)' : ''}
+                      {isPublic ? '⭐ ' : isFmea ? '🔷 ' : ''}{schema}
+                      {isPublic ? ' (Prisma 메인)' : isFmea ? ' (프로젝트 메타)' : ''}
                     </option>
                   );
                 })}
               </select>
-              {selectedSchema?.startsWith('pfmea_') && (
-                <div className="mt-1 text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                  💡 이 스키마는 FMEA 프로젝트 전용입니다. 확정상태는 <code>fmea_confirmed_states</code> 테이블에서 확인하세요.
-                </div>
-              )}
+              <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                <strong>📌 중요:</strong><br/>
+                • <code className="bg-gray-100 px-1">public</code>: Prisma 테이블 (확정상태, 구조, 기능, 고장분석 등)<br/>
+                • <code className="bg-gray-100 px-1">pfmea_*</code>: 프로젝트 메타 (FmeaInfo, FmeaLegacyData)
+              </div>
             </div>
 
             <div className="mb-4">
