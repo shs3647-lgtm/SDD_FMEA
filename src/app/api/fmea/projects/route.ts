@@ -44,13 +44,11 @@ export async function GET(request: NextRequest) {
     
     for (const row of schemasResult.rows) {
       const schemaName = row.schema_name;
-      // pfmea_pfm26_m001 → pfm26-M001
+      // pfmea_pfm26_m001 → PFM26-M001 (완전 대문자)
       const fmeaId = schemaName
         .replace('pfmea_', '')
         .replace(/_/g, '-')
-        .replace(/pfm(\d+)-([mfp])(\d+)/i, (_match: string, year: string, type: string, num: string) => 
-          `pfm${year}-${type.toUpperCase()}${num}`
-        );
+        .toUpperCase(); // ★ 완전 대문자로 변환
       
       try {
         // FmeaInfo 테이블에서 정보 조회
