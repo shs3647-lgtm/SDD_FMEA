@@ -76,19 +76,26 @@
 | `src/app/pfmea/worksheet/components/AllViewRightPanel.tsx` | codefreeze-20260110-failure-link-all |
 | `src/app/pfmea/worksheet/components/AllTabRightPanel.tsx` | codefreeze-20260110-failure-link-all |
 
-### 3. 모달 (500px 고정)
-| 파일 | 크기 |
-|------|------|
-| `src/app/pfmea/worksheet/ProcessSelectModal.tsx` | **500px** |
-| `src/app/pfmea/worksheet/WorkElementSelectModal.tsx` | **500px** |
-| `src/components/modals/BaseSelectModal.tsx` | **500px** |
-| `src/components/modals/StandardSelectModal.tsx` | **500px** |
+### 3. 모달 (350px 고정, pt-200px 위치)
+| 파일 | 크기/위치 | 코드프리즈 태그 |
+|------|----------|----------------|
+| `src/app/pfmea/worksheet/ProcessSelectModal.tsx` | **350px, pt-[200px]** | codefreeze-20260110-modal-treeview-350px |
+| `src/app/pfmea/worksheet/WorkElementSelectModal.tsx` | **350px, pt-[200px]** | codefreeze-20260110-modal-treeview-350px |
+| `src/components/modals/BaseSelectModal.tsx` | **350px** | codefreeze-20260110-modal-treeview-350px |
+| `src/components/modals/StandardSelectModal.tsx` | **350px** | codefreeze-20260110-modal-treeview-350px |
 
 ### 4. 사이드바 & 레이아웃
 | 파일 | 코드프리즈 태그 |
 |------|----------------|
 | `src/components/layout/Sidebar.tsx` | codefreeze-20260110-sidebar |
-| `src/styles/layout.ts` | codefreeze-20260110-500px-unified |
+| `src/styles/layout.ts` | codefreeze-20260110-350px-unified |
+
+### 4-1. 트리뷰 & 우측 패널 (350px 고정)
+| 파일 | 크기 | 코드프리즈 태그 |
+|------|------|----------------|
+| `src/app/pfmea/worksheet/page.tsx` (트리뷰 영역) | **350px** | codefreeze-20260110-modal-treeview-350px |
+| `src/app/pfmea/worksheet/panels/APTable/APTable5.tsx` | **350px** (RIGHT_PANEL_WIDTH) | codefreeze-20260110-modal-treeview-350px |
+| `src/app/pfmea/worksheet/panels/APTable/APTable6.tsx` | **350px** (RIGHT_PANEL_WIDTH) | codefreeze-20260110-modal-treeview-350px |
 
 ### 5. 기초정보
 | 파일 | 코드프리즈 태그 |
