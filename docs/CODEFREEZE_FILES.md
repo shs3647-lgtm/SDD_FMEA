@@ -143,6 +143,8 @@
 ```
 codefreeze-20260110-all-ui-freeze  (전체 UI 코드프리즈)
 codefreeze-20260111-worksheet-110percent  (워크시트 110% 배율 확정)
+codefreeze-20260111-function-l2-final  (기능2L 최종 확정)
+codefreeze-20260111-batch-freeze  (일괄 코드프리즈 - 2026-01-11)
 ```
 
 ---
