@@ -72,6 +72,24 @@ import { CPTab } from './tabs/cp';
 function FMEAWorksheetPageContent() {
   const router = useRouter();
   
+  // ✅ 화면 크기 100% 디폴트 설정
+  React.useEffect(() => {
+    // HTML/CSS zoom 리셋
+    document.documentElement.style.zoom = '1';
+    document.body.style.zoom = '1';
+    
+    // Viewport 초기화
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no');
+    }
+    
+    // 브라우저 zoom 리셋 (가능한 경우)
+    if (typeof (window as any).chrome !== 'undefined' && (window as any).chrome.runtime) {
+      // Chrome 확장 프로그램 API는 일반 웹페이지에서 접근 불가
+    }
+  }, []);
+  
   // ✅ 상속 정보 상태
   const [inheritInfo, setInheritInfo] = React.useState<{
     parentFmeaId: string;

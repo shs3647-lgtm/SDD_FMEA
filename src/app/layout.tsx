@@ -44,13 +44,18 @@ export default function RootLayout({
         <style dangerouslySetInnerHTML={{
           __html: `
             html {
-              zoom: 100% !important;
-              -webkit-text-size-adjust: 100%;
-              -ms-text-size-adjust: 100%;
+              zoom: 1 !important;
+              -webkit-text-size-adjust: 100% !important;
+              -ms-text-size-adjust: 100% !important;
+              transform: scale(1) !important;
             }
             body {
               zoom: 1 !important;
+              transform: scale(1) !important;
               transform-origin: 0 0;
+            }
+            * {
+              zoom: 1 !important;
             }
             ::-webkit-scrollbar {
               width: 8px;
