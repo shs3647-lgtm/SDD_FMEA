@@ -8,25 +8,26 @@ const pool = new Pool({
 });
 
 (async () => {
-  const fmeaId = process.argv[2] || 'pfm26-M001';
-  const schemaName = `pfmea_${fmeaId.toLowerCase().replace(/-/g, '_')}`;
+  const inputFmeaId = process.argv[2] || 'pfm26-M001';
+  const fmeaId = inputFmeaId.toLowerCase(); // DB에는 소문자로 저장되어 있음
+  const schemaName = `pfmea_${fmeaId.replace(/-/g, '_')}`;
   
   console.log('=== DB 실제 저장 데이터 확인 ===');
-  console.log('FMEA ID:', fmeaId);
+  console.log('입력 FMEA ID:', inputFmeaId);
+  console.log('조회 FMEA ID:', fmeaId);
   console.log('Schema:', schemaName);
   console.log('');
   
   try {
-    // FmeaInfo 테이블 조회
+    // FmeaInfo 테이블 조회 (대소문자 구분 없이)
     const result = await pool.query(`
       SELECT * FROM "${schemaName}"."FmeaInfo" 
-      WHERE "fmeaId" = $1
+      WHERE LOWER("fmeaId") = LOWER($1)
       LIMIT 1
     `, [fmeaId]);
     
     if (result.rows.length === 0) {
       console.log('❌ 데이터 없음');
-      await pool.end();
       return;
     }
     
@@ -66,7 +67,9 @@ const pool = new Pool({
     console.error('오류:', e.message);
     console.error(e.stack);
   } finally {
-    await pool.end();
+    if (pool && !pool.ended) {
+      await pool.end();
+    }
   }
 })();
 

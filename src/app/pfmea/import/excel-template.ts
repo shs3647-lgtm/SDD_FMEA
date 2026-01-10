@@ -353,15 +353,15 @@ export async function downloadSampleTemplate() {
 /** 관계형 A (공정) 빈 템플릿 */
 export async function downloadRelationAEmpty() {
   const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet('A_공정');
+  const sheet = workbook.addWorksheet('L2-1');
   
   sheet.columns = [
-    { header: 'A1 No', key: 'A1', width: 10 },
-    { header: 'A2 공정명', key: 'A2', width: 15 },
-    { header: 'A3 기능', key: 'A3', width: 25 },
-    { header: 'A4 특성', key: 'A4', width: 15 },
-    { header: 'A5 고장', key: 'A5', width: 15 },
-    { header: 'A6 검출', key: 'A6', width: 15 },
+    { header: 'L2-1.공정번호', key: 'L2-1', width: 12 },
+    { header: 'L2-2.공정명', key: 'L2-2', width: 15 },
+    { header: 'L2-3.공정기능', key: 'L2-3', width: 25 },
+    { header: 'L2-4.제품특성', key: 'L2-4', width: 15 },
+    { header: 'L2-5.고장형태', key: 'L2-5', width: 15 },
+    { header: 'L2-6.검출관리', key: 'L2-6', width: 15 },
   ];
   
   const headerRow = sheet.getRow(1);
@@ -372,21 +372,21 @@ export async function downloadRelationAEmpty() {
     row.eachCell((cell) => applyDataStyle(cell));
   }
   
-  await downloadWorkbook(workbook, '관계형A_공정_빈템플릿');
+  await downloadWorkbook(workbook, 'L2_공정_빈템플릿');
 }
 
 /** 관계형 A (공정) 샘플 템플릿 */
 export async function downloadRelationASample() {
   const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet('A_공정');
+  const sheet = workbook.addWorksheet('L2-1');
   
   sheet.columns = [
-    { header: 'A1 No', key: 'A1', width: 10 },
-    { header: 'A2 공정명', key: 'A2', width: 15 },
-    { header: 'A3 기능', key: 'A3', width: 30 },
-    { header: 'A4 특성', key: 'A4', width: 15 },
-    { header: 'A5 고장', key: 'A5', width: 15 },
-    { header: 'A6 검출', key: 'A6', width: 15 },
+    { header: 'L2-1.공정번호', key: 'L2-1', width: 12 },
+    { header: 'L2-2.공정명', key: 'L2-2', width: 15 },
+    { header: 'L2-3.공정기능', key: 'L2-3', width: 30 },
+    { header: 'L2-4.제품특성', key: 'L2-4', width: 15 },
+    { header: 'L2-5.고장형태', key: 'L2-5', width: 15 },
+    { header: 'L2-6.검출관리', key: 'L2-6', width: 15 },
   ];
   
   const headerRow = sheet.getRow(1);
@@ -411,21 +411,21 @@ export async function downloadRelationASample() {
     });
   });
   
-  await downloadWorkbook(workbook, '관계형A_공정_샘플');
+  await downloadWorkbook(workbook, 'L2_고장형태_샘플');
 }
 
 /** 관계형 B (작업요소) 빈 템플릿 */
 export async function downloadRelationBEmpty() {
   const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet('B_작업요소');
+  const sheet = workbook.addWorksheet('L3-1');
   
   sheet.columns = [
-    { header: 'A1 No', key: 'A1', width: 10 },
-    { header: 'B1 작업요소', key: 'B1', width: 15 },
-    { header: 'B2 기능', key: 'B2', width: 30 },
-    { header: 'B3 특성', key: 'B3', width: 15 },
-    { header: 'B4 원인', key: 'B4', width: 20 },
-    { header: 'B5 예방', key: 'B5', width: 15 },
+    { header: 'L2-1.공정번호', key: 'L2-1', width: 12 },
+    { header: 'L3-1.작업요소', key: 'L3-1', width: 15 },
+    { header: 'L3-2.요소기능', key: 'L3-2', width: 30 },
+    { header: 'L3-3.공정특성', key: 'L3-3', width: 15 },
+    { header: 'L3-4.고장원인', key: 'L3-4', width: 20 },
+    { header: 'L3-5.예방관리', key: 'L3-5', width: 15 },
   ];
   
   const headerRow = sheet.getRow(1);
@@ -436,21 +436,21 @@ export async function downloadRelationBEmpty() {
     row.eachCell((cell) => applyDataStyle(cell));
   }
   
-  await downloadWorkbook(workbook, '관계형B_작업요소_빈템플릿');
+  await downloadWorkbook(workbook, 'L3_작업요소_빈템플릿');
 }
 
 /** 관계형 B (작업요소) 샘플 템플릿 */
 export async function downloadRelationBSample() {
   const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet('B_작업요소');
+  const sheet = workbook.addWorksheet('L3-1');
   
   sheet.columns = [
-    { header: 'A1 No', key: 'A1', width: 10 },
-    { header: 'B1 작업요소', key: 'B1', width: 15 },
-    { header: 'B2 기능', key: 'B2', width: 35 },
-    { header: 'B3 특성', key: 'B3', width: 15 },
-    { header: 'B4 원인', key: 'B4', width: 25 },
-    { header: 'B5 예방', key: 'B5', width: 15 },
+    { header: 'L2-1.공정번호', key: 'L2-1', width: 12 },
+    { header: 'L3-1.작업요소', key: 'L3-1', width: 15 },
+    { header: 'L3-2.요소기능', key: 'L3-2', width: 35 },
+    { header: 'L3-3.공정특성', key: 'L3-3', width: 15 },
+    { header: 'L3-4.고장원인', key: 'L3-4', width: 25 },
+    { header: 'L3-5.예방관리', key: 'L3-5', width: 15 },
   ];
   
   const headerRow = sheet.getRow(1);
@@ -475,20 +475,20 @@ export async function downloadRelationBSample() {
     });
   });
   
-  await downloadWorkbook(workbook, '관계형B_작업요소_샘플');
+  await downloadWorkbook(workbook, 'L3_고장원인_샘플');
 }
 
 /** 관계형 C (완제품) 빈 템플릿 */
 export async function downloadRelationCEmpty() {
   const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet('C_완제품');
+  const sheet = workbook.addWorksheet('L1-1');
   
   sheet.columns = [
     { header: 'No', key: 'No', width: 8 },
-    { header: 'C1 구분', key: 'C1', width: 15 },
-    { header: 'C2 기능', key: 'C2', width: 35 },
-    { header: 'C3 요구', key: 'C3', width: 20 },
-    { header: 'C4 영향', key: 'C4', width: 25 },
+    { header: 'L1-1.구분', key: 'L1-1', width: 15 },
+    { header: 'L1-2.제품기능', key: 'L1-2', width: 35 },
+    { header: 'L1-3.요구사항', key: 'L1-3', width: 20 },
+    { header: 'L1-4.고장영향', key: 'L1-4', width: 25 },
   ];
   
   const headerRow = sheet.getRow(1);
@@ -499,20 +499,20 @@ export async function downloadRelationCEmpty() {
     row.eachCell((cell) => applyDataStyle(cell));
   }
   
-  await downloadWorkbook(workbook, '관계형C_완제품_빈템플릿');
+  await downloadWorkbook(workbook, 'L1_완제품_빈템플릿');
 }
 
 /** 관계형 C (완제품) 샘플 템플릿 */
 export async function downloadRelationCSample() {
   const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet('C_완제품');
+  const sheet = workbook.addWorksheet('L1-1');
   
   sheet.columns = [
     { header: 'No', key: 'No', width: 8 },
-    { header: 'C1 구분', key: 'C1', width: 15 },
-    { header: 'C2 기능', key: 'C2', width: 40 },
-    { header: 'C3 요구', key: 'C3', width: 20 },
-    { header: 'C4 영향', key: 'C4', width: 30 },
+    { header: 'L1-1.구분', key: 'L1-1', width: 15 },
+    { header: 'L1-2.제품기능', key: 'L1-2', width: 40 },
+    { header: 'L1-3.요구사항', key: 'L1-3', width: 20 },
+    { header: 'L1-4.고장영향', key: 'L1-4', width: 30 },
   ];
   
   const headerRow = sheet.getRow(1);
@@ -533,7 +533,7 @@ export async function downloadRelationCSample() {
     });
   });
   
-  await downloadWorkbook(workbook, '관계형C_완제품_샘플');
+  await downloadWorkbook(workbook, 'L1_고장영향_샘플');
 }
 
 /** 공통 다운로드 헬퍼 */

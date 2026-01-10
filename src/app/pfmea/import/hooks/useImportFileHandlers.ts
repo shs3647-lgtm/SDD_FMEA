@@ -59,6 +59,25 @@ export function useImportFileHandlers({
         errors: result.errors
       });
       
+      // 디버깅: 각 프로세스별 데이터 상세 확인
+      if (result.processes.length > 0) {
+        console.log('📋 공정 데이터 상세 (첫 3개):');
+        result.processes.slice(0, 3).forEach((p, idx) => {
+          console.log(`  ${idx + 1}. 공정번호: ${p.processNo}, 공정명: ${p.processName}`);
+          console.log(`     A3(공정기능): ${p.processDesc.length}건, A4(제품특성): ${p.productChars.length}건, A5(고장형태): ${p.failureModes.length}건`);
+          console.log(`     B1(작업요소): ${p.workElements.length}건, B4(고장원인): ${p.failureCauses.length}건, B5(예방관리): ${p.preventionCtrls.length}건`);
+        });
+      }
+      
+      // 디버깅: 제품 데이터 상세 확인
+      if (result.products.length > 0) {
+        console.log('📋 제품 데이터 상세:');
+        result.products.forEach((p, idx) => {
+          console.log(`  ${idx + 1}. 구분: ${p.productProcessName}`);
+          console.log(`     C2(제품기능): ${p.productFuncs.length}건, C3(요구사항): ${p.requirements.length}건, C4(고장영향): ${p.failureEffects.length}건`);
+        });
+      }
+      
       // Flat 데이터 생성
       const flat: ImportedFlatData[] = [];
       result.processes.forEach((p) => {
@@ -82,6 +101,26 @@ export function useImportFileHandlers({
         p.requirements.forEach((v, i) => flat.push({ id: `C3-${p.productProcessName}-${i}`, processNo: 'ALL', category: 'C', itemCode: 'C3', value: v, createdAt: new Date() }));
         p.failureEffects.forEach((v, i) => flat.push({ id: `C4-${p.productProcessName}-${i}`, processNo: 'ALL', category: 'C', itemCode: 'C4', value: v, createdAt: new Date() }));
       });
+      
+      // Flat 데이터 통계
+      const flatStats = {
+        A1: flat.filter(d => d.itemCode === 'A1').length,
+        A2: flat.filter(d => d.itemCode === 'A2').length,
+        A3: flat.filter(d => d.itemCode === 'A3').length,
+        A4: flat.filter(d => d.itemCode === 'A4').length,
+        A5: flat.filter(d => d.itemCode === 'A5').length,
+        A6: flat.filter(d => d.itemCode === 'A6').length,
+        B1: flat.filter(d => d.itemCode === 'B1').length,
+        B2: flat.filter(d => d.itemCode === 'B2').length,
+        B3: flat.filter(d => d.itemCode === 'B3').length,
+        B4: flat.filter(d => d.itemCode === 'B4').length,
+        B5: flat.filter(d => d.itemCode === 'B5').length,
+        C1: flat.filter(d => d.itemCode === 'C1').length,
+        C2: flat.filter(d => d.itemCode === 'C2').length,
+        C3: flat.filter(d => d.itemCode === 'C3').length,
+        C4: flat.filter(d => d.itemCode === 'C4').length,
+      };
+      console.log('📊 Flat 데이터 통계:', flatStats);
       
       console.log('✅ Flat 데이터 생성 완료:', flat.length, '건');
       
