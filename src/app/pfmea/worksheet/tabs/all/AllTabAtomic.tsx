@@ -59,6 +59,7 @@ interface AllTabAtomicProps {
   visibleSteps?: number[];
   setState?: React.Dispatch<React.SetStateAction<any>>;
   onNoData?: () => void; // 데이터가 없을 때 콜백
+  failureLinks?: Array<{ fmId: string; feId: string; fcId: string }>; // 고장연결 확정 결과 (역전개 기준)
 }
 
 export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], setState, onNoData }: AllTabAtomicProps) {
