@@ -36,15 +36,21 @@ interface Stats {
 
 export function useRelationData(flatData: ImportedFlatData[], relationTab: 'A' | 'B' | 'C') {
   
-  // 통계 계산
-  const stats = useMemo<Stats>(() => ({
-    total: flatData.length,
-    processCount: new Set(flatData.filter(d => d.itemCode === 'A1').map(d => d.processNo)).size,
-    aCount: flatData.filter(d => d.itemCode?.startsWith('A')).length,
-    bCount: flatData.filter(d => d.itemCode?.startsWith('B')).length,
-    cCount: flatData.filter(d => d.itemCode?.startsWith('C')).length,
-    missing: flatData.filter(d => !d.value || d.value?.trim() === '').length,
-  }), [flatData]);
+  // 통계 계산 (빈 값 제외하여 DB 저장 기준과 일치)
+  const stats = useMemo<Stats>(() => {
+    // 유효한 데이터만 카운트 (DB 저장 시 빈 값은 제외됨)
+    const validData = flatData.filter(d => d.value && d.value.trim() !== '');
+    const emptyData = flatData.filter(d => !d.value || d.value.trim() === '');
+    
+    return {
+      total: validData.length,  // 빈 값 제외 (DB 저장 건수와 일치)
+      processCount: new Set(validData.filter(d => d.itemCode === 'A1').map(d => d.processNo)).size,
+      aCount: validData.filter(d => d.itemCode?.startsWith('A')).length,
+      bCount: validData.filter(d => d.itemCode?.startsWith('B')).length,
+      cCount: validData.filter(d => d.itemCode?.startsWith('C')).length,
+      missing: emptyData.length,  // 빈 값 = 누락
+    };
+  }, [flatData]);
 
   // 관계형 데이터 필터링
   const getRelationData = (tabOverride?: 'A' | 'B' | 'C'): RelationDataRow[] => {

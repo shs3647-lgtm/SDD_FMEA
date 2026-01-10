@@ -268,33 +268,37 @@ function PFMEAImportPageContent() {
     }
 
     const load = async () => {
-      // ✅ mode=master: DB 마스터 우선 로드
-      if (mode === 'master') {
-        try {
-          const loaded = await loadActiveMasterDataset();
-          if (loaded.flatData.length > 0) {
-            setFlatData(loaded.flatData);
-            setMasterDatasetId(loaded.datasetId);
-            setMasterDatasetName(loaded.datasetName || 'MASTER');
-            setFileName(`DB Master: ${loaded.datasetName || 'MASTER'}`);
-            setIsLoaded(true);
-            return;
-          }
-        } catch (e) {
-          console.warn('[PFMEA Import] DB master load failed, fallback to localStorage:', e);
+      // ✅ DB Master 데이터 우선 로드 (항상 시도)
+      try {
+        const loaded = await loadActiveMasterDataset();
+        if (loaded.flatData.length > 0) {
+          // ✅ 빈 값 제외 (DB 저장 기준과 일치, UI 표시도 동일하게)
+          const validData = loaded.flatData.filter((d: any) => d.value && d.value.trim() !== '');
+          setFlatData(validData);
+          setMasterDatasetId(loaded.datasetId);
+          setMasterDatasetName(loaded.datasetName || 'MASTER');
+          setFileName(`DB Master: ${loaded.datasetName || 'MASTER'} (${validData.length}건)`);
+          console.log(`✅ DB Master 로드 완료: ${validData.length}건`);
+          setIsLoaded(true);
+          return;
         }
+      } catch (e) {
+        console.warn('[PFMEA Import] DB master load failed, fallback to localStorage:', e);
       }
 
-      // localStorage 폴백 (기존 동작)
+      // localStorage 폴백 (DB 로드 실패 시)
       const savedData = localStorage.getItem('pfmea_master_data');
       if (savedData) {
         try {
           const parsed = JSON.parse(savedData);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            const normalized = parsed.map((d: any) => ({
-              ...d,
-              createdAt: d.createdAt ? new Date(d.createdAt) : new Date(),
-            }));
+            // ✅ 빈 값 제외 (DB 저장 기준과 일치)
+            const normalized = parsed
+              .map((d: any) => ({
+                ...d,
+                createdAt: d.createdAt ? new Date(d.createdAt) : new Date(),
+              }))
+              .filter((d: any) => d.value && d.value.trim() !== '');
             setFlatData(normalized);
             const savedAt = localStorage.getItem('pfmea_saved_at');
             setFileName(`저장된 데이터 (${savedAt ? new Date(savedAt).toLocaleString('ko-KR') : ''})`);
