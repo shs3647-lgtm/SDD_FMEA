@@ -622,7 +622,7 @@ function FMEAWorksheetPageContent() {
 
           {/* ===== 우측: 패널 영역 (전체보기, 고장연결에서는 숨김) ===== */}
           {state.tab !== 'all' && state.tab !== 'failure-link' && (
-          <div className="w-[350px] shrink-0 flex flex-col bg-[#f0f4f8] border-l-4 border-[#00587a]">
+          <div className="w-[500px] shrink-0 flex flex-col bg-[#f0f4f8] border-l-4 border-[#00587a]">
             {/* 패널 콘텐츠 (레이지 로딩) - 메뉴는 상단 바로가기 영역에 있음 */}
             <Suspense fallback={
               <div className="flex justify-center items-center h-full text-sm text-gray-600">
