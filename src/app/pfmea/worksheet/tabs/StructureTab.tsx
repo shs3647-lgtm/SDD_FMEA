@@ -279,7 +279,14 @@ function EditableL3Cell({
       onDoubleClick={handleDoubleClick}
       title={isPlaceholder ? '클릭: 작업요소 추가' : '클릭: 모달 | 더블클릭: 텍스트 수정'}
     >
-      {isPlaceholder ? <span className="text-[#e65100] font-semibold">🔍 클릭</span> : <span className="font-normal">{value}</span>}
+      {isPlaceholder ? (
+        <span className="text-[#e65100] font-semibold">🔍 클릭</span>
+      ) : (
+        <span className="font-normal">
+          <span className="mr-1">🔍</span>
+          {value}
+        </span>
+      )}
     </td>
   );
 }
