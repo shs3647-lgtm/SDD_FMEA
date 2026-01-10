@@ -7,7 +7,7 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 interface SpecialCharItem {
@@ -48,10 +48,10 @@ interface SpecialCharSelectModalProps {
   productCharName?: string;
 }
 
-/** 공통 스타일 */
+  /** 공통 스타일 */
 const tw = {
-  overlay: 'fixed inset-0 flex items-start justify-end pt-36 pr-5 z-[10000] bg-black/40',
-  modal: 'bg-white rounded-lg w-[500px] max-h-[calc(100vh-160px)] flex flex-col shadow-xl overflow-hidden',
+  overlay: 'fixed inset-0 z-[10000] bg-black/40',
+  modal: 'fixed bg-white rounded-lg w-[350px] max-w-[350px] min-w-[350px] max-h-[calc(100vh-120px)] flex flex-col shadow-xl overflow-hidden cursor-move',
   header: 'bg-gradient-to-r from-red-600 to-red-700 py-2 px-3 text-white',
   select: 'py-2 px-3 border border-gray-300 rounded-md text-xs min-w-[120px]',
   input: 'flex-1 py-2 px-3 border border-gray-300 rounded-md text-xs',
@@ -66,6 +66,54 @@ export default function SpecialCharSelectModal({
 }: SpecialCharSelectModalProps) {
   const [selectedCustomer, setSelectedCustomer] = useState<string>('전체');
   const [search, setSearch] = useState('');
+  
+  // 드래그 상태
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [modalPosition, setModalPosition] = useState({ top: 200, right: 0 });
+
+  // 드래그 시작
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.target instanceof HTMLElement && e.target.closest('button')) return;
+    setIsDragging(true);
+    setDragStart({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  // 드래그 중
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - dragStart.x;
+      const deltaY = e.clientY - dragStart.y;
+      
+      setModalPosition(prev => ({
+        top: Math.max(0, Math.min(window.innerHeight - 200, prev.top + deltaY)),
+        right: Math.max(-350, Math.min(window.innerWidth - 350, prev.right - deltaX))
+      }));
+      
+      setDragStart({ x: e.clientX, y: e.clientY });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, dragStart]);
+
+  // 모달이 열릴 때 위치 초기화
+  useEffect(() => {
+    if (isOpen) {
+      setModalPosition({ top: 200, right: 0 });
+    }
+  }, [isOpen]);
 
   const customers = useMemo(() => {
     const unique = [...new Set(SPECIAL_CHAR_DATA.map(d => d.customer))];
@@ -106,9 +154,16 @@ export default function SpecialCharSelectModal({
 
   const modalContent = (
     <div className={tw.overlay} onClick={onClose}>
-      <div className={tw.modal} onClick={e => e.stopPropagation()}>
-        {/* 헤더 */}
-        <div className={tw.header}>
+      <div 
+        className={tw.modal} 
+        style={{ top: `${modalPosition.top}px`, right: `${modalPosition.right}px` }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* 헤더 - 드래그 가능 */}
+        <div 
+          className={`${tw.header} cursor-move select-none`}
+          onMouseDown={handleMouseDown}
+        >
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
               <span>🏷️</span>

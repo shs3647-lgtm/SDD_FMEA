@@ -86,6 +86,54 @@ export default function DataSelectModal({
   
   // ✅ 초기화 완료 플래그 (items 변경 시 재초기화 방지)
   const [initialized, setInitialized] = useState(false);
+  
+  // 드래그 상태
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [modalPosition, setModalPosition] = useState({ top: 200, right: 0 });
+
+  // 드래그 시작
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.target instanceof HTMLElement && e.target.closest('button')) return;
+    setIsDragging(true);
+    setDragStart({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  // 드래그 중
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - dragStart.x;
+      const deltaY = e.clientY - dragStart.y;
+      
+      setModalPosition(prev => ({
+        top: Math.max(0, Math.min(window.innerHeight - 200, prev.top + deltaY)),
+        right: Math.max(-350, Math.min(window.innerWidth - 350, prev.right - deltaX))
+      }));
+      
+      setDragStart({ x: e.clientX, y: e.clientY });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, dragStart]);
+
+  // 모달이 열릴 때 위치 초기화
+  useEffect(() => {
+    if (isOpen) {
+      setModalPosition({ top: 200, right: 0 });
+    }
+  }, [isOpen]);
 
   const itemInfo = ITEM_CODE_LABELS[itemCode] || { label: itemCode, category: 'A', level: 'L1' };
   const hasBelongsToFilter = ['C1', 'C2', 'C3', 'FE1', 'FE2'].includes(itemCode);
@@ -324,16 +372,20 @@ export default function DataSelectModal({
 
   return (
     <div 
-      className="fixed inset-0 z-[9999] flex items-start justify-end bg-black/40 pt-36 pr-5"
+      className="fixed inset-0 z-[9999] bg-black/40"
       onClick={onClose}
     >
       <div 
-        className="bg-white rounded-lg shadow-2xl w-[420px] flex flex-col overflow-hidden max-h-[calc(100vh-160px)]"
+        className="fixed bg-white rounded-lg shadow-2xl w-[350px] max-w-[350px] min-w-[350px] flex flex-col overflow-hidden max-h-[calc(100vh-120px)] cursor-move"
+        style={{ top: `${modalPosition.top}px`, right: `${modalPosition.right}px` }}
         onClick={e => e.stopPropagation()}
         onKeyDown={e => e.stopPropagation()}
       >
-        {/* ===== 헤더: 제목 + 닫기 ===== */}
-        <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+        {/* ===== 헤더: 제목 + 닫기 - 드래그 가능 ===== */}
+        <div 
+          className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white cursor-move select-none"
+          onMouseDown={handleMouseDown}
+        >
           <div className="flex items-center gap-2">
             <span>📋</span>
             <h2 className="text-xs font-bold">{title}</h2>
