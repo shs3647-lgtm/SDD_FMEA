@@ -908,11 +908,18 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     if (isCurrentFMLinked) {
       const newLinks = savedLinks.filter(l => l.fmId !== currentFMId);
       setSavedLinks(newLinks);
-      setState((prev: any) => ({ ...prev, failureLinks: newLinks }));
+      
+      // ✅ setStateSynced 패턴 적용
+      const updateFn = (prev: any) => ({ ...prev, failureLinks: newLinks });
+      if (setStateSynced) {
+        setStateSynced(updateFn);
+      } else {
+        setState(updateFn);
+      }
       setDirty(true);
-      requestAnimationFrame(() => {
-        saveTemp?.(); // ✅ 편집 중: localStorage만
-      });
+      setTimeout(() => {
+        saveTemp?.();
+      }, 100);
       console.log('[연결 해제]', currentFM.text);
       return;
     }
@@ -960,15 +967,23 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     // ✅ 핵심: useEffect가 linkedFEs/linkedFCs를 덮어쓰지 않도록 플래그 설정
     justConfirmedRef.current = true;
     
+    // ✅ 로컬 상태 업데이트
     setSavedLinks(newLinks);
-    setState((prev: any) => ({ ...prev, failureLinks: newLinks }));
-    setDirty(true);
-    requestAnimationFrame(() => {
-      saveTemp?.(); // ✅ 편집 중: localStorage만
-    });
     
-    // ✅ 화살표 다시 그리기 (linkedFEs/linkedFCs는 이미 유지됨)
-    setTimeout(drawLines, 100);
+    // ✅ setStateSynced 패턴 적용 (다른 탭과 동일한 패턴)
+    const updateFn = (prev: any) => ({ ...prev, failureLinks: newLinks });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
+    setDirty(true);
+    
+    // ✅ 저장 (setTimeout으로 state 업데이트 대기)
+    setTimeout(() => {
+      saveTemp?.();
+      drawLines(); // 화살표 다시 그리기
+    }, 100);
     setTimeout(drawLines, 300);
     
     // ✅ 연결 완료 알림 (자동 FM 이동 제거 - 상태 동기화 문제 방지)
@@ -1009,7 +1024,7 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
       // 현재 공정의 마지막 FM
       alert(`✅ ${currentFM.text} 연결 완료!\n\nFE: ${feArray.length}개, FC: ${fcArray.length}개`);
     }
-  }, [currentFMId, currentFM, linkedFEs, linkedFCs, savedLinks, fmData, setState, setDirty, saveToLocalStorage, drawLines]);
+  }, [currentFMId, currentFM, linkedFEs, linkedFCs, savedLinks, fmData, setState, setStateSynced, setDirty, saveToLocalStorage, drawLines]);
 
   // ========== 엔터키로 연결확정 ==========
   useEffect(() => {
