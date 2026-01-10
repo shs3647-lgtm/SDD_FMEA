@@ -339,7 +339,7 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
         });
         
         // ✅ 자동연결: 동일한 공정특성 이름을 가진 다른 공정에도 동일한 고장원인 추가
-        const currentCharName = (modal as any).parentCharName;
+        const currentCharName = modal.processCharName;  // ✅ processCharName으로 통일
         if (currentCharName && selectedValues.length > 0) {
           let autoLinkedCount = 0;
           
