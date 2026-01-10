@@ -47,7 +47,10 @@ interface FEItem {
   scope: string; 
   feNo: string; 
   text: string; 
-  severity?: number; 
+  severity?: number;
+  // ★ 역전개 정보
+  functionName?: string;
+  requirement?: string; 
 }
 
 interface FMItem { 
@@ -73,6 +76,9 @@ interface LinkResult {
   feScope: string; 
   feText: string; 
   severity: number; 
+  // ★ 역전개 정보
+  feFunctionName?: string;
+  feRequirement?: string;
   fmText: string; 
   fmProcess: string; 
   fcId: string; 
@@ -174,13 +180,19 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     (state.l1?.failureScopes || []).forEach((fs: any) => {
       if (!fs.effect || !fs.id) return;
       
-      // 구분(scope) 찾기: reqId로 type 조회
+      // ★ 역전개: reqId로 구분/완제품기능/요구사항 찾기
       let scope = 'Your Plant';
+      let functionName = '';
+      let requirement = '';
       if (fs.reqId) {
         (state.l1?.types || []).forEach((type: any) => {
           (type.functions || []).forEach((fn: any) => {
             (fn.requirements || []).forEach((req: any) => {
-              if (req.id === fs.reqId) scope = type.name || 'Your Plant';
+              if (req.id === fs.reqId) {
+                scope = type.name || 'Your Plant';
+                functionName = fn.name || '';
+                requirement = req.name || '';
+              }
             });
           });
         });
@@ -210,7 +222,10 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
         scope, 
         feNo, 
         text: fs.effect, 
-        severity: fs.severity || 0 
+        severity: fs.severity || 0,
+        // ★ 역전개 정보 추가
+        functionName,
+        requirement,
       });
     });
     
@@ -985,6 +1000,9 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
           feScope: fe.scope,
           feText: fe.text,
           severity: fe.severity || 0,
+          // ★ 역전개 정보 저장
+          feFunctionName: fe.functionName || '',
+          feRequirement: fe.requirement || '',
           fcId: fc.id,
           fcNo: fc.fcNo,
           fcProcess: fc.processName,

@@ -99,23 +99,25 @@ export default function AllTabRenderer({
     const feId = link.feId || '';
     const feText = link.feText || link.cache?.feText || '';
     
-    // ★ 역전개: FE → 요구사항 → 기능 → 구분
-    let feCategory = '';
-    let feFunctionName = '';
-    let feRequirement = '';
+    // ★ 1순위: link에 저장된 역전개 정보 사용 (confirmLink에서 저장)
+    let feCategory = link.feScope || '';
+    let feFunctionName = link.feFunctionName || '';
+    let feRequirement = link.feRequirement || '';
     
-    // feId로 먼저 찾기
-    const reqId = feToReqMap.get(feId) || feToReqMap.get(feText) || '';
-    if (reqId) {
-      const funcData = reqToFuncMap.get(reqId);
-      if (funcData) {
-        feCategory = funcData.category;
-        feFunctionName = funcData.functionName;
-        feRequirement = funcData.requirement;
+    // ★ 2순위: 없으면 reqId 역추적
+    if (!feFunctionName) {
+      const reqId = feToReqMap.get(feId) || feToReqMap.get(feText) || '';
+      if (reqId) {
+        const funcData = reqToFuncMap.get(reqId);
+        if (funcData) {
+          if (!feCategory) feCategory = funcData.category;
+          feFunctionName = funcData.functionName;
+          feRequirement = funcData.requirement;
+        }
       }
     }
     
-    // fallback: failureScope에서 직접 찾기
+    // ★ 3순위: failureScope에서 직접 찾기
     if (!feCategory) {
       const scope = failureScopes.find((fs: any) => fs.id === feId || fs.effect === feText);
       if (scope) {
