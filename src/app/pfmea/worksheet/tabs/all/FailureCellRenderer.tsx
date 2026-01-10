@@ -78,9 +78,23 @@ export function FailureCellRenderer({
     verticalAlign: 'middle' as const,
   });
 
+  // ★ 누적 rowSpan 범위 체크 헬퍼 함수
+  const isInMergedRange = (type: 'fe' | 'fc'): boolean => {
+    for (let prevIdx = 0; prevIdx < rowInFM; prevIdx++) {
+      const prevRow = fmGroup.rows[prevIdx];
+      if (!prevRow) continue;
+      const span = type === 'fe' ? prevRow.feRowSpan : prevRow.fcRowSpan;
+      if (span > 1 && prevIdx + span > rowInFM) {
+        return true; // 이전 행의 rowSpan 범위 안에 있음
+      }
+    }
+    return false;
+  };
+
   // ★ 고장영향(FE) - FE별 병합, (S)형식 표시
   if (col.name === '고장영향(FE)') {
-    if (rowInFM === 0 || (rowInFM > 0 && fmGroup.rows[rowInFM - 1].feRowSpan === 1)) {
+    // 누적 범위 체크: 이전 행의 feRowSpan 범위 안에 있으면 렌더링하지 않음
+    if (rowInFM === 0 || !isInMergedRange('fe')) {
       const severityDisplay = row.feSeverity > 0 ? `(${row.feSeverity})` : '';
       return (
         <td key={colIdx} rowSpan={row.feRowSpan} style={{ ...cellStyle(row.feRowSpan), borderBottom: rowInFM === fmGroup.rows.length - 1 ? '2px solid #303f9f' : '1px solid #ccc' }}>
@@ -117,7 +131,8 @@ export function FailureCellRenderer({
 
   // ★ 고장원인(FC) - FC별 병합
   if (col.name === '고장원인(FC)') {
-    if (rowInFM === 0 || (rowInFM > 0 && fmGroup.rows[rowInFM - 1].fcRowSpan === 1)) {
+    // 누적 범위 체크: 이전 행의 fcRowSpan 범위 안에 있으면 렌더링하지 않음
+    if (rowInFM === 0 || !isInMergedRange('fc')) {
       return (
         <td key={colIdx} rowSpan={row.fcRowSpan} style={{ ...cellStyle(row.fcRowSpan, true), borderBottom: rowInFM === fmGroup.rows.length - 1 ? '2px solid #303f9f' : '1px solid #ccc' }}>
           {row.fcText}

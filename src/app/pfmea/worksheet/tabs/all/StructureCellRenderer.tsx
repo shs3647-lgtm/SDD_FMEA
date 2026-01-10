@@ -64,6 +64,18 @@ export function StructureCellRenderer({
     verticalAlign: 'middle' as const,
   });
 
+  // ★ 누적 rowSpan 범위 체크 헬퍼 함수
+  const isInMergedRange = (): boolean => {
+    for (let prevIdx = 0; prevIdx < rowInFM; prevIdx++) {
+      const prevRow = fmGroup.rows[prevIdx];
+      if (!prevRow) continue;
+      if (prevRow.fcRowSpan > 1 && prevIdx + prevRow.fcRowSpan > rowInFM) {
+        return true; // 이전 행의 rowSpan 범위 안에 있음
+      }
+    }
+    return false;
+  };
+
   // ★ 완제품 공정명 - FM 전체 병합
   if (col.name === '완제품 공정명') {
     if (row.isFirstRow) {
@@ -91,9 +103,9 @@ export function StructureCellRenderer({
     return null;
   }
 
-  // ★ 4M - FC별 병합
+  // ★ 4M - FC별 병합 (누적 범위 체크)
   if (col.name === '4M') {
-    if (rowInFM === 0 || (rowInFM > 0 && fmGroup.rows[rowInFM - 1].fcRowSpan === 1)) {
+    if (rowInFM === 0 || !isInMergedRange()) {
       return (
         <td key={colIdx} rowSpan={row.fcRowSpan} style={{ ...cellStyle(row.fcRowSpan, true), textAlign: 'center' }}>
           {row.fcM4 || ''}
@@ -103,9 +115,9 @@ export function StructureCellRenderer({
     return null;
   }
 
-  // ★ 작업요소 - FC별 병합
+  // ★ 작업요소 - FC별 병합 (누적 범위 체크)
   if (col.name === '작업요소') {
-    if (rowInFM === 0 || (rowInFM > 0 && fmGroup.rows[rowInFM - 1].fcRowSpan === 1)) {
+    if (rowInFM === 0 || !isInMergedRange()) {
       return (
         <td key={colIdx} rowSpan={row.fcRowSpan} style={cellStyle(row.fcRowSpan, true)}>
           {row.fcWorkElem || ''}

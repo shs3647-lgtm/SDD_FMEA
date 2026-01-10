@@ -78,10 +78,24 @@ export function FunctionCellRenderer({
     verticalAlign: 'middle' as const,
   });
 
+  // ★ 누적 rowSpan 범위 체크 헬퍼 함수
+  const isInMergedRange = (type: 'fe' | 'fc'): boolean => {
+    for (let prevIdx = 0; prevIdx < rowInFM; prevIdx++) {
+      const prevRow = fmGroup.rows[prevIdx];
+      if (!prevRow) continue;
+      const span = type === 'fe' ? prevRow.feRowSpan : prevRow.fcRowSpan;
+      if (span > 1 && prevIdx + span > rowInFM) {
+        return true; // 이전 행의 rowSpan 범위 안에 있음
+      }
+    }
+    return false;
+  };
+
   // ★ FE 기반 역전개 (구분, 완제품기능, 요구사항)
   const feFunctionCols = ['구분', '완제품기능', '요구사항'];
   if (feFunctionCols.includes(col.name)) {
-    if (rowInFM === 0 || (rowInFM > 0 && fmGroup.rows[rowInFM - 1].feRowSpan === 1)) {
+    // 누적 범위 체크: 이전 행의 feRowSpan 범위 안에 있으면 렌더링하지 않음
+    if (rowInFM === 0 || !isInMergedRange('fe')) {
       let value = '';
       if (col.name === '구분') value = row.feCategory || '';
       else if (col.name === '완제품기능') value = row.feFunctionName || '';
@@ -116,7 +130,8 @@ export function FunctionCellRenderer({
   // ★ FC 기반 역전개 (작업요소 기능, 공정특성)
   const fcFunctionCols = ['작업요소 기능', '공정특성'];
   if (fcFunctionCols.includes(col.name)) {
-    if (rowInFM === 0 || (rowInFM > 0 && fmGroup.rows[rowInFM - 1].fcRowSpan === 1)) {
+    // 누적 범위 체크: 이전 행의 fcRowSpan 범위 안에 있으면 렌더링하지 않음
+    if (rowInFM === 0 || !isInMergedRange('fc')) {
       let value = '';
       if (col.name === '작업요소 기능') value = row.fcWorkFunction || '';
       else if (col.name === '공정특성') value = row.fcProcessChar || '';
