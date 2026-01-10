@@ -507,6 +507,7 @@ interface AllTabEmptyProps {
   failureLinks?: FailureLinkRow[];  // 고장연결 데이터
   state?: WorksheetState;  // 워크시트 상태
   setState?: React.Dispatch<React.SetStateAction<WorksheetState>>;  // 상태 업데이트 함수
+  setDirty?: React.Dispatch<React.SetStateAction<boolean>>;  // ✅ DB 저장 트리거용
 }
 
 export default function AllTabEmpty({ 
@@ -516,6 +517,7 @@ export default function AllTabEmpty({
   failureLinks = [],
   state,
   setState,
+  setDirty,
 }: AllTabEmptyProps) {
   // 모달 관리 훅
   const {
@@ -1076,6 +1078,11 @@ export default function AllTabEmpty({
                                         ...prev,
                                         riskData: { ...(prev.riskData || {}), [key]: autoPrevention }
                                       }));
+                                      
+                                      // ✅ DB 저장 트리거
+                                      if (setDirty) {
+                                        setDirty(true);
+                                      }
                                       
                                       // 자동연결 알림
                                       const message = getAutoLinkMessage(linkedPreventions, '예방관리');
@@ -1785,6 +1792,12 @@ export default function AllTabEmpty({
                 
                 return { ...prev, riskData: newRiskData };
               });
+              
+              // ✅ DB 저장 트리거 (예방관리 저장 시)
+              if (controlModal.type === 'prevention' && setDirty) {
+                setDirty(true);
+                console.log('[AllTabEmpty] 예방관리 저장 → DB 저장 트리거');
+              }
               
               // 자동연결 알림
               if (autoLinkedCount > 0 && currentFcText) {

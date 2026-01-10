@@ -19,6 +19,7 @@ interface AllTabRendererProps {
   tab: string;
   state: WorksheetState;
   setState?: React.Dispatch<React.SetStateAction<WorksheetState>>;
+  setDirty?: React.Dispatch<React.SetStateAction<boolean>>;  // ✅ DB 저장 트리거용
   visibleSteps?: number[];
   fmeaId?: string;
   showRPN?: boolean; // RPN 표시 여부 (기본: false)
@@ -36,6 +37,7 @@ export default function AllTabRenderer({
   tab,
   state,
   setState,
+  setDirty,
   visibleSteps: propsVisibleSteps,
   fmeaId,
   showRPN = false,
@@ -242,6 +244,7 @@ export default function AllTabRenderer({
       failureLinks={failureLinks}
       state={state}
       setState={setState}
+      setDirty={setDirty}
     />
   );
 }

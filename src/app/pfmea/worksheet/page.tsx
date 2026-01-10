@@ -583,6 +583,7 @@ function FMEAWorksheetPageContent() {
                   rows={rows} 
                   state={state}
                   setState={setState}
+                  setDirty={setDirty}
                   l1Spans={l1Spans} 
                   l1TypeSpans={l1TypeSpans}
                   l1FuncSpans={l1FuncSpans}
