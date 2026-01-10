@@ -40,9 +40,12 @@ interface AllViewRow {
   l3SpecialChar: string;     // 특별특성 (3L)
   
   // 고장분석
+  feNo: string;              // FE 번호 (S1, S2...)
   feEffect: string;          // 고장영향
   feSeverity: number;        // 심각도
+  fmNo: string;              // FM 번호 (M1, M2...)
   fmMode: string;            // 고장형태
+  fcNo: string;              // FC 번호 (C1, C2...)
   fcCause: string;           // 고장원인
   fcOccurrence: number | null; // 발생도
   
@@ -139,6 +142,20 @@ export async function GET(request: NextRequest) {
 
     console.log(`[ALL-VIEW API] FailureLinks 조회 완료: ${failureLinks.length}개`);
 
+    // ★ FM/FE/FC 번호 생성을 위한 매핑
+    const fmIdToNo = new Map<string, string>();
+    const feIdToNo = new Map<string, string>();
+    const fcIdToNo = new Map<string, string>();
+    
+    // 고유 ID 수집 및 번호 부여
+    const uniqueFMs = [...new Set(failureLinks.map(l => l.fmId))];
+    const uniqueFEs = [...new Set(failureLinks.map(l => l.feId))];
+    const uniqueFCs = [...new Set(failureLinks.map(l => l.fcId))];
+    
+    uniqueFMs.forEach((id, idx) => fmIdToNo.set(id, `M${idx + 1}`));
+    uniqueFEs.forEach((id, idx) => feIdToNo.set(id, `S${idx + 1}`));
+    uniqueFCs.forEach((id, idx) => fcIdToNo.set(id, `C${idx + 1}`));
+
     // 데이터 변환
     const rows: AllViewRow[] = failureLinks.map(link => {
       const fm = link.failureMode;
@@ -167,9 +184,12 @@ export async function GET(request: NextRequest) {
         l3SpecialChar: fc?.l3Function?.specialChar || '',
         
         // 고장분석
+        feNo: feIdToNo.get(link.feId) || '',
         feEffect: fe?.effect || '',
         feSeverity: fe?.severity || 0,
+        fmNo: fmIdToNo.get(link.fmId) || '',
         fmMode: fm?.mode || '',
+        fcNo: fcIdToNo.get(link.fcId) || '',
         fcCause: fc?.cause || '',
         fcOccurrence: fc?.occurrence || null,
         
