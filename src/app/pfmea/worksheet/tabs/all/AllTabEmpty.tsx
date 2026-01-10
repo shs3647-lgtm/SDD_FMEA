@@ -1021,6 +1021,88 @@ export default function AllTabEmpty({
                       // 리스크분석 / 최적화 컬럼 - FC와 동일한 rowSpan 적용
                       if (col.step === '리스크분석' || col.step === '최적화') {
                         if (rowInFM === 0 || (rowInFM > 0 && fmGroup.rows[rowInFM - 1].fcRowSpan === 1)) {
+                          // ★ 예방관리(PC) 셀
+                          if (col.name === '예방관리(PC)' || col.name === '예방관리개선') {
+                            const modalType = 'prevention';
+                            const key = `${modalType}-${globalRowIdx}`;
+                            const value = state?.riskData?.[key] || '';
+                            
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.fcRowSpan}
+                                onClick={() => setControlModal?.({ isOpen: true, type: modalType, rowIndex: globalRowIdx })}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {value}
+                              </td>
+                            );
+                          }
+                          
+                          // ★ 검출관리(DC) 셀
+                          if (col.name === '검출관리(DC)' || col.name === '검출관리개선') {
+                            const modalType = 'detection';
+                            const key = `${modalType}-${globalRowIdx}`;
+                            const value = state?.riskData?.[key] || '';
+                            
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.fcRowSpan}
+                                onClick={() => setControlModal?.({ isOpen: true, type: modalType, rowIndex: globalRowIdx })}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {value}
+                              </td>
+                            );
+                          }
+                          
+                          // ★ 특별특성 셀
+                          if (col.name === '특별특성') {
+                            const modalType = 'specialChar';
+                            const key = `${modalType}-${globalRowIdx}`;
+                            const value = state?.riskData?.[key] || '';
+                            
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.fcRowSpan}
+                                onClick={() => setControlModal?.({ isOpen: true, type: modalType, rowIndex: globalRowIdx })}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {value}
+                              </td>
+                            );
+                          }
+                          
+                          // 다른 리스크/최적화 컬럼
                           return (
                             <td 
                               key={colIdx}
