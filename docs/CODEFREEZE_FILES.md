@@ -50,10 +50,10 @@
 ### 2. 워크시트 탭 (2ST~6ST 전체)
 | 파일 | 코드프리즈 태그 |
 |------|----------------|
-| `src/app/pfmea/worksheet/tabs/StructureTab.tsx` | codefreeze-20260110-structure-final ⚠️ **UI 절대 변경 금지** |
+| `src/app/pfmea/worksheet/tabs/StructureTab.tsx` | codefreeze-20260110-structure-final<br/>codefreeze-20260111-structure-zebra (메인공정명 줄무늬) ⚠️ **UI 절대 변경 금지** |
 | `src/app/pfmea/worksheet/tabs/function/FunctionL1Tab.tsx` | codefreeze-20260104-worksheet-complete |
 | `src/app/pfmea/worksheet/tabs/function/FunctionL2Tab.tsx` | codefreeze-20260104-worksheet-complete<br/>codefreeze-20260111-function-l2-final (최종 확정) |
-| `src/app/pfmea/worksheet/tabs/function/FunctionL3Tab.tsx` | codefreeze-20260104-worksheet-complete |
+| `src/app/pfmea/worksheet/tabs/function/FunctionL3Tab.tsx` | codefreeze-20260104-worksheet-complete<br/>codefreeze-20260111-function-l3-zebra (메인공정명 줄무늬 최종) |
 | `src/app/pfmea/worksheet/tabs/failure/FailureL1Tab.tsx` | codefreeze-20260104-worksheet-complete |
 | `src/app/pfmea/worksheet/tabs/failure/FailureL2Tab.tsx` | codefreeze-20260104-worksheet-complete |
 | `src/app/pfmea/worksheet/tabs/failure/FailureL3Tab.tsx` | codefreeze-20260104-worksheet-complete |
@@ -144,6 +144,8 @@
 codefreeze-20260110-all-ui-freeze  (전체 UI 코드프리즈)
 codefreeze-20260111-worksheet-110percent  (워크시트 110% 배율 확정)
 codefreeze-20260111-function-l2-final  (기능2L 최종 확정)
+codefreeze-20260111-function-l3-zebra  (기능3L 메인공정명 줄무늬)
+codefreeze-20260111-structure-zebra  (구조분석 메인공정명 줄무늬)
 codefreeze-20260111-batch-freeze  (일괄 코드프리즈 - 2026-01-11)
 ```
 
