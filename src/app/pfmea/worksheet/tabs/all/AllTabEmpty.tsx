@@ -725,7 +725,7 @@ export default function AllTabEmpty({
                       
                       // ★ 구조분석 컬럼 - 역전개 데이터 표시
                       if (col.step === '구조분석') {
-                        // 완제품 공정명 (빈칸으로 유지)
+                        // 완제품 공정명 (완제품 표시)
                         if (col.name === '완제품 공정명') {
                           if (row.isFirstRow) {
                             return (
@@ -742,14 +742,14 @@ export default function AllTabEmpty({
                                   verticalAlign: 'middle',
                                 }}
                               >
-                                {/* 완제품 공정명은 비워둠 */}
+                                완제품
                               </td>
                             );
                           }
                           return null;
                         }
                         
-                        // NO+공정명 컬럼 (FM 역전개: 공정번호+공정명)
+                        // NO+공정명 컬럼 (FM 역전개: 공정번호+메인공정명)
                         if (col.name === 'NO+공정명') {
                           if (row.isFirstRow) {
                             return (
