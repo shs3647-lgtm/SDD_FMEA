@@ -10,8 +10,11 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { L1, L2, L3, border } from '@/styles/worksheet';
+import DataSelectModal from '@/components/modals/DataSelectModal';
+import { useAllTabModals } from './hooks/useAllTabModals';
+import type { WorksheetState } from '../../constants';
 
 // ============ 색상 정의 (구조분석 기준 통일) ============
 const COLORS = {
@@ -498,6 +501,8 @@ interface AllTabEmptyProps {
   showRPN?: boolean;
   visibleSteps?: string[];  // 표시할 단계명 목록 (예: ['구조분석', '기능분석'])
   failureLinks?: FailureLinkRow[];  // 고장연결 데이터
+  state?: WorksheetState;  // 워크시트 상태
+  setState?: React.Dispatch<React.SetStateAction<WorksheetState>>;  // 상태 업데이트 함수
 }
 
 export default function AllTabEmpty({ 
@@ -505,7 +510,16 @@ export default function AllTabEmpty({
   showRPN = false,
   visibleSteps,
   failureLinks = [],
+  state,
+  setState,
 }: AllTabEmptyProps) {
+  // 모달 관리 훅
+  const {
+    controlModal,
+    setControlModal,
+    closeControlModal,
+  } = useAllTabModals(setState);
+  
   // 고장연결 데이터 처리
   const processedFMGroups = React.useMemo(() => processFailureLinks(failureLinks), [failureLinks]);
   // visibleSteps가 지정되면 해당 단계만 필터링, 없으면 전체 표시
@@ -1076,6 +1090,39 @@ export default function AllTabEmpty({
           )}
         </tbody>
       </table>
+
+      {/* 예방관리/검출관리/특별특성 선택 모달 */}
+      {controlModal.isOpen && state && setState && (
+        <DataSelectModal
+          isOpen={controlModal.isOpen}
+          title={controlModal.type === 'prevention' ? '예방관리 선택' : controlModal.type === 'detection' ? '검출관리 선택' : '특별특성 선택'}
+          itemCode={controlModal.type === 'prevention' ? 'B5' : controlModal.type === 'detection' ? 'B6' : 'SC'}
+          onClose={closeControlModal}
+          onSave={(selectedValues) => {
+            if (setState && selectedValues.length > 0) {
+              const key = `${controlModal.type}-${controlModal.rowIndex}`;
+              setState((prev: WorksheetState) => ({
+                ...prev,
+                riskData: { ...(prev.riskData || {}), [key]: selectedValues[0] }
+              }));
+            }
+            closeControlModal();
+          }}
+          onDelete={() => {
+            if (setState) {
+              const key = `${controlModal.type}-${controlModal.rowIndex}`;
+              setState((prev: WorksheetState) => {
+                const newRiskData = { ...(prev.riskData || {}) };
+                delete newRiskData[key];
+                return { ...prev, riskData: newRiskData };
+              });
+            }
+            closeControlModal();
+          }}
+          singleSelect={true}
+          currentValues={[(state.riskData || {})[`${controlModal.type}-${controlModal.rowIndex}`] || ''].filter(Boolean).map(String)}
+        />
+      )}
     </div>
   );
 }

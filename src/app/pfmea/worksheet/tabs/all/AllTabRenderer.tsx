@@ -240,6 +240,8 @@ export default function AllTabRenderer({
       showRPN={showRPN}
       visibleSteps={visibleStepNames}
       failureLinks={failureLinks}
+      state={state}
+      setState={setState}
     />
   );
 }
