@@ -178,6 +178,13 @@ codefreeze-20260111-batch-freeze  (일괄 코드프리즈 - 2026-01-11)
 - `src/app/pfmea/worksheet/tabs/StructureTab.tsx` - 태그: `codefreeze-20260111-structure-zebra`
 - 공정 인덱스 기준 홀수/짝수 줄무늬 적용
 
+### 6. ⚠️ FMEA 워크시트 레이블명 절대 수정 금지
+- **태그**: `codefreeze-20260111-label-names-frozen`
+- **규칙**: 모든 컬럼/헤더 레이블명 절대 수정 금지
+  - 완제품명, 메인공정명, 작업요소, 4M, 기능, 특성 등
+  - 이유: DB 스키마, API 응답, 다른 앱(APQP, DFMEA, CP 등)과의 연계성
+  - 수정 시: DB 마이그레이션, API 버전 관리, 다른 앱 동기화 등 복잡한 영향
+
 ---
 
 ## 📅 마지막 업데이트: 2026-01-11
