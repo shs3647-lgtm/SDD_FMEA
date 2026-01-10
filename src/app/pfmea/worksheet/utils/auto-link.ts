@@ -159,6 +159,42 @@ export function findLinkedFailureCausesForProcessChar(state: WorksheetState, pro
 }
 
 /**
+ * 리스크분석: 동일한 고장원인에 연결된 예방관리들 찾기
+ * @param riskData state.riskData 객체
+ * @param failureLinks 고장연결 데이터 (고장원인 텍스트 포함)
+ * @param currentFcText 현재 행의 고장원인 텍스트
+ * @returns 동일한 고장원인에 연결된 예방관리 목록
+ */
+export function findLinkedPreventionControlsForFailureCause(
+  riskData: Record<string, any> | undefined,
+  failureLinks: Array<{ fcText?: string }>,
+  currentFcText: string
+): string[] {
+  if (!riskData || !currentFcText || !failureLinks) return [];
+  
+  const linkedPreventions: string[] = [];
+  
+  // 동일한 고장원인을 가진 행들의 인덱스 찾기
+  const matchingRowIndices: number[] = [];
+  failureLinks.forEach((link, idx) => {
+    if (link.fcText === currentFcText) {
+      matchingRowIndices.push(idx);
+    }
+  });
+  
+  // 해당 행들에서 이미 입력된 예방관리 찾기
+  matchingRowIndices.forEach(rowIdx => {
+    const key = `prevention-${rowIdx}`;
+    const prevention = riskData[key];
+    if (prevention && typeof prevention === 'string' && prevention.trim() !== '') {
+      linkedPreventions.push(prevention);
+    }
+  });
+  
+  return [...new Set(linkedPreventions)]; // 중복 제거
+}
+
+/**
  * 자동연결 적용 함수
  * @param existingItems 현재 이미 연결된 항목들
  * @param linkedItems 다른 곳에서 연결된 항목들

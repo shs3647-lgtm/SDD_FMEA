@@ -17,6 +17,7 @@ import SODSelectModal from '@/components/modals/SODSelectModal';
 import APResultModal from '@/components/modals/APResultModal';
 import { useAllTabModals } from './hooks/useAllTabModals';
 import { calculateAP } from './apCalculator';
+import { findLinkedPreventionControlsForFailureCause, getAutoLinkMessage } from '../../utils/auto-link';
 import type { WorksheetState } from '../../constants';
 
 // ============ 색상 정의 (구조분석 기준 통일) ============
@@ -1058,7 +1059,39 @@ export default function AllTabEmpty({
                               <td 
                                 key={colIdx}
                                 rowSpan={row.fcRowSpan}
-                                onClick={() => setControlModal?.({ isOpen: true, type: modalType, rowIndex: globalRowIdx })}
+                                onClick={() => {
+                                  // ✅ 자동연결: 동일한 고장원인에 동일한 예방관리 자동 연결
+                                  const currentFcText = row.fcText || '';
+                                  if (currentFcText && failureLinks && state?.riskData) {
+                                    const linkedPreventions = findLinkedPreventionControlsForFailureCause(
+                                      state.riskData,
+                                      failureLinks,
+                                      currentFcText
+                                    );
+                                    
+                                    // 자동연결된 예방관리가 있고, 현재 값이 없으면 자동 적용
+                                    if (linkedPreventions.length > 0 && !value && setState) {
+                                      const autoPrevention = linkedPreventions[0]; // 첫 번째 값 사용
+                                      setState((prev: WorksheetState) => ({
+                                        ...prev,
+                                        riskData: { ...(prev.riskData || {}), [key]: autoPrevention }
+                                      }));
+                                      
+                                      // 자동연결 알림
+                                      const message = getAutoLinkMessage(linkedPreventions, '예방관리');
+                                      console.log(`[AllTabEmpty] ${currentFcText}: ${message}`);
+                                      if (linkedPreventions.length > 0) {
+                                        setTimeout(() => {
+                                          alert(`✨ 자동연결: "${autoPrevention}" (동일 고장원인 기반)`);
+                                        }, 100);
+                                      }
+                                      return; // 자동연결 완료, 모달 열지 않음
+                                    }
+                                  }
+                                  
+                                  // 자동연결이 없거나 이미 값이 있으면 모달 열기
+                                  setControlModal?.({ isOpen: true, type: modalType, rowIndex: globalRowIdx });
+                                }}
                                 style={{
                                   background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
                                   height: `${HEIGHTS.body}px`,
@@ -1687,11 +1720,78 @@ export default function AllTabEmpty({
           onClose={closeControlModal}
           onSave={(selectedValues) => {
             if (setState && selectedValues.length > 0) {
+              const selectedValue = selectedValues[0];
               const key = `${controlModal.type}-${controlModal.rowIndex}`;
-              setState((prev: WorksheetState) => ({
-                ...prev,
-                riskData: { ...(prev.riskData || {}), [key]: selectedValues[0] }
-              }));
+              
+              // ✅ 예방관리 자동연결: 동일한 고장원인에 동일한 예방관리 자동 연결
+              let autoLinkedCount = 0;
+              let currentFcText = '';
+              let currentRowIdx = 0;
+              
+              if (controlModal.type === 'prevention' && failureLinks && processedFMGroups.length > 0) {
+                // 현재 행의 고장원인 텍스트 찾기
+                processedFMGroups.forEach((group, gIdx) => {
+                  group.rows.forEach((r, rIdx) => {
+                    const gRowIdx = processedFMGroups.slice(0, gIdx).reduce((acc, g) => acc + g.rows.length, 0) + rIdx;
+                    if (gRowIdx === controlModal.rowIndex) {
+                      currentFcText = r.fcText || '';
+                      currentRowIdx = gRowIdx;
+                    }
+                  });
+                });
+                
+                // 동일한 고장원인을 가진 다른 행들 찾기
+                if (currentFcText) {
+                  processedFMGroups.forEach((group, gIdx) => {
+                    group.rows.forEach((r, rIdx) => {
+                      const gRowIdx = processedFMGroups.slice(0, gIdx).reduce((acc, g) => acc + g.rows.length, 0) + rIdx;
+                      // 현재 행이 아니고, 동일한 고장원인을 가진 행
+                      if (gRowIdx !== currentRowIdx && r.fcText === currentFcText) {
+                        const autoKey = `${controlModal.type}-${gRowIdx}`;
+                        const existingValue = state?.riskData?.[autoKey];
+                        // 값이 없거나 다른 값이면 자동 연결
+                        if (!existingValue || existingValue !== selectedValue) {
+                          autoLinkedCount++;
+                        }
+                      }
+                    });
+                  });
+                }
+              }
+              
+              // 현재 행 저장 + 자동연결된 행들 저장
+              setState((prev: WorksheetState) => {
+                const newRiskData = { ...(prev.riskData || {}) };
+                
+                // 현재 행 저장
+                newRiskData[key] = selectedValue;
+                
+                // ✅ 자동연결: 동일한 고장원인을 가진 다른 행들에도 자동 저장
+                if (controlModal.type === 'prevention' && failureLinks && processedFMGroups.length > 0 && autoLinkedCount > 0 && currentFcText) {
+                  processedFMGroups.forEach((group, gIdx) => {
+                    group.rows.forEach((r, rIdx) => {
+                      const gRowIdx = processedFMGroups.slice(0, gIdx).reduce((acc, g) => acc + g.rows.length, 0) + rIdx;
+                      if (gRowIdx !== currentRowIdx && r.fcText === currentFcText) {
+                        const autoKey = `${controlModal.type}-${gRowIdx}`;
+                        const existingValue = prev.riskData?.[autoKey];
+                        // 값이 없거나 다른 값이면 자동 연결
+                        if (!existingValue || existingValue !== selectedValue) {
+                          newRiskData[autoKey] = selectedValue;
+                        }
+                      }
+                    });
+                  });
+                }
+                
+                return { ...prev, riskData: newRiskData };
+              });
+              
+              // 자동연결 알림
+              if (autoLinkedCount > 0 && currentFcText) {
+                setTimeout(() => {
+                  alert(`✨ 자동연결: 동일한 고장원인 "${currentFcText}"에 "${selectedValue}" 예방관리가 ${autoLinkedCount}건 자동 연결되었습니다.`);
+                }, 100);
+              }
             }
             closeControlModal();
           }}
