@@ -59,20 +59,88 @@ export default function AllTabRenderer({
   };
   const visibleStepNames = visibleStepsNumbers.map(num => stepNameMap[num] || '').filter(Boolean);
 
-  // ★ 고장연결 데이터 추출 (state.failureLinks에서)
-  const rawFailureLinks = (state as any).failureLinks || [];
-  const failureLinks = rawFailureLinks.map((link: any) => ({
-    fmId: link.fmId || '',
-    fmText: link.fmText || link.cache?.fmText || '',
-    feId: link.feId || '',
-    feText: link.feText || link.cache?.feText || '',
-    // ★ 심각도: severity 또는 feSeverity 둘 다 확인
-    feSeverity: link.severity || link.feSeverity || link.cache?.feSeverity || 0,
-    fcId: link.fcId || '',
-    fcText: link.fcText || link.cache?.fcText || '',
-  }));
+  // ★ 고장영향(FE) → 기능분석 역전개를 위한 맵 생성
+  // failureScope.reqId → 요구사항 → 기능 → 구분 역추적
+  const l1Types = state.l1?.types || [];
+  const failureScopes = (state.l1 as any)?.failureScopes || [];
   
-  console.log('🔵 AllTabRenderer: 고장연결 데이터', { 
+  // reqId → { category, functionName, requirement } 매핑
+  const reqToFuncMap = new Map<string, { category: string; functionName: string; requirement: string }>();
+  // feId/feText → reqId 매핑
+  const feToReqMap = new Map<string, string>();
+  
+  // 1. 요구사항 → 기능 → 구분 맵 생성
+  l1Types.forEach((type: any) => {
+    const category = type.name || '';
+    (type.functions || []).forEach((func: any) => {
+      const functionName = func.name || '';
+      (func.requirements || []).forEach((req: any) => {
+        if (req.id) {
+          reqToFuncMap.set(req.id, { category, functionName, requirement: req.name || '' });
+        }
+      });
+    });
+  });
+  
+  // 2. failureScope → reqId 맵 생성
+  failureScopes.forEach((fs: any) => {
+    if (fs.id && fs.reqId) {
+      feToReqMap.set(fs.id, fs.reqId);
+    }
+    // 텍스트로도 매핑 (fallback)
+    if (fs.effect) {
+      feToReqMap.set(fs.effect, fs.reqId || '');
+    }
+  });
+
+  // ★ 고장연결 데이터 추출 (state.failureLinks에서) + 기능분석 역전개
+  const rawFailureLinks = (state as any).failureLinks || [];
+  const failureLinks = rawFailureLinks.map((link: any) => {
+    const feId = link.feId || '';
+    const feText = link.feText || link.cache?.feText || '';
+    
+    // ★ 역전개: FE → 요구사항 → 기능 → 구분
+    let feCategory = '';
+    let feFunctionName = '';
+    let feRequirement = '';
+    
+    // feId로 먼저 찾기
+    const reqId = feToReqMap.get(feId) || feToReqMap.get(feText) || '';
+    if (reqId) {
+      const funcData = reqToFuncMap.get(reqId);
+      if (funcData) {
+        feCategory = funcData.category;
+        feFunctionName = funcData.functionName;
+        feRequirement = funcData.requirement;
+      }
+    }
+    
+    // fallback: failureScope에서 직접 찾기
+    if (!feCategory) {
+      const scope = failureScopes.find((fs: any) => fs.id === feId || fs.effect === feText);
+      if (scope) {
+        feCategory = scope.scope || '';
+        feRequirement = scope.requirement || '';
+      }
+    }
+    
+    return {
+      fmId: link.fmId || '',
+      fmText: link.fmText || link.cache?.fmText || '',
+      feId,
+      feText,
+      // ★ 심각도: severity 또는 feSeverity 둘 다 확인
+      feSeverity: link.severity || link.feSeverity || link.cache?.feSeverity || 0,
+      fcId: link.fcId || '',
+      fcText: link.fcText || link.cache?.fcText || '',
+      // ★ 역전개 데이터
+      feCategory,        // 구분 (Your Plant / Ship to Plant / User)
+      feFunctionName,    // 완제품기능
+      feRequirement,     // 요구사항
+    };
+  });
+  
+  console.log('🔵 AllTabRenderer: 고장연결 데이터 (역전개 포함)', { 
     count: failureLinks.length,
     sample: failureLinks[0] || null,
   });

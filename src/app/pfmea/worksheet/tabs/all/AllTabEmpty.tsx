@@ -292,6 +292,10 @@ interface FailureLinkRow {
   feSeverity: number;     // 심각도
   fcId: string;           // 고장원인 ID
   fcText: string;         // 고장원인 텍스트
+  // ★ 역전개 데이터 (고장영향 → 기능분석)
+  feCategory?: string;        // 구분 (Your Plant / Ship to Plant / User)
+  feFunctionName?: string;    // 완제품기능
+  feRequirement?: string;     // 요구사항
 }
 
 interface ProcessedFMGroup {
@@ -307,6 +311,10 @@ interface ProcessedFMGroup {
     feRowSpan: number;    // FE 셀합치기 (마지막 행 병합용)
     fcRowSpan: number;    // FC 셀합치기 (마지막 행 병합용)
     isFirstRow: boolean;  // FM 첫 행 여부
+    // ★ 역전개 데이터 (기능분석)
+    feCategory: string;       // 구분
+    feFunctionName: string;   // 완제품기능
+    feRequirement: string;    // 요구사항
   }[];
 }
 
@@ -318,8 +326,15 @@ interface ProcessedFMGroup {
 function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[] {
   if (!links || links.length === 0) return [];
   
-  // FM별 그룹핑
-  const fmMap = new Map<string, { fmText: string; fes: Map<string, { text: string; severity: number }>; fcs: Map<string, string> }>();
+  // FM별 그룹핑 (역전개 데이터 포함)
+  interface FEData {
+    text: string;
+    severity: number;
+    category: string;
+    functionName: string;
+    requirement: string;
+  }
+  const fmMap = new Map<string, { fmText: string; fes: Map<string, FEData>; fcs: Map<string, string> }>();
   
   links.forEach(link => {
     if (!fmMap.has(link.fmId)) {
@@ -331,7 +346,13 @@ function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[] {
     }
     const group = fmMap.get(link.fmId)!;
     if (link.feId && link.feText) {
-      group.fes.set(link.feId, { text: link.feText, severity: link.feSeverity || 0 });
+      group.fes.set(link.feId, { 
+        text: link.feText, 
+        severity: link.feSeverity || 0,
+        category: link.feCategory || '',
+        functionName: link.feFunctionName || '',
+        requirement: link.feRequirement || '',
+      });
     }
     if (link.fcId && link.fcText) {
       group.fcs.set(link.fcId, link.fcText);
@@ -380,6 +401,10 @@ function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[] {
         feRowSpan,
         fcRowSpan,
         isFirstRow: i === 0,
+        // ★ 역전개 데이터 (기능분석)
+        feCategory: fe?.category || '',
+        feFunctionName: fe?.functionName || '',
+        feRequirement: fe?.requirement || '',
       });
     }
     
@@ -630,6 +655,82 @@ export default function AllTabEmpty({
                                 }}
                               >
                                 {row.fcText}
+                              </td>
+                            );
+                          }
+                          return null;
+                        }
+                      }
+                      
+                      // ★ 기능분석 컬럼 - 역전개 데이터 표시 (구분, 완제품기능, 요구사항)
+                      if (col.step === '기능분석') {
+                        // 구분 컬럼
+                        if (col.name === '구분') {
+                          // FE와 동일한 rowSpan 적용
+                          if (rowInFM === 0 || (rowInFM > 0 && fmGroup.rows[rowInFM - 1].feRowSpan === 1)) {
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.feRowSpan}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                }}
+                              >
+                                {row.feCategory || ''}
+                              </td>
+                            );
+                          }
+                          return null;
+                        }
+                        
+                        // 완제품기능 컬럼
+                        if (col.name === '완제품기능') {
+                          if (rowInFM === 0 || (rowInFM > 0 && fmGroup.rows[rowInFM - 1].feRowSpan === 1)) {
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.feRowSpan}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                }}
+                              >
+                                {row.feFunctionName || ''}
+                              </td>
+                            );
+                          }
+                          return null;
+                        }
+                        
+                        // 요구사항 컬럼
+                        if (col.name === '요구사항') {
+                          if (rowInFM === 0 || (rowInFM > 0 && fmGroup.rows[rowInFM - 1].feRowSpan === 1)) {
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.feRowSpan}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                }}
+                              >
+                                {row.feRequirement || ''}
                               </td>
                             );
                           }

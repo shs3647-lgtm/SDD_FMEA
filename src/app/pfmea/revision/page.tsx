@@ -8,7 +8,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { BizInfoSelectModal } from '@/components/modals/BizInfoSelectModal';
 import { MeetingMinutesTable } from '@/components/tables/MeetingMinutesTable';
@@ -90,9 +90,9 @@ const createDefaultRevisions = (projectId: string, fmeaInfo?: FMEAInfoData | nul
   }));
 
 // =====================================================
-// 메인 컴포넌트
+// 내부 컴포넌트 (useSearchParams 사용)
 // =====================================================
-export default function RevisionManagementPage() {
+function RevisionManagementPageInner() {
   const searchParams = useSearchParams();
   const idFromUrl = searchParams.get('id') || '';
   
@@ -902,6 +902,17 @@ export default function RevisionManagementPage() {
         />
       </div>
     </>
+  );
+}
+
+// =====================================================
+// 메인 컴포넌트 (Suspense 바운더리로 감싸기 - Next.js 16 필수)
+// =====================================================
+export default function RevisionManagementPage() {
+  return (
+    <Suspense fallback={<div className="p-4">로딩 중...</div>}>
+      <RevisionManagementPageInner />
+    </Suspense>
   );
 }
 

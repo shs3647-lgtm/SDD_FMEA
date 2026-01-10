@@ -165,21 +165,21 @@ export default function OptTabConfirmable({
     
     // 🚀 FMEA 완성 후 승인 확인
     setTimeout(() => {
-      const fmeaId = state.fmeaId || '';
+      const fmeaId = (state as any).fmeaId || '';
       if (confirm('🎉 FMEA 작성이 완료되었습니다!\n\nFMEA를 승인하시겠습니까?\n\n[확인] → 개정관리 화면으로 이동\n[취소] → 현재 화면 유지')) {
         console.log('[OptTab] FMEA 승인 → 개정관리 화면 이동');
         router.push(`/pfmea/revision?id=${fmeaId}`);
       }
     }, 200);
-  }, [isUpstreamConfirmed, state.fmeaId, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB, router]);
+  }, [isUpstreamConfirmed, (state as any).fmeaId, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB, router]);
   
   // 승인 버튼 클릭 핸들러 (개정관리 화면 이동)
   const handleApproval = useCallback(() => {
-    const fmeaId = state.fmeaId || '';
+    const fmeaId = (state as any).fmeaId || '';
     if (confirm('🔏 FMEA 승인 프로세스를 시작합니다.\n\n개정관리 화면으로 이동하시겠습니까?')) {
       router.push(`/pfmea/revision?id=${fmeaId}`);
     }
-  }, [state.fmeaId, router]);
+  }, [(state as any).fmeaId, router]);
   
   // 수정 핸들러
   const handleEdit = useCallback(() => {

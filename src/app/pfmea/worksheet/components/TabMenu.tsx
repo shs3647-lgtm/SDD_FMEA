@@ -36,11 +36,11 @@ export default function TabMenu({ state, setState, setStateSynced, setDirty, sav
   
   // 승인 버튼 핸들러 (개정관리 화면 이동)
   const handleApproval = useCallback(() => {
-    const fmeaId = state.fmeaId || '';
+    const fmeaId = (state as any).fmeaId || '';
     if (confirm('🔏 FMEA 승인 프로세스를 시작합니다.\n\n개정관리 화면으로 이동하시겠습니까?')) {
       router.push(`/pfmea/revision?id=${fmeaId}`);
     }
-  }, [state.fmeaId, router]);
+  }, [(state as any).fmeaId, router]);
   
   // ✅ 탭 활성화 조건 - 모든 탭 항상 활성화 (확정 여부와 무관)
   const isTabEnabled = (tabId: string) => {

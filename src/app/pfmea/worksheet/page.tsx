@@ -591,8 +591,6 @@ function FMEAWorksheetPageContent() {
                   visibleSteps={state.visibleSteps || [2, 3, 4, 5, 6]}
                   fmeaId={selectedFmeaId || undefined}
                   useAtomicDB={true}
-                  fmeaId={selectedFmeaId || undefined}
-                  useAtomicDB={true}
                 />
               </div>
             ) : (
