@@ -806,11 +806,32 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                     background: row.severity && row.severity >= 8 ? '#ffe0b2' : row.severity && row.severity >= 5 ? '#fff9c4' : zebra.failure,
                     cursor: row.effectId ? 'pointer' : 'default'
                   }}
-                  onClick={() => row.effectId && setSODModal({ 
-                    effectId: row.effectId, 
-                    currentValue: row.severity,
-                    scope: row.typeName as 'Your Plant' | 'Ship to Plant' | 'User'
-                  })}
+                  onClick={() => {
+                    if (row.effectId) {
+                      // ✅ scope 값 명시적 확인 및 전달 (약어 'SP', 'YP'도 처리)
+                      const tn = row.typeName?.trim();
+                      let scopeValue: 'Your Plant' | 'Ship to Plant' | 'User' | undefined;
+                      
+                      if (tn === 'Your Plant' || tn === 'YP' || tn?.includes('Your') || tn?.includes('YP')) {
+                        scopeValue = 'Your Plant';
+                      } else if (tn === 'Ship to Plant' || tn === 'SP' || tn?.includes('Ship') || tn?.includes('SP')) {
+                        scopeValue = 'Ship to Plant';
+                      } else if (tn === 'User' || tn === 'EU' || tn?.includes('User') || tn?.includes('End')) {
+                        scopeValue = 'User';
+                      }
+                      
+                      console.log('[FailureL1Tab] 심각도 모달 열기:', { 
+                        effectId: row.effectId, 
+                        typeName: row.typeName, 
+                        normalizedScope: scopeValue 
+                      });
+                      setSODModal({ 
+                        effectId: row.effectId, 
+                        currentValue: row.severity,
+                        scope: scopeValue
+                      });
+                    }
+                  }}
                   title={row.effectId ? '클릭하여 심각도 선택' : ''}
                 >
                   {row.effectId ? (

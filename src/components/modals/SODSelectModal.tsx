@@ -74,13 +74,20 @@ export default function SODSelectModal({
 
   useEffect(() => {
     if (!isOpen) return;
+    
+    // ✅ 기존 localStorage 데이터 강제 삭제 (문제 해결을 위해)
     const savedData = localStorage.getItem('sod_master_data');
     if (savedData) {
-      const parsed = JSON.parse(savedData);
-      if (!parsed || parsed.length === 0) {
+      try {
+        const parsed = JSON.parse(savedData);
+        // ✅ 기존 데이터가 있더라도 항상 새로운 기본 데이터로 초기화
+        console.log('[SODSelectModal] 기존 localStorage 데이터 삭제 후 새 데이터 초기화');
+        localStorage.removeItem('sod_master_data');
         initializeDefaultSODData();
-      } else {
-        setItems(parsed);
+      } catch (e) {
+        console.error('[SODSelectModal] localStorage 파싱 오류:', e);
+        localStorage.removeItem('sod_master_data');
+        initializeDefaultSODData();
       }
     } else {
       initializeDefaultSODData();
@@ -91,16 +98,46 @@ export default function SODSelectModal({
     const uid = () => Math.random().toString(36).substr(2, 9);
     
     const PFMEA_SEVERITY = [
-      { fmeaType: 'P-FMEA' as const, category: 'S' as const, rating: 10, levelKr: '매우 높음', levelEn: 'Very High', yourPlant: '건강/안전 위험', shipToPlant: '건강/안전 위험', endUser: '안전운행 영향' },
-      { fmeaType: 'P-FMEA' as const, category: 'S' as const, rating: 9, levelKr: '매우 높음', levelEn: 'Very High', yourPlant: '규제 미준수', shipToPlant: '규제 미준수', endUser: '규제사항 미준수' },
-      { fmeaType: 'P-FMEA' as const, category: 'S' as const, rating: 8, levelKr: '높음', levelEn: 'High', yourPlant: '100% 폐기', shipToPlant: '1 Shift 이상 라인중단', endUser: '주요 기능 상실' },
-      { fmeaType: 'P-FMEA' as const, category: 'S' as const, rating: 7, levelKr: '높음', levelEn: 'High', yourPlant: '선별 및 일부 폐기', shipToPlant: '1시간~1shift 라인중단', endUser: '주요 기능 저하' },
-      { fmeaType: 'P-FMEA' as const, category: 'S' as const, rating: 6, levelKr: '중간', levelEn: 'Moderate', yourPlant: '라인 외 재작업', shipToPlant: '최대 1시간 라인중단', endUser: '보조 기능 상실' },
-      { fmeaType: 'P-FMEA' as const, category: 'S' as const, rating: 5, levelKr: '중간', levelEn: 'Moderate', yourPlant: '라인 내 재작업', shipToPlant: '30분 미만 라인중단', endUser: '보조 기능 저하' },
-      { fmeaType: 'P-FMEA' as const, category: 'S' as const, rating: 4, levelKr: '낮음', levelEn: 'Low', yourPlant: '선별 작업', shipToPlant: '생산성 감소', endUser: '외관/소음 불만족' },
-      { fmeaType: 'P-FMEA' as const, category: 'S' as const, rating: 3, levelKr: '낮음', levelEn: 'Low', yourPlant: '약간의 불편', shipToPlant: '약간의 불편', endUser: '대부분 인지 안됨' },
-      { fmeaType: 'P-FMEA' as const, category: 'S' as const, rating: 2, levelKr: '매우 낮음', levelEn: 'Very Low', yourPlant: '거의 인지 안됨', shipToPlant: '거의 인지 안됨', endUser: '거의 인지 안됨' },
-      { fmeaType: 'P-FMEA' as const, category: 'S' as const, rating: 1, levelKr: '없음', levelEn: 'None', yourPlant: '영향 없음', shipToPlant: '영향 없음', endUser: '영향 없음' },
+      { fmeaType: 'P-FMEA' as const, category: 'S' as const, rating: 10, levelKr: '매우 높음', levelEn: 'Very High', 
+        yourPlant: '고장으로 제조/조립근로자의 건강 및/또는 안전 리스크 초래 가능 (Failure may result in health and/or safety risk for manufacturing or assembly worker)', 
+        shipToPlant: '고장으로 제조/조립근로자의 건강 및/또는 안전 리스크 초래 가능 (Failure may result in health and/or safety risk for manufacturing or assembly worker)', 
+        endUser: '차량 및/또는 다른 자동차의 안전운행, 운전자, 승객 또는 도로 사용자나 보행자의 건강에 영향을 미침 (Affects safe operation of the vehicle and/or other vehicles, the health of driver or passenger(s) or road users or pedestrians)' },
+      { fmeaType: 'P-FMEA' as const, category: 'S' as const, rating: 9, levelKr: '매우 높음', levelEn: 'Very High', 
+        yourPlant: '고장이 발생하면 공장내 규제 미준수로 이어질수 있음 (Failure may result in in-plant regulatory non-compliance)', 
+        shipToPlant: '고장이 발생하면 공장내 규제 미준수로 이어질수 있음 (Failure may result in in-plant regulatory non-compliance)', 
+        endUser: '규제사항 미준수 (Noncompliance with regulations)' },
+      { fmeaType: 'P-FMEA' as const, category: 'S' as const, rating: 8, levelKr: '높음', levelEn: 'High', 
+        yourPlant: '영향을 받은 생산제품의 100%가 폐기될 수 있음 (100% of production run affected may have to be scrapped)', 
+        shipToPlant: '1 Shift 이상 라인중단; 출하중단 가능 (Line shutdown greater than full production shift)', 
+        endUser: '기대되는 사용수명기간 동안 정상 주행에 필요한 자동차 주요 기능의 상실 (Loss of primary vehicle function necessary for normal driving during expected service life)' },
+      { fmeaType: 'P-FMEA' as const, category: 'S' as const, rating: 7, levelKr: '높음', levelEn: 'High', 
+        yourPlant: '① 제품을 선별하고 일부 폐기 할 수도 있음 ② 공정에서 기준이탈; 라인속도저하, 인력추가필요 (Product may have to be sorted and portion scrapped; deviation from primary process; decreased line speed or added manpower)', 
+        shipToPlant: '1시간~1shift 라인중단; 출하중단 가능; 규정 미준수이외에 필드수리/교체 (Line shutdown from 1 hour up to full production shift; stop shipment possible)', 
+        endUser: '기대되는 사용수명기간 동안 정상 주행에 필요한 자동차 주요 기능의 저하 (Degradation of primary vehicle function necessary for normal driving during expected service life)' },
+      { fmeaType: 'P-FMEA' as const, category: 'S' as const, rating: 6, levelKr: '중간', levelEn: 'Moderate', 
+        yourPlant: '100% 라인 밖에서 재작업 및 승인 (100% of production run may have to be reworked off line and accepted)', 
+        shipToPlant: '최대 1시간 까지 라인 중단 (Impact to Ship-to-Plant when known)', 
+        endUser: '자동차 보조 기능 상실 (Loss of secondary vehicle function)' },
+      { fmeaType: 'P-FMEA' as const, category: 'S' as const, rating: 5, levelKr: '중간', levelEn: 'Moderate', 
+        yourPlant: '일부 제품을 라인밖에서 재작업 및 승인 (A portion of the production run may have to be reworked offline and accepted)', 
+        shipToPlant: '영향을 받은 제품 100%미만; 추가적인 제품결함 가능성; 선별필요; 라인중단 없음 (Less than 100% of product affected; strong possibility for additional defective product; sort required; no line shutdown)', 
+        endUser: '매우 좋지않은 외관, 소리, 진동, 거친소리 또는 촉각 (Very objectionable appearance, sound, vibration, harshness, or haptics)' },
+      { fmeaType: 'P-FMEA' as const, category: 'S' as const, rating: 4, levelKr: '낮음', levelEn: 'Low', 
+        yourPlant: '100% 스테이션에서 재작업 (100% of production run may have to be reworked in station before it is processed)', 
+        shipToPlant: '영향을 받은 제품 100%미만; 선별필요; 라인중단 없음 (Less than 100% of product affected; sort required; no line shutdown)', 
+        endUser: '좋지않은 외관, 소리, 진동, 거친소리 또는 촉각 (Objectionable appearance, sound, vibration, harshness, or haptics)' },
+      { fmeaType: 'P-FMEA' as const, category: 'S' as const, rating: 3, levelKr: '낮음', levelEn: 'Low', 
+        yourPlant: '일부 제품을 스테이션내 에서 재작업 (A portion of the production run may have to be reworked in-station before it is processed)', 
+        shipToPlant: '선별이 필요할 수도 있고 그렇지 않을 수도 있음; 라인중단 없음 (Sort may or may not be required; no line shutdown)', 
+        endUser: '외관, 소리, 진동, 거친소리 또는 촉각에 대해 매우 미세한 고객 불만 (Very slight customer annoyance with appearance, sound, vibration, harshness, or haptics)' },
+      { fmeaType: 'P-FMEA' as const, category: 'S' as const, rating: 2, levelKr: '매우 낮음', levelEn: 'Very Low', 
+        yourPlant: '재작업이 필요하지 않음; 고객 불만 없음 (No rework required; no customer complaint)', 
+        shipToPlant: '선별 및 재작업 불필요; 라인중단 없음; 고객 불만 없음 (No sort or rework required; no line shutdown; no customer complaint)', 
+        endUser: '외관, 소리, 진동, 거친소리 또는 촉각에 대해 미세한 고객 불만 (Slight customer annoyance with appearance, sound, vibration, harshness, or haptics)' },
+      { fmeaType: 'P-FMEA' as const, category: 'S' as const, rating: 1, levelKr: '없음', levelEn: 'None', 
+        yourPlant: '영향 없음 (No effect)', 
+        shipToPlant: '영향 없음 (No effect)', 
+        endUser: '영향 없음 (No effect)' },
     ];
     
     const PFMEA_OCCURRENCE = [
@@ -145,6 +182,25 @@ export default function SODSelectModal({
       .sort((a, b) => b.rating - a.rating);
   }, [items, fmeaType, category]);
 
+  // ✅ 디버깅: scope 값 확인 (강화)
+  useEffect(() => {
+    if (isOpen) {
+      console.log('[SODSelectModal] 모달 열림:', { 
+        scope, 
+        category, 
+        fmeaType, 
+        currentValue,
+        scopeType: typeof scope,
+        scopeValue: scope === 'Your Plant' ? 'YP' : scope === 'Ship to Plant' ? 'SP' : scope === 'User' ? 'User' : '없음'
+      });
+      
+      // ✅ scope가 없으면 경고
+      if (!scope) {
+        console.warn('[SODSelectModal] ⚠️ scope가 전달되지 않았습니다!');
+      }
+    }
+  }, [isOpen, scope, category, fmeaType, currentValue ?? undefined]);
+
   const categoryLabels = {
     S: { kr: '심각도', en: 'Severity', full: '심각도(Severity)' },
     O: { kr: '발생도', en: 'Occurrence', full: '발생도(Occurrence)' },
@@ -167,11 +223,14 @@ export default function SODSelectModal({
         <div className={`${tw.header} ${headerBg}`}>
           <div>
             <h3 className="m-0 text-base font-bold">
-              {scope ? `${scope} ` : ''}{categoryLabels[category].full} 선택
+              {scope === 'Your Plant' ? 'YOUR PLANT 심각도 기준' : 
+               scope === 'Ship to Plant' ? 'SHIP TO PLANT 심각도 기준' : 
+               scope === 'User' ? 'USER 심각도 기준' : 
+               `${categoryLabels[category].full} 선택`}
             </h3>
             <p className="mt-1 mb-0 text-[11px] opacity-90">
               {fmeaType} | 현재 값: {currentValue ?? '미선택'}
-              {scope && ` | 구분: ${scope}`}
+              {scope && ` | 구분: ${scope === 'Your Plant' ? 'YP (Your Plant)' : scope === 'Ship to Plant' ? 'SP (Ship to Plant)' : 'User'}`}
             </p>
           </div>
           <button onClick={onClose} className={tw.closeBtn}>✕</button>
@@ -193,17 +252,57 @@ export default function SODSelectModal({
                   <th className={`${tw.th} w-[70px]`}>레벨(한글)<br/><span className="text-[9px] opacity-80">Level(KR)</span></th>
                   <th className={`${tw.th} w-[70px]`}>레벨(영문)<br/><span className="text-[9px] opacity-80">Level(EN)</span></th>
                   <th className={tw.th}>
-                    {scope === 'Your Plant' ? '귀사의 공장에 미치는 영향' : scope === 'Ship to Plant' ? '고객사에 미치는 영향' : scope === 'User' ? '최종사용자에게 미치는 영향' : '설명'}
-                    <br/><span className="text-[9px] opacity-80">{scope === 'Your Plant' ? 'Impact to Your Plant' : scope === 'Ship to Plant' ? 'Impact to Ship to Plant' : scope === 'User' ? 'Impact to End User' : 'Description'}</span>
+                    {scope === 'Your Plant' ? 'YOUR PLANT 심각도 기준' : 
+                     scope === 'Ship to Plant' ? 'SHIP TO PLANT 심각도 기준' : 
+                     scope === 'User' ? 'USER 심각도 기준' : 
+                     '설명'}
+                    <br/><span className="text-[9px] opacity-80">
+                      {scope === 'Your Plant' ? 'Your Plant Severity Criteria' : 
+                       scope === 'Ship to Plant' ? 'Ship to Plant Severity Criteria' : 
+                       scope === 'User' ? 'User Severity Criteria' : 
+                       'Description'}
+                    </span>
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {filteredItems.map((item) => {
                   const isSelected = currentValue === item.rating;
-                  const content = category === 'S' 
-                    ? (scope === 'Your Plant' ? item.yourPlant : scope === 'Ship to Plant' ? item.shipToPlant : scope === 'User' ? item.endUser : item.yourPlant || item.endUser || item.description)
-                    : item.criteria || item.description;
+                  // ✅ scope에 따라 올바른 필드 선택 (명시적 체크)
+                  let content: string | undefined = '';
+                  if (category === 'S') {
+                    // ✅ scope 값 명시적 비교 (대소문자 구분)
+                    if (scope === 'Your Plant') {
+                      content = item.yourPlant;
+                    } else if (scope === 'Ship to Plant') {
+                      content = item.shipToPlant;
+                      // ✅ shipToPlant가 없으면 명시적으로 확인
+                      if (!content) {
+                        console.warn('[SODSelectModal] shipToPlant 필드가 비어있습니다. item:', item);
+                        content = item.yourPlant || item.endUser || item.description;
+                      }
+                    } else if (scope === 'User') {
+                      content = item.endUser;
+                    } else {
+                      // scope가 없으면 기본값
+                      console.warn('[SODSelectModal] scope가 정의되지 않았습니다. scope:', scope);
+                      content = item.yourPlant || item.endUser || item.description;
+                    }
+                  } else {
+                    content = item.criteria || item.description;
+                  }
+                  
+                  // ✅ 디버깅: scope와 content 확인 (첫 번째 항목과 rating 8)
+                  if (isOpen && scope && category === 'S' && (item.rating === 10 || item.rating === 8)) {
+                    console.log('[SODSelectModal] rating', item.rating, ':', { 
+                      scope, 
+                      yourPlant: item.yourPlant?.substring(0, 50), 
+                      shipToPlant: item.shipToPlant?.substring(0, 50), 
+                      endUser: item.endUser?.substring(0, 50), 
+                      selectedContent: content?.substring(0, 50) 
+                    });
+                  }
+                  
                   return (
                     <tr 
                       key={item.id} 
