@@ -34,6 +34,7 @@ import { groupFailureLinksByFM, calculateLastRowMerge } from '../../utils';
 import FailureLinkTables from './FailureLinkTables';
 import FailureLinkDiagram from './FailureLinkDiagram';
 import FailureLinkResult from './FailureLinkResult';
+import AllTabWithLinks from '../all/AllTabWithLinks';
 import { useSVGLines } from './hooks/useSVGLines';
 import { 
   containerStyle, rightPanelStyle, rightHeaderStyle, modeButtonStyle, 
@@ -1455,8 +1456,13 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
             />
           )}
           {viewMode === 'result' && (
-            // ✅ 고장분석 결과 화면: FM 중심으로 FE(고장영향)↔FC(고장원인) 연결 표시
-            <FailureLinkResult savedLinks={savedLinks} fmData={fmData} />
+            // ✅ 전체보기: 고장연결 확정 결과 → 기능분석/구조분석 역전개 (40컬럼)
+            <AllTabWithLinks 
+              state={state} 
+              setState={setState} 
+              failureLinks={savedLinks}
+              visibleSteps={[2, 3, 4, 5, 6]}
+            />
           )}
         </div>
       </div>
