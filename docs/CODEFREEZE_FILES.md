@@ -50,7 +50,7 @@
 ### 2. 워크시트 탭 (2ST~6ST 전체)
 | 파일 | 코드프리즈 태그 |
 |------|----------------|
-| `src/app/pfmea/worksheet/tabs/StructureTab.tsx` | codefreeze-20260110-structure-4cell |
+| `src/app/pfmea/worksheet/tabs/StructureTab.tsx` | codefreeze-20260110-structure-final ⚠️ **UI 절대 변경 금지** |
 | `src/app/pfmea/worksheet/tabs/function/FunctionL1Tab.tsx` | codefreeze-20260104-worksheet-complete |
 | `src/app/pfmea/worksheet/tabs/function/FunctionL2Tab.tsx` | codefreeze-20260104-worksheet-complete |
 | `src/app/pfmea/worksheet/tabs/function/FunctionL3Tab.tsx` | codefreeze-20260104-worksheet-complete |
