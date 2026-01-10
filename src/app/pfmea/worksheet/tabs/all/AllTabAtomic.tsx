@@ -14,6 +14,7 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { FONT_WEIGHTS } from '../../constants';
 import { ALL_TAB_COLORS, BORDER } from './constants';
 import { getZebraColors } from '@/styles/level-colors';
+import { groupFailureLinksByFM, calculateLastRowMerge } from '../../utils';
 
 const HEADER_ROW_H = 24; // 3행 sticky header stacking용
 
@@ -115,7 +116,59 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
     if (fmeaId) loadData();
   }, [fmeaId, onNoData]);
 
-  // 공정별 그룹핑 (rowSpan 계산용)
+  // FM 중심 그룹핑 (고장분석용)
+  const fmGroups = useMemo(() => {
+    if (rows.length === 0) return new Map();
+    
+    // FM별로 그룹핑
+    const groups = new Map<string, {
+      fm: { id: string; mode: string; process: string };
+      fes: Array<{ id: string; effect: string; severity: number; category: string }>;
+      fcs: Array<{ id: string; cause: string; occurrence: number | null; workElem: string; processName: string }>;
+      rows: AllViewRow[]; // 원본 행 데이터 (구조/기능분석용)
+    }>();
+    
+    rows.forEach(row => {
+      if (!row.fmId) return;
+      
+      if (!groups.has(row.fmId)) {
+        groups.set(row.fmId, {
+          fm: { id: row.fmId, mode: row.fmMode, process: row.l2StructName },
+          fes: [],
+          fcs: [],
+          rows: [],
+        });
+      }
+      
+      const group = groups.get(row.fmId)!;
+      group.rows.push(row);
+      
+      // FE 추가 (중복 체크)
+      if (row.feId && !group.fes.some(fe => fe.id === row.feId)) {
+        group.fes.push({
+          id: row.feId,
+          effect: row.feEffect,
+          severity: row.feSeverity,
+          category: row.l1FuncCategory || '',
+        });
+      }
+      
+      // FC 추가 (중복 체크)
+      if (row.fcId && !group.fcs.some(fc => fc.id === row.fcId)) {
+        group.fcs.push({
+          id: row.fcId,
+          cause: row.fcCause,
+          occurrence: row.fcOccurrence,
+          workElem: row.l3Name || '',
+          processName: row.l2StructName || '',
+        });
+      }
+    });
+    
+    return groups;
+  }, [rows]);
+
+  // 공정별 그룹핑 (rowSpan 계산용) - 구조/기능분석용
   const processedRows = useMemo(() => {
     if (rows.length === 0) return [];
     
@@ -179,6 +232,59 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
     
     return result;
   }, [rows]);
+
+  // 고장분석 렌더링용 행 데이터 (FM 중심, 마지막 행 병합)
+  const failureAnalysisRows = useMemo(() => {
+    const result: Array<{
+      fm: { id: string; mode: string; process: string };
+      fmRowSpan: number;
+      showFm: boolean;
+      fe?: { id: string; effect: string; severity: number; category: string };
+      feRowSpan: number;
+      showFe: boolean;
+      fc?: { id: string; cause: string; occurrence: number | null; workElem: string; processName: string };
+      fcRowSpan: number;
+      showFc: boolean;
+      rowIdx: number;
+      totalRows: number;
+    }> = [];
+    
+    fmGroups.forEach((group) => {
+      const feCount = group.fes.length;
+      const fcCount = group.fcs.length;
+      const totalRows = Math.max(feCount, fcCount, 1);
+      
+      for (let rowIdx = 0; rowIdx < totalRows; rowIdx++) {
+        const mergeConfig = calculateLastRowMerge(feCount, fcCount, rowIdx, totalRows);
+        
+        let feItem = undefined;
+        if (mergeConfig.showFe && rowIdx < feCount) {
+          feItem = group.fes[rowIdx];
+        }
+        
+        let fcItem = undefined;
+        if (mergeConfig.showFc && rowIdx < fcCount) {
+          fcItem = group.fcs[rowIdx];
+        }
+        
+        result.push({
+          fm: group.fm,
+          fmRowSpan: totalRows,
+          showFm: rowIdx === 0,
+          fe: feItem,
+          feRowSpan: mergeConfig.feRowSpan,
+          showFe: mergeConfig.showFe,
+          fc: fcItem,
+          fcRowSpan: mergeConfig.fcRowSpan,
+          showFc: mergeConfig.showFc,
+          rowIdx,
+          totalRows,
+        });
+      }
+    });
+    
+    return result;
+  }, [fmGroups]);
 
   // 스타일 함수
   const headerCellStyle = (bg: string, color = '#fff'): React.CSSProperties => ({
@@ -279,14 +385,16 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
               <col style={{ width: '80px' }} />
             </>
           )}
-          {/* 고장분석 5열 */}
+          {/* 고장분석 7열: FE(3) + FM(2) + FC(2) */}
           {visibleSteps.includes(4) && (
             <>
-              <col style={{ width: '200px' }} />
-              <col style={{ width: '40px' }} />
-              <col style={{ width: '200px' }} />
-              <col style={{ width: '200px' }} />
-              <col style={{ width: '40px' }} />
+              <col style={{ width: '80px' }} /> {/* 구분 */}
+              <col style={{ width: '180px' }} /> {/* 고장영향(FE) */}
+              <col style={{ width: '50px' }} /> {/* 심각도 */}
+              <col style={{ width: '10px' }} /> {/* 빈칸 */}
+              <col style={{ width: '180px' }} /> {/* 고장형태(FM) */}
+              <col style={{ width: '180px' }} /> {/* 고장원인(FC) */}
+              <col style={{ width: '100px' }} /> {/* 작업요소 */}
             </>
           )}
           {/* 리스크분석 8열 */}
@@ -396,9 +504,9 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
             )}
             {visibleSteps.includes(4) && (
               <>
-                <th colSpan={2} style={stickyHeaderCellStyle(COLORS.failure.main, HEADER_ROW_H, '#fff', 59, '9px', 600)}>1.자사/고객/사용자<br/>고장영향(FE)</th>
-                <th style={stickyHeaderCellStyle(COLORS.failure.main, HEADER_ROW_H, '#fff', 59, '9px', 600)}>2.메인공정<br/>고장형태(FM)</th>
-                <th colSpan={2} style={stickyHeaderCellStyle(COLORS.failure.main, HEADER_ROW_H, '#fff', 59, '9px', 600)}>3.작업요소<br/>고장원인(FC)</th>
+                <th colSpan={3} style={stickyHeaderCellStyle('#f9a825', HEADER_ROW_H, '#333', 59, '9px', 600)}>1.자사/고객/사용자<br/>고장영향(FE)</th>
+                <th colSpan={2} style={stickyHeaderCellStyle('#7e57c2', HEADER_ROW_H, '#fff', 59, '9px', 600)}>2.메인공정<br/>고장형태(FM)</th>
+                <th colSpan={2} style={stickyHeaderCellStyle('#66bb6a', HEADER_ROW_H, '#fff', 59, '9px', 600)}>3.작업요소<br/>고장원인(FC)</th>
               </>
             )}
             {visibleSteps.includes(5) && (
@@ -441,12 +549,13 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
             )}
             {visibleSteps.includes(4) && (
               <>
-                <th style={stickyHeaderCellStyle(COLORS.special.scope.h3, HEADER_ROW_H * 2, '#000', 58, '8px', 700)}>구분</th>
-                <th style={stickyHeaderCellStyle(COLORS.failure.header, HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>고장영향<br/>(FE)</th>
-                <th style={stickyHeaderCellStyle(COLORS.indicator.severity.bg, HEADER_ROW_H * 2, COLORS.indicator.severity.text, 58, '8px', 700)}>심각<br/>도</th>
-                <th style={stickyHeaderCellStyle(COLORS.failure.header, HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>고장형태<br/>(FM)</th>
-                <th style={stickyHeaderCellStyle(COLORS.failure.header, HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>작업<br/>요소</th>
-                <th style={stickyHeaderCellStyle(COLORS.failure.header, HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>고장원인<br/>(FC)</th>
+                <th style={stickyHeaderCellStyle('#fff8e1', HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>구분</th>
+                <th style={stickyHeaderCellStyle('#fff8e1', HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>고장영향<br/>(FE)</th>
+                <th style={stickyHeaderCellStyle('#fff8e1', HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>심각도</th>
+                <th style={stickyHeaderCellStyle('#ede7f6', HEADER_ROW_H * 2, '#000', 58, '9px', 600)}></th>
+                <th style={stickyHeaderCellStyle('#ede7f6', HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>고장형태<br/>(FM)</th>
+                <th style={stickyHeaderCellStyle('#e8f5e9', HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>고장원인<br/>(FC)</th>
+                <th style={stickyHeaderCellStyle('#e8f5e9', HEADER_ROW_H * 2, '#000', 58, '9px', 600)}>작업<br/>요소</th>
               </>
             )}
             {visibleSteps.includes(5) && (
@@ -483,102 +592,172 @@ export default function AllTabAtomic({ fmeaId, visibleSteps = [2, 3, 4, 5, 6], s
           </tr>
         </thead>
         <tbody>
-          {processedRows.map((pr, idx) => {
-            const r = pr.row;
-            const zebra = getZebraColors(pr.globalIdx);
+          {Array.from(fmGroups.entries()).map(([fmId, group], groupIdx) => {
+            const firstRow = group.rows[0]; // 구조/기능분석용 첫 번째 행
+            const feCount = group.fes.length;
+            const fcCount = group.fcs.length;
+            const totalRows = Math.max(feCount, fcCount, 1);
             
-            return (
-              <tr key={pr.row.linkId}>
-                {/* 구조분석 */}
-                {visibleSteps.includes(2) && (
-                  <>
-                    {pr.showProcess && (
-                      <>
-                        <td rowSpan={pr.processRowSpan} style={cellStyle(zebra.structure, 'center')}>{r.l1StructName}</td>
-                        <td rowSpan={pr.processRowSpan} style={cellStyle(zebra.structure, 'center')}>{r.l2StructNo} {r.l2StructName}</td>
-                      </>
-                    )}
-                    <td style={cellStyle(zebra.structure, 'center')}>{r.l3M4}</td>
-                    <td style={cellStyle(zebra.structure, 'center')}>{r.l3Name}</td>
-                  </>
-                )}
-                
-                {/* 기능분석 */}
-                {visibleSteps.includes(3) && (
-                  <>
-                    {pr.showFe && (
-                      <>
-                        <td rowSpan={pr.feRowSpan} style={cellStyle(zebra.function, 'center')}>{r.l1FuncCategory}</td>
-                        <td rowSpan={pr.feRowSpan} style={cellStyle(zebra.function, 'left')}>{r.l1FuncName}</td>
-                        <td rowSpan={pr.feRowSpan} style={cellStyle(zebra.function, 'center')}>{r.l1Requirement}</td>
-                      </>
-                    )}
-                    {pr.showFm && (
-                      <>
-                        <td rowSpan={pr.fmRowSpan} style={cellStyle(zebra.function, 'left')}>{r.l2FuncName}</td>
-                        <td rowSpan={pr.fmRowSpan} style={cellStyle(zebra.function, 'center')}>{r.l2ProductChar}</td>
-                        <td rowSpan={pr.fmRowSpan} style={cellStyle(zebra.function, 'center')}>{r.l2SpecialChar}</td>
-                      </>
-                    )}
-                    <td style={cellStyle(zebra.function, 'left')}>{r.l3FuncName}</td>
-                    <td style={cellStyle(zebra.function, 'center')}>{r.l3ProcessChar}</td>
-                  </>
-                )}
-                
-                {/* 고장분석 */}
-                {visibleSteps.includes(4) && (
-                  <>
-                    {pr.showFe && (
-                      <>
-                        <td rowSpan={pr.feRowSpan} style={cellStyle(zebra.failure, 'center')}>{r.feEffect}</td>
-                        <td rowSpan={pr.feRowSpan} style={{ ...cellStyle(zebra.failure, 'center'), fontWeight: 600 }}>{r.feSeverity || ''}</td>
-                      </>
-                    )}
-                    {pr.showFm && (
-                      <td rowSpan={pr.fmRowSpan} style={cellStyle(zebra.failure, 'center')}>{r.fmMode}</td>
-                    )}
-                    <td style={cellStyle(zebra.failure, 'center')}>{r.fcCause}</td>
-                    <td style={cellStyle(zebra.failure, 'center')}>{r.fcOccurrence || ''}</td>
-                  </>
-                )}
-                
-                {/* 리스크분석 */}
-                {visibleSteps.includes(5) && (
-                  <>
-                    <td style={cellStyle('#fff', 'center')}>{r.preventionControl || ''}</td>
-                    <td style={cellStyle('#fff', 'center')}>{r.riskOccurrence || ''}</td>
-                    <td style={cellStyle('#fff', 'center')}>{r.detectionControl || ''}</td>
-                    <td style={cellStyle('#fff', 'center')}>{r.riskDetection || ''}</td>
-                    <td style={{ ...cellStyle('#fff', 'center'), fontWeight: 600, color: r.riskAP === 'H' ? '#d32f2f' : r.riskAP === 'M' ? '#f57c00' : '#388e3c' }}>{r.riskAP || ''}</td>
-                    <td style={cellStyle('#fff', 'center')}>{(r.riskSeverity || 0) * (r.riskOccurrence || 0) * (r.riskDetection || 0)}</td>
-                    <td style={cellStyle('#fff', 'center')}>{r.l2SpecialChar || ''}</td>
-                    <td style={cellStyle('#fff', 'center')}></td>
-                  </>
-                )}
-                
-                {/* 최적화 15열 */}
-                {visibleSteps.includes(6) && (
-                  <>
-                    <td style={cellStyle('#fff', 'center')}></td>
-                    <td style={cellStyle('#fff', 'center')}></td>
-                    <td style={cellStyle('#fff', 'center')}>{r.optResponsible || ''}</td>
-                    <td style={cellStyle('#fff', 'center')}>{r.optTargetDate || ''}</td>
-                    <td style={cellStyle('#fff', 'center')}>{r.optStatus || ''}</td>
-                    <td style={cellStyle('#fff', 'center')}></td>
-                    <td style={cellStyle('#fff', 'center')}></td>
-                    <td style={cellStyle('#fff', 'center')}></td>
-                    <td style={cellStyle('#fff', 'center')}></td>
-                    <td style={cellStyle('#fff', 'center')}></td>
-                    <td style={cellStyle('#fff', 'center')}></td>
-                    <td style={cellStyle('#fff', 'center')}></td>
-                    <td style={cellStyle('#fff', 'center')}></td>
-                    <td style={cellStyle('#fff', 'center')}>{r.optRemarks || ''}</td>
-                    <td style={cellStyle('#fff', 'center')}></td>
-                  </>
-                )}
-              </tr>
-            );
-          })}
+            return Array.from({ length: totalRows }, (_, rowIdx) => {
+              const mergeConfig = calculateLastRowMerge(feCount, fcCount, rowIdx, totalRows);
+              const zebra = getZebraColors(groupIdx * 1000 + rowIdx); // 각 그룹별로 색상 적용
+              
+              const feItem = mergeConfig.showFe && rowIdx < feCount ? group.fes[rowIdx] : undefined;
+              const fcItem = mergeConfig.showFc && rowIdx < fcCount ? group.fcs[rowIdx] : undefined;
+              
+              // 구조/기능분석용: 첫 번째 행 또는 FC 기준 행
+              const structRow = fcItem ? group.rows.find(r => r.fcId === fcItem.id) || firstRow : firstRow;
+              
+              return (
+                <tr key={`${fmId}-${rowIdx}`}>
+                  {/* 구조분석 */}
+                  {visibleSteps.includes(2) && (
+                    <>
+                      {rowIdx === 0 && (
+                        <>
+                          <td rowSpan={totalRows} style={cellStyle(zebra.structure, 'center')}>{structRow?.l1StructName || ''}</td>
+                          <td rowSpan={totalRows} style={cellStyle(zebra.structure, 'center')}>{structRow?.l2StructNo || ''} {structRow?.l2StructName || ''}</td>
+                        </>
+                      )}
+                      <td style={cellStyle(zebra.structure, 'center')}>{structRow?.l3M4 || ''}</td>
+                      <td style={cellStyle(zebra.structure, 'center')}>{structRow?.l3Name || ''}</td>
+                    </>
+                  )}
+                  
+                  {/* 기능분석 */}
+                  {visibleSteps.includes(3) && (
+                    <>
+                      {/* L1 기능 (FE가 있을 때만 첫 번째 행에 표시) */}
+                      {rowIdx === 0 && mergeConfig.showFe && feItem && (
+                        <>
+                          <td rowSpan={mergeConfig.feRowSpan} style={cellStyle(zebra.function, 'center')}>{firstRow?.l1FuncCategory || ''}</td>
+                          <td rowSpan={mergeConfig.feRowSpan} style={cellStyle(zebra.function, 'left')}>{firstRow?.l1FuncName || ''}</td>
+                          <td rowSpan={mergeConfig.feRowSpan} style={cellStyle(zebra.function, 'center')}>{firstRow?.l1Requirement || ''}</td>
+                        </>
+                      )}
+                      {/* FE가 없으면 빈 셀 표시 */}
+                      {rowIdx === 0 && feCount === 0 && (
+                        <>
+                          <td rowSpan={totalRows} style={cellStyle(zebra.function, 'center')}></td>
+                          <td rowSpan={totalRows} style={cellStyle(zebra.function, 'left')}></td>
+                          <td rowSpan={totalRows} style={cellStyle(zebra.function, 'center')}></td>
+                        </>
+                      )}
+                      {/* L2 기능 (FM과 연결, 첫 번째 행에만 표시) */}
+                      {rowIdx === 0 && (
+                        <>
+                          <td rowSpan={totalRows} style={cellStyle(zebra.function, 'left')}>{firstRow?.l2FuncName || ''}</td>
+                          <td rowSpan={totalRows} style={cellStyle(zebra.function, 'center')}>{firstRow?.l2ProductChar || ''}</td>
+                          <td rowSpan={totalRows} style={cellStyle(zebra.function, 'center')}>{firstRow?.l2SpecialChar || ''}</td>
+                        </>
+                      )}
+                      {/* L3 기능 (FC와 연결, 각 행마다 표시) */}
+                      <td style={cellStyle(zebra.function, 'left')}>{structRow?.l3FuncName || ''}</td>
+                      <td style={cellStyle(zebra.function, 'center')}>{structRow?.l3ProcessChar || ''}</td>
+                    </>
+                  )}
+                  
+                  {/* 고장분석 - FM 중심 그룹핑, 마지막 행 병합 */}
+                  {visibleSteps.includes(4) && (
+                    <>
+                      {/* FE 섹션: 구분, 고장영향, 심각도 */}
+                      {mergeConfig.showFe ? (
+                        feItem ? (
+                          <>
+                            <td rowSpan={mergeConfig.feRowSpan} style={{ ...cellStyle(rowIdx % 2 === 1 ? '#fff8e1' : '#fffde7', 'center'), border: '1px solid #bbb', padding: '6px' }}>
+                              {feItem.category === 'Your Plant' ? 'YP' : feItem.category === 'Ship to Plant' ? 'SP' : feItem.category === 'User' ? 'USER' : feItem.category}
+                            </td>
+                            <td rowSpan={mergeConfig.feRowSpan} style={{ ...cellStyle(rowIdx % 2 === 1 ? '#fff8e1' : '#fffde7', 'left'), border: '1px solid #bbb', padding: '6px' }}>
+                              {feItem.effect}
+                            </td>
+                            <td rowSpan={mergeConfig.feRowSpan} style={{ ...cellStyle(rowIdx % 2 === 1 ? '#fff8e1' : '#fffde7', 'center'), border: '1px solid #bbb', padding: '6px', fontWeight: 600, color: (feItem.severity || 0) >= 8 ? '#d32f2f' : (feItem.severity || 0) >= 5 ? '#f57c00' : '#333' }}>
+                              {feItem.severity || ''}
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td rowSpan={mergeConfig.feRowSpan} style={{ ...cellStyle(rowIdx % 2 === 1 ? '#fff8e1' : '#fffde7', 'center'), border: '1px solid #bbb', padding: '6px' }}></td>
+                            <td rowSpan={mergeConfig.feRowSpan} style={{ ...cellStyle(rowIdx % 2 === 1 ? '#fff8e1' : '#fffde7', 'left'), border: '1px solid #bbb', padding: '6px' }}></td>
+                            <td rowSpan={mergeConfig.feRowSpan} style={{ ...cellStyle(rowIdx % 2 === 1 ? '#fff8e1' : '#fffde7', 'center'), border: '1px solid #bbb', padding: '6px' }}></td>
+                          </>
+                        )
+                      ) : null}
+                      {/* FM 섹션: 빈칸, 고장형태 (첫 번째 행에만 표시) */}
+                      {rowIdx === 0 && (
+                        <>
+                          <td rowSpan={totalRows} style={{ ...cellStyle(rowIdx % 2 === 1 ? '#ede7f6' : '#f3e5f5', 'center'), border: '1px solid #bbb', padding: '6px' }}></td>
+                          <td rowSpan={totalRows} style={{ ...cellStyle(rowIdx % 2 === 1 ? '#ede7f6' : '#f3e5f5', 'center'), border: '1px solid #bbb', padding: '8px', textAlign: 'center' }}>
+                            <div className="font-semibold text-purple-900">{group.fm.mode}</div>
+                          </td>
+                        </>
+                      )}
+                      {/* FC 섹션: 고장원인, 작업요소 */}
+                      {mergeConfig.showFc ? (
+                        fcItem ? (
+                          <>
+                            <td rowSpan={mergeConfig.fcRowSpan} style={{ ...cellStyle(rowIdx % 2 === 1 ? '#c8e6c9' : '#e8f5e9', 'left'), border: '1px solid #bbb', padding: '6px' }}>
+                              {fcItem.cause}
+                            </td>
+                            <td rowSpan={mergeConfig.fcRowSpan} style={{ ...cellStyle(rowIdx % 2 === 1 ? '#c8e6c9' : '#e8f5e9', 'center'), border: '1px solid #bbb', padding: '6px', fontSize: '11px' }}>
+                              {fcItem.workElem}
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td rowSpan={mergeConfig.fcRowSpan} style={{ ...cellStyle(rowIdx % 2 === 1 ? '#c8e6c9' : '#e8f5e9', 'left'), border: '1px solid #bbb', padding: '6px' }}></td>
+                            <td rowSpan={mergeConfig.fcRowSpan} style={{ ...cellStyle(rowIdx % 2 === 1 ? '#c8e6c9' : '#e8f5e9', 'center'), border: '1px solid #bbb', padding: '6px' }}></td>
+                          </>
+                        )
+                      ) : null}
+                    </>
+                  )}
+                  
+                  {/* 리스크분석 */}
+                  {visibleSteps.includes(5) && (
+                    <>
+                      {rowIdx === 0 && (
+                        <>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}>{firstRow?.preventionControl || ''}</td>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}>{firstRow?.riskOccurrence || ''}</td>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}>{firstRow?.detectionControl || ''}</td>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}>{firstRow?.riskDetection || ''}</td>
+                          <td rowSpan={totalRows} style={{ ...cellStyle('#fff', 'center'), fontWeight: 600, color: firstRow?.riskAP === 'H' ? '#d32f2f' : firstRow?.riskAP === 'M' ? '#f57c00' : '#388e3c' }}>{firstRow?.riskAP || ''}</td>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}>{((firstRow?.riskSeverity || 0) * (firstRow?.riskOccurrence || 0) * (firstRow?.riskDetection || 0)) || ''}</td>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}>{firstRow?.l2SpecialChar || ''}</td>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}></td>
+                        </>
+                      )}
+                    </>
+                  )}
+                  
+                  {/* 최적화 15열 */}
+                  {visibleSteps.includes(6) && (
+                    <>
+                      {rowIdx === 0 && (
+                        <>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}></td>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}></td>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}>{firstRow?.optResponsible || ''}</td>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}>{firstRow?.optTargetDate || ''}</td>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}>{firstRow?.optStatus || ''}</td>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}></td>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}></td>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}></td>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}></td>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}></td>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}></td>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}></td>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}></td>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}>{firstRow?.optRemarks || ''}</td>
+                          <td rowSpan={totalRows} style={cellStyle('#fff', 'center')}></td>
+                        </>
+                      )}
+                    </>
+                  )}
+                </tr>
+              );
+            });
+          }).flat()}
         </tbody>
       </table>
     </div>
