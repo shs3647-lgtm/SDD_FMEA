@@ -279,7 +279,7 @@ export default function ProcessSelectModal({
       onClick={onClose}
     >
       <div 
-        className="bg-white rounded-lg shadow-2xl w-[500px] max-w-[500px] min-w-[500px] flex flex-col overflow-hidden max-h-[calc(100vh-120px)]"
+        className="bg-white rounded-lg shadow-2xl w-[350px] max-w-[350px] min-w-[350px] flex flex-col overflow-hidden max-h-[calc(100vh-120px)]"
         onClick={e => e.stopPropagation()}
         onKeyDown={e => e.stopPropagation()}
       >

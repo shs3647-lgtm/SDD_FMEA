@@ -656,9 +656,9 @@ function FMEAWorksheetPageContent() {
             <div className="w-[2px] bg-[#1a237e] shrink-0" />
           ) : null}
 
-          {/* ===== 우측: 트리뷰 패널 영역 (500px 통일) ===== */}
+          {/* ===== 우측: 트리뷰 패널 영역 (350px 통일) ===== */}
           {((state.tab !== 'all' && state.tab !== 'failure-link') || activePanelId === '5ap' || activePanelId === '6ap' || activePanelId === 'rpn-chart') && (
-          <div className="w-[500px] shrink-0 flex flex-col bg-[#f0f4f8] overflow-hidden h-full">
+          <div className="w-[350px] shrink-0 flex flex-col bg-[#f0f4f8] overflow-hidden h-full">
             {/* 패널 콘텐츠 (레이지 로딩) - 메뉴는 상단 바로가기 영역에 있음 */}
             <Suspense fallback={
               <div style={{ 

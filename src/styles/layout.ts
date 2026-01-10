@@ -26,10 +26,10 @@ export const LAYOUT = {
     class: 'w-[2px] bg-white',
   },
   
-  // 트리뷰/입력모달/5AP/6AP 영역 (500px 통일)
+  // 트리뷰/입력모달/5AP/6AP 영역 (350px 통일)
   rightPanel: {
-    width: 500,       // px (통일)
-    class: 'w-[500px]',
+    width: 350,       // px (통일)
+    class: 'w-[350px]',
   },
   
   // 우측 상태바 영역 (4단계/5단계/6단계)
@@ -82,23 +82,23 @@ export const AREA = {
   // 2-1. 제목바 (4단계 결과)
   titleBar: 'h-10 flex items-stretch bg-[#1565c0]',
   titleBarLeft: 'flex-1 flex items-center px-4',
-  titleBarRight: 'w-[500px] shrink-0 flex items-center justify-center bg-[#0d47a1] border-l border-white/20',
+  titleBarRight: 'w-[350px] shrink-0 flex items-center justify-center bg-[#0d47a1] border-l border-white/20',
   
   // 2-2. 메인메뉴 (5단계 결과)
   mainMenu: 'h-9 flex items-stretch bg-[#1976d2]',
   mainMenuLeft: 'flex-1 flex items-center gap-2 px-3',
-  mainMenuRight: 'w-[500px] shrink-0 flex items-center justify-center bg-[#1565c0] border-l border-white/20',
+  mainMenuRight: 'w-[350px] shrink-0 flex items-center justify-center bg-[#1565c0] border-l border-white/20',
   
   // 2-3. 탭메뉴 (6단계 결과)
   tabMenu: 'h-9 flex items-stretch bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-900',
   tabMenuLeft: 'flex-1 flex items-center',
-  tabMenuRight: 'w-[500px] shrink-0 flex items-center justify-center bg-indigo-800 border-l border-yellow-400',
+  tabMenuRight: 'w-[350px] shrink-0 flex items-center justify-center bg-indigo-800 border-l border-yellow-400',
   
   // 3. 워크시트 영역
   worksheet: 'flex-1 overflow-auto bg-white',
   
-  // 4. 트리뷰 영역 (500px 통일)
-  treeView: 'w-[500px] shrink-0 flex flex-col bg-[#f0f4f8] border-l-[3px] border-white',
+  // 4. 트리뷰 영역 (350px 통일)
+  treeView: 'w-[350px] shrink-0 flex flex-col bg-[#f0f4f8] border-l-[3px] border-white',
   
   // 5. Status 영역 (우측 상단에 통합됨)
   status4: 'text-white text-xs font-bold',  // 4단계: S×O×D
@@ -131,7 +131,7 @@ export const COMMON = {
 } as const;
 
 // ============ 직접 접근용 상수 ============
-export const RIGHT_PANEL_WIDTH = '500px';  // 우측 패널 (트리뷰/입력모달/5AP/6AP 통일)
+export const RIGHT_PANEL_WIDTH = '350px';  // 우측 패널 (트리뷰/입력모달/5AP/6AP 통일)
 export const SIDEBAR_WIDTH = '48px';       // 사이드바
 export const DIVIDER_WIDTH = '2px';        // 구분선
 
