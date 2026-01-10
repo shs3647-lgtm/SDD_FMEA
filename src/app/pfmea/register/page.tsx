@@ -268,6 +268,12 @@ function PFMEARegisterPageContent() {
                 setCftMembers(project.cftMembers);
               }
               
+              // ✅ 상위 FMEA 로드
+              if (project.parentFmeaId) {
+                setSelectedBaseFmea(project.parentFmeaId);
+                console.log('[PFMEA 등록] 상위 FMEA 로드:', project.parentFmeaId);
+              }
+              
               // localStorage에도 동기화 (캐시)
               syncToLocalStorage(project.id, dbFmeaInfo, project.cftMembers || []);
               return; // DB에서 성공적으로 로드됨
@@ -509,7 +515,16 @@ function PFMEARegisterPageContent() {
       console.log('[PFMEA 등록] 저장할 fmeaInfo:', fmeaInfoToSave);
       console.log('[PFMEA 등록] 저장할 CFT 멤버:', cftMembers);
       
-      // 1. DB에 프로젝트 생성/수정 (CFT 멤버 포함)
+      // ✅ parentFmeaId 결정: 선택된 상위 FMEA 또는 Master는 본인 ID
+      const actualFmeaType = fmeaInfo.fmeaType || 'P';
+      const parentId = selectedBaseFmea || (actualFmeaType === 'M' ? fmeaId : null);
+      const parentType = selectedBaseFmea 
+        ? (selectedBaseFmea.match(/PFM\d{2}-([MFP])/i)?.[1]?.toUpperCase() || 'M')
+        : (actualFmeaType === 'M' ? 'M' : null);
+      
+      console.log('[PFMEA 등록] 상위 FMEA 저장:', { parentFmeaId: parentId, parentFmeaType: parentType });
+      
+      // 1. DB에 프로젝트 생성/수정 (CFT 멤버 + 상위 FMEA 포함)
       const response = await fetch('/api/fmea/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -519,6 +534,8 @@ function PFMEARegisterPageContent() {
           project: projectData,
           fmeaInfo: fmeaInfoToSave,  // ✅ 모든 필드 포함
           cftMembers,  // ✅ CFT 멤버도 DB에 저장
+          parentFmeaId: parentId,  // ✅ 상위 FMEA ID 저장
+          parentFmeaType: parentType,  // ✅ 상위 FMEA 유형 저장
         }),
       });
       

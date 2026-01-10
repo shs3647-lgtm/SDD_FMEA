@@ -76,11 +76,14 @@ export async function GET(request: NextRequest) {
           });
         } else {
           // FmeaInfo 없으면 스키마만으로 기본 정보 생성
+          const type = extractType(fmeaId);
           projects.push({
             id: fmeaId,
             project: { projectName: fmeaId },
             fmeaInfo: { subject: fmeaId },
-            fmeaType: extractType(fmeaId),
+            fmeaType: type,
+            parentFmeaId: type === 'M' ? fmeaId : null,  // ✅ Master는 본인 ID
+            parentFmeaType: type === 'M' ? 'M' : null,
             createdAt: new Date().toISOString(),
             status: 'active',
             step: 1,
@@ -89,11 +92,14 @@ export async function GET(request: NextRequest) {
         }
       } catch (e) {
         // 테이블이 없으면 스키마만으로 기본 정보 생성
+        const type = extractType(fmeaId);
         projects.push({
           id: fmeaId,
           project: { projectName: fmeaId },
           fmeaInfo: { subject: fmeaId },
-          fmeaType: extractType(fmeaId),
+          fmeaType: type,
+          parentFmeaId: type === 'M' ? fmeaId : null,  // ✅ Master는 본인 ID
+          parentFmeaType: type === 'M' ? 'M' : null,
           createdAt: new Date().toISOString(),
           status: 'active',
           step: 1,
@@ -139,12 +145,15 @@ export async function POST(req: NextRequest) {
     // 1. 스키마 생성
     await pool.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
     
-    // 2. FmeaInfo 테이블 생성 (cftMembers 필드 포함)
+    // 2. FmeaInfo 테이블 생성 (cftMembers, parentFmeaId 필드 포함)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS "${schemaName}"."FmeaInfo" (
         id TEXT PRIMARY KEY,
         "fmeaId" TEXT NOT NULL,
         "fmeaType" TEXT,
+        "parentFmeaId" TEXT,
+        "parentFmeaType" TEXT,
+        "inheritedAt" TIMESTAMP,
         project JSONB,
         "fmeaInfo" JSONB,
         "cftMembers" JSONB,
@@ -154,10 +163,13 @@ export async function POST(req: NextRequest) {
       )
     `);
     
-    // 2-1. cftMembers 컬럼이 없으면 추가 (기존 테이블 호환)
+    // 2-1. 기존 테이블에 컬럼 추가 (호환성)
     await pool.query(`
       ALTER TABLE "${schemaName}"."FmeaInfo" 
-      ADD COLUMN IF NOT EXISTS "cftMembers" JSONB
+      ADD COLUMN IF NOT EXISTS "cftMembers" JSONB,
+      ADD COLUMN IF NOT EXISTS "parentFmeaId" TEXT,
+      ADD COLUMN IF NOT EXISTS "parentFmeaType" TEXT,
+      ADD COLUMN IF NOT EXISTS "inheritedAt" TIMESTAMP
     `);
     
     // 3. 기본 테이블들 생성
@@ -210,24 +222,36 @@ export async function POST(req: NextRequest) {
     // ✅ FMEA 리스트와 DB는 1:1 관계 - 동일 fmeaId의 모든 기존 행 삭제 후 최신본만 저장
     const infoId = `info-${fmeaId}`;
     
+    // ✅ parentFmeaId 결정: 클라이언트에서 전달받거나, Master FMEA는 본인 ID
+    // Master(M): parentFmeaId = 본인 ID (자기 자신이 Parent)
+    // Family(F), Part(P): parentFmeaId = 클라이언트에서 전달받은 상위 FMEA ID
+    const actualFmeaType = fmeaType || extractType(fmeaId) || 'P';
+    const parentId = body.parentFmeaId || (actualFmeaType === 'M' ? fmeaId : null);
+    const parentType = body.parentFmeaType || (actualFmeaType === 'M' ? 'M' : null);
+    
     // 1. 동일 fmeaId의 모든 기존 행 삭제 (중복 방지)
     await pool.query(`
       DELETE FROM "${schemaName}"."FmeaInfo"
       WHERE "fmeaId" = $1
     `, [fmeaId]);
     
-    // 2. 최신본만 INSERT (1:1 관계 보장)
+    // 2. 최신본만 INSERT (1:1 관계 보장, parentFmeaId 포함)
     await pool.query(`
-      INSERT INTO "${schemaName}"."FmeaInfo" (id, "fmeaId", "fmeaType", project, "fmeaInfo", "cftMembers")
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO "${schemaName}"."FmeaInfo" 
+      (id, "fmeaId", "fmeaType", "parentFmeaId", "parentFmeaType", project, "fmeaInfo", "cftMembers")
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     `, [
       infoId,
       fmeaId,
-      fmeaType || 'P',
+      actualFmeaType,
+      parentId,  // ✅ Master는 본인 ID, Family/Part는 상위 FMEA ID
+      parentType,
       JSON.stringify(project || {}),
       JSON.stringify(fmeaInfoToSave),  // ✅ 모든 필드 포함
       JSON.stringify(cftMembers || [])
     ]);
+    
+    console.log(`✅ [API] parentFmeaId 설정: ${fmeaId} → parent: ${parentId} (type: ${parentType})`);
     
     console.log(`✅ [API] FMEA 저장 완료 (1:1 관계 보장): ${fmeaId} → ${infoId}`);
     
@@ -237,6 +261,8 @@ export async function POST(req: NextRequest) {
       success: true, 
       fmeaId, 
       schemaName,
+      parentFmeaId: parentId,  // ✅ 저장된 상위 FMEA ID 반환
+      parentFmeaType: parentType,
       message: 'FMEA 프로젝트가 생성되었습니다.' 
     });
     
