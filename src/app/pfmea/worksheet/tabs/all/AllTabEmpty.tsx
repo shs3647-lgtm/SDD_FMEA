@@ -96,7 +96,7 @@ const COLUMNS_BASE: ColumnDef[] = [
   // ■ 2단계: 구조분석 (4컬럼) - L1/L2/L3 색상
   { id: 1, step: '구조분석', group: '1. 완제품 공정명', name: '완제품 공정명', width: 160, 
     headerColor: COLORS.structure.product.headerLight, cellColor: COLORS.structure.product.cell, cellAltColor: COLORS.structure.product.cellAlt, align: 'left' },
-  { id: 2, step: '구조분석', group: '2. 메인 공정명', name: '공정NO+공정명', width: 140, 
+  { id: 2, step: '구조분석', group: '2. 메인 공정명', name: 'NO+공정명', width: 140, 
     headerColor: COLORS.structure.main.headerLight, cellColor: COLORS.structure.main.cell, cellAltColor: COLORS.structure.main.cellAlt, align: 'left' },
   { id: 3, step: '구조분석', group: '3. 작업 요소명', name: '4M', width: 50, 
     headerColor: COLORS.structure.m4.headerLight, cellColor: COLORS.structure.m4.cell, cellAltColor: COLORS.structure.m4.cellAlt, align: 'center' },
