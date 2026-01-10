@@ -83,7 +83,7 @@ interface LinkResult {
   fcText: string; 
 }
 
-export default function FailureLinkTab({ state, setState, setDirty, saveToLocalStorage, saveToLocalStorageOnly, saveAtomicDB }: FailureTabProps) {
+export default function FailureLinkTab({ state, setState, setStateSynced, setDirty, saveToLocalStorage, saveToLocalStorageOnly, saveAtomicDB }: FailureTabProps) {
   // ========== 상태 관리 ==========
   const [currentFMId, setCurrentFMId] = useState<string | null>(null);
   const [linkedFEs, setLinkedFEs] = useState<Map<string, FEItem>>(new Map());
@@ -1062,17 +1062,26 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     }
     
     // ✅ 강화: failureLinks와 failureLinkConfirmed 모두 저장
-    setState((prev: any) => ({ 
+    // ✅ setStateSynced 사용하여 stateRef 즉시 동기화 (DB 저장 전 최신 상태 보장)
+    const updateFn = (prev: any) => ({ 
       ...prev, 
       failureLinkConfirmed: true,
       failureLinks: savedLinks,  // ✅ 고장연결 데이터도 state에 저장
-    }));
+    });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     setDirty(true);
     
     // ✅ 전체확정: DB에 확정 저장 (원자성 + 레거시 SSOT)
+    // ✅ setTimeout으로 상태 업데이트 후 저장 (stateRef 반영 보장)
     console.log('[고장연결 전체확정] ✅ DB 확정 저장 시작:', savedLinks.length, '건');
-    saveToLocalStorage?.(); // 레거시 local backup
-    saveAtomicDB?.();       // PostgreSQL 저장 (확정 시 1회)
+    setTimeout(() => {
+      saveToLocalStorage?.(); // 레거시 local backup
+      saveAtomicDB?.();       // PostgreSQL 저장 (확정 시 1회)
+    }, 100);
     
     // ===== AI 학습 데이터 저장 =====
     // 확정된 고장연결 데이터를 AI 시스템에 저장하여 학습
@@ -1100,17 +1109,22 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       ? `\n\n⚠️ 누락: ${missingCount}개\n💡 ALL(전체보기) 화면에서 수동 입력 가능` 
       : '';
     alert(`✅ 고장연결이 확정되었습니다!\n\nFM: ${fmData.length}개\nFE: ${linkStats.feLinkedCount}개\nFC: ${linkStats.fcLinkedCount}개${missingMsg}\n\n🤖 AI 학습 데이터 ${savedLinks.length}건 저장됨`);
-  }, [fmData, linkStats, savedLinks, state.l1, setState, setDirty, saveToLocalStorage, saveAtomicDB]);
+  }, [fmData, linkStats, savedLinks, state.l1, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   // ========== 고장연결 수정 모드 ==========
   const handleEditMode = useCallback(() => {
-    setState((prev: any) => ({ ...prev, failureLinkConfirmed: false }));
+    const updateFn = (prev: any) => ({ ...prev, failureLinkConfirmed: false });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     setDirty(true);
     requestAnimationFrame(() => {
       saveTemp?.(); // ✅ 편집 중: localStorage만
     });
     alert('📝 고장연결 수정 모드로 전환되었습니다.');
-  }, [setState, setDirty, saveToLocalStorage, saveAtomicDB]);
+  }, [setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   // ========== 초기화 ==========
   const handleClearAll = useCallback(() => {
@@ -1120,14 +1134,20 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     setLinkedFEs(new Map());
     setLinkedFCs(new Map());
     setCurrentFMId(null);
-    setState((prev: any) => ({ ...prev, failureLinks: [], failureLinkConfirmed: false }));
+    
+    const updateFn = (prev: any) => ({ ...prev, failureLinks: [], failureLinkConfirmed: false });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     setDirty(true);
     requestAnimationFrame(() => {
       saveTemp?.(); // ✅ 편집 중: localStorage만
     });
     setViewMode('diagram');
     alert('✅ 모든 고장연결이 초기화되었습니다.');
-  }, [setState, setDirty, saveToLocalStorage, saveAtomicDB]);
+  }, [setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   // ========== 역전개 ==========
   const handleReverseGenerate = useCallback(() => {
