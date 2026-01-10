@@ -33,6 +33,10 @@
    - ❌ `style={{ width: '500px' }}`
    - ✅ `className="w-[500px]"`
    - 예외: 동적 계산값(줄무늬 색상 등)만 허용
+6. **⚠️ FMEA 워크시트 레이블명 절대 수정 금지** (DB/다른 앱 연계성)
+   - 완제품명, 메인공정명, 작업요소, 4M, 기능, 특성 등 모든 컬럼/헤더 레이블명
+   - DB 스키마, API 응답, 다른 앱(APQP, DFMEA, CP 등)과의 연계성
+   - 태그: `codefreeze-20260111-label-names-frozen`
 
 ---
 
@@ -146,6 +150,7 @@ codefreeze-20260111-worksheet-110percent  (워크시트 110% 배율 확정)
 codefreeze-20260111-function-l2-final  (기능2L 최종 확정)
 codefreeze-20260111-function-l3-zebra  (기능3L 메인공정명 줄무늬)
 codefreeze-20260111-structure-zebra  (구조분석 메인공정명 줄무늬)
+codefreeze-20260111-label-names-frozen  (⚠️ 레이블명 절대 수정 금지)
 codefreeze-20260111-batch-freeze  (일괄 코드프리즈 - 2026-01-11)
 ```
 
