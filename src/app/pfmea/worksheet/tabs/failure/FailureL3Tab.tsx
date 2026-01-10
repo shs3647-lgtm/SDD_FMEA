@@ -33,6 +33,7 @@ import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badge
 import { getZebra, getZebraColors } from '@/styles/level-colors';
 import { handleEnterBlur } from '../../utils/keyboard';
 import { findLinkedFailureCausesForProcessChar, getAutoLinkMessage } from '../../utils/auto-link';
+import { autoSetSCForFailureCause, syncSCToMaster } from '../../utils/special-char-sync';
 
 // 색상 정의
 const FAIL_COLORS = {
@@ -322,10 +323,15 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
             const existing = currentCauses.find((c: any) => 
               c.processCharId === processCharId && c.name === val
             );
+            // ✅ 특별특성 마스터에서 공정특성 기준 SC 자동 지정
+            const charName = modal.processCharName || '';
+            const autoSC = autoSetSCForFailureCause(charName);
+            
             return existing || { 
               id: uid(), 
               name: val, 
               occurrence: undefined,
+              sc: autoSC,  // ✅ 마스터 기준 SC 자동 지정
               processCharId: processCharId  // ✅ CASCADE 연결
             };
           });
@@ -364,10 +370,13 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
                   c.processCharId === charItem.id && c.name === val
                 );
                 if (!exists) {
+                  // ✅ 특별특성 마스터에서 SC 자동 지정
+                  const scFromMaster = autoSetSCForFailureCause(charItem.name || currentCharName);
                   updatedCauses.push({
                     id: uid(),
                     name: val,
                     occurrence: undefined,
+                    sc: scFromMaster,  // ✅ 마스터 기준 SC 자동 지정
                     processCharId: charItem.id
                   });
                   autoLinkedCount++;

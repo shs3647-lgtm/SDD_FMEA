@@ -40,6 +40,7 @@ import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badge
 import { getZebra, getZebraColors } from '@/styles/level-colors';
 import { findLinkedFailureModesForProductChar, getAutoLinkMessage } from '../../utils/auto-link';
 import { handleEnterBlur } from '../../utils/keyboard';
+import { autoSetSCForFailureMode, syncSCToMaster } from '../../utils/special-char-sync';
 
 const FAIL_COLORS = {
   header1: '#1a237e', header2: '#3949ab', header3: '#5c6bc0', cell: '#f5f6fc', cellAlt: '#e8eaf6',
@@ -286,6 +287,10 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
         const otherModes = currentModes.filter((m: any) => m.productCharId !== productCharId);
         
         // 2. 선택된 값들 각각 별도 레코드로 생성
+        // ✅ 특별특성 마스터에서 제품특성 기준 SC 자동 지정
+        const charName = modal.parentProductChar || modal.parentCharName || '';
+        const autoSC = autoSetSCForFailureMode(charName);
+        
         const newModes = selectedValues.map(val => {
           const existing = currentModes.find((m: any) => 
             m.productCharId === productCharId && m.name === val
@@ -293,7 +298,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
           return existing || { 
             id: uid(), 
             name: val, 
-            sc: false, 
+            sc: autoSC,  // ✅ 마스터 기준 SC 자동 지정
             productCharId: productCharId
           };
         });
@@ -330,10 +335,12 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
                 m.productCharId === charItem.id && m.name === val
               );
               if (!exists) {
+                // ✅ 특별특성 마스터에서 SC 자동 지정
+                const scFromMaster = autoSetSCForFailureMode(charItem.name || currentCharName);
                 updatedModes.push({
                   id: uid(),
                   name: val,
-                  sc: false,
+                  sc: scFromMaster,  // ✅ 마스터 기준 SC 자동 지정
                   productCharId: charItem.id
                 });
                 autoLinkedCount++;
