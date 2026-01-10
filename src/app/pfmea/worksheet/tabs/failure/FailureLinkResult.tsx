@@ -117,83 +117,61 @@ export default function FailureLinkResult({ savedLinks, fmData }: FailureLinkRes
 
   return (
     <div style={resultTableContainer}>
-      {/* P-FMEA 고장 분석 (4단계) 헤더 */}
-      <div className="text-center font-bold text-white py-2 mb-0" style={{ background: '#5c6bc0' }}>
-        P-FMEA 고장 분석(4단계)
-      </div>
       <table className="w-full border-collapse text-xs">
         <thead>
-          {/* 1행: 메인 그룹 헤더 */}
           <tr>
-            <th colSpan={3} style={{ background: '#f9a825', color: '#333', padding: '8px', border: '1px solid #333', fontWeight: 'bold', textAlign: 'center' }}>
-              1.자사/고객/사용자<br/>고장영향(FE)
-            </th>
-            <th colSpan={2} style={{ background: '#7e57c2', color: 'white', padding: '8px', border: '1px solid #333', fontWeight: 'bold', textAlign: 'center' }}>
-              2.메인공정<br/>고장형태(FM)
-            </th>
-            <th colSpan={2} style={{ background: '#66bb6a', color: 'white', padding: '8px', border: '1px solid #333', fontWeight: 'bold', textAlign: 'center' }}>
-              3.작업요소<br/>고장원인(FC)
-            </th>
+            <th colSpan={4} style={resultTableHeaderStyle(COLORS.structure.dark)}>고장영향(FE)</th>
+            <th rowSpan={2} style={resultTableHeaderStyle(COLORS.failure.dark, { width: '14%', verticalAlign: 'middle' })}>고장형태<br/>(FM)</th>
+            <th colSpan={4} style={resultTableHeaderStyle(COLORS.function.dark)}>고장원인(FC)</th>
           </tr>
-          {/* 2행: 세부 컬럼 헤더 */}
           <tr>
-            <th className="w-[12%] p-2 border border-gray-400 font-semibold" style={{ background: '#fff8e1' }}>구분</th>
-            <th className="w-[18%] p-2 border border-gray-400 font-semibold" style={{ background: '#fff8e1' }}>고장영향<br/>(FE)</th>
-            <th className="w-[6%] p-2 border border-gray-400 font-semibold" style={{ background: '#ede7f6' }}>심각<br/>도</th>
-            <th className="w-[16%] p-2 border border-gray-400 font-semibold" style={{ background: '#ede7f6' }}></th>
-            <th className="w-[16%] p-2 border border-gray-400 font-semibold" style={{ background: '#e8f5e9' }}>고장형태<br/>(FM)</th>
-            <th className="w-[10%] p-2 border border-gray-400 font-semibold" style={{ background: '#e8f5e9' }}>작업<br/>요소</th>
+            <th className="w-[6%] bg-[#e3f2fd] p-1 border border-gray-300 font-semibold">No</th>
+            <th className="w-[10%] bg-[#e3f2fd] p-1 border border-gray-300 font-semibold">구분</th>
+            <th className="w-[18%] bg-[#e3f2fd] p-1 border border-gray-300 font-semibold">고장영향</th>
+            <th className="w-[5%] bg-[#e3f2fd] p-1 border border-gray-300 font-semibold">S</th>
+            <th className="w-[6%] bg-[#e8f5e9] p-1 border border-gray-300 font-semibold">No</th>
+            <th className="w-[10%] bg-[#e8f5e9] p-1 border border-gray-300 font-semibold">공정명</th>
+            <th className="w-[12%] bg-[#e8f5e9] p-1 border border-gray-300 font-semibold">작업요소</th>
+            <th className="bg-[#e8f5e9] p-1 border border-gray-300 font-semibold">고장원인</th>
           </tr>
         </thead>
         <tbody>
           {renderRows.length === 0 ? (
             <tr>
-              <td colSpan={6} className="text-center p-10 text-gray-400">
+              <td colSpan={9} className="text-center p-10 text-gray-400">
                 <div className="text-[28px] mb-2.5">📋</div>
                 <div>연결된 고장이 없습니다</div>
               </td>
             </tr>
           ) : renderRows.map((row, idx) => {
-            // FE(고장영향) 배경: 노란색 계열
-            const feBg = idx % 2 === 1 ? '#fff8e1' : '#fffde7';
-            // FM(고장형태) 배경: 보라색 계열
-            const fmBg = idx % 2 === 1 ? '#ede7f6' : '#f3e5f5';
-            // FC(고장원인) 배경: 녹색 계열
-            const fcBg = idx % 2 === 1 ? '#c8e6c9' : '#e8f5e9';
-            
+            const isOdd = idx % 2 === 1;
+            const feBg = isOdd ? '#bbdefb' : '#e3f2fd';
+            const fmBg = isOdd ? '#ffe0b2' : '#fff3e0';
+            const fcBg = isOdd ? '#c8e6c9' : '#e8f5e9';
             return (
-              <tr key={`${row.fmId}-${row.rowIdx}`} className={row.rowIdx === 0 ? 'border-t-2 border-gray-500' : ''}>
-                {/* FE 영역: 구분, 고장영향 */}
+              <tr key={`${row.fmId}-${row.rowIdx}`} className={row.rowIdx === 0 ? 'border-t-2 border-gray-400' : ''}>
                 {row.showFe && (
                   <>
-                    <td rowSpan={row.feRowSpan} style={{ background: feBg, border: '1px solid #bbb', padding: '6px', textAlign: 'center', verticalAlign: 'middle' }}>
-                      {row.fe?.scope || ''}
+                    <td rowSpan={row.feRowSpan} style={tdCenterStyle(feBg, '1px solid #ccc', COLORS.structure.text)}>{row.fe?.feNo || ''}</td>
+                    <td rowSpan={row.feRowSpan} style={tdCenterStyle(feBg, '1px solid #ccc', 'inherit', { fontSize: FONT_SIZES.small, whiteSpace: 'nowrap' })}>
+                      {row.fe?.scope === 'Your Plant' ? 'YP' : row.fe?.scope === 'Ship to Plant' ? 'SP' : row.fe?.scope === 'User' ? 'USER' : row.fe?.scope || ''}
                     </td>
-                    <td rowSpan={row.feRowSpan} style={{ background: feBg, border: '1px solid #bbb', padding: '6px', verticalAlign: 'middle' }}>
-                      {row.fe?.text || ''}
-                    </td>
+                    <td rowSpan={row.feRowSpan} style={tdStyle(feBg, '1px solid #ccc', { fontSize: FONT_SIZES.small, verticalAlign: 'middle' })}>{row.fe?.text || ''}</td>
+                    <td rowSpan={row.feRowSpan} style={tdCenterStyle(feBg, '1px solid #ccc', (row.fe?.severity || 0) >= 8 ? '#f57c00' : (row.fe?.severity || 0) >= 5 ? '#f57f17' : '#333')}>{row.fe?.severity || ''}</td>
                   </>
                 )}
-                {/* FM 영역: 심각도, 고장형태 */}
                 {row.showFm && (
-                  <>
-                    <td rowSpan={row.totalRows} style={{ background: fmBg, border: '1px solid #bbb', padding: '6px', textAlign: 'center', verticalAlign: 'middle', fontWeight: 'bold', color: (row.fe?.severity || 0) >= 8 ? '#d32f2f' : (row.fe?.severity || 0) >= 5 ? '#f57c00' : '#333' }}>
-                      {row.fe?.severity || ''}
-                    </td>
-                    <td rowSpan={row.totalRows} style={{ background: fmBg, border: '1px solid #bbb', padding: '8px', verticalAlign: 'middle', textAlign: 'center' }}>
-                      <div className="font-semibold text-purple-900">{row.fm.text}</div>
-                    </td>
-                  </>
+                  <td rowSpan={row.totalRows} style={tdCenterStyle(fmBg, '1px solid #ccc')}>
+                    <div className="text-xs font-semibold text-orange-800">{row.fm.no}</div>
+                    <div>{row.fm.text}</div>
+                  </td>
                 )}
-                {/* FC 영역: 고장원인, 작업요소 */}
                 {row.showFc && (
                   <>
-                    <td rowSpan={row.fcRowSpan} style={{ background: fcBg, border: '1px solid #bbb', padding: '6px', verticalAlign: 'middle' }}>
-                      {row.fc?.text || ''}
-                    </td>
-                    <td rowSpan={row.fcRowSpan} style={{ background: fcBg, border: '1px solid #bbb', padding: '6px', textAlign: 'center', verticalAlign: 'middle', fontSize: '11px' }}>
-                      {row.fc?.workElem || ''}
-                    </td>
+                    <td rowSpan={row.fcRowSpan} style={tdCenterStyle(fcBg, '1px solid #ccc', COLORS.function.text)}>{row.fc?.fcNo || ''}</td>
+                    <td rowSpan={row.fcRowSpan} style={tdCenterStyle(fcBg, '1px solid #ccc', 'inherit', { fontSize: FONT_SIZES.small, whiteSpace: 'nowrap' })}>{row.fc?.processName || ''}</td>
+                    <td rowSpan={row.fcRowSpan} style={tdStyle(fcBg, '1px solid #ccc', { fontSize: FONT_SIZES.small, verticalAlign: 'middle' })}>{row.fc?.workElem || ''}</td>
+                    <td rowSpan={row.fcRowSpan} style={tdStyle(fcBg, '1px solid #ccc', { verticalAlign: 'middle' })}>{row.fc?.text || ''}</td>
                   </>
                 )}
               </tr>
