@@ -378,6 +378,46 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     }
   }, [fmData, currentFMId]);
 
+  // ========== savedLinks에서 현재 FM의 연결 상태 복원 ==========
+  useEffect(() => {
+    if (!currentFMId) return;
+    
+    // savedLinks에서 현재 FM의 연결 찾기
+    const currentLinks = savedLinks.filter(l => l.fmId === currentFMId);
+    
+    if (currentLinks.length > 0) {
+      // FE 복원
+      const feMap = new Map<string, any>();
+      const fcMap = new Map<string, any>();
+      
+      currentLinks.forEach(link => {
+        // FE 복원
+        if (link.feId && link.feId.trim() !== '') {
+          const fe = feData.find(f => f.id === link.feId);
+          if (fe && !feMap.has(fe.id)) {
+            feMap.set(fe.id, fe);
+          }
+        }
+        // FC 복원
+        if (link.fcId && link.fcId.trim() !== '') {
+          const fc = fcData.find(f => f.id === link.fcId);
+          if (fc && !fcMap.has(fc.id)) {
+            fcMap.set(fc.id, fc);
+          }
+        }
+      });
+      
+      console.log('[FailureLinkTab] ✅ savedLinks에서 연결 복원:', { 
+        fmId: currentFMId, 
+        feCount: feMap.size, 
+        fcCount: fcMap.size 
+      });
+      
+      setLinkedFEs(feMap);
+      setLinkedFCs(fcMap);
+    }
+  }, [currentFMId, savedLinks, feData, fcData]);
+
   // ========== SVG 연결선 ==========
   const { svgPaths, drawLines } = useSVGLines(
     chainAreaRef, fmNodeRef, feColRef, fcColRef, linkedFEs, linkedFCs, currentFM
@@ -980,8 +1020,7 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
           setTimeout(() => {
             setCurrentFMId(nextFM.id);
             setSelectedProcess(nextProcess);
-            setLinkedFEs(new Map());
-            setLinkedFCs(new Map());
+            // ✅ linkedFEs/linkedFCs는 useEffect에서 savedLinks 기반으로 자동 복원됨
             setViewMode('diagram');
           }, 100);
           
@@ -1004,8 +1043,7 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     if (nextFMInProc) {
       setTimeout(() => {
         setCurrentFMId(nextFMInProc.id);
-        setLinkedFEs(new Map());
-        setLinkedFCs(new Map());
+        // ✅ linkedFEs/linkedFCs는 useEffect에서 savedLinks 기반으로 자동 복원됨
         setViewMode('diagram');
       }, 100);
       
