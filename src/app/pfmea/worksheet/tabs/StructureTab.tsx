@@ -419,9 +419,16 @@ export function StructureRow({
   const showMergedCells = spanCount !== undefined && spanCount > 0;
   
   // ✅ 메인공정명 줄무늬: 공정 인덱스 기준 (홀수/짝수)
+  // state.l2에서 공정 인덱스 찾기
   const procIdx = state.l2.findIndex((p: any) => p.id === row.l2Id);
-  const procZebra = getZebraColors(procIdx);
-  const l2ZebraBg = procZebra.structure; // 구조분석 색상 (파란색 계열)
+  // procIdx가 -1이면 기본 색상 사용, 아니면 공정 인덱스 기준 줄무늬
+  // getZebraColors: 0(dark), 1(light), 2(dark), 3(light) ...
+  const l2ZebraBg = procIdx >= 0 ? getZebraColors(procIdx).structure : zebraBg;
+  
+  // 디버깅용 (개발 환경에서만)
+  if (process.env.NODE_ENV === 'development' && procIdx >= 0) {
+    console.log(`[StructureRow] 공정: ${row.l2Name}, 인덱스: ${procIdx}, 색상: ${l2ZebraBg}`);
+  }
   
   return (
     <>
