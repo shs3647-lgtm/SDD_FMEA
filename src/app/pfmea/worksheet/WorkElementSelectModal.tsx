@@ -311,33 +311,36 @@ export default function WorkElementSelectModal({
         </div>
 
         {/* ===== 4M 필터 + 검색 + 버튼 ===== */}
-        <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-2">
-          {/* 4M 필터 */}
-          <select
-            value={filterM4}
-            onChange={(e) => setFilterM4(e.target.value)}
-            className="px-2 py-1 text-[10px] border rounded cursor-pointer"
-          >
-            <option value="all">전체 4M</option>
-            {M4_OPTIONS.map(o => (
-              <option key={o.id} value={o.id}>{o.label}</option>
-            ))}
-          </select>
+        <div className="px-2 py-1.5 border-b bg-gray-50">
+          {/* 첫 줄: 4M 필터 + 검색 */}
+          <div className="flex items-center gap-1.5 mb-1">
+            <select
+              value={filterM4}
+              onChange={(e) => setFilterM4(e.target.value)}
+              className="px-1.5 py-0.5 text-[9px] border rounded cursor-pointer shrink-0"
+            >
+              <option value="all">전체 4M</option>
+              {M4_OPTIONS.map(o => (
+                <option key={o.id} value={o.id}>{o.label}</option>
+              ))}
+            </select>
 
-          {/* 검색 */}
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="🔍 작업요소 검색..."
-            className="flex-1 px-2 py-1 text-[10px] border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="🔍 작업요소 검색..."
+              className="flex-1 px-2 py-0.5 text-[9px] border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-0"
+            />
+          </div>
 
-          {/* 버튼: [전체][해제][적용][삭제] */}
-          <button onClick={selectAll} className="px-2 py-1 text-[10px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600">전체</button>
-          <button onClick={deselectAll} className="px-2 py-1 text-[10px] font-bold bg-gray-300 text-gray-700 rounded hover:bg-gray-400">해제</button>
-          <button onClick={handleApply} className="px-2 py-1 text-[10px] font-bold bg-green-600 text-white rounded hover:bg-green-700">적용</button>
-          <button onClick={handleDeleteAll} className="px-2 py-1 text-[10px] font-bold bg-red-500 text-white rounded hover:bg-red-600">삭제</button>
+          {/* 두 번째 줄: 버튼들 - 모두 보이도록 flex-wrap */}
+          <div className="flex items-center gap-1 flex-wrap">
+            <button onClick={selectAll} className="px-1.5 py-0.5 text-[9px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600 shrink-0">전체</button>
+            <button onClick={deselectAll} className="px-1.5 py-0.5 text-[9px] font-bold bg-gray-300 text-gray-700 rounded hover:bg-gray-400 shrink-0">해제</button>
+            <button onClick={handleApply} className="px-1.5 py-0.5 text-[9px] font-bold bg-green-600 text-white rounded hover:bg-green-700 shrink-0">적용</button>
+            <button onClick={handleDeleteAll} className="px-1.5 py-0.5 text-[9px] font-bold bg-red-500 text-white rounded hover:bg-red-600 shrink-0">삭제</button>
+          </div>
         </div>
 
         {/* ===== 하위항목 라벨 ===== */}

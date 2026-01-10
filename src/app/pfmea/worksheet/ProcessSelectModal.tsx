@@ -196,11 +196,22 @@ export default function ProcessSelectModal({
   }, [isOpen, existingProcessNames]);
 
   const filteredProcesses = useMemo(() => {
-    if (!search.trim()) return processes;
-    const q = search.toLowerCase();
-    return processes.filter(p => 
-      p.no.includes(q) || p.name.toLowerCase().includes(q)
-    );
+    let result = processes;
+    
+    // 검색 필터링
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = processes.filter(p => 
+        p.no.includes(q) || p.name.toLowerCase().includes(q)
+      );
+    }
+    
+    // 공정 번호 기준 숫자 정렬 (10, 20, 30 순서)
+    return [...result].sort((a, b) => {
+      const numA = parseInt(a.no.replace(/\D/g, '')) || 0; // 숫자만 추출
+      const numB = parseInt(b.no.replace(/\D/g, '')) || 0;
+      return numA - numB; // 오름차순 정렬
+    });
   }, [processes, search]);
   
   const toggleSelect = useCallback((id: string) => {
@@ -390,20 +401,24 @@ export default function ProcessSelectModal({
         </div>
 
         {/* 검색 + 버튼: [전체][해제][적용][삭제] */}
-        <div className="px-4 py-2 border-b bg-gray-50 flex items-center gap-2">
-          <div className="relative flex-1">
+        <div className="px-2 py-1.5 border-b bg-gray-50">
+          {/* 첫 줄: 검색 */}
+          <div className="mb-1">
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="🔍 공정명 또는 번호 검색..."
-              className="w-full px-3 py-1.5 text-xs border rounded focus:ring-1 focus:ring-blue-500 outline-none"
+              className="w-full px-2 py-0.5 text-[9px] border rounded focus:ring-1 focus:ring-blue-500 outline-none"
             />
           </div>
-          <button onClick={selectAll} className="px-2 py-1 text-[10px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600">전체</button>
-          <button onClick={deselectAll} className="px-2 py-1 text-[10px] font-bold bg-gray-200 text-gray-700 rounded hover:bg-gray-300">해제</button>
-          <button onClick={handleSave} className="px-2 py-1 text-[10px] font-bold bg-green-600 text-white rounded hover:bg-green-700">적용</button>
-          <button onClick={clearAndSave} className="px-2 py-1 text-[10px] font-bold bg-red-500 text-white rounded hover:bg-red-600">삭제</button>
+          {/* 두 번째 줄: 버튼들 - 모두 보이도록 flex-wrap */}
+          <div className="flex items-center gap-1 flex-wrap">
+            <button onClick={selectAll} className="px-1.5 py-0.5 text-[9px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600 shrink-0">전체</button>
+            <button onClick={deselectAll} className="px-1.5 py-0.5 text-[9px] font-bold bg-gray-300 text-gray-700 rounded hover:bg-gray-400 shrink-0">해제</button>
+            <button onClick={handleSave} className="px-1.5 py-0.5 text-[9px] font-bold bg-green-600 text-white rounded hover:bg-green-700 shrink-0">적용</button>
+            <button onClick={clearAndSave} className="px-1.5 py-0.5 text-[9px] font-bold bg-red-500 text-white rounded hover:bg-red-600 shrink-0">삭제</button>
+          </div>
         </div>
 
         {/* 컴팩트 테이블 - 고정 높이 */}

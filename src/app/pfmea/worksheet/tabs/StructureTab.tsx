@@ -280,12 +280,9 @@ function EditableL3Cell({
       title={isPlaceholder ? '클릭: 작업요소 추가' : '클릭: 모달 | 더블클릭: 텍스트 수정'}
     >
       {isPlaceholder || !value || value.trim() === '' ? (
-        <span className="text-[#e65100] font-semibold">🔍 클릭</span>
+        <span className="text-[#e65100] font-semibold">🔍 클릭하여 작업요소 추가</span>
       ) : (
-        <span className="font-normal flex items-center justify-center">
-          <span className="mr-1 text-base">🔍</span>
-          <span>{value}</span>
-        </span>
+        <span className="font-normal">{value}</span>
       )}
     </td>
   );
