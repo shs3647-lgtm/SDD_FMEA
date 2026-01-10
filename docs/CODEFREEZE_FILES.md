@@ -58,7 +58,7 @@
 | `src/app/pfmea/worksheet/tabs/function/FunctionL1Tab.tsx` | codefreeze-20260104-worksheet-complete |
 | `src/app/pfmea/worksheet/tabs/function/FunctionL2Tab.tsx` | codefreeze-20260104-worksheet-complete<br/>codefreeze-20260111-function-l2-final (최종 확정) |
 | `src/app/pfmea/worksheet/tabs/function/FunctionL3Tab.tsx` | codefreeze-20260104-worksheet-complete<br/>codefreeze-20260111-function-l3-zebra (메인공정명 줄무늬 최종) |
-| `src/app/pfmea/worksheet/tabs/failure/FailureL1Tab.tsx` | codefreeze-20260104-worksheet-complete |
+| `src/app/pfmea/worksheet/tabs/failure/FailureL1Tab.tsx` | codefreeze-20260104-worksheet-complete<br/>codefreeze-20260112-failure-l1-doubleclick-edit (더블클릭 인라인 수정) |
 | `src/app/pfmea/worksheet/tabs/failure/FailureL2Tab.tsx` | codefreeze-20260104-worksheet-complete |
 | `src/app/pfmea/worksheet/tabs/failure/FailureL3Tab.tsx` | codefreeze-20260104-worksheet-complete |
 | `src/app/pfmea/worksheet/tabs/failure/FailureLinkTab.tsx` | codefreeze-20260110-failure-link-all |
