@@ -260,12 +260,27 @@ export default function SpecialCharMasterModal({ isOpen, onClose }: SpecialCharM
     
     // ✅ FMEA 분석 결과 동기화 - SC 지정된 제품특성/공정특성 자동 등록
     try {
-      const worksheetData = localStorage.getItem('pfmea_worksheet_data');
-      if (worksheetData) {
-        const allData = JSON.parse(worksheetData);
-        let syncCount = 0;
-        
-        Object.values(allData).forEach((data: any) => {
+      // ✅ 모든 FMEA 워크시트 데이터 수집 (pfmea_worksheet_${fmeaId} 형식)
+      const allWorksheetData: any[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('pfmea_worksheet_')) {
+          try {
+            const data = JSON.parse(localStorage.getItem(key) || '{}');
+            if (data && data.l2) {
+              allWorksheetData.push(data);
+            }
+          } catch (e) {
+            console.warn('워크시트 파싱 오류:', key);
+          }
+        }
+      }
+      
+      console.log(`[특별특성 마스터] ${allWorksheetData.length}개 FMEA 워크시트 검색`);
+      
+      let syncCount = 0;
+      
+      allWorksheetData.forEach((data: any) => {
           // L2 공정에서 SC가 지정된 고장형태의 제품특성 수집
           (data?.l2 || []).forEach((proc: any) => {
             const processName = proc.no ? `${proc.no}. ${proc.name}` : proc.name;
@@ -276,23 +291,25 @@ export default function SpecialCharMasterModal({ isOpen, onClose }: SpecialCharM
                 const charName = pc.name?.trim();
                 if (!charName || charName.includes('클릭')) return;
                 
-                // 해당 제품특성에 연결된 고장형태 중 SC=true인 것 찾기
+                // ✅ 제품특성 자체에 specialChar가 있거나, 연결된 고장형태에 SC=true인 것 찾기
+                const hasSpecialChar = pc.specialChar && pc.specialChar !== '';
                 const linkedModes = (proc.failureModes || []).filter(
                   (m: any) => m.productCharId === pc.id && m.sc === true
                 );
                 
-                if (linkedModes.length > 0) {
+                if (hasSpecialChar || linkedModes.length > 0) {
                   // 마스터에 해당 제품특성이 없으면 추가
                   const exists = currentData.some(m => m.productChar === charName && m.linkPFMEA);
                   if (!exists) {
+                    const symbol = pc.specialChar || 'SC';
                     currentData.push({
                       id: `SC_FMEA_${Date.now()}_${syncCount}`,
                       customer: 'FMEA분석',
-                      customerSymbol: 'SC',
-                      internalSymbol: 'SC',
-                      meaning: '제품특성 SC',
-                      icon: '◆',
-                      color: '#e53935',
+                      customerSymbol: symbol,
+                      internalSymbol: symbol === 'CC' ? 'SC' : symbol,
+                      meaning: `제품특성 ${symbol}`,
+                      icon: symbol === 'CC' ? '★' : '◆',
+                      color: symbol === 'CC' ? '#d32f2f' : '#e53935',
                       partName: data?.l1?.name || '',
                       processName: processName || '',
                       productChar: charName,
@@ -303,6 +320,7 @@ export default function SpecialCharMasterModal({ isOpen, onClose }: SpecialCharM
                       linkPFD: false,
                     });
                     syncCount++;
+                    console.log(`[특별특성 마스터] 제품특성 동기화: "${charName}" (${symbol})`);
                   }
                 }
               });
@@ -313,22 +331,24 @@ export default function SpecialCharMasterModal({ isOpen, onClose }: SpecialCharM
                   const charName = pc.name?.trim();
                   if (!charName || charName.includes('클릭')) return;
                   
-                  // 해당 공정특성에 연결된 고장원인 중 SC=true인 것 찾기
+                  // ✅ 공정특성 자체에 specialChar가 있거나, 연결된 고장원인에 SC=true인 것 찾기
+                  const hasSpecialChar = pc.specialChar && pc.specialChar !== '';
                   const linkedCauses = (proc.failureCauses || []).filter(
                     (c: any) => c.processCharId === pc.id && c.sc === true
                   );
                   
-                  if (linkedCauses.length > 0) {
+                  if (hasSpecialChar || linkedCauses.length > 0) {
                     const exists = currentData.some(m => m.processChar === charName && m.linkPFMEA);
                     if (!exists) {
+                      const symbol = pc.specialChar || 'SC';
                       currentData.push({
                         id: `SC_FMEA_${Date.now()}_${syncCount}`,
                         customer: 'FMEA분석',
-                        customerSymbol: 'SC',
-                        internalSymbol: 'SC',
-                        meaning: '공정특성 SC',
-                        icon: '◆',
-                        color: '#ff9800',
+                        customerSymbol: symbol,
+                        internalSymbol: symbol === 'CC' ? 'SC' : symbol,
+                        meaning: `공정특성 ${symbol}`,
+                        icon: symbol === 'CC' ? '★' : '◆',
+                        color: symbol === 'CC' ? '#d32f2f' : '#ff9800',
                         partName: data?.l1?.name || '',
                         processName: processName || '',
                         productChar: '',
@@ -339,6 +359,7 @@ export default function SpecialCharMasterModal({ isOpen, onClose }: SpecialCharM
                         linkPFD: false,
                       });
                       syncCount++;
+                      console.log(`[특별특성 마스터] 공정특성 동기화: "${charName}" (${symbol})`);
                     }
                   }
                 });
@@ -464,6 +485,11 @@ export default function SpecialCharMasterModal({ isOpen, onClose }: SpecialCharM
             {customers.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
           <button onClick={addNewItem} className="py-1.5 px-3 bg-green-600 text-white border-none rounded text-xs cursor-pointer font-semibold">+ 신규</button>
+          <button onClick={() => {
+            // FMEA 분석결과 수동 동기화
+            const count = masterData.filter(m => m.customer === 'FMEA분석').length;
+            alert(`FMEA 분석결과 ${count}건이 동기화되었습니다.\n\n마스터를 열 때 자동으로 동기화됩니다.\n특별특성이 없으면 FMEA 워크시트에서 먼저 SC를 지정해주세요.`);
+          }} className="py-1.5 px-3 bg-purple-600 text-white border-none rounded text-xs cursor-pointer font-semibold">🔄 FMEA 동기화</button>
           <span className="text-[11px] text-gray-600 ml-1">총 {filteredData.length}개</span>
           <div className="flex-1" />
           <button onClick={handleExport} className="py-1.5 px-3 bg-blue-700 text-white border-none rounded text-xs cursor-pointer">📥 Export</button>
