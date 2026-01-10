@@ -103,6 +103,8 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
   const feColRef = useRef<HTMLDivElement>(null);
   const fcColRef = useRef<HTMLDivElement>(null);
   const isInitialLoad = useRef(true);
+  // ✅ 연결확정 직후 useEffect가 linkedFEs/linkedFCs를 덮어쓰지 않도록 방지
+  const justConfirmedRef = useRef(false);
 
   // ========== 초기 데이터 로드 (화면 전환 시에도 항상 복원) ==========
   const stateFailureLinksJson = JSON.stringify((state as any).failureLinks || []);
@@ -560,6 +562,13 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
 
   // ========== FM 선택 시 연결된 FE/FC 로드 ==========
   useEffect(() => {
+    // ✅ 연결확정 직후에는 이 useEffect가 linkedFEs/linkedFCs를 덮어쓰지 않음
+    if (justConfirmedRef.current) {
+      console.log('[FM 선택] ⏭️ justConfirmed=true, 덮어쓰기 스킵');
+      justConfirmedRef.current = false; // 다음에는 정상 작동
+      return;
+    }
+    
     if (!currentFMId) {
       setLinkedFEs(new Map());
       setLinkedFCs(new Map());
@@ -948,6 +957,9 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     
     console.log('[연결 확정]', currentFM.text, '→ FE:', feArray.length, 'FC:', fcArray.length, '총:', newLinks.length);
     
+    // ✅ 핵심: useEffect가 linkedFEs/linkedFCs를 덮어쓰지 않도록 플래그 설정
+    justConfirmedRef.current = true;
+    
     setSavedLinks(newLinks);
     setState((prev: any) => ({ ...prev, failureLinks: newLinks }));
     setDirty(true);
@@ -955,18 +967,9 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
       saveTemp?.(); // ✅ 편집 중: localStorage만
     });
     
-    // ✅ 핵심 수정: linkedFEs/linkedFCs를 직접 유지 (useEffect 타이밍 이슈 방지)
-    // 연결확정 후 현재 FE/FC가 그대로 표시되어야 함
-    // (useEffect가 비동기로 실행되어 일시적으로 빈 Map이 되는 문제 방지)
-    const feMapToKeep = new Map(linkedFEs);
-    const fcMapToKeep = new Map(linkedFCs);
-    requestAnimationFrame(() => {
-      setLinkedFEs(feMapToKeep);
-      setLinkedFCs(fcMapToKeep);
-      // 화살표 다시 그리기
-      setTimeout(drawLines, 50);
-      setTimeout(drawLines, 200);
-    });
+    // ✅ 화살표 다시 그리기 (linkedFEs/linkedFCs는 이미 유지됨)
+    setTimeout(drawLines, 100);
+    setTimeout(drawLines, 300);
     
     // ✅ 연결 완료 알림 (자동 FM 이동 제거 - 상태 동기화 문제 방지)
     // 사용자가 ▼다음 FM 버튼으로 직접 이동하도록 함
