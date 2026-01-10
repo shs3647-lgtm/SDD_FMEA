@@ -955,6 +955,19 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
       saveTemp?.(); // ✅ 편집 중: localStorage만
     });
     
+    // ✅ 핵심 수정: linkedFEs/linkedFCs를 직접 유지 (useEffect 타이밍 이슈 방지)
+    // 연결확정 후 현재 FE/FC가 그대로 표시되어야 함
+    // (useEffect가 비동기로 실행되어 일시적으로 빈 Map이 되는 문제 방지)
+    const feMapToKeep = new Map(linkedFEs);
+    const fcMapToKeep = new Map(linkedFCs);
+    requestAnimationFrame(() => {
+      setLinkedFEs(feMapToKeep);
+      setLinkedFCs(fcMapToKeep);
+      // 화살표 다시 그리기
+      setTimeout(drawLines, 50);
+      setTimeout(drawLines, 200);
+    });
+    
     // ✅ 연결 완료 알림 (자동 FM 이동 제거 - 상태 동기화 문제 방지)
     // 사용자가 ▼다음 FM 버튼으로 직접 이동하도록 함
     const currentProcess = currentFM.processName;
@@ -977,10 +990,6 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     const allProcesses = [...new Set(fmData.map(fm => fm.processName))];
     const currentIdx = allProcesses.indexOf(currentProcess);
     const nextProcess = allProcesses[currentIdx + 1];
-    
-    // ✅ 화살표 다시 그리기 (연결 상태 유지)
-    setTimeout(drawLines, 100);
-    setTimeout(drawLines, 300);
     
     // 메시지 표시 (FM 자동 이동 없음)
     if (allLinkedInProcess && !nextProcess) {
