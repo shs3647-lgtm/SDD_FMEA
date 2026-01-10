@@ -449,7 +449,7 @@ export function StructureRow({
               else setState(updateFn);
               setDirty(true); 
             }}
-            onBlur={handleInputBlur} onKeyDown={handleInputKeyDown} placeholder="완제품명 입력"
+            onBlur={handleInputBlur} onKeyDown={handleInputKeyDown} placeholder="완제품명+라인 입력"
             className="w-full text-center border-0 outline-none text-xs font-semibold min-h-6 bg-transparent rounded px-1"
           />
         </td>
