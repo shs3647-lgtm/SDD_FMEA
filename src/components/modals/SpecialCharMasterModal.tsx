@@ -248,15 +248,115 @@ export default function SpecialCharMasterModal({ isOpen, onClose }: SpecialCharM
   useEffect(() => {
     if (!isOpen) return;
     const saved = localStorage.getItem('pfmea_special_char_master');
+    let currentData: SpecialCharMaster[] = [];
+    
     if (saved) {
-      setMasterData(JSON.parse(saved));
+      currentData = JSON.parse(saved);
     } else {
-      const initialData: SpecialCharMaster[] = DEFAULT_SPECIAL_CHARS.map((item, idx) => ({
+      currentData = DEFAULT_SPECIAL_CHARS.map((item, idx) => ({
         ...item, id: `SC_${idx + 1}`, partName: '', processName: '', productChar: '', processChar: '',
       }));
-      setMasterData(initialData);
-      localStorage.setItem('pfmea_special_char_master', JSON.stringify(initialData));
     }
+    
+    // ✅ FMEA 분석 결과 동기화 - SC 지정된 제품특성/공정특성 자동 등록
+    try {
+      const worksheetData = localStorage.getItem('pfmea_worksheet_data');
+      if (worksheetData) {
+        const allData = JSON.parse(worksheetData);
+        let syncCount = 0;
+        
+        Object.values(allData).forEach((data: any) => {
+          // L2 공정에서 SC가 지정된 고장형태의 제품특성 수집
+          (data?.l2 || []).forEach((proc: any) => {
+            const processName = proc.no ? `${proc.no}. ${proc.name}` : proc.name;
+            
+            // 모든 기능의 제품특성 수집
+            (proc.functions || []).forEach((func: any) => {
+              (func.productChars || []).forEach((pc: any) => {
+                const charName = pc.name?.trim();
+                if (!charName || charName.includes('클릭')) return;
+                
+                // 해당 제품특성에 연결된 고장형태 중 SC=true인 것 찾기
+                const linkedModes = (proc.failureModes || []).filter(
+                  (m: any) => m.productCharId === pc.id && m.sc === true
+                );
+                
+                if (linkedModes.length > 0) {
+                  // 마스터에 해당 제품특성이 없으면 추가
+                  const exists = currentData.some(m => m.productChar === charName && m.linkPFMEA);
+                  if (!exists) {
+                    currentData.push({
+                      id: `SC_FMEA_${Date.now()}_${syncCount}`,
+                      customer: 'FMEA분석',
+                      customerSymbol: 'SC',
+                      internalSymbol: 'SC',
+                      meaning: '제품특성 SC',
+                      icon: '◆',
+                      color: '#e53935',
+                      partName: data?.l1?.name || '',
+                      processName: processName || '',
+                      productChar: charName,
+                      processChar: '',
+                      linkDFMEA: false,
+                      linkPFMEA: true,
+                      linkCP: true,
+                      linkPFD: false,
+                    });
+                    syncCount++;
+                  }
+                }
+              });
+              
+              // 작업요소의 공정특성도 처리
+              (func.workElements || []).forEach((we: any) => {
+                (we.processChars || []).forEach((pc: any) => {
+                  const charName = pc.name?.trim();
+                  if (!charName || charName.includes('클릭')) return;
+                  
+                  // 해당 공정특성에 연결된 고장원인 중 SC=true인 것 찾기
+                  const linkedCauses = (proc.failureCauses || []).filter(
+                    (c: any) => c.processCharId === pc.id && c.sc === true
+                  );
+                  
+                  if (linkedCauses.length > 0) {
+                    const exists = currentData.some(m => m.processChar === charName && m.linkPFMEA);
+                    if (!exists) {
+                      currentData.push({
+                        id: `SC_FMEA_${Date.now()}_${syncCount}`,
+                        customer: 'FMEA분석',
+                        customerSymbol: 'SC',
+                        internalSymbol: 'SC',
+                        meaning: '공정특성 SC',
+                        icon: '◆',
+                        color: '#ff9800',
+                        partName: data?.l1?.name || '',
+                        processName: processName || '',
+                        productChar: '',
+                        processChar: charName,
+                        linkDFMEA: false,
+                        linkPFMEA: true,
+                        linkCP: true,
+                        linkPFD: false,
+                      });
+                      syncCount++;
+                    }
+                  }
+                });
+              });
+            });
+          });
+        });
+        
+        if (syncCount > 0) {
+          console.log(`[특별특성 마스터] FMEA 분석 결과 ${syncCount}건 동기화`);
+        }
+      }
+    } catch (e) {
+      console.error('FMEA 분석 결과 동기화 오류:', e);
+    }
+    
+    setMasterData(currentData);
+    localStorage.setItem('pfmea_special_char_master', JSON.stringify(currentData));
   }, [isOpen]);
 
   const saveData = useCallback((data: SpecialCharMaster[]) => {
