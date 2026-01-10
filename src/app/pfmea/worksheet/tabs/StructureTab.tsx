@@ -279,12 +279,12 @@ function EditableL3Cell({
       onDoubleClick={handleDoubleClick}
       title={isPlaceholder ? '클릭: 작업요소 추가' : '클릭: 모달 | 더블클릭: 텍스트 수정'}
     >
-      {isPlaceholder ? (
+      {isPlaceholder || !value || value.trim() === '' ? (
         <span className="text-[#e65100] font-semibold">🔍 클릭</span>
       ) : (
-        <span className="font-normal">
-          <span className="mr-1">🔍</span>
-          {value}
+        <span className="font-normal flex items-center justify-center">
+          <span className="mr-1 text-base">🔍</span>
+          <span>{value}</span>
         </span>
       )}
     </td>
@@ -724,8 +724,15 @@ export default function StructureTab(props: StructureTabProps) {
               -
             </td>
             {/* 4열: 작업요소 */}
-            <td className="border border-[#ccc] p-1 text-center align-middle text-xs text-gray-400" style={{ background: '#ffe0b2' }}>
-              (공정 선택 후 추가)
+            <td 
+              className="border border-[#ccc] p-1 text-center align-middle text-xs text-gray-400 cursor-pointer hover:bg-orange-100" 
+              style={{ background: '#ffe0b2' }}
+              onClick={() => {
+                // 작업요소 모달 열기
+                setIsWorkElementModalOpen(true);
+              }}
+            >
+              <span className="text-[#e65100] font-semibold">🔍 클릭하여 작업요소 추가</span>
             </td>
           </tr>
         ) : (
