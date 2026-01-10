@@ -28,6 +28,7 @@ import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { WorksheetState, COLORS, FlatRow, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../constants';
 import { S, F, X, L1, L2, L3, cell, cellCenter, border, btnConfirm, btnEdit, badgeConfirmed, badgeOk, badgeMissing } from '@/styles/worksheet';
 import { handleEnterBlur } from '../utils/keyboard';
+import { getZebraColors } from '@/styles/level-colors';
 
 interface StructureTabProps {
   state: WorksheetState;
@@ -417,6 +418,11 @@ export function StructureRow({
   const spanCount = l2Spans[idx];
   const showMergedCells = spanCount !== undefined && spanCount > 0;
   
+  // ✅ 메인공정명 줄무늬: 공정 인덱스 기준 (홀수/짝수)
+  const procIdx = state.l2.findIndex((p: any) => p.id === row.l2Id);
+  const procZebra = getZebraColors(procIdx);
+  const l2ZebraBg = procZebra.structure; // 구조분석 색상 (파란색 계열)
+  
   return (
     <>
       {/* 완제품 공정명: 메인 공정명과 동일하게 l2Spans 기준 병합 (1:1 매칭) */}
@@ -441,7 +447,7 @@ export function StructureRow({
         </td>
       )}
       
-      {/* 메인 공정명: l2Spans 기준 병합 + 인라인 수정 지원 */}
+      {/* 메인 공정명: l2Spans 기준 병합 + 인라인 수정 지원 + 공정 인덱스 기준 줄무늬 */}
       {showMergedCells && (
         <EditableL2Cell
           l2Id={row.l2Id}
@@ -453,7 +459,7 @@ export function StructureRow({
           handleSelect={handleSelect}
           setIsProcessModalOpen={setIsProcessModalOpen}
           saveToLocalStorage={saveToLocalStorage}
-          zebraBg={zebraBg}
+          zebraBg={l2ZebraBg}  // ✅ 공정 인덱스 기준 줄무늬 색상
           rowSpan={spanCount || 1}
           isConfirmed={isConfirmed}
         />
