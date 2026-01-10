@@ -147,11 +147,13 @@ export function RiskOptCellRenderer({
     );
   }
 
-  // ★ 발생도 / 검출도 셀
+  // ★ 발생도 / 검출도 셀 - 숫자만 표시 (문자열은 무시)
   if (col.name === '발생도' || col.name === '검출도') {
     const category: 'O' | 'D' = col.name === '발생도' ? 'O' : 'D';
     const key = `${targetType}-${uniqueKey}-${category}`;
-    const currentValue = (state?.riskData?.[key] as number) || 0;
+    const rawValue = state?.riskData?.[key];
+    // ★ 숫자만 허용, 문자열은 무시
+    const currentValue = typeof rawValue === 'number' ? rawValue : 0;
     return (
       <td key={colIdx} rowSpan={fcRowSpan} onDoubleClick={() => handleSODClick(category, targetType as 'risk' | 'opt', globalRowIdx, currentValue)} style={{ ...style, fontWeight: currentValue ? 700 : 400 }}>
         {currentValue || ''}
@@ -159,7 +161,7 @@ export function RiskOptCellRenderer({
     );
   }
 
-  // ★ 심각도(재평가) / 발생도(재평가) / 검출도(재평가) 셀 (최적화 단계)
+  // ★ 심각도(재평가) / 발생도(재평가) / 검출도(재평가) 셀 (최적화 단계) - 숫자만 표시
   const reEvalMap: Record<string, 'S' | 'O' | 'D'> = {
     '심각도(재평가)': 'S',
     '발생도(재평가)': 'O',
@@ -168,7 +170,9 @@ export function RiskOptCellRenderer({
   if (reEvalMap[col.name] && col.step === '최적화') {
     const category = reEvalMap[col.name];
     const key = `opt-${globalRowIdx}-${category}`;
-    const currentValue = (state?.riskData?.[key] as number) || 0;
+    const rawValue = state?.riskData?.[key];
+    // ★ 숫자만 허용, 문자열은 무시
+    const currentValue = typeof rawValue === 'number' ? rawValue : 0;
     return (
       <td key={colIdx} rowSpan={fcRowSpan} onDoubleClick={() => handleSODClick(category, 'opt', globalRowIdx, currentValue)} style={{ ...style, fontWeight: currentValue ? 700 : 400 }}>
         {currentValue || ''}
@@ -176,14 +180,18 @@ export function RiskOptCellRenderer({
     );
   }
 
-  // ★ AP 셀 (5단계 리스크분석 / 6단계 최적화)
+  // ★ AP 셀 (5단계 리스크분석 / 6단계 최적화) - 숫자만 사용
   if (col.name === 'AP' || col.name === 'AP(재평가)') {
     const sKey = `${targetType}-${globalRowIdx}-S`;
     const oKey = `${targetType}-${globalRowIdx}-O`;
     const dKey = `${targetType}-${globalRowIdx}-D`;
-    const s = (state?.riskData?.[sKey] as number) || 0;
-    const o = (state?.riskData?.[oKey] as number) || 0;
-    const d = (state?.riskData?.[dKey] as number) || 0;
+    const sRaw = state?.riskData?.[sKey];
+    const oRaw = state?.riskData?.[oKey];
+    const dRaw = state?.riskData?.[dKey];
+    // ★ 숫자만 허용
+    const s = typeof sRaw === 'number' ? sRaw : 0;
+    const o = typeof oRaw === 'number' ? oRaw : 0;
+    const d = typeof dRaw === 'number' ? dRaw : 0;
     const apValue = calcAP(s, o, d);
     const bgColor = getAPColor(apValue, col.cellColor, col.cellAltColor, globalRowIdx);
     
@@ -258,14 +266,18 @@ export function RiskOptCellRenderer({
     );
   }
 
-  // ★ RPN 셀 (자동 계산)
+  // ★ RPN 셀 (자동 계산) - 숫자만 사용
   if (col.name === 'RPN' || col.name === 'RPN(재평가)') {
     const sKey = `${targetType}-${globalRowIdx}-S`;
     const oKey = `${targetType}-${globalRowIdx}-O`;
     const dKey = `${targetType}-${globalRowIdx}-D`;
-    const s = (state?.riskData?.[sKey] as number) || 0;
-    const o = (state?.riskData?.[oKey] as number) || 0;
-    const d = (state?.riskData?.[dKey] as number) || 0;
+    const sRaw = state?.riskData?.[sKey];
+    const oRaw = state?.riskData?.[oKey];
+    const dRaw = state?.riskData?.[dKey];
+    // ★ 숫자만 허용
+    const s = typeof sRaw === 'number' ? sRaw : 0;
+    const o = typeof oRaw === 'number' ? oRaw : 0;
+    const d = typeof dRaw === 'number' ? dRaw : 0;
     const rpn = s > 0 && o > 0 && d > 0 ? s * o * d : 0;
     return (
       <td key={colIdx} rowSpan={fcRowSpan} style={{ ...style, cursor: 'default', fontWeight: rpn > 0 ? 700 : 400 }}>
