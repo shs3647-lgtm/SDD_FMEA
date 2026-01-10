@@ -83,10 +83,10 @@ function generateFMEAId(fmeaType: FMEAType = 'P'): string {
     const stored = localStorage.getItem('pfmea-projects');
     if (stored) {
       const projects = JSON.parse(stored);
-      // 해당 연도 + 유형의 ID 찾기 (예: pfm26-M, pfm26-F, pfm26-P)
-      const prefix = `pfm${year}-${fmeaType}`.toLowerCase();
+      // 해당 연도 + 유형의 ID 찾기 (예: PFM26-M, PFM26-F, PFM26-P)
+      const prefix = `PFM${year}-${fmeaType}`.toUpperCase();
       const currentTypeIds = projects
-        .filter((p: { id: string }) => p.id?.toLowerCase().startsWith(prefix))
+        .filter((p: { id: string }) => p.id?.toUpperCase().startsWith(prefix))
         .map((p: { id: string }) => {
           // pfm26-M001 -> 001 추출
           const match = p.id.match(/\d{3}$/);
@@ -95,7 +95,7 @@ function generateFMEAId(fmeaType: FMEAType = 'P'): string {
       
       if (currentTypeIds.length > 0) {
         const maxSeq = Math.max(...currentTypeIds);
-        return `pfm${year}-${fmeaType}${(maxSeq + 1).toString().padStart(3, '0')}`;
+        return `PFM${year}-${fmeaType}${(maxSeq + 1).toString().padStart(3, '0')}`;
       }
     }
   } catch (e) {
@@ -125,16 +125,19 @@ function PFMEARegisterPageContent() {
   
   // FMEA 선택 모달 상태
   const [fmeaSelectModalOpen, setFmeaSelectModalOpen] = useState(false);
-  const [fmeaSelectType, setFmeaSelectType] = useState<'M' | 'F' | 'P'>('M');
+  const [fmeaSelectType, setFmeaSelectType] = useState<'M' | 'F' | 'P' | 'ALL'>('M');
   const [availableFmeas, setAvailableFmeas] = useState<Array<{id: string; subject: string; type: string}>>([]);
   const [selectedBaseFmea, setSelectedBaseFmea] = useState<string | null>(null);
   
   // 저장 상태
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved'>('idle');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [cftSaveStatus, setCftSaveStatus] = useState<'idle' | 'saved'>('idle');
   
+  // 미입력 필드 표시 여부 (저장 후에만 표시)
+  const [showMissingFields, setShowMissingFields] = useState(false);
+  
   // FMEA 선택 모달 열기 (DB에서 로드)
-  const openFmeaSelectModal = async (type: 'M' | 'F' | 'P') => {
+  const openFmeaSelectModal = async (type: 'M' | 'F' | 'P' | 'ALL') => {
     try {
       // DB에서 FMEA 프로젝트 목록 가져오기
       const res = await fetch('/api/fmea/projects');
@@ -143,26 +146,59 @@ function PFMEARegisterPageContent() {
       const data = await res.json();
       const projects = data.projects || data || [];
       
-      // 타입별 필터링 (fmeaType 필드 우선 사용)
-      const filtered = projects.filter((p: any) => {
-        // fmeaType 필드가 있으면 사용
-        if (p.fmeaType) {
-          return p.fmeaType.toUpperCase() === type;
-        }
-        // 없으면 ID에서 추출
-        const match = p.id.match(/pfm\d{2}-([MFP])/i);
-        return match && match[1].toUpperCase() === type;
-      }).map((p: any) => ({
-        id: p.id,
-        subject: p.fmeaInfo?.subject || p.project?.productName || p.name || '제목 없음',
-        type: type
-      }));
+      // 타입별 필터링 (ALL이면 현재 자신 제외한 모든 FMEA, 아니면 타입별 필터링)
+      let filtered: Array<{id: string; subject: string; type: string}>;
+      
+      if (type === 'ALL') {
+        // 자신을 제외한 모든 FMEA
+        filtered = projects
+          .filter((p: any) => p.id !== fmeaId)  // 자신 제외
+          .map((p: any) => {
+            // 타입 추출
+            let fmeaType = 'P';
+            if (p.fmeaType) {
+              fmeaType = p.fmeaType.toUpperCase();
+            } else {
+              const match = p.id.match(/pfm\d{2}-([MFP])/i);
+              if (match) fmeaType = match[1].toUpperCase();
+            }
+            return {
+              id: p.id,
+              subject: p.fmeaInfo?.subject || p.project?.productName || p.name || '제목 없음',
+              type: fmeaType
+            };
+          });
+      } else {
+        // 타입별 필터링 (fmeaType 필드 우선 사용)
+        filtered = projects.filter((p: any) => {
+          // fmeaType 필드가 있으면 사용
+          if (p.fmeaType) {
+            return p.fmeaType.toUpperCase() === type;
+          }
+          // 없으면 ID에서 추출
+          const match = p.id.match(/pfm\d{2}-([MFP])/i);
+          return match && match[1].toUpperCase() === type;
+        }).map((p: any) => ({
+          id: p.id,
+          subject: p.fmeaInfo?.subject || p.project?.productName || p.name || '제목 없음',
+          type: type
+        }));
+      }
       
       console.log(`[FMEA 선택] 타입: ${type}, 필터링 결과:`, filtered);
       
+      // FMEA 리스트가 없으면 자신 ID를 상위 FMEA로 설정
       if (filtered.length === 0) {
-        alert(`등록된 ${type === 'M' ? 'Master' : type === 'F' ? 'Family' : 'Part'} FMEA가 없습니다.`);
-        return;
+        if (type === 'ALL') {
+          // 상위 FMEA 선택 시 리스트가 없으면 자신 ID 입력
+          setSelectedBaseFmea(fmeaId);
+          setShowMissingFields(false);
+          console.log('[상위 FMEA] 리스트 없음, 자신 ID로 설정:', fmeaId);
+          return;
+        } else {
+          alert(`등록된 ${type === 'M' ? 'Master' : type === 'F' ? 'Family' : 'Part'} FMEA가 없습니다.`);
+          return;
+        }
       }
       
       setAvailableFmeas(filtered);
@@ -170,7 +206,14 @@ function PFMEARegisterPageContent() {
       setFmeaSelectModalOpen(true);
     } catch (e) {
       console.error('FMEA 목록 로드 실패:', e);
-      alert('FMEA 목록을 불러올 수 없습니다. DB 연결을 확인하세요.');
+      // 에러 발생 시에도 자신 ID로 설정
+      if (type === 'ALL') {
+        setSelectedBaseFmea(fmeaId);
+        setShowMissingFields(false);
+        console.log('[상위 FMEA] 로드 실패, 자신 ID로 설정:', fmeaId);
+      } else {
+        alert('FMEA 목록을 불러올 수 없습니다. DB 연결을 확인하세요.');
+      }
     }
   };
   
@@ -182,70 +225,170 @@ function PFMEARegisterPageContent() {
     window.location.href = `/pfmea/worksheet?id=${fmeaId}&baseId=${selectedId}&mode=inherit`;
   };
 
-  // 초기화 및 수정 모드 데이터 로드
+  // ✅ 초기화 및 수정 모드 데이터 로드 - DB API 우선, localStorage 폴백
   useEffect(() => {
-    if (isEditMode && editId) {
-      // 수정 모드: 기존 데이터 로드
-      const storedProjects = localStorage.getItem('pfmea-projects');
-      if (storedProjects) {
-        try {
-          const projects = JSON.parse(storedProjects);
-          const existingProject = projects.find((p: { id: string }) => p.id === editId);
-          if (existingProject) {
-            setFmeaId(existingProject.id);
-            if (existingProject.fmeaInfo) {
-              setFmeaInfo(existingProject.fmeaInfo);
-            }
-            if (existingProject.cftMembers && existingProject.cftMembers.length > 0) {
-              setCftMembers(existingProject.cftMembers);
-            }
-          }
-        } catch (e) {
-          console.error('프로젝트 데이터 로드 실패:', e);
-        }
-      }
-    } else {
-      // 신규 등록 모드: 마지막 저장된 프로젝트 불러오기
-      const storedProjects = localStorage.getItem('pfmea-projects');
-      if (storedProjects) {
-        try {
-          const projects = JSON.parse(storedProjects);
-          // ✅ 가장 최근 저장된 프로젝트 (첫 번째 = 가장 최신)
-          if (projects.length > 0) {
-            const lastProject = projects[0];
-            setFmeaId(lastProject.id);
-            if (lastProject.fmeaInfo) {
-              setFmeaInfo(lastProject.fmeaInfo);
-            }
-            if (lastProject.cftMembers && lastProject.cftMembers.length > 0) {
-              setCftMembers(lastProject.cftMembers);
-            }
-            console.log('[PFMEA 등록] 마지막 저장된 프로젝트 로드:', lastProject.id);
-          } else {
-            // 저장된 프로젝트가 없으면 새 ID 생성
-            setFmeaId(generateFMEAId());
-          }
-        } catch (e) {
-          console.error('프로젝트 데이터 로드 실패:', e);
-          setFmeaId(generateFMEAId());
-        }
-      } else {
-        // 저장된 프로젝트가 없으면 새 ID 생성
-        setFmeaId(generateFMEAId());
+    const loadProjectData = async () => {
+      const targetId = isEditMode && editId ? editId : null;
+      
+      if (targetId) {
+        // ========== 수정 모드: DB API에서 데이터 로드 ==========
+        console.log('[PFMEA 등록] 수정 모드 - DB에서 로드 시도:', targetId);
         
-        // 저장된 CFT 데이터 불러오기
-        const savedCft = localStorage.getItem('pfmea-cft-data');
-        if (savedCft) {
+        try {
+          // 1. DB API 호출
+          const res = await fetch(`/api/fmea/projects?id=${targetId}`);
+          if (res.ok) {
+            const data = await res.json();
+            const project = data.projects?.find((p: any) => p.id === targetId);
+            
+            if (project) {
+              console.log('[PFMEA 등록] ✅ DB에서 프로젝트 로드 성공:', project.id);
+              setFmeaId(project.id);
+              
+              // DB 데이터를 등록화면 형식으로 변환
+              const dbFmeaInfo: FMEAInfo = {
+                companyName: project.project?.customer || project.fmeaInfo?.companyName || '',
+                engineeringLocation: project.fmeaInfo?.engineeringLocation || '',
+                customerName: project.project?.customer || project.fmeaInfo?.customerName || '',
+                modelYear: project.fmeaInfo?.modelYear || '',
+                subject: project.fmeaInfo?.subject || project.project?.projectName || '',
+                fmeaStartDate: project.fmeaInfo?.fmeaStartDate || '',
+                fmeaRevisionDate: project.fmeaInfo?.fmeaRevisionDate || '',
+                fmeaProjectName: project.project?.projectName || '',
+                fmeaId: project.id,
+                fmeaType: (project.fmeaType || 'P') as FMEAType,
+                designResponsibility: project.fmeaInfo?.designResponsibility || '',
+                confidentialityLevel: project.fmeaInfo?.confidentialityLevel || '',
+                fmeaResponsibleName: project.fmeaInfo?.fmeaResponsibleName || '',
+              };
+              setFmeaInfo(dbFmeaInfo);
+              
+              // CFT 멤버 로드
+              if (project.cftMembers && project.cftMembers.length > 0) {
+                setCftMembers(project.cftMembers);
+              }
+              
+              // localStorage에도 동기화 (캐시)
+              syncToLocalStorage(project.id, dbFmeaInfo, project.cftMembers || []);
+              return; // DB에서 성공적으로 로드됨
+            }
+          }
+        } catch (e) {
+          console.warn('[PFMEA 등록] DB 로드 실패, localStorage 폴백:', e);
+        }
+        
+        // 2. DB 실패 시 localStorage 폴백
+        const storedProjects = localStorage.getItem('pfmea-projects');
+        if (storedProjects) {
           try {
-            const parsed = JSON.parse(savedCft);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setCftMembers(parsed);
+            const projects = JSON.parse(storedProjects);
+            const existingProject = projects.find((p: { id: string }) => p.id === targetId);
+            if (existingProject) {
+              console.log('[PFMEA 등록] localStorage에서 로드:', targetId);
+              setFmeaId(existingProject.id);
+              if (existingProject.fmeaInfo) {
+                setFmeaInfo(existingProject.fmeaInfo);
+              }
+              if (existingProject.cftMembers && existingProject.cftMembers.length > 0) {
+                setCftMembers(existingProject.cftMembers);
+              }
             }
           } catch (e) {
-            console.error('CFT 데이터 로드 실패:', e);
+            console.error('localStorage 로드 실패:', e);
           }
         }
+      } else {
+        // ========== 신규 등록 모드 ==========
+        // DB에서 최근 프로젝트 확인
+        try {
+          const res = await fetch('/api/fmea/projects');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.projects && data.projects.length > 0) {
+              const lastProject = data.projects[0];
+              console.log('[PFMEA 등록] DB에서 최근 프로젝트 로드:', lastProject.id);
+              setFmeaId(lastProject.id);
+              
+              const dbFmeaInfo: FMEAInfo = {
+                companyName: lastProject.project?.customer || '',
+                engineeringLocation: lastProject.fmeaInfo?.engineeringLocation || '',
+                customerName: lastProject.project?.customer || '',
+                modelYear: lastProject.fmeaInfo?.modelYear || '',
+                subject: lastProject.fmeaInfo?.subject || lastProject.project?.projectName || '',
+                fmeaStartDate: lastProject.fmeaInfo?.fmeaStartDate || '',
+                fmeaRevisionDate: lastProject.fmeaInfo?.fmeaRevisionDate || '',
+                fmeaProjectName: lastProject.project?.projectName || '',
+                fmeaId: lastProject.id,
+                fmeaType: (lastProject.fmeaType || 'P') as FMEAType,
+                designResponsibility: lastProject.fmeaInfo?.designResponsibility || '',
+                confidentialityLevel: lastProject.fmeaInfo?.confidentialityLevel || '',
+                fmeaResponsibleName: lastProject.fmeaInfo?.fmeaResponsibleName || '',
+              };
+              setFmeaInfo(dbFmeaInfo);
+              
+              if (lastProject.cftMembers && lastProject.cftMembers.length > 0) {
+                setCftMembers(lastProject.cftMembers);
+              }
+              
+              syncToLocalStorage(lastProject.id, dbFmeaInfo, lastProject.cftMembers || []);
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn('[PFMEA 등록] DB 조회 실패:', e);
+        }
+        
+        // DB에 프로젝트 없으면 localStorage 확인
+        const storedProjects = localStorage.getItem('pfmea-projects');
+        if (storedProjects) {
+          try {
+            const projects = JSON.parse(storedProjects);
+            if (projects.length > 0) {
+              const lastProject = projects[0];
+              setFmeaId(lastProject.id);
+              if (lastProject.fmeaInfo) {
+                setFmeaInfo(lastProject.fmeaInfo);
+              }
+              if (lastProject.cftMembers && lastProject.cftMembers.length > 0) {
+                setCftMembers(lastProject.cftMembers);
+              }
+              console.log('[PFMEA 등록] localStorage에서 최근 프로젝트 로드:', lastProject.id);
+              return;
+            }
+          } catch (e) {
+            console.error('localStorage 로드 실패:', e);
+          }
+        }
+        
+        // 아무 데이터도 없으면 새 ID 생성
+        setFmeaId(generateFMEAId());
       }
+    };
+    
+    // localStorage 동기화 헬퍼
+    const syncToLocalStorage = (id: string, info: FMEAInfo, cft: CFTMember[]) => {
+      try {
+        let projects = [];
+        const stored = localStorage.getItem('pfmea-projects');
+        if (stored) projects = JSON.parse(stored);
+        projects = projects.filter((p: any) => p.id !== id);
+        projects.unshift({ id, fmeaInfo: info, cftMembers: cft, updatedAt: new Date().toISOString() });
+        localStorage.setItem('pfmea-projects', JSON.stringify(projects));
+      } catch (e) {
+        console.error('localStorage 동기화 실패:', e);
+      }
+    };
+    
+    loadProjectData();
+    
+    // URL 해시가 있으면 해당 섹션으로 스크롤 (CFT 섹션 등)
+    if (typeof window !== 'undefined' && window.location.hash) {
+      setTimeout(() => {
+        const element = document.querySelector(window.location.hash);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 500);
     }
   }, [isEditMode, editId]);
 
@@ -313,6 +456,7 @@ function PFMEARegisterPageContent() {
   const handleCftSave = () => {
     localStorage.setItem('pfmea-cft-data', JSON.stringify(cftMembers));
     setCftSaveStatus('saved');
+    setShowMissingFields(false);  // CFT 저장 시 미입력 표시 숨김
     setTimeout(() => setCftSaveStatus('idle'), 3000);
   };
 
@@ -345,7 +489,27 @@ function PFMEARegisterPageContent() {
         endDate: '',
       };
       
-      // 1. DB에 프로젝트 생성/수정
+      // ✅ fmeaInfo 객체에 모든 필드 명시적으로 포함
+      const fmeaInfoToSave = {
+        companyName: fmeaInfo.companyName || '',
+        engineeringLocation: fmeaInfo.engineeringLocation || '',
+        customerName: fmeaInfo.customerName || '',
+        modelYear: fmeaInfo.modelYear || '',
+        subject: fmeaInfo.subject || '',
+        fmeaStartDate: fmeaInfo.fmeaStartDate || '',
+        fmeaRevisionDate: fmeaInfo.fmeaRevisionDate || '',
+        fmeaProjectName: fmeaInfo.fmeaProjectName || '',
+        fmeaId: fmeaId,
+        fmeaType: fmeaInfo.fmeaType || 'P',
+        designResponsibility: fmeaInfo.designResponsibility || '',
+        confidentialityLevel: fmeaInfo.confidentialityLevel || '',
+        fmeaResponsibleName: fmeaInfo.fmeaResponsibleName || '',
+      };
+      
+      console.log('[PFMEA 등록] 저장할 fmeaInfo:', fmeaInfoToSave);
+      console.log('[PFMEA 등록] 저장할 CFT 멤버:', cftMembers);
+      
+      // 1. DB에 프로젝트 생성/수정 (CFT 멤버 포함)
       const response = await fetch('/api/fmea/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -353,7 +517,8 @@ function PFMEARegisterPageContent() {
           fmeaId,
           fmeaType: fmeaInfo.fmeaType,
           project: projectData,
-          fmeaInfo,
+          fmeaInfo: fmeaInfoToSave,  // ✅ 모든 필드 포함
+          cftMembers,  // ✅ CFT 멤버도 DB에 저장
         }),
       });
       
@@ -387,7 +552,13 @@ function PFMEARegisterPageContent() {
       // 3. 저장 완료 이벤트 발생
       window.dispatchEvent(new Event('fmea-projects-updated'));
       
+      // 4. iframe인 경우 부모 창에 저장 완료 메시지 전송
+      if (window.parent !== window) {
+        window.parent.postMessage('fmea-saved', '*');
+      }
+      
       setSaveStatus('saved');
+      setShowMissingFields(true);  // ✅ 저장 후 미입력 필드 표시 활성화
       console.log('✅ FMEA DB 저장 완료:', fmeaId);
       
       setTimeout(() => {
@@ -441,7 +612,7 @@ function PFMEARegisterPageContent() {
           <div className="flex items-center gap-2">
             <span className="text-lg">{isEditMode ? '✏️' : '📝'}</span>
             <h1 className="text-sm font-bold text-gray-800">P-FMEA {isEditMode ? '수정' : '등록'}</h1>
-            <span className="text-xs text-gray-500 ml-2">ID: {fmeaId}</span>
+            <span className="text-xs text-gray-500 ml-2">ID: {fmeaId?.toUpperCase()}</span>
             {isEditMode && <span className="px-2 py-0.5 text-xs bg-yellow-200 text-yellow-800 rounded font-bold">수정모드</span>}
           </div>
         <div className="flex gap-2">
@@ -469,34 +640,80 @@ function PFMEARegisterPageContent() {
             {/* 1행 - 파란색 (총 100%) */}
             <tr className="bg-[#e3f2fd] h-8">
               <td className={`${headerCell} w-[11%] whitespace-nowrap`}>회사 명</td>
-              <td className={`${inputCell} w-[14%]`}>
-                <input type="text" name="fmea-company-name-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.companyName} onChange={(e) => updateField('companyName', e.target.value)}
-                  className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="공정 FMEA에 책임이 있는 회사 명" />
+              <td className={`${inputCell} w-[14%] relative`}>
+                {showMissingFields && !fmeaInfo.companyName && (
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-orange-400 text-[10px] pointer-events-none">
+                    미입력
+                  </span>
+                )}
+                <input 
+                  type="text" 
+                  name="fmea-company-name-x1" 
+                  autoComplete="new-password" 
+                  data-lpignore="true" 
+                  data-form-type="other" 
+                  value={fmeaInfo.companyName} 
+                  onChange={(e) => {
+                    updateField('companyName', e.target.value);
+                    setShowMissingFields(false);  // 입력 시 미입력 표시 숨김
+                  }}
+                  className={`w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400 ${showMissingFields && !fmeaInfo.companyName ? 'text-transparent' : ''}`}
+                  placeholder="공정 FMEA에 책임이 있는 회사 명" 
+                />
               </td>
               <td className={`${headerCell} w-[7%] whitespace-nowrap`}>FMEA명</td>
-              <td className={`${inputCell} w-[23%]`}>
-                <input type="text" name="fmea-subject-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.subject} onChange={(e) => updateField('subject', e.target.value)}
-                  className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="시스템, 서브시스템 및/또는 구성품" />
+              <td className={`${inputCell} w-[23%] relative`}>
+                {showMissingFields && !fmeaInfo.subject && (
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-orange-400 text-[10px] pointer-events-none">
+                    미입력
+                  </span>
+                )}
+                <input 
+                  type="text" 
+                  name="fmea-subject-x1" 
+                  autoComplete="new-password" 
+                  data-lpignore="true" 
+                  data-form-type="other" 
+                  value={fmeaInfo.subject} 
+                  onChange={(e) => {
+                    updateField('subject', e.target.value);
+                    setShowMissingFields(false);
+                  }}
+                  className={`w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400 ${showMissingFields && !fmeaInfo.subject ? 'text-transparent' : ''}`}
+                  placeholder="시스템, 서브시스템 및/또는 구성품" 
+                />
               </td>
               <td className={`${headerCell} w-[7%] whitespace-nowrap`}>FMEA ID</td>
               <td className={`${inputCell} w-[10%]`}>
-                <span className="px-2 text-xs font-semibold text-blue-600">{fmeaId}</span>
+                <span className="px-2 text-xs font-semibold text-blue-600">{fmeaId?.toUpperCase()}</span>
               </td>
               <td className={`${headerCell} w-[8%] whitespace-nowrap`}>상위 FMEA</td>
-              <td className={`${inputCell} w-[20%]`}>
+              <td 
+                className={`${inputCell} w-[20%] cursor-pointer hover:bg-gray-100 relative`}
+                onClick={() => openFmeaSelectModal('ALL')}
+                title="상위 FMEA 선택 (클릭하여 FMEA 리스트 보기)"
+              >
                 {selectedBaseFmea ? (
-                  <a 
-                    href={`/pfmea/worksheet?id=${selectedBaseFmea}`}
-                    className="flex items-center gap-1 px-2 text-xs font-semibold text-purple-600 hover:underline"
-                    title="상위 FMEA 보기"
-                  >
-                    <span className="px-1 py-0 rounded text-[9px] font-bold text-white bg-purple-500">
-                      {selectedBaseFmea.match(/pfm\d{2}-([MFP])/i)?.[1] || 'M'}
+                  <div className="flex items-center gap-1 px-2">
+                      <span className="px-1 py-0 rounded text-[9px] font-bold text-white bg-purple-500">
+                      {selectedBaseFmea?.toUpperCase().match(/PFM\d{2}-([MFP])/)?.[1] || 'M'}
                     </span>
-                    <span>{selectedBaseFmea}</span>
-                  </a>
+                    <span className="text-xs font-semibold text-purple-600">{selectedBaseFmea?.toUpperCase()}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openFmeaSelectModal('ALL');
+                      }}
+                      className="ml-1 text-blue-500 hover:text-blue-700 text-[10px]"
+                      title="FMEA 리스트 보기"
+                    >
+                      🔍
+                    </button>
+                  </div>
                 ) : (
-                  <span className="px-2 text-xs text-gray-400">-</span>
+                  <span className={`px-2 text-xs ${showMissingFields ? 'text-orange-400' : 'text-gray-400'}`}>
+                    {showMissingFields ? '미입력 (클릭하여 선택)' : '- (클릭하여 선택)'}
+                  </span>
                 )}
               </td>
             </tr>
@@ -504,22 +721,91 @@ function PFMEARegisterPageContent() {
             {/* 2행 - 흰색 */}
             <tr className="bg-white h-8">
               <td className={`${headerCell} whitespace-nowrap`}>엔지니어링 위치</td>
-              <td className={`${inputCell}`}>
-                <input type="text" name="fmea-location-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.engineeringLocation} onChange={(e) => updateField('engineeringLocation', e.target.value)}
-                  className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="지리적 위치" />
+              <td className={`${inputCell} relative`}>
+                {showMissingFields && !fmeaInfo.engineeringLocation && (
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-orange-400 text-[10px] pointer-events-none">
+                    미입력
+                  </span>
+                )}
+                <input 
+                  type="text" 
+                  name="fmea-location-x1" 
+                  autoComplete="new-password" 
+                  data-lpignore="true" 
+                  data-form-type="other" 
+                  value={fmeaInfo.engineeringLocation} 
+                  onChange={(e) => {
+                    updateField('engineeringLocation', e.target.value);
+                    setShowMissingFields(false);
+                  }}
+                  className={`w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400 ${showMissingFields && !fmeaInfo.engineeringLocation ? 'text-transparent' : ''}`}
+                  placeholder="지리적 위치" 
+                />
               </td>
               <td className={`${headerCell} whitespace-nowrap`}>시작 일자</td>
-              <td className={`${inputCell}`}>
-                <input type="date" name="fmea-start-date-x1" autoComplete="new-password" value={fmeaInfo.fmeaStartDate} onChange={(e) => updateField('fmeaStartDate', e.target.value)}
-                  className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none" />
+              <td className={`${inputCell} relative`}>
+                {showMissingFields && !fmeaInfo.fmeaStartDate && (
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-orange-400 text-[10px] pointer-events-none z-10">
+                    미입력
+                  </span>
+                )}
+                <input 
+                  type="date" 
+                  name="fmea-start-date-x1" 
+                  autoComplete="new-password" 
+                  value={fmeaInfo.fmeaStartDate} 
+                  onChange={(e) => {
+                    updateField('fmeaStartDate', e.target.value);
+                    setShowMissingFields(false);
+                  }}
+                  className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none"
+                />
               </td>
               <td className={`${headerCell} whitespace-nowrap`}>공정 책임</td>
               <td className={`${inputCell}`} colSpan={3}>
                 <div className="flex items-center gap-2">
-                  <input type="text" name="fmea-dept-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.designResponsibility} onChange={(e) => updateField('designResponsibility', e.target.value)}
-                    className="w-24 h-7 px-2 text-xs border border-gray-300 rounded bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="부서" />
-                  <input type="text" name="fmea-responsible-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.fmeaResponsibleName} onChange={(e) => updateField('fmeaResponsibleName', e.target.value)}
-                    className="flex-1 h-7 px-2 text-xs border border-gray-300 rounded bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="책임자 성명" />
+                  <div className="relative">
+                    {showMissingFields && !fmeaInfo.designResponsibility && (
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-orange-400 text-[10px] pointer-events-none">
+                        미입력
+                      </span>
+                    )}
+                    <input 
+                      type="text" 
+                      name="fmea-dept-x1" 
+                      autoComplete="new-password" 
+                      data-lpignore="true" 
+                      data-form-type="other" 
+                      value={fmeaInfo.designResponsibility} 
+                      onChange={(e) => {
+                        updateField('designResponsibility', e.target.value);
+                        setShowMissingFields(false);
+                      }}
+                      className={`w-24 h-7 px-2 text-xs border border-gray-300 rounded bg-transparent focus:outline-none placeholder:text-gray-400 ${showMissingFields && !fmeaInfo.designResponsibility ? 'text-transparent' : ''}`}
+                      placeholder="부서" 
+                    />
+                  </div>
+                  <div className="relative flex-1">
+                    {showMissingFields && !fmeaInfo.fmeaResponsibleName && (
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-orange-400 text-[10px] pointer-events-none">
+                        미입력
+                      </span>
+                    )}
+                    <input 
+                      type="text" 
+                      name="fmea-responsible-x1" 
+                      autoComplete="new-password" 
+                      data-lpignore="true" 
+                      data-form-type="other" 
+                      value={fmeaInfo.fmeaResponsibleName} 
+                      onChange={(e) => {
+                        updateField('fmeaResponsibleName', e.target.value);
+                        setShowMissingFields(false);
+                      }}
+                      className={`flex-1 h-7 px-2 text-xs border border-gray-300 rounded bg-transparent focus:outline-none placeholder:text-gray-400 ${showMissingFields && !fmeaInfo.fmeaResponsibleName ? 'text-transparent' : ''}`}
+                      placeholder="책임자 성명" 
+                    />
+                  </div>
                   <button onClick={() => { setUserModalTarget('responsible'); setUserModalOpen(true); }} className="text-blue-500 hover:text-blue-700 px-1">🔍</button>
                 </div>
               </td>
@@ -528,22 +814,64 @@ function PFMEARegisterPageContent() {
             {/* 3행 - 파란색 */}
             <tr className="bg-[#e3f2fd] h-8">
               <td className={`${headerCell} whitespace-nowrap`}>고객 명</td>
-              <td className={`${inputCell}`}>
+              <td className={`${inputCell} relative`}>
+                {showMissingFields && !fmeaInfo.customerName && (
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-orange-400 text-[10px] pointer-events-none">
+                    미입력
+                  </span>
+                )}
                 <div className="flex items-center gap-1">
-                  <input type="text" name="fmea-customer-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.customerName} onChange={(e) => updateField('customerName', e.target.value)}
-                    className="flex-1 h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="고객(들) 또는 제품 패밀리 명" />
+                  <input 
+                    type="text" 
+                    name="fmea-customer-x1" 
+                    autoComplete="new-password" 
+                    data-lpignore="true" 
+                    data-form-type="other" 
+                    value={fmeaInfo.customerName} 
+                    onChange={(e) => {
+                      updateField('customerName', e.target.value);
+                      setShowMissingFields(false);
+                    }}
+                    className={`flex-1 h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400 ${showMissingFields && !fmeaInfo.customerName ? 'text-transparent' : ''}`}
+                    placeholder="고객(들) 또는 제품 패밀리 명" 
+                  />
                   <button onClick={() => setBizInfoModalOpen(true)} className="text-blue-500 hover:text-blue-700" title="고객정보 검색">🔍</button>
                 </div>
               </td>
               <td className={`${headerCell} whitespace-nowrap`}>개정 일자</td>
-              <td className={`${inputCell}`}>
-                <input type="date" name="fmea-revision-date-x1" autoComplete="new-password" value={fmeaInfo.fmeaRevisionDate} onChange={(e) => updateField('fmeaRevisionDate', e.target.value)}
-                  className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none" />
+              <td className={`${inputCell} relative`}>
+                {showMissingFields && !fmeaInfo.fmeaRevisionDate && (
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-orange-400 text-[10px] pointer-events-none z-10">
+                    미입력
+                  </span>
+                )}
+                <input 
+                  type="date" 
+                  name="fmea-revision-date-x1" 
+                  autoComplete="new-password" 
+                  value={fmeaInfo.fmeaRevisionDate} 
+                  onChange={(e) => {
+                    updateField('fmeaRevisionDate', e.target.value);
+                    setShowMissingFields(false);
+                  }}
+                  className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none"
+                />
               </td>
               <td className={`${headerCell} whitespace-nowrap`}>기밀유지 수준</td>
-              <td className={`${inputCell}`} colSpan={3}>
-                <select value={fmeaInfo.confidentialityLevel} onChange={(e) => updateField('confidentialityLevel', e.target.value)}
-                  className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none text-gray-600">
+              <td className={`${inputCell} relative`} colSpan={3}>
+                {showMissingFields && !fmeaInfo.confidentialityLevel && (
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-orange-400 text-[10px] pointer-events-none z-10">
+                    미입력
+                  </span>
+                )}
+                <select 
+                  value={fmeaInfo.confidentialityLevel} 
+                  onChange={(e) => {
+                    updateField('confidentialityLevel', e.target.value);
+                    setShowMissingFields(false);
+                  }}
+                  className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none text-gray-600"
+                >
                   <option value="">선택</option>
                   <option value="사업용도">사업용도</option>
                   <option value="독점">독점</option>
@@ -555,9 +883,26 @@ function PFMEARegisterPageContent() {
             {/* 4행 - 흰색 */}
             <tr className="bg-white h-8">
               <td className={`${headerCell} whitespace-nowrap`}>모델 연식 / 플랫폼</td>
-              <td className={`${inputCell}`}>
-                <input type="text" name="fmea-model-year-x1" autoComplete="new-password" data-lpignore="true" data-form-type="other" value={fmeaInfo.modelYear} onChange={(e) => updateField('modelYear', e.target.value)}
-                  className="w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400" placeholder="고객 어플리케이션 또는 회사 모델/스타일" />
+              <td className={`${inputCell} relative`}>
+                {showMissingFields && !fmeaInfo.modelYear && (
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-orange-400 text-[10px] pointer-events-none">
+                    미입력
+                  </span>
+                )}
+                <input 
+                  type="text" 
+                  name="fmea-model-year-x1" 
+                  autoComplete="new-password" 
+                  data-lpignore="true" 
+                  data-form-type="other" 
+                  value={fmeaInfo.modelYear} 
+                  onChange={(e) => {
+                    updateField('modelYear', e.target.value);
+                    setShowMissingFields(false);
+                  }}
+                  className={`w-full h-7 px-2 text-xs border-0 bg-transparent focus:outline-none placeholder:text-gray-400 ${showMissingFields && !fmeaInfo.modelYear ? 'text-transparent' : ''}`}
+                  placeholder="고객 어플리케이션 또는 회사 모델/스타일" 
+                />
               </td>
               <td className={`${headerCell} whitespace-nowrap`}>FMEA 유형</td>
               <td className={`${inputCell}`}>
@@ -582,11 +927,17 @@ function PFMEARegisterPageContent() {
                   <span className="text-xs text-gray-700 px-2">{cftNames}</span>
                 ) : (
                   <span 
-                    className="text-xs text-blue-600 px-2 cursor-pointer hover:underline hover:text-blue-800"
-                    onClick={() => window.location.href = '/pfmea/cft'}
+                    className={`text-xs px-2 cursor-pointer hover:bg-yellow-50 rounded ${showMissingFields ? 'text-orange-400' : 'text-gray-400'}`}
+                    onClick={() => {
+                      // CFT 섹션으로 스크롤
+                      const cftSection = document.getElementById('cft-section');
+                      if (cftSection) {
+                        cftSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    }}
                     title="CFT 리스트로 이동"
                   >
-                    📋 CFT 리스트 참조
+                    {showMissingFields ? '미입력' : '-'}
                   </span>
                 )}
               </td>
@@ -636,7 +987,7 @@ function PFMEARegisterPageContent() {
         </table>
         {selectedBaseFmea && (
           <div className="mt-2 text-xs text-blue-600">
-            📌 선택된 기반 FMEA: <span className="font-bold">{selectedBaseFmea}</span>
+            📌 선택된 기반 FMEA: <span className="font-bold">{selectedBaseFmea?.toUpperCase()}</span>
           </div>
         )}
       </div>
@@ -646,18 +997,24 @@ function PFMEARegisterPageContent() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-[600px] max-h-[500px] overflow-hidden">
             <div className={`px-4 py-3 flex justify-between items-center ${
-              fmeaSelectType === 'M' ? 'bg-purple-600' : fmeaSelectType === 'F' ? 'bg-blue-600' : 'bg-green-600'
+              fmeaSelectType === 'M' ? 'bg-purple-600' : 
+              fmeaSelectType === 'F' ? 'bg-blue-600' : 
+              fmeaSelectType === 'P' ? 'bg-green-600' : 
+              'bg-gray-600'
             } text-white`}>
               <h3 className="font-bold">
                 {fmeaSelectType === 'M' ? '🟣 Master FMEA 선택' : 
-                 fmeaSelectType === 'F' ? '🔵 Family FMEA 선택' : '🟢 Part FMEA 선택'}
+                 fmeaSelectType === 'F' ? '🔵 Family FMEA 선택' : 
+                 fmeaSelectType === 'P' ? '🟢 Part FMEA 선택' : 
+                 '📋 FMEA 리스트 선택'}
               </h3>
               <button onClick={() => setFmeaSelectModalOpen(false)} className="text-white hover:text-gray-200">✕</button>
             </div>
             <div className="p-4 max-h-[400px] overflow-y-auto">
               {availableFmeas.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  등록된 {fmeaSelectType === 'M' ? 'Master' : fmeaSelectType === 'F' ? 'Family' : 'Part'} FMEA가 없습니다.
+                  {fmeaSelectType === 'ALL' ? '등록된 FMEA가 없습니다. 자신의 FMEA ID가 상위 FMEA로 설정됩니다.' : 
+                   `등록된 ${fmeaSelectType === 'M' ? 'Master' : fmeaSelectType === 'F' ? 'Family' : 'Part'} FMEA가 없습니다.`}
                 </div>
               ) : (
                 <table className="w-full border-collapse text-xs">
@@ -671,14 +1028,16 @@ function PFMEARegisterPageContent() {
                   <tbody>
                     {availableFmeas.map((fmea, idx) => (
                       <tr key={fmea.id} className={`hover:bg-blue-50 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                        <td className="border border-gray-300 px-3 py-2 font-semibold text-blue-600">{fmea.id}</td>
+                        <td className="border border-gray-300 px-3 py-2 font-semibold text-blue-600">{fmea.id?.toUpperCase()}</td>
                         <td className="border border-gray-300 px-3 py-2">{fmea.subject}</td>
                         <td className="border border-gray-300 px-3 py-2 text-center">
                           <button
                             onClick={() => handleFmeaSelect(fmea.id)}
                             className={`px-3 py-1 rounded text-white text-xs font-bold ${
                               fmeaSelectType === 'M' ? 'bg-purple-500 hover:bg-purple-600' :
-                              fmeaSelectType === 'F' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-green-500 hover:bg-green-600'
+                              fmeaSelectType === 'F' ? 'bg-blue-500 hover:bg-blue-600' : 
+                              fmeaSelectType === 'P' ? 'bg-green-500 hover:bg-green-600' :
+                              'bg-gray-500 hover:bg-gray-600'
                             }`}
                           >
                             선택

@@ -196,6 +196,40 @@ pfmea_{fmeaId}/
 
 ---
 
+## 📋 핵심 규칙 (Rules)
+
+### 룰 1번: UI 코드프리즈 (2026-01-10)
+**원칙**: 모든 UI는 코드프리즈됨. **절대 수정 금지 목록**: 등록화면, 리스트, 워크시트, Import, 개정관리, 기초정보, 웰컴보드, 사이드바, 모든 모달, 레이아웃.  
+**UI 수정 시 필수 프로세스**: 1) "이 파일은 코드프리즈입니다. 수정하시겠습니까?" 질문 2) 사용자 승인 후 → "어디까지 수정할까요?" 범위 확인 3) 범위 승인 후에만 수정 시작.  
+**위반 시**: 즉시 `git checkout`으로 복원.  
+**태그**: `codefreeze-20260110-all-ui-freeze`
+
+### 룰 2번: FMEA 리스트와 DB는 1:1 관계 (2026-01-10)
+**원칙**: 각 FMEA ID당 DB에는 **최신본 하나만** 유지되어야 함. FMEA 리스트와 DB는 **1:1 매핑** 관계.
+
+**필수 사항**:
+1. **저장 시 중복 방지**: 동일 `fmeaId`의 모든 기존 행을 삭제 후 최신본만 INSERT
+2. **ID 형식 통일**: `info-${fmeaId}` 형식으로 Primary Key 생성 (예: `info-pfm26-M001`)
+3. **완전한 데이터 저장**: 모든 필드(`engineeringLocation`, `designResponsibility`, `fmeaRevisionDate`, `confidentialityLevel`, `fmeaResponsibleName`, `companyName`, `customerName`, `cftMembers` 등) 필수 포함
+4. **저장 검증**: 저장 후 반드시 DB에 완전한 데이터가 저장되었는지 확인
+
+**구현 위치**:
+- API: `src/app/api/fmea/projects/route.ts` (POST 메서드)
+- 저장 로직: 동일 `fmeaId`의 모든 기존 행 삭제 → 최신본 INSERT
+
+**검증 방법**:
+- DB 뷰어: `http://localhost:3000/admin/db-viewer`에서 확인
+- 스크립트: `node scripts/check-duplicate-ids.js ${fmeaId}`
+- 테스트 URL 제공 시 반드시 DB 스키마 URL도 함께 제공
+
+**테스트 URL 제공 형식**:
+```
+테스트 URL: http://localhost:3000/pfmea/register?id=pfm26-M001
+DB 확인 URL: http://localhost:3000/admin/db-viewer
+```
+
+---
+
 ## 🏷️ 코드프리즈 현황
 
 ### 최신 코드프리즈 태그 (2026-01-10)
@@ -306,6 +340,7 @@ pfmea_{fmeaId}/
 
 | 버전 | 일자 | 변경 내용 |
 |------|------|---------|
+| 1.1.0 | 2026-01-10 | 룰 2번 추가: FMEA 리스트와 DB 1:1 관계 보장, 중복 ID 정리, 완전한 데이터 저장 필수 |
 | 1.0.0 | 2026-01-10 | 최초 작성 - 전체 진단 완료 |
 
 ---

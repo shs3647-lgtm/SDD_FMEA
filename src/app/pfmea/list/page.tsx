@@ -34,6 +34,15 @@ interface FMEAProject {
     designResponsibility?: string;
     fmeaResponsibleName?: string;
   };
+  cftMembers?: Array<{
+    id: string;
+    name: string;
+    role: string;
+    department: string;
+    position: string;
+    email?: string;
+    phone?: string;
+  }>;
   createdAt: string;
   status?: string;
   step?: number;  // 단계 (1~7)
@@ -57,6 +66,7 @@ const COLUMN_HEADERS = [
   '모델명',
   '공정책임',
   '담당자',
+  'CFT',  // CFT 리스트 입력 상태
   '시작일자',
   '개정일자',
   '개정번호',
@@ -90,13 +100,13 @@ function extractFmeaType(id: string): { code: string; label: string; color: stri
  * 예시: pfm26-M001 (Master), pfm26-F001 (Family), pfm26-P001 (Part)
  */
 function formatFmeaId(id: string, index: number): string {
-  // 기존 ID가 pfm 형식이면 소문자로 정규화하여 반환
-  if (id.toLowerCase().startsWith('pfm')) return id.toLowerCase();
+  // 기존 ID가 PFM 형식이면 대문자로 정규화하여 반환
+  if (id?.toUpperCase().startsWith('PFM')) return id.toUpperCase();
   
   // 년도 추출 (현재 년도 기준), 기본 유형 P
   const year = new Date().getFullYear().toString().slice(-2);
   const seq = (index + 1).toString().padStart(3, '0');
-  return `pfm${year}-P${seq}`;
+  return `PFM${year}-P${seq}`;
 }
 
 // 온프레미스 운영 모드 - 샘플 데이터 없음
@@ -138,6 +148,7 @@ export default function FMEAListPage() {
 
   // 로딩 상태
   const [isLoading, setIsLoading] = useState(false);
+  
   
   // 데이터 로드 (DB API 호출)
   const loadData = useCallback(async () => {
@@ -278,6 +289,14 @@ export default function FMEAListPage() {
     window.location.href = `/pfmea/register?id=${selectedId}`;
   };
 
+  // 등록화면으로 이동 (CFT 섹션으로 스크롤)
+  const handleOpenRegisterPage = (fmeaId: string, section?: 'cft') => {
+    const url = section === 'cft' 
+      ? `/pfmea/register?id=${fmeaId}#cft-section`
+      : `/pfmea/register?id=${fmeaId}`;
+    window.location.href = url;
+  };
+
   return (
     <>
       {/* 상단 고정 바로가기 메뉴 */}
@@ -316,19 +335,6 @@ export default function FMEAListPage() {
             className="px-4 py-2 bg-gray-100 border border-gray-400 text-gray-700 text-xs rounded hover:bg-gray-200 flex items-center gap-1"
           >
             🔄 새로고침
-          </button>
-          <button
-            onClick={() => {
-              if (confirm('로컬 캐시를 삭제하시겠습니까?\nDB 데이터는 유지됩니다.')) {
-                localStorage.removeItem('pfmea-projects');
-                localStorage.removeItem('fmea-projects');
-                loadData();
-                alert('✅ 로컬 캐시가 삭제되었습니다.');
-              }
-            }}
-            className="px-4 py-2 bg-orange-100 border border-orange-400 text-orange-700 text-xs rounded hover:bg-orange-200 flex items-center gap-1"
-          >
-            🗑️ 캐시 삭제
           </button>
           <button
             onClick={handleSave}
@@ -427,7 +433,7 @@ export default function FMEAListPage() {
                       href={`/pfmea/worksheet?id=${p.parentFmeaId}`} 
                       className="text-blue-600 hover:underline text-[10px] font-semibold"
                       onClick={(e) => e.stopPropagation()}
-                      title={`상위 FMEA: ${p.parentFmeaId}`}
+                      title={`상위 FMEA: ${p.parentFmeaId?.toUpperCase()}`}
                     >
                       {(() => {
                         const parentType = extractFmeaType(p.parentFmeaId);
@@ -436,13 +442,22 @@ export default function FMEAListPage() {
                             <span className={`px-1 py-0 rounded text-[9px] font-bold ${parentType.color}`}>
                               {parentType.code}
                             </span>
-                            <span>{p.parentFmeaId.split('-').pop()}</span>
+                            <span>{p.parentFmeaId?.toUpperCase().split('-').pop()}</span>
                           </span>
                         );
                       })()}
                     </a>
                   ) : (
-                    <span className="text-orange-400 text-[10px]">미입력</span>
+                    <span 
+                      className="text-orange-400 text-[10px] cursor-pointer hover:bg-yellow-50 px-1 py-0.5 rounded"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenRegisterPage(p.id);
+                      }}
+                      title="클릭하여 등록화면에서 입력"
+                    >
+                      미입력
+                    </span>
                   )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-left align-middle">
@@ -455,16 +470,35 @@ export default function FMEAListPage() {
                       {p.project.projectName}
                     </a>
                   ) : (
-                    <span className="text-orange-400 text-[10px]">미입력</span>
+                    <span 
+                      className="text-orange-400 text-[10px] cursor-pointer hover:bg-yellow-50 px-1 py-0.5 rounded"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenRegisterPage(p.id);
+                      }}
+                      title="클릭하여 등록화면에서 입력"
+                    >
+                      미입력
+                    </span>
                   )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-left align-middle">
-                  {/* FMEA명: ID와 동일하거나 비어있으면 미입력 */}
                   {(() => {
                     const fmeaName = p.fmeaInfo?.subject || p.project?.productName;
                     // FMEA명이 ID와 동일하면 미입력 처리
                     if (!fmeaName || fmeaName === p.id || fmeaName.toLowerCase() === p.id.toLowerCase()) {
-                      return <span className="text-orange-400 text-[10px]">미입력</span>;
+                      return (
+                        <span 
+                          className="text-orange-400 text-[10px] cursor-pointer hover:bg-yellow-50 px-1 py-0.5 rounded"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenRegisterPage(p.id);
+                          }}
+                          title="클릭하여 등록화면에서 입력"
+                        >
+                          미입력
+                        </span>
+                      );
                     }
                     return (
                       <a 
@@ -478,34 +512,119 @@ export default function FMEAListPage() {
                   })()}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                  {p.project?.customer ? p.project.customer : <span className="text-orange-400 text-[10px]">미입력</span>}
+                  {p.project?.customer ? (
+                    p.project.customer
+                  ) : (
+                    <span 
+                      className="text-orange-400 text-[10px] cursor-pointer hover:bg-yellow-50 px-1 py-0.5 rounded"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenRegisterPage(p.id);
+                      }}
+                      title="클릭하여 등록화면에서 입력"
+                    >
+                      미입력
+                    </span>
+                  )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                  {p.fmeaInfo?.modelYear ? p.fmeaInfo.modelYear : <span className="text-orange-400 text-[10px]">미입력</span>}
+                  {p.fmeaInfo?.modelYear ? (
+                    p.fmeaInfo.modelYear
+                  ) : (
+                    <span 
+                      className="text-orange-400 text-[10px] cursor-pointer hover:bg-yellow-50 px-1 py-0.5 rounded"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenRegisterPage(p.id);
+                      }}
+                      title="클릭하여 등록화면에서 입력"
+                    >
+                      미입력
+                    </span>
+                  )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
                   {p.fmeaInfo?.designResponsibility || p.project?.department ? (
                     p.fmeaInfo?.designResponsibility || p.project?.department
                   ) : (
-                    <span className="text-orange-400 text-[10px]">미입력</span>
+                    <span 
+                      className="text-orange-400 text-[10px] cursor-pointer hover:bg-yellow-50 px-1 py-0.5 rounded"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenRegisterPage(p.id);
+                      }}
+                      title="클릭하여 등록화면에서 입력"
+                    >
+                      미입력
+                    </span>
                   )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
                   {p.fmeaInfo?.fmeaResponsibleName || p.project?.leader ? (
                     p.fmeaInfo?.fmeaResponsibleName || p.project?.leader
                   ) : (
-                    <span className="text-orange-400 text-[10px]">미입력</span>
+                    <span 
+                      className="text-orange-400 text-[10px] cursor-pointer hover:bg-yellow-50 px-1 py-0.5 rounded"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenRegisterPage(p.id);
+                      }}
+                      title="클릭하여 등록화면에서 입력"
+                    >
+                      미입력
+                    </span>
+                  )}
+                </td>
+                {/* CFT 컬럼 */}
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle">
+                  {p.cftMembers && p.cftMembers.length > 0 ? (
+                    <span className="text-blue-600 text-[10px] font-semibold">
+                      {p.cftMembers.filter(m => m.name && m.name.trim()).length}명
+                    </span>
+                  ) : (
+                    <span 
+                      className="text-orange-400 text-[10px] cursor-pointer hover:bg-yellow-50 px-1 py-0.5 rounded"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenRegisterPage(p.id, 'cft');
+                      }}
+                      title="클릭하여 등록화면 CFT 섹션에서 입력"
+                    >
+                      미입력
+                    </span>
                   )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
                   {p.fmeaInfo?.fmeaStartDate || p.project?.startDate ? (
                     p.fmeaInfo?.fmeaStartDate || p.project?.startDate
                   ) : (
-                    <span className="text-orange-400 text-[10px]">미입력</span>
+                    <span 
+                      className="text-orange-400 text-[10px] cursor-pointer hover:bg-yellow-50 px-1 py-0.5 rounded"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenRegisterPage(p.id);
+                      }}
+                      title="클릭하여 등록화면에서 입력"
+                    >
+                      미입력
+                    </span>
                   )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                  {p.fmeaInfo?.fmeaRevisionDate ? p.fmeaInfo.fmeaRevisionDate : <span className="text-orange-400 text-[10px]">미입력</span>}
+                  {p.fmeaInfo?.fmeaRevisionDate ? (
+                    p.fmeaInfo.fmeaRevisionDate
+                  ) : (
+                    <span 
+                      className="text-orange-400 text-[10px] cursor-pointer hover:bg-yellow-50 px-1 py-0.5 rounded"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenRegisterPage(p.id);
+                      }}
+                      title="클릭하여 등록화면에서 입력"
+                    >
+                      미입력
+                    </span>
+                  )}
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">{p.revisionNo || 'Rev.00'}</td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
@@ -533,6 +652,8 @@ export default function FMEAListPage() {
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
+                <td className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
               </tr>
             ))}
           </tbody>
@@ -545,6 +666,7 @@ export default function FMEAListPage() {
           <span>버전: FMEA Suite v3.0 | 사용자: FMEA Lead</span>
         </div>
       </div>
+
     </>
   );
 }

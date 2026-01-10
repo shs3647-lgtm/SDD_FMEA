@@ -13,18 +13,31 @@ function getPool() {
   return new Pool({ connectionString: process.env.DATABASE_URL });
 }
 
-// GET: FMEA 프로젝트 목록 조회
-export async function GET() {
+// GET: FMEA 프로젝트 목록 조회 (id 파라미터로 특정 프로젝트 조회 가능)
+export async function GET(request: NextRequest) {
   const pool = getPool();
+  const searchParams = request.nextUrl.searchParams;
+  const targetId = searchParams.get('id'); // 특정 ID로 조회
   
   try {
-    // 1. 모든 FMEA 스키마 조회
-    const schemasResult = await pool.query(`
+    // 1. 모든 FMEA 스키마 조회 (또는 특정 ID의 스키마만)
+    let schemasQuery = `
       SELECT schema_name 
       FROM information_schema.schemata 
       WHERE schema_name LIKE 'pfmea_pfm%' 
       ORDER BY schema_name
-    `);
+    `;
+    
+    if (targetId) {
+      const targetSchema = `pfmea_${targetId.replace(/-/g, '_').toLowerCase()}`;
+      schemasQuery = `
+        SELECT schema_name 
+        FROM information_schema.schemata 
+        WHERE schema_name = '${targetSchema}'
+      `;
+    }
+    
+    const schemasResult = await pool.query(schemasQuery);
     
     const projects: any[] = [];
     
@@ -53,6 +66,7 @@ export async function GET() {
             fmeaType: info.fmeaType || 'P',
             parentFmeaId: info.parentFmeaId || null,  // ✅ 상위 FMEA ID
             parentFmeaType: info.parentFmeaType || null,  // ✅ 상위 FMEA 유형
+            cftMembers: info.cftMembers || [],  // ✅ CFT 멤버
             structureConfirmed: info.structureConfirmed || false,
             createdAt: info.createdAt,
             updatedAt: info.updatedAt,
@@ -113,7 +127,7 @@ export async function POST(req: NextRequest) {
   
   try {
     const body = await req.json();
-    const { fmeaId, fmeaType, project, fmeaInfo } = body;
+    const { fmeaId, fmeaType, project, fmeaInfo, cftMembers } = body;
     
     if (!fmeaId) {
       return NextResponse.json({ success: false, error: 'fmeaId is required' }, { status: 400 });
@@ -125,7 +139,7 @@ export async function POST(req: NextRequest) {
     // 1. 스키마 생성
     await pool.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
     
-    // 2. FmeaInfo 테이블 생성
+    // 2. FmeaInfo 테이블 생성 (cftMembers 필드 포함)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS "${schemaName}"."FmeaInfo" (
         id TEXT PRIMARY KEY,
@@ -133,10 +147,17 @@ export async function POST(req: NextRequest) {
         "fmeaType" TEXT,
         project JSONB,
         "fmeaInfo" JSONB,
+        "cftMembers" JSONB,
         "structureConfirmed" BOOLEAN DEFAULT FALSE,
         "createdAt" TIMESTAMP DEFAULT NOW(),
         "updatedAt" TIMESTAMP DEFAULT NOW()
       )
+    `);
+    
+    // 2-1. cftMembers 컬럼이 없으면 추가 (기존 테이블 호환)
+    await pool.query(`
+      ALTER TABLE "${schemaName}"."FmeaInfo" 
+      ADD COLUMN IF NOT EXISTS "cftMembers" JSONB
     `);
     
     // 3. 기본 테이블들 생성
@@ -165,22 +186,50 @@ export async function POST(req: NextRequest) {
       )
     `);
     
-    // 4. FmeaInfo 저장
+    // 4. FmeaInfo 저장 (cftMembers 포함) - 모든 필드 명시적으로 포함
+    const fmeaInfoToSave = {
+      companyName: fmeaInfo?.companyName || '',
+      engineeringLocation: fmeaInfo?.engineeringLocation || '',
+      customerName: fmeaInfo?.customerName || '',
+      modelYear: fmeaInfo?.modelYear || '',
+      subject: fmeaInfo?.subject || '',
+      fmeaStartDate: fmeaInfo?.fmeaStartDate || '',
+      fmeaRevisionDate: fmeaInfo?.fmeaRevisionDate || '',
+      fmeaProjectName: fmeaInfo?.fmeaProjectName || '',
+      fmeaId: fmeaId,
+      fmeaType: fmeaType || 'P',
+      designResponsibility: fmeaInfo?.designResponsibility || '',
+      confidentialityLevel: fmeaInfo?.confidentialityLevel || '',
+      fmeaResponsibleName: fmeaInfo?.fmeaResponsibleName || '',
+    };
+    
+    console.log(`[API] 저장할 fmeaInfo (${fmeaId}):`, JSON.stringify(fmeaInfoToSave, null, 2));
+    console.log(`[API] 저장할 project:`, JSON.stringify(project || {}, null, 2));
+    console.log(`[API] 저장할 cftMembers:`, JSON.stringify(cftMembers || [], null, 2));
+    
+    // ✅ FMEA 리스트와 DB는 1:1 관계 - 동일 fmeaId의 모든 기존 행 삭제 후 최신본만 저장
+    const infoId = `info-${fmeaId}`;
+    
+    // 1. 동일 fmeaId의 모든 기존 행 삭제 (중복 방지)
     await pool.query(`
-      INSERT INTO "${schemaName}"."FmeaInfo" (id, "fmeaId", "fmeaType", project, "fmeaInfo")
-      VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT (id) DO UPDATE SET
-        "fmeaType" = $3,
-        project = $4,
-        "fmeaInfo" = $5,
-        "updatedAt" = NOW()
+      DELETE FROM "${schemaName}"."FmeaInfo"
+      WHERE "fmeaId" = $1
+    `, [fmeaId]);
+    
+    // 2. 최신본만 INSERT (1:1 관계 보장)
+    await pool.query(`
+      INSERT INTO "${schemaName}"."FmeaInfo" (id, "fmeaId", "fmeaType", project, "fmeaInfo", "cftMembers")
+      VALUES ($1, $2, $3, $4, $5, $6)
     `, [
-      `info-${fmeaId}`,
+      infoId,
       fmeaId,
       fmeaType || 'P',
       JSON.stringify(project || {}),
-      JSON.stringify(fmeaInfo || {})
+      JSON.stringify(fmeaInfoToSave),  // ✅ 모든 필드 포함
+      JSON.stringify(cftMembers || [])
     ]);
+    
+    console.log(`✅ [API] FMEA 저장 완료 (1:1 관계 보장): ${fmeaId} → ${infoId}`);
     
     console.log(`✅ FMEA 프로젝트 생성: ${fmeaId} (스키마: ${schemaName})`);
     
