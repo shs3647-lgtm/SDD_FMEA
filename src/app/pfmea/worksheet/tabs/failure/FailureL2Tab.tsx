@@ -52,7 +52,7 @@ const cellBase: React.CSSProperties = { border: BORDER, padding: '4px 6px', font
 const headerStyle = (bg: string, color = '#fff'): React.CSSProperties => ({ ...cellBase, background: bg, color, fontWeight: FONT_WEIGHTS.bold, textAlign: 'center' });
 const dataCell = (bg: string): React.CSSProperties => ({ ...cellBase, background: bg });
 
-export default function FailureL2Tab({ state, setState, setDirty, saveToLocalStorage, saveAtomicDB }: FailureTabProps) {
+export default function FailureL2Tab({ state, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB }: FailureTabProps) {
   const [modal, setModal] = useState<{ 
     type: string; 
     processId: string; 
@@ -73,18 +73,23 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
   // ✅ 상위 단계(기능분석 2L) 확정 여부 - 미확정이면 FM 입력/확정/표시를 막음
   const isUpstreamConfirmed = state.l2Confirmed || false;
 
-  // ✅ 셀 클릭 시 확정됨 상태면 자동으로 수정 모드로 전환
+  // ✅ 셀 클릭 시 확정됨 상태면 자동으로 수정 모드로 전환 - setStateSynced 패턴 적용
   const handleCellClick = useCallback((modalConfig: any) => {
     if (!isUpstreamConfirmed) {
       alert('⚠️ 기능분석(2L)을 먼저 확정해주세요.\n\n기능분석 확정 후 고장형태(FM)을 입력할 수 있습니다.');
       return;
     }
     if (isConfirmed) {
-      setState(prev => ({ ...prev, failureL2Confirmed: false }));
+      const updateFn = (prev: any) => ({ ...prev, failureL2Confirmed: false });
+      if (setStateSynced) {
+        setStateSynced(updateFn);
+      } else {
+        setState(updateFn);
+      }
       setDirty(true);
     }
     setModal(modalConfig);
-  }, [isUpstreamConfirmed, isConfirmed, setState, setDirty]);
+  }, [isUpstreamConfirmed, isConfirmed, setState, setStateSynced, setDirty]);
 
   const isMissing = (name: string | undefined) => {
     if (!name) return true;
@@ -190,6 +195,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
     return count;
   }, [isUpstreamConfirmed, state.l2]);
 
+  // ✅ 확정 핸들러 - setStateSynced 패턴 적용
   const handleConfirm = useCallback(() => {
     if (!isUpstreamConfirmed) {
       alert('⚠️ 기능분석(2L)을 먼저 확정해주세요.\n\n기능분석 확정 후 고장형태(FM)을 확정할 수 있습니다.');
@@ -205,11 +211,18 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
     const allModes = state.l2.flatMap((p: any) => p.failureModes || []);
     console.log('[FailureL2Tab] 확정 시 고장형태:', allModes.length, '개');
     
-    setState(prev => {
+    // ✅ setStateSynced 사용하여 stateRef 즉시 동기화 (확정 상태 저장 보장)
+    const updateFn = (prev: any) => {
       const newState = { ...prev, failureL2Confirmed: true };
       console.log('[FailureL2Tab] 확정 상태 업데이트:', newState.failureL2Confirmed);
       return newState;
-    });
+    };
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+      console.log('[FailureL2Tab] setStateSynced로 확정 상태 동기화');
+    } else {
+      setState(updateFn);
+    }
     setDirty(true);
     
     // ✅ 확정 상태 저장 - setTimeout으로 state 업데이트 대기
@@ -223,13 +236,19 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
     }, 100);
     
     alert('2L 고장형태(FM) 분석이 확정되었습니다.');
-  }, [isUpstreamConfirmed, missingCount, state.l2, setState, setDirty, saveToLocalStorage, saveAtomicDB]);
+  }, [isUpstreamConfirmed, missingCount, state.l2, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
+  // ✅ 수정 핸들러 - setStateSynced 패턴 적용
   const handleEdit = useCallback(() => {
-    setState(prev => ({ ...prev, failureL2Confirmed: false }));
+    const updateFn = (prev: any) => ({ ...prev, failureL2Confirmed: false });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     setDirty(true);
     setTimeout(() => saveToLocalStorage?.(), 100);
-  }, [setState, setDirty, saveToLocalStorage]);
+  }, [setState, setStateSynced, setDirty, saveToLocalStorage]);
 
   // ✅ failureModes 변경 감지용 ref
   const failureModesRef = useRef<string>('');

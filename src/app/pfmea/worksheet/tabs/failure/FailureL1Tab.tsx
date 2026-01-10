@@ -79,7 +79,7 @@ const isMeaningfulRequirementName = (name: unknown): name is string => {
   return true;
 };
 
-export default function FailureL1Tab({ state, setState, setDirty, saveToLocalStorage, saveAtomicDB }: FailureTabProps) {
+export default function FailureL1Tab({ state, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB }: FailureTabProps) {
   const [modal, setModal] = useState<{ 
     type: string; 
     effectId?: string;
@@ -104,18 +104,23 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
   // ✅ 상위 단계(기능분석 1L) 확정 여부 - 미확정이면 FE 입력/확정/표시를 막음
   const isUpstreamConfirmed = state.l1Confirmed || false;
 
-  // ✅ 셀 클릭 시 확정됨 상태면 자동으로 수정 모드로 전환
+  // ✅ 셀 클릭 시 확정됨 상태면 자동으로 수정 모드로 전환 - setStateSynced 패턴 적용
   const handleCellClick = useCallback((modalConfig: any) => {
     if (!isUpstreamConfirmed) {
       alert('⚠️ 기능분석(1L)을 먼저 확정해주세요.\n\n기능분석 확정 후 고장영향(FE)을 입력할 수 있습니다.');
       return;
     }
     if (isConfirmed) {
-      setState(prev => ({ ...prev, failureL1Confirmed: false }));
+      const updateFn = (prev: any) => ({ ...prev, failureL1Confirmed: false });
+      if (setStateSynced) {
+        setStateSynced(updateFn);
+      } else {
+        setState(updateFn);
+      }
       setDirty(true);
     }
     setModal(modalConfig);
-  }, [isUpstreamConfirmed, isConfirmed, setState, setDirty]);
+  }, [isUpstreamConfirmed, isConfirmed, setState, setStateSynced, setDirty]);
 
   // 누락 건수 계산 (state.l1.failureScopes 사용)
   // 항목별 누락 건수 분리 계산 - 심각도는 선택사항이므로 누락건에서 제외
@@ -162,7 +167,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
   }, [state.l1, saveToLocalStorage]);
 
 
-  // 확정 핸들러 (L2 패턴 적용)
+  // 확정 핸들러 (L2 패턴 적용) - ✅ setStateSynced 패턴 적용
   const handleConfirm = useCallback(() => {
     if (!isUpstreamConfirmed) {
       alert('⚠️ 기능분석(1L)을 먼저 확정해주세요.\n\n기능분석 확정 후 고장영향(FE)을 확정할 수 있습니다.');
@@ -178,11 +183,18 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
     const allScopes = (state.l1 as any)?.failureScopes || [];
     console.log('[FailureL1Tab] 확정 시 고장영향:', allScopes.length, '개');
     
-    setState(prev => {
+    // ✅ setStateSynced 사용하여 stateRef 즉시 동기화 (확정 상태 저장 보장)
+    const updateFn = (prev: any) => {
       const newState = { ...prev, failureL1Confirmed: true };
       console.log('[FailureL1Tab] 확정 상태 업데이트:', newState.failureL1Confirmed);
       return newState;
-    });
+    };
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+      console.log('[FailureL1Tab] setStateSynced로 확정 상태 동기화');
+    } else {
+      setState(updateFn);
+    }
     setDirty(true);
     
     // ✅ 확정 상태 저장 - setTimeout으로 state 업데이트 대기
@@ -200,14 +212,19 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
     }, 100);
     
     alert('1L 고장영향(FE) 분석이 확정되었습니다.');
-  }, [isUpstreamConfirmed, missingCount, state.l1, setState, setDirty, saveToLocalStorage, saveAtomicDB]);
+  }, [isUpstreamConfirmed, missingCount, state.l1, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
-  // 수정 핸들러
+  // 수정 핸들러 - ✅ setStateSynced 패턴 적용
   const handleEdit = useCallback(() => {
-    setState(prev => ({ ...prev, failureL1Confirmed: false }));
+    const updateFn = (prev: any) => ({ ...prev, failureL1Confirmed: false });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     setDirty(true);
     setTimeout(() => saveToLocalStorage?.(), 100);
-  }, [setState, setDirty, saveToLocalStorage]);
+  }, [setState, setStateSynced, setDirty, saveToLocalStorage]);
 
   // 기능분석 L1에서 요구사항 목록 가져오기 (구분 포함)
   // 요구사항이 없는 구분/기능도 표시
