@@ -96,6 +96,27 @@ export default function AllTabRenderer({
     }
   });
 
+  // ★ FC 역전개를 위한 맵 생성 (state.l3에서)
+  // fcId → { workFunction, processChar } 매핑
+  const fcToL3Map = new Map<string, { workFunction: string; processChar: string }>();
+  (state.l2 || []).forEach((proc: any) => {
+    (proc.l3 || []).forEach((we: any) => {
+      (we.functions || []).forEach((fn: any) => {
+        (fn.processChars || []).forEach((pc: any) => {
+          // 이 공정특성에 연결된 고장원인들 찾기
+          (proc.failureCauses || []).forEach((fc: any) => {
+            if (fc.processCharId === pc.id) {
+              fcToL3Map.set(fc.id, {
+                workFunction: fn.name || '',
+                processChar: pc.name || '',
+              });
+            }
+          });
+        });
+      });
+    });
+  });
+
   // ★ FM 역전개를 위한 맵 생성 (state.l2에서)
   // fmId → { processFunction, productChar } 매핑
   const fmToL2Map = new Map<string, { processFunction: string; productChar: string; processNo: string; processName: string }>();
@@ -197,8 +218,8 @@ export default function AllTabRenderer({
       feFunctionName,    // 완제품기능
       feRequirement,     // 요구사항
       // ★ FC 역전개 데이터 (고장원인 → 3L 기능분석)
-      fcWorkFunction: link.fcWorkFunction || '',  // 작업요소 기능
-      fcProcessChar: link.fcProcessChar || '',    // 공정특성
+      fcWorkFunction: link.fcWorkFunction || fcToL3Map.get(link.fcId || '')?.workFunction || '',  // 작업요소 기능
+      fcProcessChar: link.fcProcessChar || fcToL3Map.get(link.fcId || '')?.processChar || '',    // 공정특성
       // ★ FC 역전개 데이터 (고장원인 → 2L 구조분석)
       fcM4: link.fcM4 || '',          // 4M
       fcWorkElem: link.fcWorkElem || '',  // 작업요소
