@@ -1,0 +1,200 @@
+/**
+ * @file processFailureLinks.ts
+ * @description 고장연결 데이터를 FM 중심으로 그룹핑하고 rowSpan 계산
+ */
+
+/** 고장연결 데이터 행 타입 */
+export interface FailureLinkRow {
+  fmId: string;
+  fmText: string;
+  feId: string;
+  feText: string;
+  feSeverity: number;
+  fcId: string;
+  fcText: string;
+  l1ProductName?: string;
+  fmProcessNo?: string;
+  fmProcessName?: string;
+  fmProcessFunction?: string;
+  fmProductChar?: string;
+  feCategory?: string;
+  feFunctionName?: string;
+  feRequirement?: string;
+  fcWorkFunction?: string;
+  fcProcessChar?: string;
+  fcM4?: string;
+  fcWorkElem?: string;
+}
+
+/** 처리된 FM 그룹 타입 */
+export interface ProcessedFMGroup {
+  fmId: string;
+  fmText: string;
+  fmRowSpan: number;
+  maxSeverity: number;
+  maxSeverityFeText: string;
+  l1ProductName: string;
+  fmProcessNo: string;
+  fmProcessName: string;
+  fmProcessFunction: string;
+  fmProductChar: string;
+  rows: {
+    feText: string;
+    feSeverity: number;
+    fcText: string;
+    feRowSpan: number;
+    fcRowSpan: number;
+    isFirstRow: boolean;
+    feCategory: string;
+    feFunctionName: string;
+    feRequirement: string;
+    fcWorkFunction: string;
+    fcProcessChar: string;
+    fcM4: string;
+    fcWorkElem: string;
+  }[];
+}
+
+/** FE 데이터 내부 타입 */
+interface FEData {
+  text: string;
+  severity: number;
+  category: string;
+  functionName: string;
+  requirement: string;
+}
+
+/** FC 데이터 내부 타입 */
+interface FCData {
+  text: string;
+  workFunction: string;
+  processChar: string;
+  m4: string;
+  workElem: string;
+}
+
+/** FM 데이터 내부 타입 */
+interface FMData {
+  fmText: string;
+  l1ProductName: string;
+  fmProcessNo: string;
+  fmProcessName: string;
+  fmProcessFunction: string;
+  fmProductChar: string;
+  fes: Map<string, FEData>;
+  fcs: Map<string, FCData>;
+}
+
+/**
+ * 고장연결 데이터를 FM 중심으로 그룹핑하고 rowSpan 계산
+ * - 고장형태(FM)를 중심으로 고장영향(FE)과 고장원인(FC)을 매칭
+ * - FE/FC 갯수가 다를 때 마지막 행을 셀합치기
+ */
+export function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[] {
+  if (!links || links.length === 0) return [];
+  
+  const fmMap = new Map<string, FMData>();
+  
+  links.forEach(link => {
+    if (!fmMap.has(link.fmId)) {
+      fmMap.set(link.fmId, {
+        fmText: link.fmText,
+        l1ProductName: link.l1ProductName || '',
+        fmProcessNo: link.fmProcessNo || '',
+        fmProcessName: link.fmProcessName || '',
+        fmProcessFunction: link.fmProcessFunction || '',
+        fmProductChar: link.fmProductChar || '',
+        fes: new Map(),
+        fcs: new Map(),
+      });
+    }
+    const group = fmMap.get(link.fmId)!;
+    if (link.feId && link.feText) {
+      group.fes.set(link.feId, { 
+        text: link.feText, 
+        severity: link.feSeverity || 0,
+        category: link.feCategory || '',
+        functionName: link.feFunctionName || '',
+        requirement: link.feRequirement || '',
+      });
+    }
+    if (link.fcId && link.fcText) {
+      group.fcs.set(link.fcId, {
+        text: link.fcText,
+        workFunction: link.fcWorkFunction || '',
+        processChar: link.fcProcessChar || '',
+        m4: link.fcM4 || '',
+        workElem: link.fcWorkElem || '',
+      });
+    }
+  });
+  
+  const result: ProcessedFMGroup[] = [];
+  
+  fmMap.forEach((group, fmId) => {
+    const feList = Array.from(group.fes.entries()).map(([id, data]) => ({ id, ...data }));
+    const fcList = Array.from(group.fcs.entries()).map(([id, data]) => ({ id, ...data }));
+    
+    // 최대 심각도 계산
+    let maxSeverity = 0;
+    let maxSeverityFeText = '';
+    feList.forEach(fe => {
+      if (fe.severity > maxSeverity) {
+        maxSeverity = fe.severity;
+        maxSeverityFeText = fe.text;
+      }
+    });
+    
+    const maxRows = Math.max(feList.length, fcList.length, 1);
+    const rows: ProcessedFMGroup['rows'] = [];
+    
+    for (let i = 0; i < maxRows; i++) {
+      const fe = feList[i];
+      const fc = fcList[i];
+      
+      // 마지막 행 셀합치기 계산
+      let feRowSpan = 1;
+      let fcRowSpan = 1;
+      
+      if (feList.length < fcList.length && i === feList.length - 1 && feList.length > 0) {
+        feRowSpan = maxRows - i;
+      }
+      if (fcList.length < feList.length && i === fcList.length - 1 && fcList.length > 0) {
+        fcRowSpan = maxRows - i;
+      }
+      
+      rows.push({
+        feText: fe?.text || '',
+        feSeverity: fe?.severity || 0,
+        fcText: fc?.text || '',
+        feRowSpan,
+        fcRowSpan,
+        isFirstRow: i === 0,
+        feCategory: fe?.category || '',
+        feFunctionName: fe?.functionName || '',
+        feRequirement: fe?.requirement || '',
+        fcWorkFunction: fc?.workFunction || '',
+        fcProcessChar: fc?.processChar || '',
+        fcM4: fc?.m4 || '',
+        fcWorkElem: fc?.workElem || '',
+      });
+    }
+    
+    result.push({
+      fmId,
+      fmText: group.fmText,
+      fmRowSpan: maxRows,
+      maxSeverity,
+      maxSeverityFeText,
+      l1ProductName: group.l1ProductName,
+      fmProcessNo: group.fmProcessNo,
+      fmProcessName: group.fmProcessName,
+      fmProcessFunction: group.fmProcessFunction,
+      fmProductChar: group.fmProductChar,
+      rows,
+    });
+  });
+  
+  return result;
+}
+

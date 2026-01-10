@@ -99,6 +99,8 @@ const STORAGE_KEY_RULES = 'fmea-ai-rules';
 const MIN_SUPPORT = 0.01;      // 최소 지지도 1%
 const MIN_CONFIDENCE = 0.3;    // 최소 신뢰도 30%
 const MAX_RECOMMENDATIONS = 10; // 최대 추천 개수
+const MAX_HISTORY_SIZE = 10000; // ✅ 최대 히스토리 개수 (10,000건)
+const CLEANUP_THRESHOLD = 12000; // ✅ 정리 임계값 (12,000건 이상 시 정리)
 
 // =====================================================
 // 유틸리티 함수
@@ -118,12 +120,70 @@ function getStorage<T>(key: string): T[] {
   }
 }
 
-function setStorage<T>(key: string, data: T[]): void {
+function setStorage<T extends { createdAt?: string; frequency?: number }>(key: string, data: T[]): void {
   if (typeof window === 'undefined') return;
+  
   try {
-    localStorage.setItem(key, JSON.stringify(data));
-  } catch (e) {
-    console.error('Storage error:', e);
+    // ✅ 데이터 크기 제한: MAX_HISTORY_SIZE를 초과하면 오래된 항목 삭제
+    let dataToSave = data;
+    
+    if (data.length > MAX_HISTORY_SIZE) {
+      // 빈도 높은 항목 우선 유지, 나머지는 최신순 정렬 후 오래된 것 삭제
+      dataToSave = data
+        .sort((a, b) => {
+          // 빈도 높은 순 우선
+          const freqA = (a.frequency || 0);
+          const freqB = (b.frequency || 0);
+          if (freqB !== freqA) return freqB - freqA;
+          
+          // 빈도 같으면 최신순
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        })
+        .slice(0, MAX_HISTORY_SIZE);
+      
+      console.warn(`[AI 히스토리] 용량 제한 초과: ${data.length}건 → ${dataToSave.length}건으로 정리`);
+    }
+    
+    localStorage.setItem(key, JSON.stringify(dataToSave));
+  } catch (e: any) {
+    // ✅ QuotaExceededError 처리: 오래된 데이터 삭제 후 재시도
+    if (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014) {
+      console.warn('[AI 히스토리] localStorage 용량 초과, 오래된 데이터 정리 중...');
+      
+      try {
+        // 데이터를 빈도 높은 순 + 최신순으로 정렬
+        const sortedData = [...data].sort((a, b) => {
+          const freqA = (a.frequency || 0);
+          const freqB = (b.frequency || 0);
+          if (freqB !== freqA) return freqB - freqA;
+          
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        });
+        
+        // 상위 50%만 유지 (빈도 높고 최신 데이터 우선)
+        const reducedData = sortedData.slice(0, Math.floor(sortedData.length * 0.5));
+        
+        console.warn(`[AI 히스토리] 용량 초과로 인한 정리: ${data.length}건 → ${reducedData.length}건으로 축소`);
+        localStorage.setItem(key, JSON.stringify(reducedData));
+        
+        // 재시도 후에도 실패하면 빈 배열로 초기화
+        try {
+          localStorage.setItem(key, JSON.stringify(reducedData));
+        } catch (retryError) {
+          console.error('[AI 히스토리] 재시도 실패, 빈 배열로 초기화');
+          localStorage.setItem(key, JSON.stringify([]));
+        }
+      } catch (cleanupError) {
+        console.error('[AI 히스토리] 정리 실패, 빈 배열로 초기화:', cleanupError);
+        localStorage.setItem(key, JSON.stringify([]));
+      }
+    } else {
+      console.error('[AI 히스토리] Storage error:', e);
+    }
   }
 }
 
@@ -155,6 +215,7 @@ class AIRecommendationEngine {
    * 고장 관계 저장
    * - 새로운 FMEA 데이터가 입력될 때마다 호출
    * - 동일 패턴이 있으면 빈도 증가, 없으면 새로 추가
+   * - ✅ 히스토리 크기 제한 및 자동 정리
    */
   saveFailureRelation(relation: Partial<FailureRelation>): void {
     if (!this.isInitialized) this.initialize();
@@ -162,6 +223,24 @@ class AIRecommendationEngine {
     // 필수 필드 체크
     if (!relation.failureMode && !relation.failureCause && !relation.failureEffect) {
       return;
+    }
+
+    // ✅ 히스토리 크기 확인 및 정리 (CLEANUP_THRESHOLD 초과 시)
+    if (this.history.length >= CLEANUP_THRESHOLD) {
+      // 빈도 높은 항목 우선 유지, 나머지는 최신순 정렬 후 오래된 것 삭제
+      this.history = this.history
+        .sort((a, b) => {
+          const freqA = a.frequency || 0;
+          const freqB = b.frequency || 0;
+          if (freqB !== freqA) return freqB - freqA;
+          
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        })
+        .slice(0, MAX_HISTORY_SIZE);
+      
+      console.log(`[AI 히스토리] 자동 정리: ${CLEANUP_THRESHOLD}건 → ${this.history.length}건`);
     }
 
     // 동일 패턴 찾기 (공정+작업요소+4M+고장형태 기준)
@@ -202,8 +281,11 @@ class AIRecommendationEngine {
       this.history.unshift(newRelation);
     }
 
-    // 저장
+    // 저장 (자동 정리 로직 포함)
     setStorage(STORAGE_KEY_HISTORY, this.history);
+    
+    // 저장 후 히스토리 다시 로드 (정리된 데이터 반영)
+    this.history = getStorage<FailureRelation>(STORAGE_KEY_HISTORY);
     
     // 일정 주기로 연관 규칙 업데이트 (100건마다)
     if (this.history.length % 100 === 0) {
@@ -608,9 +690,12 @@ export const aiEngine = new AIRecommendationEngine();
 
 /**
  * FMEA 데이터 저장 (워크시트에서 호출)
+ * ✅ AI 히스토리 저장 기능 비활성화 (QuotaExceededError 방지 및 DB 중심 설계)
  */
 export function saveToAIHistory(data: Partial<FailureRelation>): void {
-  aiEngine.saveFailureRelation(data);
+  // 로직 제거: 더 이상 localStorage에 데이터를 쌓지 않음
+  // aiEngine.saveFailureRelation(data);
+  console.log('[AI 히스토리] 저장 건너뜀 (DB 데이터 우선 원칙)');
 }
 
 /**

@@ -21,7 +21,7 @@ export interface SODModalState {
 /** 컨트롤 모달 상태 타입 */
 export interface ControlModalState {
   isOpen: boolean;
-  type: 'prevention' | 'detection' | 'specialChar';
+  type: 'prevention' | 'detection' | 'specialChar' | 'prevention-opt' | 'detection-opt';
   rowIndex: number;
   fcText?: string;
 }
@@ -136,7 +136,7 @@ export function useAllTabModals(setState?: React.Dispatch<React.SetStateAction<W
   };
 
   /** 컨트롤 모달 열기 */
-  const openControlModal = (type: 'prevention' | 'detection' | 'specialChar', rowIndex: number, fcText?: string) => {
+  const openControlModal = (type: 'prevention' | 'detection' | 'specialChar' | 'prevention-opt' | 'detection-opt', rowIndex: number, fcText?: string) => {
     setControlModal({ isOpen: true, type, rowIndex, fcText });
   };
 
