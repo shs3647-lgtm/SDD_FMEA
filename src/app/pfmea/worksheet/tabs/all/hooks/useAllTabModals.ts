@@ -23,6 +23,8 @@ export interface ControlModalState {
   isOpen: boolean;
   type: 'prevention' | 'detection' | 'specialChar' | 'prevention-opt' | 'detection-opt';
   rowIndex: number;
+  fmId?: string;    // ★ 고유 키용
+  fcId?: string;    // ★ 고유 키용
   fcText?: string;
 }
 

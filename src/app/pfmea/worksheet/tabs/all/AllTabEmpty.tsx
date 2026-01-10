@@ -244,6 +244,8 @@ export default function AllTabEmpty({
                             fcRowSpan={row.fcRowSpan}
                             rowInFM={rowInFM}
                             prevFcRowSpan={prevFcRowSpan}
+                            fmId={fmGroup.fmId}
+                            fcId={row.fcId}
                             state={state}
                             setState={setState}
                             setDirty={setDirty}
@@ -324,36 +326,37 @@ export default function AllTabEmpty({
           onSave={(selectedValues) => {
             if (setState && selectedValues.length > 0) {
               const selectedValue = selectedValues[0];
-              const key = `${controlModal.type}-${controlModal.rowIndex}`;
+              // ★ 고유 키: fmId-fcId 조합 사용 (없으면 rowIndex 폴백)
+              const uniqueKey = controlModal.fmId && controlModal.fcId 
+                ? `${controlModal.fmId}-${controlModal.fcId}` 
+                : String(controlModal.rowIndex);
+              const key = `${controlModal.type}-${uniqueKey}`;
               
               // ✅ 예방관리(PC) 자동연결: 동일한 고장원인에 동일한 예방관리 자동 연결
               // ⚠️ 예방관리개선(prevention-opt)은 자동연결하지 않음
               let autoLinkedCount = 0;
               let currentFcText = '';
-              let currentRowIdx = 0;
+              const currentFcId = controlModal.fcId || '';
               
               if (controlModal.type === 'prevention' && failureLinks && processedFMGroups.length > 0) {
                 // 현재 행의 고장원인 텍스트 찾기
-                processedFMGroups.forEach((group, gIdx) => {
-                  group.rows.forEach((r, rIdx) => {
-                    const gRowIdx = processedFMGroups.slice(0, gIdx).reduce((acc, g) => acc + g.rows.length, 0) + rIdx;
-                    if (gRowIdx === controlModal.rowIndex) {
+                processedFMGroups.forEach((group) => {
+                  group.rows.forEach((r) => {
+                    if (r.fcId === currentFcId) {
                       currentFcText = r.fcText || '';
-                      currentRowIdx = gRowIdx;
                     }
                   });
                 });
                 
                 // 동일한 고장원인을 가진 다른 행들 찾기
                 if (currentFcText) {
-                  processedFMGroups.forEach((group, gIdx) => {
-                    group.rows.forEach((r, rIdx) => {
-                      const gRowIdx = processedFMGroups.slice(0, gIdx).reduce((acc, g) => acc + g.rows.length, 0) + rIdx;
-                      // 현재 행이 아니고, 동일한 고장원인을 가진 행
-                      if (gRowIdx !== currentRowIdx && r.fcText === currentFcText) {
-                        const autoKey = `${controlModal.type}-${gRowIdx}`;
+                  processedFMGroups.forEach((group) => {
+                    group.rows.forEach((r) => {
+                      // 현재 fcId가 아니고, 동일한 고장원인 텍스트를 가진 행
+                      if (r.fcId !== currentFcId && r.fcText === currentFcText) {
+                        const autoUniqueKey = `${group.fmId}-${r.fcId}`;
+                        const autoKey = `${controlModal.type}-${autoUniqueKey}`;
                         const existingValue = state?.riskData?.[autoKey];
-                        // 값이 없거나 다른 값이면 자동 연결
                         if (!existingValue || existingValue !== selectedValue) {
                           autoLinkedCount++;
                         }
@@ -370,15 +373,14 @@ export default function AllTabEmpty({
                 // 현재 행 저장
                 newRiskData[key] = selectedValue;
                 
-                // ✅ 자동연결: 동일한 고장원인을 가진 다른 행들에도 자동 저장 (예방관리 PC만)
-                if (controlModal.type === 'prevention' && failureLinks && processedFMGroups.length > 0 && autoLinkedCount > 0 && currentFcText) {
-                  processedFMGroups.forEach((group, gIdx) => {
-                    group.rows.forEach((r, rIdx) => {
-                      const gRowIdx = processedFMGroups.slice(0, gIdx).reduce((acc, g) => acc + g.rows.length, 0) + rIdx;
-                      if (gRowIdx !== currentRowIdx && r.fcText === currentFcText) {
-                        const autoKey = `${controlModal.type}-${gRowIdx}`;
+                // ✅ 자동연결 (예방관리 PC만)
+                if (controlModal.type === 'prevention' && autoLinkedCount > 0 && currentFcText) {
+                  processedFMGroups.forEach((group) => {
+                    group.rows.forEach((r) => {
+                      if (r.fcId !== currentFcId && r.fcText === currentFcText) {
+                        const autoUniqueKey = `${group.fmId}-${r.fcId}`;
+                        const autoKey = `${controlModal.type}-${autoUniqueKey}`;
                         const existingValue = prev.riskData?.[autoKey];
-                        // 값이 없거나 다른 값이면 자동 연결
                         if (!existingValue || existingValue !== selectedValue) {
                           newRiskData[autoKey] = selectedValue;
                         }
@@ -390,13 +392,13 @@ export default function AllTabEmpty({
                 return { ...prev, riskData: newRiskData };
               });
               
-              // ✅ DB 저장 트리거 (모든 타입 저장 시)
+              // ✅ DB 저장 트리거
               if (setDirty) {
                 setDirty(true);
-                console.log(`[AllTabEmpty] ${controlModal.type} 저장 → DB 저장 트리거`);
+                console.log(`[AllTabEmpty] ${controlModal.type} 저장 (키: ${key}) → DB 저장 트리거`);
               }
               
-              // 자동연결 알림 (예방관리 PC만)
+              // 자동연결 알림
               if (controlModal.type === 'prevention' && autoLinkedCount > 0 && currentFcText) {
                 setTimeout(() => {
                   alert(`✨ 자동연결: 동일한 고장원인 "${currentFcText}"에 "${selectedValue}" 예방관리가 ${autoLinkedCount}건 자동 연결되었습니다.`);
@@ -407,7 +409,10 @@ export default function AllTabEmpty({
           }}
           onDelete={() => {
             if (setState) {
-              const key = `${controlModal.type}-${controlModal.rowIndex}`;
+              const uniqueKey = controlModal.fmId && controlModal.fcId 
+                ? `${controlModal.fmId}-${controlModal.fcId}` 
+                : String(controlModal.rowIndex);
+              const key = `${controlModal.type}-${uniqueKey}`;
               setState((prev: WorksheetState) => {
                 const newRiskData = { ...(prev.riskData || {}) };
                 delete newRiskData[key];
@@ -417,7 +422,12 @@ export default function AllTabEmpty({
             closeControlModal();
           }}
           singleSelect={true}
-          currentValues={[(state.riskData || {})[`${controlModal.type}-${controlModal.rowIndex}`] || ''].filter(Boolean).map(String)}
+          currentValues={[(() => {
+            const uniqueKey = controlModal.fmId && controlModal.fcId 
+              ? `${controlModal.fmId}-${controlModal.fcId}` 
+              : String(controlModal.rowIndex);
+            return (state.riskData || {})[`${controlModal.type}-${uniqueKey}`] || '';
+          })()].filter(Boolean).map(String)}
         />
       )}
       

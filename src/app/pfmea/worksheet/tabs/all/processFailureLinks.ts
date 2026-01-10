@@ -39,8 +39,10 @@ export interface ProcessedFMGroup {
   fmProcessFunction: string;
   fmProductChar: string;
   rows: {
+    feId: string;        // ★ 고유 키용
     feText: string;
     feSeverity: number;
+    fcId: string;        // ★ 고유 키용
     fcText: string;
     feRowSpan: number;
     fcRowSpan: number;
@@ -164,8 +166,10 @@ export function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[]
       }
       
       rows.push({
+        feId: fe?.id || '',        // ★ 고유 키용
         feText: fe?.text || '',
         feSeverity: fe?.severity || 0,
+        fcId: fc?.id || '',        // ★ 고유 키용
         fcText: fc?.text || '',
         feRowSpan,
         fcRowSpan,

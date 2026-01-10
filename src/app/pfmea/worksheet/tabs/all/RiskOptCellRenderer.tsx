@@ -26,6 +26,8 @@ interface ControlModalState {
   isOpen: boolean;
   type: ControlModalType;
   rowIndex: number;
+  fmId?: string;    // ★ 고유 키용
+  fcId?: string;    // ★ 고유 키용
 }
 
 /** 셀 렌더러 Props */
@@ -36,6 +38,8 @@ interface RiskOptCellRendererProps {
   fcRowSpan: number;
   rowInFM: number;
   prevFcRowSpan: number;
+  fmId?: string;    // ★ 고유 키용
+  fcId?: string;    // ★ 고유 키용
   state?: WorksheetState;
   setState?: React.Dispatch<React.SetStateAction<WorksheetState>>;
   setDirty?: React.Dispatch<React.SetStateAction<boolean>>;
@@ -106,6 +110,8 @@ export function RiskOptCellRenderer({
   fcRowSpan,
   rowInFM,
   prevFcRowSpan,
+  fmId = '',    // ★ 고유 키용
+  fcId = '',    // ★ 고유 키용
   state,
   setState,
   setDirty,
@@ -115,6 +121,9 @@ export function RiskOptCellRenderer({
 }: RiskOptCellRendererProps): React.ReactElement | null {
   const targetType = col.step === '리스크분석' ? 'risk' : 'opt';
   const stage = col.step === '리스크분석' ? 5 : 6;
+  
+  // ★ 고유 키 생성: fmId-fcId 조합 (없으면 globalRowIdx 폴백)
+  const uniqueKey = fmId && fcId ? `${fmId}-${fcId}` : String(globalRowIdx);
   
   // ★ rowSpan 조건: 첫 번째 행이거나 이전 행의 fcRowSpan이 1인 경우에만 셀 렌더링
   const shouldRender = rowInFM === 0 || prevFcRowSpan === 1;
@@ -134,10 +143,10 @@ export function RiskOptCellRenderer({
   };
   if (controlTypes[col.name]) {
     const modalType = controlTypes[col.name];
-    const key = `${modalType}-${globalRowIdx}`;
+    const key = `${modalType}-${uniqueKey}`;
     const value = state?.riskData?.[key] || '';
     return (
-      <td key={colIdx} rowSpan={fcRowSpan} onDoubleClick={() => setControlModal?.({ isOpen: true, type: modalType, rowIndex: globalRowIdx })} style={style}>
+      <td key={colIdx} rowSpan={fcRowSpan} onDoubleClick={() => setControlModal?.({ isOpen: true, type: modalType, rowIndex: globalRowIdx, fmId, fcId })} style={style}>
         {value}
       </td>
     );
@@ -146,7 +155,7 @@ export function RiskOptCellRenderer({
   // ★ 발생도 / 검출도 셀
   if (col.name === '발생도' || col.name === '검출도') {
     const category: 'O' | 'D' = col.name === '발생도' ? 'O' : 'D';
-    const key = `${targetType}-${globalRowIdx}-${category}`;
+    const key = `${targetType}-${uniqueKey}-${category}`;
     const currentValue = (state?.riskData?.[key] as number) || 0;
     return (
       <td key={colIdx} rowSpan={fcRowSpan} onDoubleClick={() => handleSODClick(category, targetType as 'risk' | 'opt', globalRowIdx, currentValue)} style={{ ...style, fontWeight: currentValue ? 700 : 400 }}>
