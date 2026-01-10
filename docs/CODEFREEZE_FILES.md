@@ -52,7 +52,7 @@
 |------|----------------|
 | `src/app/pfmea/worksheet/tabs/StructureTab.tsx` | codefreeze-20260110-structure-final ⚠️ **UI 절대 변경 금지** |
 | `src/app/pfmea/worksheet/tabs/function/FunctionL1Tab.tsx` | codefreeze-20260104-worksheet-complete |
-| `src/app/pfmea/worksheet/tabs/function/FunctionL2Tab.tsx` | codefreeze-20260104-worksheet-complete |
+| `src/app/pfmea/worksheet/tabs/function/FunctionL2Tab.tsx` | codefreeze-20260104-worksheet-complete<br/>codefreeze-20260111-function-l2-final (최종 확정) |
 | `src/app/pfmea/worksheet/tabs/function/FunctionL3Tab.tsx` | codefreeze-20260104-worksheet-complete |
 | `src/app/pfmea/worksheet/tabs/failure/FailureL1Tab.tsx` | codefreeze-20260104-worksheet-complete |
 | `src/app/pfmea/worksheet/tabs/failure/FailureL2Tab.tsx` | codefreeze-20260104-worksheet-complete |
@@ -156,6 +156,10 @@ codefreeze-20260111-worksheet-110percent  (워크시트 110% 배율 확정)
 ### 2. 작업요소 돋보기 표시 로직 표준화
 - `src/app/pfmea/worksheet/tabs/StructureTab.tsx` - SelectableCell과 동일하게 value 있을 때 돋보기 숨김
 - 메인공정기능과 일관성 유지
+
+### 3. 기능2L(메인공정기능) 최종 코드프리즈
+- `src/app/pfmea/worksheet/tabs/function/FunctionL2Tab.tsx` - 태그: `codefreeze-20260111-function-l2-final`
+- 작업요소 돋보기 표시 로직 표준화 완료
 
 ---
 
