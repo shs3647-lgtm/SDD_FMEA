@@ -78,13 +78,16 @@ export async function parseMultiSheetExcel(file: File): Promise<ParseResult> {
     console.log('📊 Excel 파일 시트 목록:', allSheetNames);
 
     workbook.eachSheet((sheet) => {
-      const sheetName = sheet.name.trim();
+      const originalSheetName = sheet.name.trim();
+      const sheetName = normalizeSheetName(originalSheetName);
       
-      // 유효한 시트만 처리 (A1-A6, B1-B5, C1-C4)
-      if (!isValidSheetName(sheetName)) {
-        console.log(`⏭️ 시트 "${sheetName}" 건너뜀 (유효한 이름: A1~A6, B1~B5, C1~C4)`);
+      // 유효한 시트만 처리 (A1-A6, B1-B5, C1-C4 또는 L2-1 ~ L1-4 형식)
+      if (!sheetName) {
+        console.log(`⏭️ 시트 "${originalSheetName}" 건너뜀 (유효한 이름: A1~C4 또는 L2-1~L1-4)`);
         return;
       }
+      
+      console.log(`📋 시트 "${originalSheetName}" → "${sheetName}" 매핑됨`);
 
       const headers: string[] = [];
       const rows: { key: string; value: string }[] = [];
@@ -301,14 +304,60 @@ export async function parseMultiSheetExcel(file: File): Promise<ParseResult> {
   }
 }
 
-/** 유효한 시트 이름 확인 */
-function isValidSheetName(name: string): boolean {
+/** 시트 이름 → 내부 코드 매핑 */
+const SHEET_NAME_MAP: Record<string, string> = {
+  // 새로운 시트 이름 형식 (L2-1, L2-2, ...) → 내부 코드 (A1, A2, ...)
+  'L2-1 공정번호': 'A1',
+  'L2-2 공정명': 'A2',
+  'L2-3 공정기능': 'A3',
+  'L2-4 제품특성': 'A4',
+  'L2-5 고장형태': 'A5',
+  'L2-6 검출관리': 'A6',
+  'L3-1 작업요소': 'B1',
+  'L3-2 요소기능': 'B2',
+  'L3-3 공정특성': 'B3',
+  'L3-4 고장원인': 'B4',
+  'L3-5 예방관리': 'B5',
+  'L1-1 구분': 'C1',
+  'L1-2 제품기능': 'C2',
+  'L1-3 요구사항': 'C3',
+  'L1-4 고장영향': 'C4',
+  // 기존 형식도 지원
+  'A1': 'A1', 'A2': 'A2', 'A3': 'A3', 'A4': 'A4', 'A5': 'A5', 'A6': 'A6',
+  'B1': 'B1', 'B2': 'B2', 'B3': 'B3', 'B4': 'B4', 'B5': 'B5',
+  'C1': 'C1', 'C2': 'C2', 'C3': 'C3', 'C4': 'C4',
+};
+
+/** 유효한 시트 이름 확인 및 내부 코드 반환 */
+function normalizeSheetName(name: string): string | null {
+  // 직접 매핑 확인
+  if (SHEET_NAME_MAP[name]) {
+    return SHEET_NAME_MAP[name];
+  }
+  
+  // 부분 매핑 확인 (시트 이름 앞부분만 일치)
+  for (const [key, value] of Object.entries(SHEET_NAME_MAP)) {
+    if (name.startsWith(key.split(' ')[0])) {
+      return value;
+    }
+  }
+  
+  // 기존 A1~C4 형식 확인
   const validNames = [
     'A1', 'A2', 'A3', 'A4', 'A5', 'A6',
     'B1', 'B2', 'B3', 'B4', 'B5',
     'C1', 'C2', 'C3', 'C4',
   ];
-  return validNames.includes(name);
+  if (validNames.includes(name)) {
+    return name;
+  }
+  
+  return null;
+}
+
+/** 유효한 시트 이름 확인 */
+function isValidSheetName(name: string): boolean {
+  return normalizeSheetName(name) !== null;
 }
 
 /** 파싱 결과 통계 */

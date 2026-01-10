@@ -37,7 +37,7 @@ export default function WelcomeBoardPage() {
 
   return (
     <div 
-      className="min-h-screen p-6"
+      className="min-h-screen p-4"
       style={{
         background: 'radial-gradient(1200px 700px at 70% -10%, #162a56 0%, #0d1830 45%, #0b1426 100%)',
       }}
@@ -58,7 +58,7 @@ export default function WelcomeBoardPage() {
       <APSummaryTable data={apSummaryData} stats={apStats} />
 
       {/* 푸터 */}
-      <footer className="mt-6 text-center text-[#a7b6d3] text-xs">
+      <footer className="mt-3 text-center text-[#a7b6d3] text-xs">
         v2.0.0 · FMEA Smart System · © AMP SYSTEM
       </footer>
     </div>

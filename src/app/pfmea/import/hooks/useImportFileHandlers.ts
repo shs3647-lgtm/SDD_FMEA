@@ -47,14 +47,25 @@ export function useImportFileHandlers({
     setImportSuccess(false);
     
     try {
+      console.log('📂 파일 파싱 시작:', file.name);
       const result = await parseMultiSheetExcel(file);
       setParseResult(result);
+      
+      console.log('📊 파싱 결과:', {
+        success: result.success,
+        processes: result.processes.length,
+        products: result.products.length,
+        sheetSummary: result.sheetSummary,
+        errors: result.errors
+      });
       
       // Flat 데이터 생성
       const flat: ImportedFlatData[] = [];
       result.processes.forEach((p) => {
         flat.push({ id: `${p.processNo}-A1`, processNo: p.processNo, category: 'A', itemCode: 'A1', value: p.processNo, createdAt: new Date() });
-        flat.push({ id: `${p.processNo}-A2`, processNo: p.processNo, category: 'A', itemCode: 'A2', value: p.processName, createdAt: new Date() });
+        if (p.processName) {
+          flat.push({ id: `${p.processNo}-A2`, processNo: p.processNo, category: 'A', itemCode: 'A2', value: p.processName, createdAt: new Date() });
+        }
         p.processDesc.forEach((v, i) => flat.push({ id: `${p.processNo}-A3-${i}`, processNo: p.processNo, category: 'A', itemCode: 'A3', value: v, createdAt: new Date() }));
         p.productChars.forEach((v, i) => flat.push({ id: `${p.processNo}-A4-${i}`, processNo: p.processNo, category: 'A', itemCode: 'A4', value: v, createdAt: new Date() }));
         p.failureModes.forEach((v, i) => flat.push({ id: `${p.processNo}-A5-${i}`, processNo: p.processNo, category: 'A', itemCode: 'A5', value: v, createdAt: new Date() }));
@@ -72,6 +83,15 @@ export function useImportFileHandlers({
         p.failureEffects.forEach((v, i) => flat.push({ id: `C4-${p.productProcessName}-${i}`, processNo: 'ALL', category: 'C', itemCode: 'C4', value: v, createdAt: new Date() }));
       });
       
+      console.log('✅ Flat 데이터 생성 완료:', flat.length, '건');
+      
+      // ⚠️ 파싱 결과가 비어있으면 경고
+      if (flat.length === 0) {
+        console.warn('⚠️ 파싱된 데이터가 없습니다. 시트 이름을 확인하세요.');
+        console.warn('   유효한 시트 이름: L2-1 공정번호, L2-3 공정기능, L3-1 작업요소, L1-1 구분 등');
+        alert('⚠️ 파싱된 데이터가 없습니다.\n\n시트 이름이 올바른지 확인하세요:\n- L2-1 공정번호, L2-3 공정기능\n- L3-1 작업요소, L3-4 고장원인\n- L1-1 구분, L1-4 고장영향\n\n또는 기존 형식: A1, A2, A3, B1, C1 등');
+      }
+      
       setPendingData(flat);
       setFlatData(flat);
       
@@ -79,8 +99,10 @@ export function useImportFileHandlers({
       console.log('  - 공정 수:', result.processes.length);
       console.log('  - 제품 수:', result.products.length);
       console.log('  - Flat 데이터 수:', flat.length);
+      console.log('  - pendingData 설정 완료: Import 버튼 활성화됨');
     } catch (error) {
-      console.error('파싱 오류:', error);
+      console.error('❌ 파싱 오류:', error);
+      alert('❌ Excel 파싱 중 오류가 발생했습니다.\n\n' + (error as Error).message);
     } finally {
       setIsParsing(false);
     }

@@ -627,8 +627,19 @@ function PFMEAImportPageContent() {
         {/* 좌측: FMEA 기초정보 미리 보기 - 고정 400px */}
         <div className="w-[400px] shrink-0 flex flex-col border-2 border-[#00587a] rounded-lg overflow-hidden bg-white shadow-lg">
           {/* FMEA 기초정보 미리 보기 헤더 */}
-          <div className="bg-gradient-to-br from-[#00587a] to-[#007a9e] text-white px-4 py-2.5 text-sm font-bold flex items-center gap-2">
-            <span>📋</span> FMEA 기초정보 미리 보기
+          <div className="bg-gradient-to-br from-[#00587a] to-[#007a9e] text-white px-4 py-2.5 text-sm font-bold flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span>📋</span> FMEA 기초정보 미리 보기
+            </div>
+            {/* 입력 상태 표시 */}
+            <div className="flex items-center gap-3 text-[11px] font-normal">
+              <span className="bg-white/20 px-2 py-0.5 rounded">
+                항목: <b className="text-yellow-300">{stats.total}</b>건
+              </span>
+              <span className={`px-2 py-0.5 rounded ${stats.missing > 0 ? 'bg-red-500/50' : 'bg-green-500/50'}`}>
+                누락: <b className={stats.missing > 0 ? 'text-red-200' : 'text-green-200'}>{stats.missing}</b>건
+              </span>
+            </div>
           </div>
           
           {/* 탭 + 테이블 통합 wrapper */}
@@ -841,8 +852,25 @@ function PFMEAImportPageContent() {
         {/* 우측: FMEA 분석 DATA 미리 보기 - 나머지 영역 */}
         <div className="flex-1 flex flex-col border-2 border-[#00587a] rounded-lg overflow-hidden bg-white shadow-lg">
           {/* FMEA 분석 DATA 미리 보기 헤더 */}
-          <div className="bg-gradient-to-br from-[#00587a] to-[#007a9e] text-white px-4 py-2.5 text-sm font-bold flex items-center gap-2">
-            <span>📈</span> FMEA 분석 DATA 미리 보기
+          <div className="bg-gradient-to-br from-[#00587a] to-[#007a9e] text-white px-4 py-2.5 text-sm font-bold flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span>📈</span> FMEA 분석 DATA 미리 보기
+            </div>
+            {/* 레벨별 입력 상태 표시 */}
+            <div className="flex items-center gap-2 text-[11px] font-normal">
+              <span className="bg-blue-500/40 px-2 py-0.5 rounded">
+                L2: <b className="text-blue-200">{stats.aCount}</b>
+              </span>
+              <span className="bg-green-500/40 px-2 py-0.5 rounded">
+                L3: <b className="text-green-200">{stats.bCount}</b>
+              </span>
+              <span className="bg-orange-500/40 px-2 py-0.5 rounded">
+                L1: <b className="text-orange-200">{stats.cCount}</b>
+              </span>
+              <span className="bg-white/20 px-2 py-0.5 rounded">
+                공정: <b className="text-yellow-300">{stats.processCount}</b>개
+              </span>
+            </div>
           </div>
           
           {/* 탭 + 테이블 통합 wrapper - FMEA 기초정보 미리 보기와 동일한 디자인 */}

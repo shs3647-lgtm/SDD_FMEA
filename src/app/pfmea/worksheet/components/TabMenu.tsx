@@ -42,24 +42,15 @@ export default function TabMenu({ state, setState, setStateSynced, setDirty, sav
     }
   }, [state.fmeaId, router]);
   
-  // 탭 활성화 조건
+  // ✅ 탭 활성화 조건 - 모든 탭 항상 활성화 (확정 여부와 무관)
   const isTabEnabled = (tabId: string) => {
-    if (tabId === 'structure') return true;
-    if (tabId.startsWith('function-')) return structureConfirmed;
-    if (tabId.startsWith('failure-')) return structureConfirmed;
-    if (tabId === 'risk' || tabId === 'opt') return failureLinkConfirmed;
-    return structureConfirmed;
+    // 모든 탭 활성화 - 사용자가 현재 상태를 볼 수 있도록
+    return true;
   };
   
-  // 탭 클릭 시 경고 메시지
+  // ✅ 탭 클릭 시 경고 메시지 - 경고만 표시하고 이동은 허용
   const getTabWarning = (tabId: string): string | null => {
-    if (tabId === 'risk' || tabId === 'opt') {
-      if (!hasFailureLinks) return '⚠️ 고장연결이 없습니다.\n먼저 고장분석에서 고장연결을 완료해주세요.';
-      if (!failureLinkConfirmed) return '⚠️ 고장연결이 확정되지 않았습니다.\n고장연결 탭에서 "전체확정" 버튼을 눌러주세요.';
-    }
-    if (!structureConfirmed && tabId !== 'structure') {
-      return '⚠️ 구조분석을 먼저 확정해주세요.';
-    }
+    // 경고 없이 모든 탭 이동 허용
     return null;
   };
 
@@ -88,14 +79,13 @@ export default function TabMenu({ state, setState, setStateSynced, setDirty, sav
                 className={`
                   px-2 sm:px-3 lg:px-4 py-1 sm:py-1.5
                   text-[10px] sm:text-[11px] lg:text-xs
-                  rounded transition-all duration-200 whitespace-nowrap shrink-0
+                  rounded transition-all duration-200 whitespace-nowrap shrink-0 cursor-pointer
                   ${isActive 
                     ? 'bg-indigo-700 border border-yellow-400 text-yellow-400 font-bold shadow-lg' 
                     : 'bg-transparent border border-transparent text-white font-medium hover:bg-white/15 hover:text-yellow-400'
                   }
-                  ${isEnabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}
                 `}
-                title={!isEnabled ? '구조분석 확정 후 사용 가능' : tab.label}
+                title={tab.label}
               >
                 <span className="hidden sm:inline">{tab.label}</span>
                 <span className="sm:hidden">{tab.label.replace('분석', '').replace('기능', 'F').replace('고장', 'X')}</span>

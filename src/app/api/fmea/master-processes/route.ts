@@ -1,7 +1,7 @@
 /**
  * 마스터 FMEA 공정 목록 API
- * - GET: Master/Family FMEA의 L2 공정 목록 반환
- * - public 스키마 사용 (fmeaId로 구분)
+ * - GET: Master FMEA 기초정보에서 공정 목록 반환
+ * - pfmea_master_flat_items 테이블에서 A1(공정번호), A2(공정명) 조회
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getPrisma } from '@/lib/prisma';
@@ -14,56 +14,69 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'DB 연결 실패', processes: [] });
   }
   
-  const { searchParams } = new URL(req.url);
-  const fmeaId = searchParams.get('fmeaId') || 'pfm26-M001';
-  const type = searchParams.get('type') || 'M'; // M, F, P
-  
   try {
-    // public 스키마에서 Master/Family 공정 조회
-    const processes = await prisma.l2Structure.findMany({
-      where: {
-        fmeaId: {
-          // Master: pfm26-M001, Family: pfm26-F001 형식
-          startsWith: type === 'M' ? 'pfm26-M' : type === 'F' ? 'pfm26-F' : fmeaId
-        }
-      },
-      orderBy: [
-        { order: 'asc' },
-        { no: 'asc' }
-      ],
-      select: {
-        id: true,
-        no: true,
-        name: true,
-        fmeaId: true
-      }
+    // 1. 활성화된 Master Dataset 조회
+    const activeDataset = await prisma.pfmeaMasterDataset.findFirst({
+      where: { isActive: true },
+      orderBy: { updatedAt: 'desc' }
     });
     
-    // 특정 FMEA ID로 조회된 공정이 없으면 Master에서 가져옴
-    let result = processes;
-    if (result.length === 0 && type !== 'M' && prisma) {
-      result = await prisma.l2Structure.findMany({
-        where: { fmeaId: { startsWith: 'pfm26-M' } },
-        orderBy: [{ order: 'asc' }, { no: 'asc' }],
-        select: { id: true, no: true, name: true, fmeaId: true }
+    if (!activeDataset) {
+      console.log('⚠️ 활성화된 Master Dataset 없음');
+      return NextResponse.json({ 
+        success: true, 
+        processes: [],
+        source: 'none',
+        message: 'Master FMEA 기초정보가 없습니다. 먼저 기초정보를 Import해주세요.'
       });
     }
     
-    const mapped = result.map(row => ({
-      id: row.id,
-      no: row.no || '',
-      name: row.name || '',
-      fmeaId: row.fmeaId
-    }));
+    // 2. Master Dataset의 공정 데이터 조회 (A1: 공정번호, A2: 공정명)
+    const flatItems = await prisma.pfmeaMasterFlatItem.findMany({
+      where: { 
+        datasetId: activeDataset.id,
+        itemCode: { in: ['A1', 'A2', 'L2-1', 'L2-2'] }  // 공정번호, 공정명
+      },
+      orderBy: { processNo: 'asc' }
+    });
     
-    console.log(`✅ 공정 ${mapped.length}개 반환 (type=${type}, fmeaId=${fmeaId})`);
+    // 3. processNo별로 공정 데이터 그룹핑
+    const processMap = new Map<string, { no: string; name: string }>();
+    
+    flatItems.forEach((item: any) => {
+      const processNo = item.processNo || '';
+      if (!processMap.has(processNo)) {
+        processMap.set(processNo, { no: '', name: '' });
+      }
+      const proc = processMap.get(processNo)!;
+      
+      // A1 또는 L2-1 = 공정번호
+      if (item.itemCode === 'A1' || item.itemCode === 'L2-1') {
+        proc.no = item.value || '';
+      }
+      // A2 또는 L2-2 = 공정명
+      if (item.itemCode === 'A2' || item.itemCode === 'L2-2') {
+        proc.name = item.value || '';
+      }
+    });
+    
+    // 4. 공정 목록 생성 (공정명이 있는 것만)
+    const processes = Array.from(processMap.entries())
+      .filter(([_, proc]) => proc.name && proc.name.trim() !== '')
+      .map(([processNo, proc], idx) => ({
+        id: `master_proc_${processNo}_${idx}`,
+        no: proc.no || String((idx + 1) * 10),
+        name: proc.name
+      }));
+    
+    console.log(`✅ Master 공정 ${processes.length}개 반환 (dataset: ${activeDataset.name})`);
     
     return NextResponse.json({ 
       success: true, 
-      processes: mapped,
-      source: 'public-schema',
-      type,
-      requestedFmeaId: fmeaId
+      processes,
+      source: 'pfmea_master_flat_items',
+      datasetId: activeDataset.id,
+      datasetName: activeDataset.name
     });
     
   } catch (error: any) {

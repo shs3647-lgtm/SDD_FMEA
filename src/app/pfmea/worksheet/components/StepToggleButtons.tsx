@@ -29,7 +29,8 @@ export default function StepToggleButtons({ state, setState }: StepToggleButtons
     { step: 6, label: '6ST' },
   ];
 
-  const visibleSteps = state.visibleSteps || [2, 3, 4, 5, 6];
+  // ✅ visibleSteps가 배열인지 확인 (안전한 기본값 처리)
+  const visibleSteps = Array.isArray(state.visibleSteps) ? state.visibleSteps : [2, 3, 4, 5, 6];
   const isAllTab = state.tab === 'all';
 
   /**
@@ -37,7 +38,7 @@ export default function StepToggleButtons({ state, setState }: StepToggleButtons
    */
   const toggleStep = useCallback((step: number) => {
     setState(prev => {
-      const currentSteps = prev.visibleSteps || [2, 3, 4, 5, 6];
+      const currentSteps = Array.isArray(prev.visibleSteps) ? prev.visibleSteps : [2, 3, 4, 5, 6];
       const isVisible = currentSteps.includes(step);
       
       // 최소 1개는 선택되어야 함
@@ -66,7 +67,7 @@ export default function StepToggleButtons({ state, setState }: StepToggleButtons
     if (!isAllTab) {
       console.log(`[StepToggle] ALL 탭 이동`);
       setState(prev => {
-        const currentSteps = prev.visibleSteps || [2, 3, 4, 5, 6];
+        const currentSteps = Array.isArray(prev.visibleSteps) ? prev.visibleSteps : [2, 3, 4, 5, 6];
         const isVisible = currentSteps.includes(step);
         
         // 최소 1개는 선택되어야 함

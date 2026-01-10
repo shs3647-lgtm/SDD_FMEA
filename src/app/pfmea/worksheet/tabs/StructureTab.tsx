@@ -685,27 +685,40 @@ export default function StructureTab(props: StructureTabProps) {
       </thead>
       <tbody onKeyDown={handleEnterBlur}>
         {rows.length === 0 ? (
-          // ✅ rows가 비어있을 때도 완제품 공정명 입력 가능
-          <tr className="h-6 bg-white">
-            <td colSpan={4} className="text-center text-xs border border-[#ccc] p-1 align-middle">
-              <div className="flex items-center justify-center gap-2">
-                <input
-                  type="text" 
-                  value={state.l1.name || ''}
-                  onChange={(e) => { 
-                    // ✅ 데이터 변경 시 확정 상태 해제
-                    const updateFn = (prev: any) => ({ ...prev, l1: { ...prev.l1, name: e.target.value }, structureConfirmed: false } as any);
-                    if (setStateSynced) setStateSynced(updateFn);
-                    else setState(updateFn);
-                    setDirty(true); 
-                  }}
-                  onBlur={handleInputBlur} 
-                  onKeyDown={handleInputKeyDown} 
-                  placeholder="완제품명+라인 입력"
-                  className="w-full max-w-md text-center border border-gray-300 outline-none text-xs font-semibold min-h-6 bg-white rounded px-2 py-1"
-                />
-                <span className="text-gray-500 text-xs">공정을 추가하려면 "2. 메인 공정명"을 클릭하세요</span>
-              </div>
+          // ✅ rows가 비어있을 때 2L 화면처럼 4개의 별도 셀 표시
+          <tr className="h-6" style={{ background: '#e3f2fd' }}>
+            {/* 1열: 완제품 공정명 */}
+            <td className="border border-[#ccc] p-1 text-center align-middle" style={{ background: '#e3f2fd' }}>
+              <input
+                type="text" 
+                value={state.l1.name || ''}
+                onChange={(e) => { 
+                  const updateFn = (prev: any) => ({ ...prev, l1: { ...prev.l1, name: e.target.value }, structureConfirmed: false } as any);
+                  if (setStateSynced) setStateSynced(updateFn);
+                  else setState(updateFn);
+                  setDirty(true); 
+                }}
+                onBlur={handleInputBlur} 
+                onKeyDown={handleInputKeyDown} 
+                placeholder="완제품명+라인 입력"
+                className="w-full text-center border-0 outline-none text-xs font-semibold min-h-6 bg-white/95 rounded px-1"
+              />
+            </td>
+            {/* 2열: 메인 공정명 */}
+            <td 
+              className="border border-[#ccc] p-1 text-center align-middle cursor-pointer hover:bg-green-200"
+              style={{ background: '#c8e6c9' }}
+              onClick={() => setIsProcessModalOpen(true)}
+            >
+              <span className="text-[#e65100] font-semibold text-xs">🔍 클릭하여 공정 선택</span>
+            </td>
+            {/* 3열: 4M */}
+            <td className="border border-[#ccc] p-1 text-center align-middle text-xs text-gray-400 font-bold" style={{ background: '#bbdefb' }}>
+              -
+            </td>
+            {/* 4열: 작업요소 */}
+            <td className="border border-[#ccc] p-1 text-center align-middle text-xs text-gray-400" style={{ background: '#ffe0b2' }}>
+              (공정 선택 후 추가)
             </td>
           </tr>
         ) : (

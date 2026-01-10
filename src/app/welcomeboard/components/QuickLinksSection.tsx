@@ -16,8 +16,8 @@ interface QuickLinksSectionProps {
 
 export default function QuickLinksSection({ links }: QuickLinksSectionProps) {
   return (
-    <section className="mb-6">
-      <h2 className="text-white font-black text-base mb-3">바로가기</h2>
+    <section className="mb-4">
+      <h2 className="text-white font-black text-lg mb-2">바로가기</h2>
       <div className="flex justify-between gap-2">
         {links.map((link) => (
           <Link

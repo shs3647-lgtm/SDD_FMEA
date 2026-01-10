@@ -15,11 +15,11 @@ interface ProjectStatsSectionProps {
 
 export default function ProjectStatsSection({ stats }: ProjectStatsSectionProps) {
   return (
-    <section className="mb-6">
-      <h2 className="text-white font-black text-base mb-3">
+    <section className="mb-4">
+      <h2 className="text-white font-black text-lg mb-2">
         프로젝트 프리뷰 — My Projects Status
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* 진행중 */}
         <div className="bg-[#0e1a33] border border-[#1d2a48] rounded-[14px] p-4 flex items-center justify-between shadow-lg">
           <div>

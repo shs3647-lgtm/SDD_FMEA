@@ -9,8 +9,8 @@
 
 export default function Header() {
   return (
-    <header className="mb-6 bg-[#0e1a33] border border-[#1d2a48] rounded-[14px] shadow-lg">
-      <div className="flex items-center justify-between h-14 px-6">
+    <header className="mb-3 bg-[#0e1a33] border border-[#1d2a48] rounded-[14px] shadow-lg">
+      <div className="flex items-center justify-between h-12 px-4">
         {/* 중앙: Smart System */}
         <div className="flex-1 text-center">
           <h1 className="text-2xl font-black text-white tracking-wide">
