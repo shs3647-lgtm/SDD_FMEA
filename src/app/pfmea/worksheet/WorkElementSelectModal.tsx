@@ -233,8 +233,7 @@ export default function WorkElementSelectModal({
       onClick={onClose}
     >
       <div 
-        className="bg-white rounded-lg shadow-2xl flex flex-col overflow-hidden"
-        style={{ width: '500px', maxWidth: '500px', minWidth: '500px', maxHeight: 'calc(100vh - 120px)' }}
+        className="bg-white rounded-lg shadow-2xl w-[500px] max-w-[500px] min-w-[500px] flex flex-col overflow-hidden max-h-[calc(100vh-120px)]"
         onClick={e => e.stopPropagation()}
         onKeyDown={e => e.stopPropagation()}
       >
