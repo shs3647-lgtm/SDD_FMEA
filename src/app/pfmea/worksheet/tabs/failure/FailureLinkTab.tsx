@@ -34,7 +34,6 @@ import { groupFailureLinksByFM, calculateLastRowMerge } from '../../utils';
 import FailureLinkTables from './FailureLinkTables';
 import FailureLinkDiagram from './FailureLinkDiagram';
 import FailureLinkResult from './FailureLinkResult';
-import AllTabAtomic from '../all/AllTabAtomic';
 import { useSVGLines } from './hooks/useSVGLines';
 import { 
   containerStyle, rightPanelStyle, rightHeaderStyle, modeButtonStyle, 
@@ -1456,16 +1455,8 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
             />
           )}
           {viewMode === 'result' && (
-            // ✅ ALL 화면: 원자성 DB에서 CASCADE 역전개 (구조분석, 기능분석, 고장분석 통합)
-            <AllTabAtomic 
-              fmeaId={(state as any).fmeaId || ''} 
-              visibleSteps={[2, 3, 4, 5, 6]}
-              setState={setState}
-              onNoData={() => {
-                // 원자성 DB에 데이터가 없으면 기본 결과 화면 표시
-                console.log('[FailureLinkTab] 원자성 DB에 데이터 없음, 기본 결과 표시');
-              }}
-            />
+            // ✅ 고장분석 결과 화면: FM 중심으로 FE(고장영향)↔FC(고장원인) 연결 표시
+            <FailureLinkResult savedLinks={savedLinks} fmData={fmData} />
           )}
         </div>
       </div>
