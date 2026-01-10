@@ -472,14 +472,14 @@ export async function POST(request: NextRequest) {
           }
         }
         
-        // ✅ FmeaInfo 테이블의 structureConfirmed도 업데이트 (raw SQL)
+        // ✅ FmeaInfo 테이블의 structureConfirmed도 업데이트 (raw SQL - 스키마 포함)
         try {
           await tx.$executeRawUnsafe(`
-            UPDATE "FmeaInfo" 
+            UPDATE "${schema}"."FmeaInfo" 
             SET "structureConfirmed" = $1, "updatedAt" = NOW()
             WHERE "fmeaId" = $2
           `, db.confirmed.structure || false, db.fmeaId);
-          console.log('[API] ✅ FmeaInfo.structureConfirmed 업데이트:', db.confirmed.structure);
+          console.log('[API] ✅ FmeaInfo.structureConfirmed 업데이트:', db.confirmed.structure, '스키마:', schema);
         } catch (e: any) {
           // 테이블이 없으면 스킵
           console.warn('[API] FmeaInfo 업데이트 오류 (무시):', e.message);

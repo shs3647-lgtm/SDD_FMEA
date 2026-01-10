@@ -19,9 +19,13 @@ interface DbData {
   data: any[];
 }
 
-// 주요 FMEA 테이블 목록
+// 주요 FMEA 테이블 목록 (PascalCase: Raw SQL, snake_case: Prisma)
 const IMPORTANT_TABLES = [
-  { name: 'fmea_legacy_data', label: '📦 레거시 데이터', desc: 'FMEA 전체 JSON' },
+  // Raw SQL 테이블 (프로젝트 스키마에서 사용)
+  { name: 'FmeaInfo', label: '📋 FMEA 정보', desc: '프로젝트 메타' },
+  { name: 'FmeaLegacyData', label: '📦 레거시 데이터', desc: 'FMEA 전체 JSON' },
+  // Prisma 테이블 (public 스키마)
+  { name: 'fmea_legacy_data', label: '📦 레거시(Prisma)', desc: 'FMEA JSON' },
   { name: 'fmea_confirmed_states', label: '✅ 확정상태', desc: '탭별 확정' },
   { name: 'l1_structures', label: '🏭 1L 구조', desc: '완제품' },
   { name: 'l2_structures', label: '⚙️ 2L 구조', desc: '메인공정' },
