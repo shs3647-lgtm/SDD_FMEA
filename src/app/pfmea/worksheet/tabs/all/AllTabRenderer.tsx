@@ -59,6 +59,9 @@ export default function AllTabRenderer({
   };
   const visibleStepNames = visibleStepsNumbers.map(num => stepNameMap[num] || '').filter(Boolean);
 
+  // ★ 완제품명 (L1)
+  const l1ProductName = state.l1?.name || '';
+  
   // ★ 고장영향(FE) → 기능분석 역전개를 위한 맵 생성
   // failureScope.reqId → 요구사항 → 기능 → 구분 역추적
   const l1Types = state.l1?.types || [];
@@ -177,6 +180,8 @@ export default function AllTabRenderer({
     return {
       fmId,
       fmText: link.fmText || link.cache?.fmText || '',
+      // ★ L1 역전개 데이터 (완제품명)
+      l1ProductName,     // ★ 완제품 공정명
       fmProcessNo,       // ★ 공정번호
       fmProcessName,     // ★ 공정명
       fmProcessFunction, // ★ 공정기능 (역전개)

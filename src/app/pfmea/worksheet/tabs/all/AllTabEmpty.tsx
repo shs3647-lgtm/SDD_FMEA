@@ -292,6 +292,8 @@ interface FailureLinkRow {
   feSeverity: number;     // 심각도
   fcId: string;           // 고장원인 ID
   fcText: string;         // 고장원인 텍스트
+  // ★ L1 역전개 데이터 (완제품명)
+  l1ProductName?: string;     // 완제품 공정명
   // ★ FM 역전개 데이터 (고장형태 → 2L 기능분석)
   fmProcessNo?: string;       // 공정번호
   fmProcessName?: string;     // 공정명
@@ -315,6 +317,8 @@ interface ProcessedFMGroup {
   fmRowSpan: number;      // FM 셀합치기 행 수
   maxSeverity: number;    // 연결된 FE 중 최대 심각도
   maxSeverityFeText: string; // 최대 심각도를 가진 FE 텍스트
+  // ★ L1 역전개 데이터 (완제품명)
+  l1ProductName: string;      // 완제품 공정명
   // ★ FM 역전개 데이터 (2L 기능분석)
   fmProcessNo: string;        // 공정번호
   fmProcessName: string;      // 공정명
@@ -365,6 +369,8 @@ function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[] {
   }
   interface FMData {
     fmText: string;
+    // ★ L1 역전개 데이터
+    l1ProductName: string;
     // ★ FM 역전개 데이터
     fmProcessNo: string;
     fmProcessName: string;
@@ -379,6 +385,8 @@ function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[] {
     if (!fmMap.has(link.fmId)) {
       fmMap.set(link.fmId, {
         fmText: link.fmText,
+        // ★ L1 역전개 데이터
+        l1ProductName: link.l1ProductName || '',
         // ★ FM 역전개 데이터
         fmProcessNo: link.fmProcessNo || '',
         fmProcessName: link.fmProcessName || '',
@@ -470,6 +478,8 @@ function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[] {
       fmRowSpan: maxRows,
       maxSeverity,
       maxSeverityFeText,
+      // ★ L1 역전개 데이터
+      l1ProductName: group.l1ProductName,
       // ★ FM 역전개 데이터
       fmProcessNo: group.fmProcessNo,
       fmProcessName: group.fmProcessName,
@@ -725,7 +735,7 @@ export default function AllTabEmpty({
                       
                       // ★ 구조분석 컬럼 - 역전개 데이터 표시
                       if (col.step === '구조분석') {
-                        // 완제품 공정명 (완제품 표시)
+                        // 완제품 공정명 (L1 역전개)
                         if (col.name === '완제품 공정명') {
                           if (row.isFirstRow) {
                             return (
@@ -742,7 +752,7 @@ export default function AllTabEmpty({
                                   verticalAlign: 'middle',
                                 }}
                               >
-                                완제품
+                                {fmGroup.l1ProductName || ''}
                               </td>
                             );
                           }
