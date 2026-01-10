@@ -27,7 +27,7 @@
 | `src/app/pfmea/import/page.tsx` | codefreeze-20260110-pfmea-import |
 | `src/app/pfmea/revision/page.tsx` | codefreeze-20260110-revision-approval |
 
-### 2. 워크시트 탭
+### 2. 워크시트 탭 (2ST~6ST 전체)
 | 파일 | 코드프리즈 태그 |
 |------|----------------|
 | `src/app/pfmea/worksheet/tabs/StructureTab.tsx` | codefreeze-20260110-structure-4cell |
@@ -37,6 +37,24 @@
 | `src/app/pfmea/worksheet/tabs/failure/FailureL1Tab.tsx` | codefreeze-20260104-worksheet-complete |
 | `src/app/pfmea/worksheet/tabs/failure/FailureL2Tab.tsx` | codefreeze-20260104-worksheet-complete |
 | `src/app/pfmea/worksheet/tabs/failure/FailureL3Tab.tsx` | codefreeze-20260104-worksheet-complete |
+| `src/app/pfmea/worksheet/tabs/failure/FailureLinkTab.tsx` | codefreeze-20260110-failure-link-all |
+| `src/app/pfmea/worksheet/tabs/failure/FailureLinkTables.tsx` | codefreeze-20260110-failure-link-all |
+| `src/app/pfmea/worksheet/tabs/failure/FailureLinkDiagram.tsx` | codefreeze-20260110-failure-link-all |
+| `src/app/pfmea/worksheet/tabs/RiskTab.tsx` | codefreeze-20260110-failure-link-all |
+| `src/app/pfmea/worksheet/tabs/RiskTabConfirmable.tsx` | codefreeze-20260110-failure-link-all |
+| `src/app/pfmea/worksheet/tabs/OptTab.tsx` | codefreeze-20260110-failure-link-all |
+| `src/app/pfmea/worksheet/tabs/OptTabConfirmable.tsx` | codefreeze-20260110-failure-link-all |
+
+### 2-1. ALL 화면 (전체보기)
+| 파일 | 코드프리즈 태그 |
+|------|----------------|
+| `src/app/pfmea/worksheet/tabs/all/AllTabAtomic.tsx` | codefreeze-20260110-failure-link-all |
+| `src/app/pfmea/worksheet/tabs/all/AllTabWithLinks.tsx` | codefreeze-20260110-failure-link-all |
+| `src/app/pfmea/worksheet/tabs/all/AllTabRenderer.tsx` | codefreeze-20260110-failure-link-all |
+| `src/app/pfmea/worksheet/tabs/all/AllTabBasic.tsx` | codefreeze-20260110-failure-link-all |
+| `src/app/pfmea/worksheet/tabs/AllViewTab.tsx` | codefreeze-20260110-failure-link-all |
+| `src/app/pfmea/worksheet/components/AllViewRightPanel.tsx` | codefreeze-20260110-failure-link-all |
+| `src/app/pfmea/worksheet/components/AllTabRightPanel.tsx` | codefreeze-20260110-failure-link-all |
 
 ### 3. 모달 (500px 고정)
 | 파일 | 크기 |
