@@ -51,3 +51,4 @@ console.log('💡 스크립트로 확인:');
 console.log('   node scripts/show-full-db.js');
 console.log('');
 
+

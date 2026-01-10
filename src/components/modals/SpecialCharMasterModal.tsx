@@ -145,13 +145,57 @@ function ItemSelectModal({
 interface SpecialCharMasterModalProps {
   isOpen: boolean;
   onClose: () => void;
+  currentFmeaId?: string | null;  // ✅ 현재 작업 중인 FMEA ID (null도 허용)
 }
 
-export default function SpecialCharMasterModal({ isOpen, onClose }: SpecialCharMasterModalProps) {
+export default function SpecialCharMasterModal({ isOpen, onClose, currentFmeaId }: SpecialCharMasterModalProps) {
   const [masterData, setMasterData] = useState<SpecialCharMaster[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<string>('전체');
   const [selectModal, setSelectModal] = useState<{ itemId: string; field: 'partName' | 'processName' | 'productChar' | 'processChar'; title: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // ✅ 탭 상태 (기호등록 / FMEA 조회)
+  const [activeTab, setActiveTab] = useState<'symbol' | 'fmea'>('symbol');
+  
+  // ✅ FMEA ID 검색 관련 상태
+  const [searchFmeaId, setSearchFmeaId] = useState<string>('');
+  const [loadedFmeaIds, setLoadedFmeaIds] = useState<string[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showFmeaDropdown, setShowFmeaDropdown] = useState(false);
+  
+  // ✅ 사용 가능한 FMEA ID 목록 (메모이제이션) - 대문자 표시
+  const availableFmeaList = useMemo(() => {
+    if (typeof window === 'undefined') return [];
+    const fmeaIds: { id: string; name: string }[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('pfmea_worksheet_')) {
+        const rawId = key.replace('pfmea_worksheet_', '');
+        const fmeaId = rawId.toUpperCase(); // ✅ 대문자로 표시
+        try {
+          const data = JSON.parse(localStorage.getItem(key) || '{}');
+          const productName = data?.l1?.name || '';
+          fmeaIds.push({ 
+            id: fmeaId, 
+            name: productName ? `${fmeaId} - ${productName}` : fmeaId 
+          });
+        } catch {
+          fmeaIds.push({ id: fmeaId, name: fmeaId });
+        }
+      }
+    }
+    return fmeaIds.sort((a, b) => a.id.localeCompare(b.id));
+  }, [isOpen]);
+  
+  // ✅ 검색어로 필터링된 FMEA 목록
+  const filteredFmeaList = useMemo(() => {
+    if (!searchFmeaId.trim()) return availableFmeaList;
+    const search = searchFmeaId.toLowerCase();
+    return availableFmeaList.filter(f => 
+      f.id.toLowerCase().includes(search) || 
+      f.name.toLowerCase().includes(search)
+    );
+  }, [availableFmeaList, searchFmeaId]);
 
   // FMEA 기초정보(pfmea_master_data)에서 항목 목록 가져오기
   const masterItems = useMemo(() => {
@@ -245,6 +289,222 @@ export default function SpecialCharMasterModal({ isOpen, onClose }: SpecialCharM
     };
   }, [isOpen]);
 
+  // ✅ FMEA ID로 워크시트 데이터 로드하는 함수 (대소문자 구분 없이 검색)
+  const loadFmeaWorksheet = useCallback((fmeaId: string): { key: string; data: any } | null => {
+    if (typeof window === 'undefined' || !fmeaId) return null;
+    
+    // 여러 케이스 시도: 원본, 소문자, 대문자
+    const keysToTry = [
+      `pfmea_worksheet_${fmeaId}`,
+      `pfmea_worksheet_${fmeaId.toLowerCase()}`,
+      `pfmea_worksheet_${fmeaId.toUpperCase()}`,
+    ];
+    
+    for (const key of keysToTry) {
+      try {
+        const rawData = localStorage.getItem(key);
+        if (rawData) {
+          const data = JSON.parse(rawData);
+          if (data && data.l2) {
+            console.log(`[특별특성 마스터] FMEA 발견: ${key}`);
+            return { key, data };
+          }
+        }
+      } catch (e) {
+        console.warn('워크시트 파싱 오류:', key);
+      }
+    }
+    
+    // 패턴 매칭으로 재시도 (localStorage 전체 검색)
+    for (let i = 0; i < localStorage.length; i++) {
+      const storageKey = localStorage.key(i);
+      if (storageKey && storageKey.startsWith('pfmea_worksheet_')) {
+        const storedFmeaId = storageKey.replace('pfmea_worksheet_', '');
+        if (storedFmeaId.toLowerCase() === fmeaId.toLowerCase()) {
+          try {
+            const rawData = localStorage.getItem(storageKey);
+            if (rawData) {
+              const data = JSON.parse(rawData);
+              if (data && data.l2) {
+                console.log(`[특별특성 마스터] FMEA 발견 (패턴매칭): ${storageKey}`);
+                return { key: storageKey, data };
+              }
+            }
+          } catch (e) {
+            console.warn('워크시트 파싱 오류:', storageKey);
+          }
+        }
+      }
+    }
+    
+    // 디버그: 사용 가능한 FMEA 목록 출력
+    const availableFmeas: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const storageKey = localStorage.key(i);
+      if (storageKey && storageKey.startsWith('pfmea_worksheet_')) {
+        availableFmeas.push(storageKey.replace('pfmea_worksheet_', ''));
+      }
+    }
+    console.log(`[특별특성 마스터] 사용 가능한 FMEA 목록:`, availableFmeas);
+    
+    return null;
+  }, []);
+
+  // ✅ FMEA에서 특별특성 추출하는 함수 (수정: specialChar가 있는 모든 특성 수집)
+  const extractSCFromFmea = useCallback((worksheetData: { key: string; data: any }, currentData: SpecialCharMaster[]): { newItems: SpecialCharMaster[]; syncCount: number } => {
+    const newItems: SpecialCharMaster[] = [];
+    let syncCount = 0;
+    
+    const { key, data } = worksheetData;
+    const rawFmeaId = key.replace('pfmea_worksheet_', '');
+    const fmeaId = rawFmeaId.toUpperCase(); // ✅ 대문자로 표시
+    
+    console.log(`[SC추출] FMEA ${fmeaId} 분석 시작...`);
+    
+    // L2 공정 순회
+    (data?.l2 || []).forEach((proc: any) => {
+      const processName = proc.no ? `${proc.no}. ${proc.name}` : proc.name;
+      if (!processName || processName.includes('클릭')) return;
+      
+      // ✅ 제품특성 경로: proc.functions[].productChars[] - specialChar가 있는 모든 항목
+      (proc.functions || []).forEach((func: any) => {
+        (func.productChars || []).forEach((pc: any) => {
+          const charName = pc.name?.trim();
+          if (!charName || charName.includes('클릭')) return;
+          
+          // ✅ specialChar 필드가 있으면 특별특성으로 간주
+          const symbol = pc.specialChar;
+          if (symbol && symbol !== '' && symbol !== '-') {
+            const exists = [...currentData, ...newItems].some(m => m.productChar === charName && m.linkPFMEA);
+            if (!exists) {
+              console.log(`  [제품특성] ${charName} → ${symbol}`);
+              newItems.push({
+                id: `SC_FMEA_${fmeaId}_${Date.now()}_${syncCount}`,
+                customer: `FMEA: ${fmeaId}`,
+                customerSymbol: symbol,
+                internalSymbol: symbol === 'CC' ? 'SC' : symbol,
+                meaning: `제품특성 ${symbol}`,
+                icon: symbol === 'CC' ? '★' : '◆',
+                color: symbol === 'CC' ? '#d32f2f' : '#e53935',
+                partName: data?.l1?.name || '',
+                processName: processName || '',
+                productChar: charName,
+                processChar: '',
+                linkDFMEA: false,
+                linkPFMEA: true,
+                linkCP: true,
+                linkPFD: false,
+              });
+              syncCount++;
+            }
+          }
+        });
+      });
+      
+      // ✅ 공정특성 경로: proc.l3[].functions[].processChars[] - specialChar가 있는 모든 항목
+      (proc.l3 || []).forEach((we: any) => {
+        if (!we.name || we.name.includes('클릭')) return;
+        
+        (we.functions || []).forEach((func: any) => {
+          (func.processChars || []).forEach((pc: any) => {
+            const charName = pc.name?.trim();
+            if (!charName || charName.includes('클릭')) return;
+            
+            // ✅ specialChar 필드가 있으면 특별특성으로 간주
+            const symbol = pc.specialChar;
+            if (symbol && symbol !== '' && symbol !== '-') {
+              const exists = [...currentData, ...newItems].some(m => m.processChar === charName && m.linkPFMEA);
+              if (!exists) {
+                console.log(`  [공정특성] ${charName} → ${symbol}`);
+                newItems.push({
+                  id: `SC_FMEA_${fmeaId}_${Date.now()}_${syncCount}`,
+                  customer: `FMEA: ${fmeaId}`,
+                  customerSymbol: symbol,
+                  internalSymbol: symbol === 'CC' ? 'SC' : symbol,
+                  meaning: `공정특성 ${symbol}`,
+                  icon: symbol === 'CC' ? '★' : '◆',
+                  color: symbol === 'CC' ? '#d32f2f' : '#ff9800',
+                  partName: data?.l1?.name || '',
+                  processName: processName || '',
+                  productChar: '',
+                  processChar: charName,
+                  linkDFMEA: false,
+                  linkPFMEA: true,
+                  linkCP: true,
+                  linkPFD: false,
+                });
+                syncCount++;
+              }
+            }
+          });
+        });
+      });
+    });
+    
+    console.log(`[SC추출] FMEA ${fmeaId} 완료: ${syncCount}개 발견`);
+    return { newItems, syncCount };
+  }, []);
+
+  // ✅ 사용 가능한 FMEA 목록 조회 (대문자로 반환)
+  const getAvailableFmeaIds = useCallback((): string[] => {
+    if (typeof window === 'undefined') return [];
+    const fmeaIds: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('pfmea_worksheet_')) {
+        fmeaIds.push(key.replace('pfmea_worksheet_', '').toUpperCase()); // ✅ 대문자 변환
+      }
+    }
+    return fmeaIds.sort();
+  }, []);
+
+  // ✅ FMEA ID 검색 핸들러 (직접 ID 전달 가능하도록 수정)
+  const handleSearchFmea = useCallback((directFmeaId?: string) => {
+    const targetId = directFmeaId || searchFmeaId.trim(); // ✅ 직접 전달된 ID 우선 사용
+    
+    if (!targetId) {
+      // 빈 검색 시 사용 가능한 FMEA 목록 표시
+      const available = getAvailableFmeaIds();
+      if (available.length > 0) {
+        alert(`사용 가능한 FMEA 목록:\n\n${available.join('\n')}\n\n위 ID 중 하나를 입력해주세요.`);
+      } else {
+        alert('저장된 FMEA 워크시트가 없습니다.\n\n먼저 FMEA 워크시트에서 데이터를 저장해주세요.');
+      }
+      return;
+    }
+    
+    setIsSearching(true);
+    
+    const worksheetData = loadFmeaWorksheet(targetId);
+    if (!worksheetData) {
+      const available = getAvailableFmeaIds();
+      const availableList = available.length > 0 
+        ? `\n\n사용 가능한 FMEA:\n${available.slice(0, 10).join('\n')}${available.length > 10 ? `\n... 외 ${available.length - 10}개` : ''}`
+        : '\n\n저장된 FMEA 워크시트가 없습니다.';
+      alert(`FMEA ID "${targetId}"를 찾을 수 없습니다.${availableList}`);
+      setIsSearching(false);
+      return;
+    }
+    
+    const { newItems, syncCount } = extractSCFromFmea(worksheetData, masterData);
+    
+    const upperFmeaId = targetId.toUpperCase(); // ✅ 대문자로 표시
+    if (syncCount > 0) {
+      const updatedData = [...masterData, ...newItems];
+      setMasterData(updatedData);
+      localStorage.setItem('pfmea_special_char_master', JSON.stringify(updatedData));
+      setLoadedFmeaIds(prev => [...new Set([...prev, upperFmeaId])]);
+      alert(`FMEA "${upperFmeaId}"에서 ${syncCount}건의 특별특성이 동기화되었습니다.`);
+    } else {
+      // 워크시트는 찾았지만 특별특성이 없는 경우
+      setLoadedFmeaIds(prev => [...new Set([...prev, upperFmeaId])]);
+      alert(`FMEA "${upperFmeaId}" 워크시트를 로드했습니다.\n\n현재 등록된 특별특성이 없습니다.\n워크시트에서 제품특성/공정특성에 SC를 지정하면 자동 동기화됩니다.`);
+    }
+    
+    setIsSearching(false);
+    setSearchFmeaId('');
+  }, [searchFmeaId, masterData, loadFmeaWorksheet, extractSCFromFmea, getAvailableFmeaIds]);
+
   useEffect(() => {
     if (!isOpen) return;
     const saved = localStorage.getItem('pfmea_special_char_master');
@@ -258,126 +518,36 @@ export default function SpecialCharMasterModal({ isOpen, onClose }: SpecialCharM
       }));
     }
     
-    // ✅ FMEA 분석 결과 동기화 - SC 지정된 제품특성/공정특성 자동 등록
+    // ✅ 현재 작업 중인 FMEA만 자동 동기화 (성능 최적화)
     try {
-      // ✅ 모든 FMEA 워크시트 데이터 수집 (pfmea_worksheet_${fmeaId} 형식)
-      const allWorksheetData: any[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('pfmea_worksheet_')) {
-          try {
-            const data = JSON.parse(localStorage.getItem(key) || '{}');
-            if (data && data.l2) {
-              allWorksheetData.push(data);
-            }
-          } catch (e) {
-            console.warn('워크시트 파싱 오류:', key);
+      let syncCount = 0;
+      
+      if (currentFmeaId) {
+        const worksheetData = loadFmeaWorksheet(currentFmeaId);
+        if (worksheetData) {
+          const upperFmeaId = currentFmeaId.toUpperCase(); // ✅ 대문자로 표시
+          console.log(`[특별특성 마스터] 현재 FMEA 동기화: ${upperFmeaId}`);
+          const { newItems, syncCount: count } = extractSCFromFmea(worksheetData, currentData);
+          if (count > 0) {
+            currentData = [...currentData, ...newItems];
+            syncCount = count;
+            setLoadedFmeaIds([upperFmeaId]);
           }
         }
       }
       
-      console.log(`[특별특성 마스터] ${allWorksheetData.length}개 FMEA 워크시트 검색`);
-      
-      let syncCount = 0;
-      
-      allWorksheetData.forEach((data: any) => {
-          // L2 공정에서 SC가 지정된 고장형태의 제품특성 수집
-          (data?.l2 || []).forEach((proc: any) => {
-            const processName = proc.no ? `${proc.no}. ${proc.name}` : proc.name;
-            
-            // 모든 기능의 제품특성 수집
-            (proc.functions || []).forEach((func: any) => {
-              (func.productChars || []).forEach((pc: any) => {
-                const charName = pc.name?.trim();
-                if (!charName || charName.includes('클릭')) return;
-                
-                // ✅ 제품특성 자체에 specialChar가 있거나, 연결된 고장형태에 SC=true인 것 찾기
-                const hasSpecialChar = pc.specialChar && pc.specialChar !== '';
-                const linkedModes = (proc.failureModes || []).filter(
-                  (m: any) => m.productCharId === pc.id && m.sc === true
-                );
-                
-                if (hasSpecialChar || linkedModes.length > 0) {
-                  // 마스터에 해당 제품특성이 없으면 추가
-                  const exists = currentData.some(m => m.productChar === charName && m.linkPFMEA);
-                  if (!exists) {
-                    const symbol = pc.specialChar || 'SC';
-                    currentData.push({
-                      id: `SC_FMEA_${Date.now()}_${syncCount}`,
-                      customer: 'FMEA분석',
-                      customerSymbol: symbol,
-                      internalSymbol: symbol === 'CC' ? 'SC' : symbol,
-                      meaning: `제품특성 ${symbol}`,
-                      icon: symbol === 'CC' ? '★' : '◆',
-                      color: symbol === 'CC' ? '#d32f2f' : '#e53935',
-                      partName: data?.l1?.name || '',
-                      processName: processName || '',
-                      productChar: charName,
-                      processChar: '',
-                      linkDFMEA: false,
-                      linkPFMEA: true,
-                      linkCP: true,
-                      linkPFD: false,
-                    });
-                    syncCount++;
-                    console.log(`[특별특성 마스터] 제품특성 동기화: "${charName}" (${symbol})`);
-                  }
-                }
-              });
-              
-              // 작업요소의 공정특성도 처리
-              (func.workElements || []).forEach((we: any) => {
-                (we.processChars || []).forEach((pc: any) => {
-                  const charName = pc.name?.trim();
-                  if (!charName || charName.includes('클릭')) return;
-                  
-                  // ✅ 공정특성 자체에 specialChar가 있거나, 연결된 고장원인에 SC=true인 것 찾기
-                  const hasSpecialChar = pc.specialChar && pc.specialChar !== '';
-                  const linkedCauses = (proc.failureCauses || []).filter(
-                    (c: any) => c.processCharId === pc.id && c.sc === true
-                  );
-                  
-                  if (hasSpecialChar || linkedCauses.length > 0) {
-                    const exists = currentData.some(m => m.processChar === charName && m.linkPFMEA);
-                    if (!exists) {
-                      const symbol = pc.specialChar || 'SC';
-                      currentData.push({
-                        id: `SC_FMEA_${Date.now()}_${syncCount}`,
-                        customer: 'FMEA분석',
-                        customerSymbol: symbol,
-                        internalSymbol: symbol === 'CC' ? 'SC' : symbol,
-                        meaning: `공정특성 ${symbol}`,
-                        icon: symbol === 'CC' ? '★' : '◆',
-                        color: symbol === 'CC' ? '#d32f2f' : '#ff9800',
-                        partName: data?.l1?.name || '',
-                        processName: processName || '',
-                        productChar: '',
-                        processChar: charName,
-                        linkDFMEA: false,
-                        linkPFMEA: true,
-                        linkCP: true,
-                        linkPFD: false,
-                      });
-                      syncCount++;
-                      console.log(`[특별특성 마스터] 공정특성 동기화: "${charName}" (${symbol})`);
-                    }
-                  }
-                });
-              });
-            });
-          });
-        });
-        
-        if (syncCount > 0) {
-          console.log(`[특별특성 마스터] FMEA 분석 결과 ${syncCount}건 동기화`);
-        }
+      if (syncCount > 0) {
+        console.log(`[특별특성 마스터] 현재 FMEA에서 ${syncCount}건 동기화`);
+      } else {
+        console.log('[특별특성 마스터] 동기화할 특별특성 없음');
+      }
     } catch (e) {
       console.error('FMEA 분석 결과 동기화 오류:', e);
     }
     
     setMasterData(currentData);
     localStorage.setItem('pfmea_special_char_master', JSON.stringify(currentData));
-  }, [isOpen]);
+  }, [isOpen, currentFmeaId, loadFmeaWorksheet, extractSCFromFmea]);
 
   const saveData = useCallback((data: SpecialCharMaster[]) => {
     setMasterData(data);
@@ -470,109 +640,269 @@ export default function SpecialCharMasterModal({ isOpen, onClose }: SpecialCharM
   // 헤더 그라데이션 스타일
   const headerGradientStyle: React.CSSProperties = { background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)' };
 
+  // 탭 스타일
+  const tabStyle = (isActive: boolean): React.CSSProperties => ({
+    padding: '10px 24px',
+    border: 'none',
+    borderBottom: isActive ? '3px solid #2e7d32' : '3px solid transparent',
+    background: isActive ? '#e8f5e9' : 'transparent',
+    color: isActive ? '#2e7d32' : '#666',
+    fontSize: '13px',
+    fontWeight: isActive ? 700 : 500,
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  });
+
   const modalContent = (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[10000]" onClick={onClose}>
       <div className="bg-white rounded-lg w-[98%] max-w-[1400px] max-h-[90vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
         
+        {/* 헤더 */}
         <div className="text-white py-3 px-5 flex justify-between items-center" style={headerGradientStyle}>
           <h3 className="m-0 text-[15px] font-bold">★ 특별특성 마스터 등록</h3>
           <button onClick={onClose} className="bg-white/20 border-none text-white w-7 h-7 rounded-full cursor-pointer text-base">×</button>
         </div>
 
-        <div className="py-2 px-4 bg-gray-100 border-b border-gray-300 flex gap-2 items-center flex-wrap">
-          <select value={selectedCustomer} onChange={e => setSelectedCustomer(e.target.value)} className="py-1.5 px-2.5 border border-gray-300 rounded text-xs">
-            {customers.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <button onClick={addNewItem} className="py-1.5 px-3 bg-green-600 text-white border-none rounded text-xs cursor-pointer font-semibold">+ 신규</button>
-          <button onClick={() => {
-            // FMEA 분석결과 수동 동기화
-            const count = masterData.filter(m => m.customer === 'FMEA분석').length;
-            alert(`FMEA 분석결과 ${count}건이 동기화되었습니다.\n\n마스터를 열 때 자동으로 동기화됩니다.\n특별특성이 없으면 FMEA 워크시트에서 먼저 SC를 지정해주세요.`);
-          }} className="py-1.5 px-3 bg-purple-600 text-white border-none rounded text-xs cursor-pointer font-semibold">🔄 FMEA 동기화</button>
-          <span className="text-[11px] text-gray-600 ml-1">총 {filteredData.length}개</span>
+        {/* 탭 네비게이션 */}
+        <div className="flex border-b border-gray-300 bg-white">
+          <button onClick={() => setActiveTab('symbol')} style={tabStyle(activeTab === 'symbol')}>
+            📋 기호등록
+          </button>
+          <button onClick={() => setActiveTab('fmea')} style={tabStyle(activeTab === 'fmea')}>
+            🔍 FMEA 조회
+          </button>
           <div className="flex-1" />
-          <button onClick={handleExport} className="py-1.5 px-3 bg-blue-700 text-white border-none rounded text-xs cursor-pointer">📥 Export</button>
-          <button onClick={() => fileInputRef.current?.click()} className="py-1.5 px-3 bg-orange-500 text-white border-none rounded text-xs cursor-pointer">📤 Import</button>
-          <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
-          <div className="w-px h-6 bg-gray-300 mx-1" />
-          <button onClick={() => { saveData(masterData); alert('저장되었습니다.'); onClose(); }} className="py-1.5 px-4 bg-green-800 text-white border-none rounded text-xs cursor-pointer font-semibold">💾 저장</button>
-          <button onClick={onClose} className="py-1.5 px-3 bg-gray-500 text-white border-none rounded text-xs cursor-pointer">취소</button>
+          <div className="flex items-center gap-2 px-4">
+            <button onClick={handleExport} className="py-1.5 px-3 bg-blue-700 text-white border-none rounded text-xs cursor-pointer">📥 Export</button>
+            <button onClick={() => fileInputRef.current?.click()} className="py-1.5 px-3 bg-orange-500 text-white border-none rounded text-xs cursor-pointer">📤 Import</button>
+            <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
+            <div className="w-px h-6 bg-gray-300 mx-1" />
+            <button onClick={() => { saveData(masterData); alert('저장되었습니다.'); onClose(); }} className="py-1.5 px-4 bg-green-800 text-white border-none rounded text-xs cursor-pointer font-semibold">💾 저장</button>
+            <button onClick={onClose} className="py-1.5 px-3 bg-gray-500 text-white border-none rounded text-xs cursor-pointer">취소</button>
+          </div>
         </div>
 
-        <div className="flex-1 overflow-auto">
-          <table className="w-full border-collapse min-w-[1200px]">
-            <thead className="sticky top-0 z-[1]">
-              <tr className="bg-green-50">
-                <th colSpan={4} className="p-2 border border-green-300 text-[11px] font-semibold whitespace-nowrap text-center bg-green-100 text-green-800">기호등록</th>
-                <th colSpan={4} className="p-2 border border-green-300 text-[11px] font-semibold whitespace-nowrap text-center bg-blue-100 text-blue-700">항목등록 (FMEA 기초정보에서 선택)</th>
-                <th colSpan={4} className="p-2 border border-green-300 text-[11px] font-semibold whitespace-nowrap text-center bg-purple-100 text-purple-800">연동</th>
-                <th className="p-2 border border-green-300 text-[11px] font-semibold whitespace-nowrap text-center bg-gray-200">작업</th>
-              </tr>
-              <tr className="bg-gray-50">
-                <th className="p-2 border border-green-300 text-[11px] font-semibold whitespace-nowrap text-center w-20">고객</th>
-                <th className="p-2 border border-green-300 text-[11px] font-semibold whitespace-nowrap text-center w-[70px]">기호</th>
-                <th className="p-2 border border-green-300 text-[11px] font-semibold whitespace-nowrap text-center w-[50px]">자사</th>
-                <th className="p-2 border border-green-300 text-[11px] font-semibold whitespace-nowrap text-center w-20">구분</th>
-                <th className="p-2 border border-green-300 text-[11px] font-semibold whitespace-nowrap text-center w-[100px]">부품</th>
-                <th className="p-2 border border-green-300 text-[11px] font-semibold whitespace-nowrap text-center w-[120px]">공정</th>
-                <th className="p-2 border border-green-300 text-[11px] font-semibold whitespace-nowrap text-center w-[140px]">제품특성</th>
-                <th className="p-2 border border-green-300 text-[11px] font-semibold whitespace-nowrap text-center w-[140px]">공정특성</th>
-                <th className="p-2 border border-green-300 text-[11px] font-semibold whitespace-nowrap text-center w-[55px]">D-FMEA</th>
-                <th className="p-2 border border-green-300 text-[11px] font-semibold whitespace-nowrap text-center w-[55px]">P-FMEA</th>
-                <th className="p-2 border border-green-300 text-[11px] font-semibold whitespace-nowrap text-center w-10">CP</th>
-                <th className="p-2 border border-green-300 text-[11px] font-semibold whitespace-nowrap text-center w-10">PFD</th>
-                <th className="p-2 border border-green-300 text-[11px] font-semibold whitespace-nowrap text-center w-[60px]"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredData.map(item => (
-                <tr key={item.id} className="bg-white">
-                  <td style={STYLES.td}>
-                    <input type="text" value={item.customer} onChange={e => updateItem(item.id, 'customer', e.target.value)} className="w-full py-1 px-1.5 border border-gray-300 rounded text-[11px]" />
-                  </td>
-                  <td className="p-1 border border-gray-300 text-[11px] whitespace-nowrap text-center">
-                    <span style={{ ...STYLES.badge, background: item.color }}>{item.icon} {item.customerSymbol || '?'}</span>
-                  </td>
-                  <td className="p-1 border border-gray-300 text-[11px] whitespace-nowrap text-center">
-                    <select value={item.internalSymbol} onChange={e => updateItem(item.id, 'internalSymbol', e.target.value)} className="py-0.5 px-1 border border-gray-300 rounded text-[10px]">
-                      <option value="SC">SC</option>
-                      <option value="FF">FF</option>
-                    </select>
-                  </td>
-                  <td style={STYLES.td}>
-                    <input type="text" value={item.meaning} onChange={e => updateItem(item.id, 'meaning', e.target.value)} className="w-full py-1 px-1.5 border border-gray-300 rounded text-[11px]" />
-                  </td>
-                  <td style={STYLES.td}><SelectButton itemId={item.id} field="partName" value={item.partName || ''} title="부품 선택" /></td>
-                  <td style={STYLES.td}><SelectButton itemId={item.id} field="processName" value={item.processName || ''} title="공정 선택" /></td>
-                  <td style={STYLES.td}><SelectButton itemId={item.id} field="productChar" value={item.productChar || ''} title="제품특성 선택" /></td>
-                  <td style={STYLES.td}><SelectButton itemId={item.id} field="processChar" value={item.processChar || ''} title="공정특성 선택" /></td>
-                  <td className="p-1 border border-gray-300 text-[11px] whitespace-nowrap text-center">
-                    <button onClick={() => toggleLink(item.id, 'linkDFMEA')} style={linkBtnStyle(item.linkDFMEA)}>{item.linkDFMEA ? '연동' : '-'}</button>
-                  </td>
-                  <td className="p-1 border border-gray-300 text-[11px] whitespace-nowrap text-center">
-                    <button onClick={() => toggleLink(item.id, 'linkPFMEA')} style={linkBtnStyle(item.linkPFMEA)}>{item.linkPFMEA ? '연동' : '-'}</button>
-                  </td>
-                  <td className="p-1 border border-gray-300 text-[11px] whitespace-nowrap text-center">
-                    <button onClick={() => toggleLink(item.id, 'linkCP')} style={linkBtnStyle(item.linkCP)}>{item.linkCP ? '연동' : '-'}</button>
-                  </td>
-                  <td className="p-1 border border-gray-300 text-[11px] whitespace-nowrap text-center">
-                    <button onClick={() => toggleLink(item.id, 'linkPFD')} style={linkBtnStyle(item.linkPFD)}>{item.linkPFD ? '연동' : '-'}</button>
-                  </td>
-                  <td className="p-1 border border-gray-300 text-[11px] whitespace-nowrap text-center">
-                    <select defaultValue="" onChange={(e) => { if (e.target.value === 'delete') deleteItem(item.id); e.target.value = ''; }} className="py-0.5 px-1 border border-gray-300 rounded text-[10px] cursor-pointer">
-                      <option value="">수정▼</option>
-                      <option value="delete">🗑 삭제</option>
-                    </select>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {/* ===== 탭 1: 기호등록 ===== */}
+        {activeTab === 'symbol' && (
+          <>
+            <div className="py-2 px-4 bg-green-50 border-b border-gray-300 flex gap-2 items-center flex-wrap">
+              <select value={selectedCustomer} onChange={e => setSelectedCustomer(e.target.value)} className="py-1.5 px-2.5 border border-gray-300 rounded text-xs">
+                {customers.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <button onClick={addNewItem} className="py-1.5 px-3 bg-green-600 text-white border-none rounded text-xs cursor-pointer font-semibold">+ 신규 기호</button>
+              <span className="text-[11px] text-gray-600 ml-1">총 {filteredData.length}개</span>
+            </div>
 
-        <div className="px-4 py-2 bg-[#f5f5f5] border-t border-[#e0e0e0]">
-          <span className="text-[11px] text-[#666]">💡 SC: Safety/Critical | FF: Fit/Function | 연동 시 해당 문서에 자동 표시</span>
-        </div>
+            <div className="flex-1 overflow-auto">
+              <table className="w-full border-collapse">
+                <thead className="sticky top-0 z-[1]">
+                  <tr className="bg-green-100">
+                    <th className="p-2 border border-green-300 text-[11px] font-semibold text-center w-24">고객</th>
+                    <th className="p-2 border border-green-300 text-[11px] font-semibold text-center w-20">기호</th>
+                    <th className="p-2 border border-green-300 text-[11px] font-semibold text-center w-20">고객기호</th>
+                    <th className="p-2 border border-green-300 text-[11px] font-semibold text-center w-16">자사</th>
+                    <th className="p-2 border border-green-300 text-[11px] font-semibold text-center w-24">구분</th>
+                    <th className="p-2 border border-green-300 text-[11px] font-semibold text-center w-16">아이콘</th>
+                    <th className="p-2 border border-green-300 text-[11px] font-semibold text-center w-20">색상</th>
+                    <th className="p-2 border border-green-300 text-[11px] font-semibold text-center w-16">삭제</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredData.map(item => (
+                    <tr key={item.id} className="bg-white hover:bg-green-50">
+                      <td style={STYLES.td}>
+                        <input type="text" value={item.customer} onChange={e => updateItem(item.id, 'customer', e.target.value)} className="w-full py-1 px-1.5 border border-gray-300 rounded text-[11px]" />
+                      </td>
+                      <td className="p-1 border border-gray-300 text-center">
+                        <span style={{ ...STYLES.badge, background: item.color }}>{item.icon} {item.customerSymbol || '?'}</span>
+                      </td>
+                      <td style={STYLES.td}>
+                        <input type="text" value={item.customerSymbol} onChange={e => updateItem(item.id, 'customerSymbol', e.target.value)} className="w-full py-1 px-1.5 border border-gray-300 rounded text-[11px] text-center" />
+                      </td>
+                      <td className="p-1 border border-gray-300 text-center">
+                        <select value={item.internalSymbol} onChange={e => updateItem(item.id, 'internalSymbol', e.target.value)} className="py-0.5 px-1 border border-gray-300 rounded text-[10px]">
+                          <option value="SC">SC</option>
+                          <option value="FF">FF</option>
+                        </select>
+                      </td>
+                      <td style={STYLES.td}>
+                        <input type="text" value={item.meaning} onChange={e => updateItem(item.id, 'meaning', e.target.value)} className="w-full py-1 px-1.5 border border-gray-300 rounded text-[11px]" />
+                      </td>
+                      <td style={STYLES.td}>
+                        <select value={item.icon || '●'} onChange={e => updateItem(item.id, 'icon', e.target.value)} className="w-full py-1 border border-gray-300 rounded text-[12px] text-center">
+                          <option value="●">●</option>
+                          <option value="◆">◆</option>
+                          <option value="★">★</option>
+                          <option value="▲">▲</option>
+                          <option value="■">■</option>
+                          <option value="◇">◇</option>
+                          <option value="○">○</option>
+                        </select>
+                      </td>
+                      <td style={STYLES.td}>
+                        <input type="color" value={item.color} onChange={e => updateItem(item.id, 'color', e.target.value)} className="w-full h-6 border border-gray-300 rounded cursor-pointer" />
+                      </td>
+                      <td className="p-1 border border-gray-300 text-center">
+                        <button onClick={() => deleteItem(item.id)} className="py-1 px-2 bg-red-500 text-white border-none rounded text-[10px] cursor-pointer">🗑</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="px-4 py-2 bg-green-50 border-t border-gray-300">
+              <span className="text-[11px] text-green-700">💡 SC: Safety/Critical | FF: Fit/Function | 고객별 특별특성 기호를 등록하세요</span>
+            </div>
+          </>
+        )}
+
+        {/* ===== 탭 2: FMEA 조회 ===== */}
+        {activeTab === 'fmea' && (
+          <>
+            <div className="py-2 px-4 bg-blue-50 border-b border-gray-300 flex gap-2 items-center flex-wrap">
+              <select value={selectedCustomer} onChange={e => setSelectedCustomer(e.target.value)} className="py-1.5 px-2.5 border border-gray-300 rounded text-xs">
+                {customers.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              
+              {/* FMEA ID 검색 영역 (드롭다운 콤보박스) */}
+              <div className="relative flex items-center gap-1 bg-white border border-purple-300 rounded px-2 py-0.5">
+                <span className="text-[10px] text-purple-700 font-semibold whitespace-nowrap">🔍 FMEA ID:</span>
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    value={searchFmeaId} 
+                    onChange={(e) => setSearchFmeaId(e.target.value)}
+                    onFocus={() => setShowFmeaDropdown(true)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearchFmea()}
+                    placeholder={currentFmeaId || 'FMEA ID 검색/선택'}
+                    className="w-[160px] py-1 px-2 border-none text-xs outline-none bg-transparent"
+                  />
+                  <button 
+                    onClick={() => setShowFmeaDropdown(!showFmeaDropdown)}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-500 hover:text-purple-600"
+                    title="FMEA 목록 보기"
+                  >
+                    ▼
+                  </button>
+                  
+                  {/* FMEA ID 드롭다운 목록 */}
+                  {showFmeaDropdown && (
+                    <div 
+                      className="absolute top-full left-0 mt-1 w-[280px] max-h-[200px] overflow-y-auto bg-white border border-purple-300 rounded shadow-lg z-50"
+                      onMouseLeave={() => setShowFmeaDropdown(false)}
+                    >
+                      <div className="sticky top-0 bg-purple-100 px-2 py-1 text-[10px] text-purple-700 font-semibold border-b border-purple-200">
+                        📋 등록된 FMEA ({availableFmeaList.length}개)
+                      </div>
+                      {filteredFmeaList.length === 0 ? (
+                        <div className="px-3 py-2 text-xs text-gray-500">검색 결과 없음</div>
+                      ) : (
+                        filteredFmeaList.map((fmea, idx) => (
+                          <div
+                            key={fmea.id}
+                            onClick={() => {
+                              setShowFmeaDropdown(false);
+                              setSearchFmeaId(fmea.id);
+                              // ✅ 선택 즉시 검색 실행 - ID 직접 전달로 상태 타이밍 문제 해결
+                              handleSearchFmea(fmea.id);
+                            }}
+                            className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-purple-50 border-b border-gray-100 ${
+                              fmea.id.toLowerCase() === currentFmeaId?.toLowerCase() ? 'bg-green-50 text-green-700 font-semibold' : ''
+                            } ${loadedFmeaIds.some(id => id.toLowerCase() === fmea.id.toLowerCase()) ? 'bg-blue-50' : ''}`}
+                          >
+                            <span className="font-mono">{fmea.id}</span>
+                            {fmea.name !== fmea.id && (
+                              <span className="text-gray-500 ml-1">({fmea.name.replace(fmea.id + ' - ', '')})</span>
+                            )}
+                            {fmea.id.toLowerCase() === currentFmeaId?.toLowerCase() && <span className="ml-1 text-green-600">✓ 현재</span>}
+                            {loadedFmeaIds.some(id => id.toLowerCase() === fmea.id.toLowerCase()) && fmea.id.toLowerCase() !== currentFmeaId?.toLowerCase() && (
+                              <span className="ml-1 text-blue-500">✓ 로드됨</span>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+                <button 
+                  onClick={() => handleSearchFmea()} 
+                  disabled={isSearching}
+                  className="py-1 px-3 bg-purple-600 text-white border-none rounded text-[10px] cursor-pointer font-semibold disabled:bg-gray-400"
+                >
+                  {isSearching ? '...' : '검색'}
+                </button>
+              </div>
+              
+              {/* 현재 로드된 FMEA 표시 */}
+              {currentFmeaId && (
+                <span className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded border border-green-300">
+                  현재: {currentFmeaId.toUpperCase()}
+                </span>
+              )}
+              {loadedFmeaIds.length > 0 && (
+                <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                  동기화: {loadedFmeaIds.join(', ')}
+                </span>
+              )}
+              
+              <span className="text-[11px] text-gray-600 ml-1">총 {filteredData.length}개</span>
+            </div>
+
+            <div className="flex-1 overflow-auto">
+              <table className="w-full border-collapse min-w-[1100px]">
+                <thead className="sticky top-0 z-[1]">
+                  <tr className="bg-blue-100">
+                    <th className="p-2 border border-blue-300 text-[11px] font-semibold text-center w-16">기호</th>
+                    <th className="p-2 border border-blue-300 text-[11px] font-semibold text-center w-20">고객</th>
+                    <th className="p-2 border border-blue-300 text-[11px] font-semibold text-center bg-blue-200 w-[100px]">부품</th>
+                    <th className="p-2 border border-blue-300 text-[11px] font-semibold text-center bg-blue-200 w-[120px]">공정</th>
+                    <th className="p-2 border border-blue-300 text-[11px] font-semibold text-center bg-blue-200 w-[160px]">제품특성</th>
+                    <th className="p-2 border border-blue-300 text-[11px] font-semibold text-center bg-blue-200 w-[160px]">공정특성</th>
+                    <th className="p-2 border border-blue-300 text-[11px] font-semibold text-center bg-purple-200 w-[55px]">D-FMEA</th>
+                    <th className="p-2 border border-blue-300 text-[11px] font-semibold text-center bg-purple-200 w-[55px]">P-FMEA</th>
+                    <th className="p-2 border border-blue-300 text-[11px] font-semibold text-center bg-purple-200 w-10">CP</th>
+                    <th className="p-2 border border-blue-300 text-[11px] font-semibold text-center bg-purple-200 w-10">PFD</th>
+                    <th className="p-2 border border-blue-300 text-[11px] font-semibold text-center bg-gray-200 w-16">삭제</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredData.map(item => (
+                    <tr key={item.id} className="bg-white hover:bg-blue-50">
+                      <td className="p-1 border border-gray-300 text-center">
+                        <span style={{ ...STYLES.badge, background: item.color }}>{item.icon} {item.customerSymbol || '?'}</span>
+                      </td>
+                      <td className="p-1 border border-gray-300 text-[11px] text-center">{item.customer}</td>
+                      <td style={STYLES.td}><SelectButton itemId={item.id} field="partName" value={item.partName || ''} title="부품 선택" /></td>
+                      <td style={STYLES.td}><SelectButton itemId={item.id} field="processName" value={item.processName || ''} title="공정 선택" /></td>
+                      <td style={STYLES.td}><SelectButton itemId={item.id} field="productChar" value={item.productChar || ''} title="제품특성 선택" /></td>
+                      <td style={STYLES.td}><SelectButton itemId={item.id} field="processChar" value={item.processChar || ''} title="공정특성 선택" /></td>
+                      <td className="p-1 border border-gray-300 text-center">
+                        <button onClick={() => toggleLink(item.id, 'linkDFMEA')} style={linkBtnStyle(item.linkDFMEA)}>{item.linkDFMEA ? '연동' : '-'}</button>
+                      </td>
+                      <td className="p-1 border border-gray-300 text-center">
+                        <button onClick={() => toggleLink(item.id, 'linkPFMEA')} style={linkBtnStyle(item.linkPFMEA)}>{item.linkPFMEA ? '연동' : '-'}</button>
+                      </td>
+                      <td className="p-1 border border-gray-300 text-center">
+                        <button onClick={() => toggleLink(item.id, 'linkCP')} style={linkBtnStyle(item.linkCP)}>{item.linkCP ? '연동' : '-'}</button>
+                      </td>
+                      <td className="p-1 border border-gray-300 text-center">
+                        <button onClick={() => toggleLink(item.id, 'linkPFD')} style={linkBtnStyle(item.linkPFD)}>{item.linkPFD ? '연동' : '-'}</button>
+                      </td>
+                      <td className="p-1 border border-gray-300 text-center">
+                        <button onClick={() => deleteItem(item.id)} className="py-1 px-2 bg-red-500 text-white border-none rounded text-[10px] cursor-pointer">🗑</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="px-4 py-2 bg-blue-50 border-t border-gray-300">
+              <span className="text-[11px] text-blue-700">💡 FMEA ID를 검색하여 해당 FMEA의 특별특성을 조회/연동하세요. 연동 시 해당 문서에 자동 표시됩니다.</span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* 항목 선택 모달 */}

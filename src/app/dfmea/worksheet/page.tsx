@@ -806,6 +806,7 @@ function FMEAWorksheetPageContent() {
         <SpecialCharMasterModal
           isOpen={isSpecialCharModalOpen}
           onClose={() => setIsSpecialCharModalOpen(false)}
+          currentFmeaId={selectedFmeaId}
         />
 
         {/* SOD 마스터 모달 */}

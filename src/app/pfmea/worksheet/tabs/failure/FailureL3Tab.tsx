@@ -319,13 +319,19 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
           const otherCauses = currentCauses.filter((c: any) => c.processCharId !== processCharId);
           
           // 2. 선택된 값들 각각 별도 레코드로 생성
+          // ✅ 특별특성 마스터에서 공정특성 기준 SC 자동 지정
+          const charName = modal.processCharName || '';
+          const autoSC = autoSetSCForFailureCause(charName);
+          
+          // ✅ SC가 설정되면 마스터에 동기화
+          if (autoSC && charName) {
+            syncSCToMaster(charName, 'process', true);
+          }
+          
           const newCauses = selectedValues.map(val => {
             const existing = currentCauses.find((c: any) => 
               c.processCharId === processCharId && c.name === val
             );
-            // ✅ 특별특성 마스터에서 공정특성 기준 SC 자동 지정
-            const charName = modal.processCharName || '';
-            const autoSC = autoSetSCForFailureCause(charName);
             
             return existing || { 
               id: uid(), 

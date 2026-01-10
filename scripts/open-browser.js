@@ -24,3 +24,4 @@ const { chromium } = require('playwright');
   console.log('브라우저가 열렸습니다. 확인 후 닫으세요.');
 })();
 
+

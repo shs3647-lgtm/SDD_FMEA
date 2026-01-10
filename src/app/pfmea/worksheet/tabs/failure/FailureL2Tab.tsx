@@ -291,6 +291,11 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
         const charName = modal.parentProductChar || modal.parentCharName || '';
         const autoSC = autoSetSCForFailureMode(charName);
         
+        // ✅ SC가 설정되면 마스터에 동기화
+        if (autoSC && charName) {
+          syncSCToMaster(charName, 'product', true);
+        }
+        
         const newModes = selectedValues.map(val => {
           const existing = currentModes.find((m: any) => 
             m.productCharId === productCharId && m.name === val

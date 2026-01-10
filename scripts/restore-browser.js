@@ -38,3 +38,4 @@ const { chromium } = require('playwright');
   // 브라우저 열어둠
 })();
 
+
