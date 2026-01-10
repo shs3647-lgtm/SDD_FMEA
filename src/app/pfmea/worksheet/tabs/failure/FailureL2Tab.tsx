@@ -307,7 +307,7 @@ export default function FailureL2Tab({ state, setState, setDirty, saveToLocalSto
       });
       
       // ✅ 자동연결: 동일한 제품특성 이름을 가진 다른 공정에도 동일한 고장형태 추가
-      const currentCharName = modal.parentCharName;
+      const currentCharName = modal.parentProductChar || modal.parentCharName;  // ✅ parentProductChar 우선 사용
       if (currentCharName && selectedValues.length > 0) {
         let autoLinkedCount = 0;
         
