@@ -39,7 +39,8 @@ function computeLegacyCompletenessScore(legacy: any): number {
 
 export async function GET(request: NextRequest) {
   try {
-    const fmeaId = request.nextUrl.searchParams.get('fmeaId');
+    // ✅ FMEA ID는 항상 대문자로 정규화 (DB 일관성 보장)
+    const fmeaId = request.nextUrl.searchParams.get('fmeaId')?.toUpperCase();
     if (!fmeaId) {
       return NextResponse.json({ ok: false, error: 'fmeaId parameter is required' }, { status: 400 });
     }

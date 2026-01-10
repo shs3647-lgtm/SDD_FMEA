@@ -17,7 +17,8 @@ function getPool() {
 export async function GET(request: NextRequest) {
   const pool = getPool();
   const searchParams = request.nextUrl.searchParams;
-  const targetId = searchParams.get('id'); // 특정 ID로 조회
+  // ✅ FMEA ID는 항상 대문자로 정규화 (DB 일관성 보장)
+  const targetId = searchParams.get('id')?.toUpperCase() || null; // 특정 ID로 조회
   
   try {
     // 1. 모든 FMEA 스키마 조회 (또는 특정 ID의 스키마만)
@@ -133,7 +134,9 @@ export async function POST(req: NextRequest) {
   
   try {
     const body = await req.json();
-    const { fmeaId, fmeaType, project, fmeaInfo, cftMembers } = body;
+    // ✅ FMEA ID는 항상 대문자로 정규화 (DB 일관성 보장)
+    const fmeaId = body.fmeaId?.toUpperCase();
+    const { fmeaType, project, fmeaInfo, cftMembers } = body;
     
     if (!fmeaId) {
       return NextResponse.json({ success: false, error: 'fmeaId is required' }, { status: 400 });

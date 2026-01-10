@@ -20,7 +20,8 @@ export async function GET(request: NextRequest) {
   
   try {
     const searchParams = request.nextUrl.searchParams;
-    const fmeaId = searchParams.get('fmeaId');
+    // ✅ FMEA ID는 항상 대문자로 정규화 (DB 일관성 보장)
+    const fmeaId = searchParams.get('fmeaId')?.toUpperCase();
     
     if (!fmeaId) {
       return NextResponse.json({ success: false, error: 'fmeaId is required' }, { status: 400 });

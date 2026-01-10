@@ -27,8 +27,9 @@ export async function GET(req: NextRequest) {
   
   try {
     const { searchParams } = new URL(req.url);
-    const sourceId = searchParams.get('sourceId');
-    const targetId = searchParams.get('targetId');
+    // ✅ FMEA ID는 항상 대문자로 정규화 (DB 일관성 보장)
+    const sourceId = searchParams.get('sourceId')?.toUpperCase();
+    const targetId = searchParams.get('targetId')?.toUpperCase();
     
     if (!sourceId) {
       return NextResponse.json({ 
@@ -37,7 +38,7 @@ export async function GET(req: NextRequest) {
       }, { status: 400 });
     }
     
-    // 원본 스키마 이름 생성: pfm26-M001 → pfmea_pfm26_m001
+    // 원본 스키마 이름 생성: PFM26-M001 → pfmea_pfm26_m001
     const sourceSchema = `pfmea_${sourceId.replace(/-/g, '_').toLowerCase()}`;
     
     console.log(`[상속 API] 원본: ${sourceId} (${sourceSchema})`);
@@ -252,7 +253,10 @@ export async function POST(req: NextRequest) {
   
   try {
     const body = await req.json();
-    const { sourceId, targetId, inherited } = body;
+    // ✅ FMEA ID는 항상 대문자로 정규화 (DB 일관성 보장)
+    const sourceId = body.sourceId?.toUpperCase();
+    const targetId = body.targetId?.toUpperCase();
+    const { inherited } = body;
     
     if (!sourceId || !targetId || !inherited) {
       return NextResponse.json({ 
@@ -261,7 +265,7 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
     
-    // 대상 스키마 이름 생성
+    // 대상 스키마 이름 생성 (PFM26-M001 → pfmea_pfm26_m001)
     const targetSchema = `pfmea_${targetId.replace(/-/g, '_').toLowerCase()}`;
     
     console.log(`[상속 저장] ${sourceId} → ${targetId}`);

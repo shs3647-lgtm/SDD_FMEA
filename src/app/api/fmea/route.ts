@@ -74,6 +74,11 @@ export async function POST(request: NextRequest) {
     const legacyData = requestBody.legacyData; // ✅ 레거시 데이터 (Single Source of Truth)
     const forceOverwrite = Boolean(requestBody.forceOverwrite); // ✅ 서버 가드 우회 (디버깅/관리자용)
     
+    // ✅ FMEA ID는 항상 대문자로 정규화 (DB 일관성 보장)
+    if (db.fmeaId) {
+      db.fmeaId = db.fmeaId.toUpperCase();
+    }
+    
     if (!db.fmeaId) {
       return NextResponse.json(
         { error: 'FMEA ID is required' },
@@ -595,7 +600,8 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams;
-    const fmeaId = searchParams.get('fmeaId');
+    // ✅ FMEA ID는 항상 대문자로 정규화 (DB 일관성 보장)
+    const fmeaId = searchParams.get('fmeaId')?.toUpperCase();
     const format = searchParams.get('format'); // 'atomic' | undefined
 
     if (!fmeaId) {

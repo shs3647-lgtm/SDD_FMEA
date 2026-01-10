@@ -23,7 +23,9 @@ export async function POST(req: NextRequest) {
   
   try {
     const body = await req.json();
-    const { fmeaId, schemaName, legacyData } = body;
+    // ✅ FMEA ID는 항상 대문자로 정규화 (DB 일관성 보장)
+    const fmeaId = body.fmeaId?.toUpperCase();
+    const { schemaName, legacyData } = body;
     
     if (!fmeaId || !legacyData) {
       return NextResponse.json({ 
@@ -145,7 +147,8 @@ export async function GET(req: NextRequest) {
   
   try {
     const { searchParams } = new URL(req.url);
-    const fmeaId = searchParams.get('fmeaId');
+    // ✅ FMEA ID는 항상 대문자로 정규화 (DB 일관성 보장)
+    const fmeaId = searchParams.get('fmeaId')?.toUpperCase();
     
     if (!fmeaId) {
       return NextResponse.json({ 
