@@ -98,7 +98,15 @@ export default function TabMenu({ state, setState, setStateSynced, setDirty, sav
         {/* 구분선 */}
         <div className="hidden sm:block w-px h-5 bg-white/30 mx-1 lg:mx-2 shrink-0" />
         
-        {/* 5단계/6단계 확정 버튼 - 항상 표시 */}
+        {/* 단계별 토글 버튼 - 큰 화면에서만 */}
+        <div className="hidden md:block">
+          <StepToggleButtons state={state} setState={setState} />
+        </div>
+        
+        {/* 구분선 */}
+        <div className="hidden sm:block w-px h-5 bg-white/30 mx-1 lg:mx-2 shrink-0" />
+        
+        {/* 5단계/6단계 확정 버튼 - ALL 버튼 뒤쪽에 배치 */}
         <div className="flex gap-1 shrink-0">
           <button
             onClick={() => {
@@ -169,14 +177,6 @@ export default function TabMenu({ state, setState, setStateSynced, setDirty, sav
           >
             📋 {optConfirmed ? '승인' : '승인'}
           </button>
-        </div>
-        
-        {/* 구분선 */}
-        <div className="hidden sm:block w-px h-5 bg-white/30 mx-1 lg:mx-2 shrink-0" />
-        
-        {/* 단계별 토글 버튼 - 큰 화면에서만 */}
-        <div className="hidden md:block">
-          <StepToggleButtons state={state} setState={setState} />
         </div>
       </div>
     </div>
