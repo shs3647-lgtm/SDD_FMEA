@@ -900,27 +900,46 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     return hasFE || hasFC;
   }, [currentFMId, savedLinks]);
 
-  // ========== 연결 확정 (토글 방식) ==========
+  // ========== 연결 해제 (수정 모드에서만 사용) ==========
+  const unlinkCurrentFM = useCallback(() => {
+    if (!currentFMId || !currentFM) return;
+    
+    if (!confirm(`⚠️ "${currentFM.text}"의 연결을 해제하시겠습니까?\n\n연결된 FE/FC가 모두 해제됩니다.`)) {
+      return;
+    }
+    
+    const newLinks = savedLinks.filter(l => l.fmId !== currentFMId);
+    setSavedLinks(newLinks);
+    
+    // ✅ setStateSynced 패턴 적용
+    const updateFn = (prev: any) => ({ ...prev, failureLinks: newLinks });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
+    setDirty(true);
+    
+    // linkedFEs/linkedFCs 초기화
+    setLinkedFEs(new Map());
+    setLinkedFCs(new Map());
+    
+    setTimeout(() => {
+      saveTemp?.();
+      drawLines();
+    }, 100);
+    
+    console.log('[연결 해제]', currentFM.text);
+    alert(`✅ "${currentFM.text}" 연결이 해제되었습니다.\n\n다시 FE/FC를 선택하여 연결할 수 있습니다.`);
+  }, [currentFMId, currentFM, savedLinks, setState, setStateSynced, setDirty, saveTemp, drawLines]);
+
+  // ========== 연결 확정 (확정 전용, 토글 아님) ==========
   const confirmLink = useCallback(() => {
     if (!currentFMId || !currentFM) return;
     
-    // 이미 연결되어 있으면 해제
+    // ✅ 이미 연결되어 있으면 수정 안내 메시지 표시 (토글 방지)
     if (isCurrentFMLinked) {
-      const newLinks = savedLinks.filter(l => l.fmId !== currentFMId);
-      setSavedLinks(newLinks);
-      
-      // ✅ setStateSynced 패턴 적용
-      const updateFn = (prev: any) => ({ ...prev, failureLinks: newLinks });
-      if (setStateSynced) {
-        setStateSynced(updateFn);
-      } else {
-        setState(updateFn);
-      }
-      setDirty(true);
-      setTimeout(() => {
-        saveTemp?.();
-      }, 100);
-      console.log('[연결 해제]', currentFM.text);
+      alert(`ℹ️ "${currentFM.text}"는 이미 연결이 확정되었습니다.\n\n💡 연결을 수정하려면 [🔗 연결해제] 버튼을 사용하세요.`);
       return;
     }
     
@@ -1293,23 +1312,41 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
           </div>
           
           <div style={actionButtonGroupStyle}>
-            {/* 연결확정 토글 버튼 */}
+            {/* 연결확정 버튼 (이미 확정된 경우 비활성) */}
             <button 
               onClick={confirmLink} 
-              disabled={!currentFMId || (!isCurrentFMLinked && linkedFEs.size === 0 && linkedFCs.size === 0)}
-              className={!isCurrentFMLinked ? 'blink-orange' : ''}
+              disabled={!currentFMId || isCurrentFMLinked || (linkedFEs.size === 0 && linkedFCs.size === 0)}
+              className={!isCurrentFMLinked && currentFMId && (linkedFEs.size > 0 || linkedFCs.size > 0) ? 'blink-orange' : ''}
               style={{
                 ...actionButtonStyle({
-                  bg: isCurrentFMLinked ? '#2196f3' : '#ef6c00', 
+                  bg: isCurrentFMLinked ? '#4caf50' : '#ef6c00', 
                   color: '#fff',
-                  opacity: (!currentFMId || (!isCurrentFMLinked && linkedFEs.size === 0 && linkedFCs.size === 0)) ? 0.5 : 1
+                  opacity: (!currentFMId || isCurrentFMLinked || (linkedFEs.size === 0 && linkedFCs.size === 0)) ? 0.5 : 1
                 }),
                 whiteSpace: 'nowrap',
                 minWidth: '80px'
               }}
             >
-              {isCurrentFMLinked ? '연결확정' : '미확정'}
+              {isCurrentFMLinked ? '✅ 확정됨' : '🔗 연결확정'}
             </button>
+            
+            {/* 연결해제 버튼 (확정된 경우만 표시) */}
+            {isCurrentFMLinked && (
+              <button 
+                onClick={unlinkCurrentFM} 
+                style={{
+                  ...actionButtonStyle({
+                    bg: '#ff5722', 
+                    color: '#fff',
+                    opacity: 1
+                  }),
+                  whiteSpace: 'nowrap',
+                  minWidth: '70px'
+                }}
+              >
+                🔓 연결해제
+              </button>
+            )}
             
             {/* 전체 확정/수정 버튼 */}
             {!isConfirmed ? (
