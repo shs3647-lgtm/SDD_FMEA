@@ -67,13 +67,19 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
   const isConfirmed = state.l3Confirmed || false;
 
   // ✅ 셀 클릭 시 확정됨 상태면 자동으로 수정 모드로 전환
+  // ✅ 셀 클릭 시 확정됨 상태면 자동으로 수정 모드로 전환 - setStateSynced 패턴 적용
   const handleCellClick = useCallback((modalConfig: any) => {
     if (isConfirmed) {
-      setState(prev => ({ ...prev, l3Confirmed: false }));
+      const updateFn = (prev: any) => ({ ...prev, l3Confirmed: false });
+      if (setStateSynced) {
+        setStateSynced(updateFn);
+      } else {
+        setState(updateFn);
+      }
       setDirty(true);
     }
     setModal(modalConfig);
-  }, [isConfirmed, setState, setDirty]);
+  }, [isConfirmed, setState, setStateSynced, setDirty]);
 
   // 누락 건수 계산 (플레이스홀더 패턴 모두 체크)
   const isMissing = (name: string | undefined) => {
