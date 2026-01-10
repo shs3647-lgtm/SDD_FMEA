@@ -40,10 +40,13 @@
 - `src/app/pfmea/worksheet/tabs/failure/FailureL2Tab.tsx`
 - `src/app/pfmea/worksheet/tabs/failure/FailureL3Tab.tsx`
 
-### 6. 모달 컴포넌트
-- `src/app/pfmea/worksheet/ProcessSelectModal.tsx` ⚠️ 350px 고정
-- `src/app/pfmea/worksheet/WorkElementModal.tsx`
+### 6. 모달 컴포넌트 (codefreeze-20260110-500px-unified)
+- `src/app/pfmea/worksheet/ProcessSelectModal.tsx` ⚠️ **500px 고정**
+- `src/app/pfmea/worksheet/WorkElementSelectModal.tsx` ⚠️ **500px 고정**
 - `src/components/modals/*.tsx`
+
+### 9. 레이아웃 상수 (codefreeze-20260110-500px-unified)
+- `src/styles/layout.ts` ⚠️ **트리뷰/입력모달/5AP/6AP = 500px 통일**
 
 ### 7. FMEA 리스트 (codefreeze-20260110-full-system)
 - `src/app/pfmea/list/page.tsx`
