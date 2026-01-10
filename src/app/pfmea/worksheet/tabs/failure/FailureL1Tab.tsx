@@ -407,6 +407,30 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
     // 필요시 구현
   }, []);
 
+  // ✅ 더블클릭 인라인 수정 핸들러
+  const handleDoubleClickEdit = useCallback((effectId: string, newValue: string) => {
+    if (!effectId || !newValue.trim()) return;
+    
+    setState(prev => {
+      const newState = JSON.parse(JSON.stringify(prev));
+      if (!newState.l1.failureScopes) newState.l1.failureScopes = [];
+      
+      // 해당 고장영향 항목의 effect 값 업데이트
+      newState.l1.failureScopes = newState.l1.failureScopes.map((s: any) => 
+        s.id === effectId ? { ...s, effect: newValue.trim() } : s
+      );
+      
+      // ✅ CRUD Update: 확정 상태 해제
+      if (newState.failureL1Confirmed) {
+        newState.failureL1Confirmed = false;
+      }
+      
+      return newState;
+    });
+    setDirty(true);
+    setTimeout(() => saveToLocalStorage?.(), 100);
+  }, [setState, setDirty, saveToLocalStorage]);
+
   // 심각도 업데이트
   // ✅ 심각도 업데이트 - CRUD Update → 확정 해제 필요
   const updateSeverity = useCallback((effectId: string, severity: number | undefined) => {
@@ -766,6 +790,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                       parentReqName: row.reqName,
                       parentFuncName: row.funcName
                     })} 
+                    onDoubleClickEdit={row.effectId ? (newValue: string) => handleDoubleClickEdit(row.effectId, newValue) : undefined}
                   />
                 </td>
                 
