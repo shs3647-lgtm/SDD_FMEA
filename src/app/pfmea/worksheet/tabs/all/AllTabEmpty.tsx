@@ -15,17 +15,22 @@ import { L1, L2, L3, border, btnConfirm, btnEdit, badgeConfirmed, badgeOk, badge
 
 // ============ 색상 정의 (구조분석 기준 통일) ============
 const COLORS = {
-  // 2단계: 구조분석 (L1/L2/L3 색상 사용)
+  // 2단계: 구조분석 (컬럼별 개별 색상)
   structure: {
-    product: { header: L1.header, headerLight: L1.headerLight, cell: L1.cell, cellAlt: L1.cellAlt },
-    main: { header: L2.header, headerLight: L2.headerLight, cell: L2.cell, cellAlt: L2.cellAlt },
-    work: { header: L3.header, headerLight: L3.headerLight, cell: L3.cell, cellAlt: L3.cellAlt },
+    product: { header: L1.header, headerLight: L1.headerLight, cell: L1.cell, cellAlt: L1.cellAlt },        // 완제품 공정명 (파란색)
+    main: { header: L2.header, headerLight: L2.headerLight, cell: L2.cell, cellAlt: L2.cellAlt },           // 공정NO+공정명 (녹색)
+    m4: { header: '#ef6c00', headerLight: '#ffa726', cell: '#fff3e0', cellAlt: '#ffe0b2' },                 // 4M (주황색)
+    workElement: { header: '#f57c00', headerLight: '#ff9800', cell: '#ffe0b1', cellAlt: '#ffcc80' },       // 작업요소 (밝은 주황색)
   },
-  // 3단계: 기능분석 (동일 L1/L2/L3 색상)
+  // 3단계: 기능분석 (컬럼별 개별 색상)
   function: {
-    product: { header: '#1565c0', headerLight: '#42a5f5', cell: '#e3f2fd', cellAlt: '#bbdefb' },
-    main: { header: '#2e7d32', headerLight: '#66bb6a', cell: '#e8f5e9', cellAlt: '#c8e6c9' },
-    work: { header: '#ef6c00', headerLight: '#ffa726', cell: '#fff3e0', cellAlt: '#ffe0b2' },
+    division: { header: '#1565c0', headerLight: '#42a5f5', cell: '#e3f2fd', cellAlt: '#bbdefb' },        // 구분 (파란색)
+    productFunc: { header: '#1976d2', headerLight: '#64b5f6', cell: '#e1f5fe', cellAlt: '#b3e5fc' },    // 완제품기능 (밝은 파란색)
+    requirement: { header: '#0277bd', headerLight: '#4fc3f7', cell: '#e0f7fa', cellAlt: '#b2ebf2' },    // 요구사항 (청록 파란색)
+    processFunc: { header: '#2e7d32', headerLight: '#66bb6a', cell: '#e8f5e9', cellAlt: '#c8e6c9' },    // 공정 기능 (녹색)
+    productChar: { header: '#388e3c', headerLight: '#81c784', cell: '#f1f8e9', cellAlt: '#dcedc8' },    // 제품특성 (연한 녹색)
+    workFunc: { header: '#ef6c00', headerLight: '#ffa726', cell: '#fff3e0', cellAlt: '#ffe0b2' },       // 작업요소 기능 (주황색)
+    processChar: { header: '#fb8c00', headerLight: '#ffb74d', cell: '#fff8e1', cellAlt: '#ffecb3' },    // 공정특성 (밝은 주황색)
   },
   // 4단계: 고장분석 (FE=노랑, FM=네이비, FC=연두)
   failure: {
@@ -94,25 +99,25 @@ const COLUMNS_BASE: ColumnDef[] = [
   { id: 2, step: '구조분석', group: '2. 메인 공정명', name: '공정NO+공정명', width: 140, 
     headerColor: COLORS.structure.main.headerLight, cellColor: COLORS.structure.main.cell, cellAltColor: COLORS.structure.main.cellAlt, align: 'left' },
   { id: 3, step: '구조분석', group: '3. 작업 요소명', name: '4M', width: 50, 
-    headerColor: COLORS.structure.work.headerLight, cellColor: COLORS.structure.work.cell, cellAltColor: COLORS.structure.work.cellAlt, align: 'center' },
+    headerColor: COLORS.structure.m4.headerLight, cellColor: COLORS.structure.m4.cell, cellAltColor: COLORS.structure.m4.cellAlt, align: 'center' },
   { id: 4, step: '구조분석', group: '3. 작업 요소명', name: '작업요소', width: 120, 
-    headerColor: COLORS.structure.work.headerLight, cellColor: COLORS.structure.work.cell, cellAltColor: COLORS.structure.work.cellAlt, align: 'left' },
+    headerColor: COLORS.structure.workElement.headerLight, cellColor: COLORS.structure.workElement.cell, cellAltColor: COLORS.structure.workElement.cellAlt, align: 'left' },
   
-  // ■ 3단계: 기능분석 (7컬럼) - 동일 L1/L2/L3 색상
+  // ■ 3단계: 기능분석 (7컬럼) - 컬럼별 개별 색상
   { id: 5, step: '기능분석', group: '1. 완제품 공정기능/요구사항', name: '구분', width: 50, 
-    headerColor: COLORS.function.product.headerLight, cellColor: COLORS.function.product.cell, cellAltColor: COLORS.function.product.cellAlt, align: 'center' },
+    headerColor: COLORS.function.division.headerLight, cellColor: COLORS.function.division.cell, cellAltColor: COLORS.function.division.cellAlt, align: 'center' },
   { id: 6, step: '기능분석', group: '1. 완제품 공정기능/요구사항', name: '완제품기능', width: 160, 
-    headerColor: COLORS.function.product.headerLight, cellColor: COLORS.function.product.cell, cellAltColor: COLORS.function.product.cellAlt, align: 'left' },
+    headerColor: COLORS.function.productFunc.headerLight, cellColor: COLORS.function.productFunc.cell, cellAltColor: COLORS.function.productFunc.cellAlt, align: 'left' },
   { id: 7, step: '기능분석', group: '1. 완제품 공정기능/요구사항', name: '요구사항', width: 160, 
-    headerColor: COLORS.function.product.headerLight, cellColor: COLORS.function.product.cell, cellAltColor: COLORS.function.product.cellAlt, align: 'left' },
+    headerColor: COLORS.function.requirement.headerLight, cellColor: COLORS.function.requirement.cell, cellAltColor: COLORS.function.requirement.cellAlt, align: 'left' },
   { id: 8, step: '기능분석', group: '2. 메인공정기능 및 제품특성', name: '공정 기능', width: 140, 
-    headerColor: COLORS.function.main.headerLight, cellColor: COLORS.function.main.cell, cellAltColor: COLORS.function.main.cellAlt, align: 'left' },
+    headerColor: COLORS.function.processFunc.headerLight, cellColor: COLORS.function.processFunc.cell, cellAltColor: COLORS.function.processFunc.cellAlt, align: 'left' },
   { id: 9, step: '기능분석', group: '2. 메인공정기능 및 제품특성', name: '제품특성', width: 120, 
-    headerColor: COLORS.function.main.headerLight, cellColor: COLORS.function.main.cell, cellAltColor: COLORS.function.main.cellAlt, align: 'left' },
+    headerColor: COLORS.function.productChar.headerLight, cellColor: COLORS.function.productChar.cell, cellAltColor: COLORS.function.productChar.cellAlt, align: 'left' },
   { id: 10, step: '기능분석', group: '3. 작업요소 기능 및 공정특성', name: '작업요소 기능', width: 140, 
-    headerColor: COLORS.function.work.headerLight, cellColor: COLORS.function.work.cell, cellAltColor: COLORS.function.work.cellAlt, align: 'left' },
+    headerColor: COLORS.function.workFunc.headerLight, cellColor: COLORS.function.workFunc.cell, cellAltColor: COLORS.function.workFunc.cellAlt, align: 'left' },
   { id: 11, step: '기능분석', group: '3. 작업요소 기능 및 공정특성', name: '공정특성', width: 120, 
-    headerColor: COLORS.function.work.headerLight, cellColor: COLORS.function.work.cell, cellAltColor: COLORS.function.work.cellAlt, align: 'left' },
+    headerColor: COLORS.function.processChar.headerLight, cellColor: COLORS.function.processChar.cell, cellAltColor: COLORS.function.processChar.cellAlt, align: 'left' },
   
   // ■ 4단계: 고장분석 (4컬럼) - FE/FM/FC 색상
   { id: 12, step: '고장분석', group: '1. 고장영향(FE)', name: '고장영향(FE)', width: 160, 
@@ -176,6 +181,15 @@ const STEP_COLORS: Record<string, string> = {
   '고장분석': '#f57c00',      // 주황색
   '리스크분석': '#1a237e',    // 네이비
   '최적화': '#558b2f',        // 연두색
+};
+
+// 단계명 → 표시용 텍스트 (단계 번호 포함)
+const STEP_LABELS: Record<string, string> = {
+  '구조분석': '2단계 구조분석',
+  '기능분석': '3단계 기능분석',
+  '고장분석': '4단계 고장분석',
+  '리스크분석': '5단계 리스크분석',
+  '최적화': '6단계 최적화',
 };
 
 // RPN 컬럼 (옵션)
@@ -278,6 +292,7 @@ interface AllTabEmptyProps {
   missingCount?: number;
   onConfirm?: () => void;
   onEdit?: () => void;
+  visibleSteps?: string[];  // 표시할 단계명 목록 (예: ['구조분석', '기능분석'])
 }
 
 export default function AllTabEmpty({ 
@@ -288,8 +303,14 @@ export default function AllTabEmpty({
   missingCount = 0,
   onConfirm,
   onEdit,
+  visibleSteps,
 }: AllTabEmptyProps) {
-  const columns = showRPN ? getColumnsWithRPN() : COLUMNS_BASE;
+  // visibleSteps가 지정되면 해당 단계만 필터링, 없으면 전체 표시
+  const allColumns = showRPN ? getColumnsWithRPN() : COLUMNS_BASE;
+  const columns = visibleSteps && visibleSteps.length > 0
+    ? allColumns.filter(col => visibleSteps.includes(col.step))
+    : allColumns;
+  
   const stepSpans = calculateStepSpans(columns);
   const groupSpans = calculateGroupSpans(columns);
   const totalWidth = columns.reduce((sum, col) => sum + col.width, 0);
@@ -337,7 +358,7 @@ export default function AllTabEmpty({
                 }}
               >
                 <div className="flex items-center justify-center gap-3">
-                  <span>{span.step}</span>
+                  <span>{STEP_LABELS[span.step] || span.step}</span>
                   {/* 첫 번째 단계(구조분석)에만 확정/수정 버튼 표시 */}
                   {idx === 0 && (
                     <div className="flex gap-1.5">

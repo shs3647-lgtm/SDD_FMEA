@@ -48,13 +48,25 @@ export default function AllTabRenderer({
     stateL1Name: state.l1?.name,
   });
 
+  // visibleSteps를 단계명으로 변환
+  const visibleStepsNumbers = propsVisibleSteps || state.visibleSteps || [2, 3, 4, 5, 6];
+  const stepNameMap: Record<number, string> = {
+    2: '구조분석',
+    3: '기능분석',
+    4: '고장분석',
+    5: '리스크분석',
+    6: '최적화',
+  };
+  const visibleStepNames = visibleStepsNumbers.map(num => stepNameMap[num] || '').filter(Boolean);
+
   // ★★★ 새로운 ALL 화면: AllTabEmpty 사용 ★★★
   // 사이드바, 제목, 메인메뉴, 탭 메뉴는 상위 컴포넌트에서 유지
   // 워크시트 영역만 새로운 시트로 대체
   return (
     <AllTabEmpty 
       rowCount={30} 
-      showRPN={showRPN} 
+      showRPN={showRPN}
+      visibleSteps={visibleStepNames}
     />
   );
 }
