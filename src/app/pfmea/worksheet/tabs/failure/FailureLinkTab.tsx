@@ -378,46 +378,6 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     }
   }, [fmData, currentFMId]);
 
-  // ========== savedLinks에서 현재 FM의 연결 상태 복원 ==========
-  useEffect(() => {
-    if (!currentFMId) return;
-    
-    // savedLinks에서 현재 FM의 연결 찾기
-    const currentLinks = savedLinks.filter(l => l.fmId === currentFMId);
-    
-    if (currentLinks.length > 0) {
-      // FE 복원
-      const feMap = new Map<string, any>();
-      const fcMap = new Map<string, any>();
-      
-      currentLinks.forEach(link => {
-        // FE 복원
-        if (link.feId && link.feId.trim() !== '') {
-          const fe = feData.find(f => f.id === link.feId);
-          if (fe && !feMap.has(fe.id)) {
-            feMap.set(fe.id, fe);
-          }
-        }
-        // FC 복원
-        if (link.fcId && link.fcId.trim() !== '') {
-          const fc = fcData.find(f => f.id === link.fcId);
-          if (fc && !fcMap.has(fc.id)) {
-            fcMap.set(fc.id, fc);
-          }
-        }
-      });
-      
-      console.log('[FailureLinkTab] ✅ savedLinks에서 연결 복원:', { 
-        fmId: currentFMId, 
-        feCount: feMap.size, 
-        fcCount: fcMap.size 
-      });
-      
-      setLinkedFEs(feMap);
-      setLinkedFCs(fcMap);
-    }
-  }, [currentFMId, savedLinks, feData, fcData]);
-
   // ========== SVG 연결선 ==========
   const { svgPaths, drawLines } = useSVGLines(
     chainAreaRef, fmNodeRef, feColRef, fcColRef, linkedFEs, linkedFCs, currentFM
@@ -995,7 +955,8 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
       saveTemp?.(); // ✅ 편집 중: localStorage만
     });
     
-    // ✅ 현재 공정의 모든 FM 연결 완료 확인 → 자동으로 다음 공정 이동
+    // ✅ 연결 완료 알림 (자동 FM 이동 제거 - 상태 동기화 문제 방지)
+    // 사용자가 ▼다음 FM 버튼으로 직접 이동하도록 함
     const currentProcess = currentFM.processName;
     const currentProcessFMs = fmData.filter(fm => fm.processName === currentProcess);
     
@@ -1007,52 +968,36 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
       return hasFE && hasFC;
     });
     
-    if (allLinkedInProcess) {
-      // 현재 공정 완료 → 다음 공정 찾기
-      const allProcesses = [...new Set(fmData.map(fm => fm.processName))];
-      const currentIdx = allProcesses.indexOf(currentProcess);
-      const nextProcess = allProcesses[currentIdx + 1];
-      
-      if (nextProcess) {
-        // 다음 공정의 첫 번째 FM 선택
-        const nextFM = fmData.find(fm => fm.processName === nextProcess);
-        if (nextFM) {
-          setTimeout(() => {
-            setCurrentFMId(nextFM.id);
-            setSelectedProcess(nextProcess);
-            // ✅ linkedFEs/linkedFCs는 useEffect에서 savedLinks 기반으로 자동 복원됨
-            setViewMode('diagram');
-          }, 100);
-          
-          alert(`✅ ${currentFM.text} 연결 완료!\n\n🎯 ${currentProcess} 공정 완료!\n\n➡️ 다음 공정: ${nextProcess}\n   (${nextFM.fmNo}: ${nextFM.text})`);
-          return;
-        }
-      } else {
-        // 모든 공정 완료
-        setViewMode('result');
-        alert(`✅ ${currentFM.text} 연결 완료!\n\n🎉 모든 공정의 고장연결이 완료되었습니다!\n\n[전체확정] 버튼을 눌러 확정해주세요.`);
-        return;
-      }
-    }
-    
-    // 같은 공정 내 다음 FM으로 이동
+    // 같은 공정 내 다음 FM 확인
     const sameProcFMs = fmData.filter(fm => fm.processName === currentProcess);
     const currentFMIdx = sameProcFMs.findIndex(fm => fm.id === currentFMId);
     const nextFMInProc = sameProcFMs[currentFMIdx + 1];
     
-    if (nextFMInProc) {
-      setTimeout(() => {
-        setCurrentFMId(nextFMInProc.id);
-        // ✅ linkedFEs/linkedFCs는 useEffect에서 savedLinks 기반으로 자동 복원됨
-        setViewMode('diagram');
-      }, 100);
-      
-      alert(`✅ ${currentFM.text} 연결 완료!\n\n➡️ 다음 FM: ${nextFMInProc.fmNo}: ${nextFMInProc.text}`);
+    // 다음 공정 확인
+    const allProcesses = [...new Set(fmData.map(fm => fm.processName))];
+    const currentIdx = allProcesses.indexOf(currentProcess);
+    const nextProcess = allProcesses[currentIdx + 1];
+    
+    // ✅ 화살표 다시 그리기 (연결 상태 유지)
+    setTimeout(drawLines, 100);
+    setTimeout(drawLines, 300);
+    
+    // 메시지 표시 (FM 자동 이동 없음)
+    if (allLinkedInProcess && !nextProcess) {
+      // 모든 공정 완료
+      alert(`✅ ${currentFM.text} 연결 완료!\n\n🎉 모든 공정의 고장연결이 완료되었습니다!\n\n[전체확정] 버튼을 눌러 확정해주세요.`);
+    } else if (allLinkedInProcess && nextProcess) {
+      // 현재 공정 완료, 다음 공정 있음
+      const nextFM = fmData.find(fm => fm.processName === nextProcess);
+      alert(`✅ ${currentFM.text} 연결 완료!\n\n🎯 ${currentProcess} 공정 완료!\n\n💡 ▼다음 FM 버튼을 눌러 ${nextProcess} 공정으로 이동하세요.`);
+    } else if (nextFMInProc) {
+      // 같은 공정 내 다음 FM 있음
+      alert(`✅ ${currentFM.text} 연결 완료!\n\n💡 ▼다음 FM 버튼을 눌러 ${nextFMInProc.fmNo}: ${nextFMInProc.text}로 이동하세요.`);
     } else {
-      setViewMode('result');
+      // 현재 공정의 마지막 FM
       alert(`✅ ${currentFM.text} 연결 완료!\n\nFE: ${feArray.length}개, FC: ${fcArray.length}개`);
     }
-  }, [currentFMId, currentFM, linkedFEs, linkedFCs, savedLinks, fmData, setState, setDirty, saveToLocalStorage]);
+  }, [currentFMId, currentFM, linkedFEs, linkedFCs, savedLinks, fmData, setState, setDirty, saveToLocalStorage, drawLines]);
 
   // ========== 엔터키로 연결확정 ==========
   useEffect(() => {
