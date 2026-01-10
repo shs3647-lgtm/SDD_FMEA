@@ -433,13 +433,35 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
 
   // 심각도 업데이트
   // ✅ 심각도 업데이트 - CRUD Update → 확정 해제 필요
+  // ✅ 자동연결: 동일 고장영향에 동일 심각도 적용
   const updateSeverity = useCallback((effectId: string, severity: number | undefined) => {
     setState(prev => {
       const newState = JSON.parse(JSON.stringify(prev));
-      newState.l1.failureScopes = (newState.l1.failureScopes || []).map((s: any) => {
-        if (s.id !== effectId) return s;
-        return { ...s, severity };
+      const allScopes = newState.l1.failureScopes || [];
+      
+      // 현재 수정하는 항목의 고장영향 이름 찾기
+      const currentEffect = allScopes.find((s: any) => s.id === effectId);
+      const effectName = currentEffect?.effect;
+      
+      let autoLinkedCount = 0;
+      
+      newState.l1.failureScopes = allScopes.map((s: any) => {
+        // 현재 항목 업데이트
+        if (s.id === effectId) {
+          return { ...s, severity };
+        }
+        // ✅ 자동연결: 동일한 고장영향명에 동일 심각도 적용
+        if (effectName && s.effect === effectName && s.severity !== severity) {
+          autoLinkedCount++;
+          return { ...s, severity };
+        }
+        return s;
       });
+      
+      if (autoLinkedCount > 0) {
+        console.log(`[FailureL1Tab] 심각도 자동연결: "${effectName}" → ${autoLinkedCount}건에 심각도 ${severity} 적용`);
+      }
+      
       // ✅ CRUD Update: 확정 상태 해제
       newState.failureL1Confirmed = false;
       return newState;
