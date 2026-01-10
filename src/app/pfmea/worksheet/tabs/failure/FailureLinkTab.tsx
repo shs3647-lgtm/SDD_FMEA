@@ -1028,15 +1028,15 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     const nextProcess = allProcesses[currentIdx + 1];
     
     // ✅ 자동 FM 이동 (setTimeout으로 상태 업데이트 대기)
+    // ⚠️ linkedFEs/linkedFCs는 수동으로 초기화하지 않음 - useEffect가 savedLinks 기반으로 로드
     if (allLinkedInProcess && nextProcess) {
       // 현재 공정 완료 → 다음 공정의 첫 번째 FM으로 이동
       const nextFM = fmData.find(fm => fm.processName === nextProcess);
       if (nextFM) {
         setTimeout(() => {
+          justConfirmedRef.current = false; // ✅ 다음 FM 로딩을 위해 리셋
           setCurrentFMId(nextFM.id);
           setSelectedProcess(nextProcess);
-          setLinkedFEs(new Map());
-          setLinkedFCs(new Map());
         }, 200);
         alert(`✅ ${currentFM.text} 연결 완료!\n\n🎯 ${currentProcess} 공정 완료!\n\n➡️ 다음 공정: ${nextProcess}`);
         return;
@@ -1049,9 +1049,8 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     } else if (nextFMInProc) {
       // 같은 공정 내 다음 FM으로 이동
       setTimeout(() => {
+        justConfirmedRef.current = false; // ✅ 다음 FM 로딩을 위해 리셋
         setCurrentFMId(nextFMInProc.id);
-        setLinkedFEs(new Map());
-        setLinkedFCs(new Map());
       }, 200);
       alert(`✅ ${currentFM.text} 연결 완료!\n\n➡️ 다음 FM: ${nextFMInProc.fmNo}: ${nextFMInProc.text}`);
       return;
