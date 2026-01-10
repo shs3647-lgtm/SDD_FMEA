@@ -165,6 +165,14 @@ codefreeze-20260111-batch-freeze  (일괄 코드프리즈 - 2026-01-11)
 - `src/app/pfmea/worksheet/tabs/function/FunctionL2Tab.tsx` - 태그: `codefreeze-20260111-function-l2-final`
 - 작업요소 돋보기 표시 로직 표준화 완료
 
+### 4. 기능3L 메인공정명 줄무늬 최종 확정
+- `src/app/pfmea/worksheet/tabs/function/FunctionL3Tab.tsx` - 태그: `codefreeze-20260111-function-l3-zebra`
+- 공정 인덱스 기준 홀수/짝수 줄무늬 적용 (자재입고/수입검사 색상 구분)
+
+### 5. 구조분석 메인공정명 줄무늬 최종 확정
+- `src/app/pfmea/worksheet/tabs/StructureTab.tsx` - 태그: `codefreeze-20260111-structure-zebra`
+- 공정 인덱스 기준 홀수/짝수 줄무늬 적용
+
 ---
 
 ## 📅 마지막 업데이트: 2026-01-11
