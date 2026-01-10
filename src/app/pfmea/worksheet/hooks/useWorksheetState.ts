@@ -70,8 +70,9 @@ interface UseWorksheetStateReturn {
 export function useWorksheetState(): UseWorksheetStateReturn {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const selectedFmeaId = searchParams.get('id');
-  const baseId = searchParams.get('baseId');  // ✅ 상속 원본 FMEA ID
+  // ✅ FMEA ID는 항상 대문자로 정규화 (DB, localStorage 일관성 보장)
+  const selectedFmeaId = searchParams.get('id')?.toUpperCase() || null;
+  const baseId = searchParams.get('baseId')?.toUpperCase() || null;  // ✅ 상속 원본 FMEA ID
   const mode = searchParams.get('mode');  // ✅ 상속 모드 ('inherit')
   
   // ✅ 초기 상태는 항상 동일 (Hydration 오류 방지)
@@ -84,9 +85,9 @@ export function useWorksheetState(): UseWorksheetStateReturn {
   useEffect(() => {
     setIsHydrated(true);
     
-    // URL에서 FMEA ID 가져오기
+    // URL에서 FMEA ID 가져오기 (대문자 정규화)
     const urlParams = new URLSearchParams(window.location.search);
-    const fmeaId = urlParams.get('id');
+    const fmeaId = urlParams.get('id')?.toUpperCase();
     if (!fmeaId) return;
     
     // 별도 키에서 tab과 riskData 읽기
@@ -806,7 +807,8 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         setFmeaList(projects);
         
         if (selectedFmeaId) {
-          const found = projects.find(p => p.id === selectedFmeaId);
+          // ✅ 대소문자 무시 비교 (ID 일관성 문제 방지)
+          const found = projects.find(p => p.id?.toUpperCase() === selectedFmeaId.toUpperCase());
           if (found) setCurrentFmea(found);
         } else if (projects.length > 0) {
           setCurrentFmea(projects[0]);
@@ -924,13 +926,36 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     
     console.log('[워크시트] 데이터 로드 시작:', selectedFmeaId);
     
+    // ✅ localStorage 키 대소문자 마이그레이션 (한 번만 실행)
+    const migrationKey = `_migration_uppercase_${selectedFmeaId}`;
+    if (!localStorage.getItem(migrationKey)) {
+      const lowerFmeaId = selectedFmeaId.toLowerCase();
+      const keys = ['pfmea_worksheet_', 'pfmea_tab_', 'pfmea_riskData_'];
+      keys.forEach(prefix => {
+        const lowerKey = prefix + lowerFmeaId;
+        const upperKey = prefix + selectedFmeaId;
+        // 소문자 키가 있고 대문자 키가 없으면 마이그레이션
+        const lowerData = localStorage.getItem(lowerKey);
+        const upperData = localStorage.getItem(upperKey);
+        if (lowerData && !upperData) {
+          console.log(`[마이그레이션] ${lowerKey} → ${upperKey}`);
+          localStorage.setItem(upperKey, lowerData);
+          localStorage.removeItem(lowerKey);
+        }
+      });
+      localStorage.setItem(migrationKey, new Date().toISOString());
+    }
+    
     // ✅ 프로젝트 정보에서 L1 이름 미리 가져오기 (빈 데이터 복구용)
     let projectL1Name = '';
     try {
       const projectsData = localStorage.getItem('pfmea-projects');
       if (projectsData) {
         const projects = JSON.parse(projectsData);
-        const currentProject = projects.find((p: any) => p.id === selectedFmeaId);
+        // ✅ 대소문자 무시 비교 (ID 일관성 문제 방지)
+        const currentProject = projects.find((p: any) => 
+          p.id?.toUpperCase() === selectedFmeaId.toUpperCase()
+        );
         if (currentProject) {
           projectL1Name = currentProject.fmeaInfo?.subject || currentProject.project?.productName || '';
           console.log('[기초정보] FMEA명 발견:', projectL1Name);
@@ -1923,7 +1948,10 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         const projectsData = localStorage.getItem('pfmea-projects');
         if (projectsData) {
           const projects = JSON.parse(projectsData);
-          const currentProject = projects.find((p: any) => p.id === selectedFmeaId);
+          // ✅ 대소문자 무시 비교 (ID 일관성 문제 방지)
+          const currentProject = projects.find((p: any) => 
+            p.id?.toUpperCase() === selectedFmeaId.toUpperCase()
+          );
           if (currentProject) {
             // fmeaInfo.subject (FMEA명) 사용
             l1Name = currentProject.fmeaInfo?.subject || currentProject.project?.productName || '';

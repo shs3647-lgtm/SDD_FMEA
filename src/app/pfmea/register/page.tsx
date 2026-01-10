@@ -110,7 +110,8 @@ function generateFMEAId(fmeaType: FMEAType = 'P'): string {
 // =====================================================
 function PFMEARegisterPageContent() {
   const searchParams = useSearchParams();
-  const editId = searchParams.get('id'); // 수정 모드일 때 ID
+  // ✅ FMEA ID는 항상 대문자로 정규화 (DB, localStorage 일관성 보장)
+  const editId = searchParams.get('id')?.toUpperCase() || null; // 수정 모드일 때 ID
   const isEditMode = !!editId;
 
   const [fmeaInfo, setFmeaInfo] = useState<FMEAInfo>(INITIAL_FMEA);
