@@ -194,6 +194,9 @@ export default function AllTabRenderer({
       // ★ FC 역전개 데이터 (고장원인 → 3L 기능분석)
       fcWorkFunction: link.fcWorkFunction || '',  // 작업요소 기능
       fcProcessChar: link.fcProcessChar || '',    // 공정특성
+      // ★ FC 역전개 데이터 (고장원인 → 2L 구조분석)
+      fcM4: link.fcM4 || '',          // 4M
+      fcWorkElem: link.fcWorkElem || '',  // 작업요소
     };
   });
   

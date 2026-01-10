@@ -304,6 +304,9 @@ interface FailureLinkRow {
   // ★ FC 역전개 데이터 (고장원인 → 3L 기능분석)
   fcWorkFunction?: string;    // 작업요소 기능
   fcProcessChar?: string;     // 공정특성
+  // ★ FC 역전개 데이터 (고장원인 → 2L 구조분석)
+  fcM4?: string;              // 4M
+  fcWorkElem?: string;        // 작업요소
 }
 
 interface ProcessedFMGroup {
@@ -331,6 +334,9 @@ interface ProcessedFMGroup {
     // ★ FC 역전개 데이터 (3L 기능분석)
     fcWorkFunction: string;   // 작업요소 기능
     fcProcessChar: string;    // 공정특성
+    // ★ FC 역전개 데이터 (2L 구조분석)
+    fcM4: string;             // 4M
+    fcWorkElem: string;       // 작업요소
   }[];
 }
 
@@ -354,6 +360,8 @@ function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[] {
     text: string;
     workFunction: string;  // 작업요소 기능
     processChar: string;   // 공정특성
+    m4: string;            // 4M
+    workElem: string;      // 작업요소
   }
   interface FMData {
     fmText: string;
@@ -395,6 +403,8 @@ function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[] {
         text: link.fcText,
         workFunction: link.fcWorkFunction || '',
         processChar: link.fcProcessChar || '',
+        m4: link.fcM4 || '',
+        workElem: link.fcWorkElem || '',
       });
     }
   });
@@ -448,6 +458,9 @@ function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[] {
         // ★ FC 역전개 데이터 (3L 기능분석)
         fcWorkFunction: fc?.workFunction || '',
         fcProcessChar: fc?.processChar || '',
+        // ★ FC 역전개 데이터 (2L 구조분석)
+        fcM4: fc?.m4 || '',
+        fcWorkElem: fc?.workElem || '',
       });
     }
     
@@ -703,6 +716,105 @@ export default function AllTabEmpty({
                                 }}
                               >
                                 {row.fcText}
+                              </td>
+                            );
+                          }
+                          return null;
+                        }
+                      }
+                      
+                      // ★ 구조분석 컬럼 - 역전개 데이터 표시
+                      if (col.step === '구조분석') {
+                        // 완제품 공정명 (빈칸으로 유지)
+                        if (col.name === '완제품 공정명') {
+                          if (row.isFirstRow) {
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={fmGroup.fmRowSpan}
+                                style={{
+                                  background: fmIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                }}
+                              >
+                                {/* 완제품 공정명은 비워둠 */}
+                              </td>
+                            );
+                          }
+                          return null;
+                        }
+                        
+                        // NO+공정명 컬럼 (FM 역전개: 공정번호+공정명)
+                        if (col.name === 'NO+공정명') {
+                          if (row.isFirstRow) {
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={fmGroup.fmRowSpan}
+                                style={{
+                                  background: fmIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                }}
+                              >
+                                {fmGroup.fmProcessNo ? `${fmGroup.fmProcessNo} ${fmGroup.fmProcessName}` : fmGroup.fmProcessName}
+                              </td>
+                            );
+                          }
+                          return null;
+                        }
+                        
+                        // 4M 컬럼 (FC 역전개)
+                        if (col.name === '4M') {
+                          if (rowInFM === 0 || (rowInFM > 0 && fmGroup.rows[rowInFM - 1].fcRowSpan === 1)) {
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.fcRowSpan}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                }}
+                              >
+                                {row.fcM4 || ''}
+                              </td>
+                            );
+                          }
+                          return null;
+                        }
+                        
+                        // 작업요소 컬럼
+                        if (col.name === '작업요소') {
+                          if (rowInFM === 0 || (rowInFM > 0 && fmGroup.rows[rowInFM - 1].fcRowSpan === 1)) {
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={row.fcRowSpan}
+                                style={{
+                                  background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                }}
+                              >
+                                {row.fcWorkElem || ''}
                               </td>
                             );
                           }
