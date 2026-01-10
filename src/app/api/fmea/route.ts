@@ -16,6 +16,7 @@ import type { FMEAWorksheetDB } from '@/app/pfmea/worksheet/schema';
 import { getBaseDatabaseUrl, getPrisma, getPrismaForSchema } from '@/lib/prisma';
 import { upsertActiveMasterFromWorksheetTx } from '@/app/api/pfmea/master/sync';
 import { ensureProjectSchemaReady, getProjectSchemaName } from '@/lib/project-schema';
+import { Pool } from 'pg';
 
 // 레거시 데이터 스키마 버전
 const LEGACY_DATA_VERSION = '1.0.0';
@@ -472,17 +473,22 @@ export async function POST(request: NextRequest) {
           }
         }
         
-        // ✅ FmeaInfo 테이블의 structureConfirmed도 업데이트 (raw SQL - 스키마 포함)
+      }
+      
+      // ✅ FmeaInfo 테이블의 structureConfirmed 업데이트 (직접 pg Pool 사용 - Prisma 트랜잭션 외부)
+      // Prisma 트랜잭션이 public 스키마를 사용하므로, 프로젝트 스키마 업데이트는 별도 연결 필요
+      if (db.confirmed) {
         try {
-          await tx.$executeRawUnsafe(`
+          const pool = new Pool({ connectionString: baseUrl });
+          await pool.query(`
             UPDATE "${schema}"."FmeaInfo" 
             SET "structureConfirmed" = $1, "updatedAt" = NOW()
             WHERE "fmeaId" = $2
-          `, db.confirmed.structure || false, db.fmeaId);
-          console.log('[API] ✅ FmeaInfo.structureConfirmed 업데이트:', db.confirmed.structure, '스키마:', schema);
+          `, [db.confirmed.structure || false, db.fmeaId]);
+          await pool.end();
+          console.log('[API] ✅ FmeaInfo.structureConfirmed 업데이트 (직접 Pool):', db.confirmed.structure, '스키마:', schema);
         } catch (e: any) {
-          // 테이블이 없으면 스킵
-          console.warn('[API] FmeaInfo 업데이트 오류 (무시):', e.message);
+          console.warn('[API] FmeaInfo 업데이트 오류:', e.message);
         }
       }
       
