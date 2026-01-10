@@ -110,7 +110,8 @@ export default function TabMenu({ state, setState, setStateSynced, setDirty, sav
                 alert('✅ 이미 확정되었습니다.');
                 return;
               }
-              setState(prev => ({ ...prev, tab: 'risk' }));
+              // ✅ 5ST 확정: 고장연결 탭의 ALL 화면(전체보기)으로 이동
+              setState(prev => ({ ...prev, tab: 'failureLink', failureLinkViewMode: 'result' }));
             }}
             className={`
               px-2 py-1 text-[10px] sm:text-xs rounded whitespace-nowrap border
@@ -134,7 +135,8 @@ export default function TabMenu({ state, setState, setStateSynced, setDirty, sav
                 alert('✅ 이미 확정되었습니다.');
                 return;
               }
-              setState(prev => ({ ...prev, tab: 'opt' }));
+              // ✅ 6ST 확정: 고장연결 탭의 ALL 화면(전체보기)으로 이동
+              setState(prev => ({ ...prev, tab: 'failureLink', failureLinkViewMode: 'result' }));
             }}
             className={`
               px-2 py-1 text-[10px] sm:text-xs rounded whitespace-nowrap border

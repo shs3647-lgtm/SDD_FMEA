@@ -368,17 +368,31 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
   // ========== 현재 선택된 FM ==========
   const currentFM = useMemo(() => fmData.find(f => f.id === currentFMId), [fmData, currentFMId]);
 
+  // ========== viewMode 초기화 (5ST/6ST/ALL 버튼으로 들어온 경우 result 화면 표시) ==========
+  useEffect(() => {
+    const requestedViewMode = (state as any).failureLinkViewMode;
+    if (requestedViewMode === 'result') {
+      setViewMode('result');
+      setSelectedProcess('all');
+      // ✅ failureLinkViewMode 플래그 초기화 (한 번만 적용)
+      setState((prev: any) => {
+        const { failureLinkViewMode, ...rest } = prev;
+        return rest;
+      });
+      console.log('[FailureLinkTab] 5ST/6ST/ALL 버튼으로 전체 화면 표시');
+    }
+  }, [(state as any).failureLinkViewMode, setState]);
+
   // ========== 첫 번째 FM 자동 선택 (고장사슬 기본 표시) ==========
   useEffect(() => {
-    // FM 데이터가 있고 현재 선택된 FM이 없으면 첫 번째 FM 자동 선택
-    if (fmData.length > 0 && !currentFMId) {
+    // FM 데이터가 있고 현재 선택된 FM이 없으면 첫 번째 FM 자동 선택 (diagram 모드일 때만)
+    if (viewMode === 'diagram' && fmData.length > 0 && !currentFMId) {
       const firstFM = fmData[0];
       console.log('[FailureLinkTab] 첫 번째 FM 자동 선택:', firstFM.fmNo, firstFM.text);
       setCurrentFMId(firstFM.id);
       setSelectedProcess(firstFM.processName);
-      setViewMode('diagram');
     }
-  }, [fmData, currentFMId]);
+  }, [fmData, currentFMId, viewMode]);
 
   // ========== SVG 연결선 ==========
   const { svgPaths, drawLines } = useSVGLines(
@@ -1287,7 +1301,13 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
         onToggleFC={toggleFC}
         onUnlinkFE={unlinkFE}
         onUnlinkFC={unlinkFC}
-        onProcessChange={setSelectedProcess}
+        onProcessChange={(process: string) => {
+          setSelectedProcess(process);
+          // ✅ ALL 버튼 클릭 시 전체 화면(result)으로 전환
+          if (process === 'all') {
+            setViewMode('result');
+          }
+        }}
         onFcScopeChange={setFcLinkScope}
       />
 
