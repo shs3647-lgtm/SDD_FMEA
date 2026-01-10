@@ -126,9 +126,11 @@ export function RiskOptCellRenderer({
   const uniqueKey = fmId && fcId ? `${fmId}-${fcId}` : String(globalRowIdx);
   
   // ★ rowSpan 조건: 첫 번째 행이거나 이전 행의 fcRowSpan이 1인 경우에만 셀 렌더링
-  const shouldRender = rowInFM === 0 || prevFcRowSpan === 1;
+  // prevFcRowSpan > 1이면 이전 행에서 이미 rowSpan으로 병합되어 있으므로 렌더링하지 않음
+  // 단, rowInFM === 0이면 무조건 첫 번째 행이므로 렌더링
+  const shouldRender = rowInFM === 0 || prevFcRowSpan <= 1;
   if (!shouldRender) {
-    return null; // fcRowSpan으로 병합됨
+    return null; // fcRowSpan으로 병합됨 - 이전 행에서 이미 rowSpan 처리됨
   }
   
   const style = getCellStyle(globalRowIdx, col.cellColor, col.cellAltColor, col.align, true);
