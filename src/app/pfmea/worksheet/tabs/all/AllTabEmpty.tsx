@@ -292,7 +292,12 @@ interface FailureLinkRow {
   feSeverity: number;     // 심각도
   fcId: string;           // 고장원인 ID
   fcText: string;         // 고장원인 텍스트
-  // ★ 역전개 데이터 (고장영향 → 기능분석)
+  // ★ FM 역전개 데이터 (고장형태 → 2L 기능분석)
+  fmProcessNo?: string;       // 공정번호
+  fmProcessName?: string;     // 공정명
+  fmProcessFunction?: string; // 공정기능
+  fmProductChar?: string;     // 제품특성
+  // ★ FE 역전개 데이터 (고장영향 → 1L 기능분석)
   feCategory?: string;        // 구분 (Your Plant / Ship to Plant / User)
   feFunctionName?: string;    // 완제품기능
   feRequirement?: string;     // 요구사항
@@ -304,6 +309,11 @@ interface ProcessedFMGroup {
   fmRowSpan: number;      // FM 셀합치기 행 수
   maxSeverity: number;    // 연결된 FE 중 최대 심각도
   maxSeverityFeText: string; // 최대 심각도를 가진 FE 텍스트
+  // ★ FM 역전개 데이터 (2L 기능분석)
+  fmProcessNo: string;        // 공정번호
+  fmProcessName: string;      // 공정명
+  fmProcessFunction: string;  // 공정기능
+  fmProductChar: string;      // 제품특성
   rows: {
     feText: string;
     feSeverity: number;
@@ -311,7 +321,7 @@ interface ProcessedFMGroup {
     feRowSpan: number;    // FE 셀합치기 (마지막 행 병합용)
     fcRowSpan: number;    // FC 셀합치기 (마지막 행 병합용)
     isFirstRow: boolean;  // FM 첫 행 여부
-    // ★ 역전개 데이터 (기능분석)
+    // ★ FE 역전개 데이터 (1L 기능분석)
     feCategory: string;       // 구분
     feFunctionName: string;   // 완제품기능
     feRequirement: string;    // 요구사항
@@ -334,12 +344,27 @@ function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[] {
     functionName: string;
     requirement: string;
   }
-  const fmMap = new Map<string, { fmText: string; fes: Map<string, FEData>; fcs: Map<string, string> }>();
+  interface FMData {
+    fmText: string;
+    // ★ FM 역전개 데이터
+    fmProcessNo: string;
+    fmProcessName: string;
+    fmProcessFunction: string;
+    fmProductChar: string;
+    fes: Map<string, FEData>;
+    fcs: Map<string, string>;
+  }
+  const fmMap = new Map<string, FMData>();
   
   links.forEach(link => {
     if (!fmMap.has(link.fmId)) {
       fmMap.set(link.fmId, {
         fmText: link.fmText,
+        // ★ FM 역전개 데이터
+        fmProcessNo: link.fmProcessNo || '',
+        fmProcessName: link.fmProcessName || '',
+        fmProcessFunction: link.fmProcessFunction || '',
+        fmProductChar: link.fmProductChar || '',
         fes: new Map(),
         fcs: new Map(),
       });
@@ -414,6 +439,11 @@ function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[] {
       fmRowSpan: maxRows,
       maxSeverity,
       maxSeverityFeText,
+      // ★ FM 역전개 데이터
+      fmProcessNo: group.fmProcessNo,
+      fmProcessName: group.fmProcessName,
+      fmProcessFunction: group.fmProcessFunction,
+      fmProductChar: group.fmProductChar,
       rows,
     });
   });
@@ -731,6 +761,54 @@ export default function AllTabEmpty({
                                 }}
                               >
                                 {row.feRequirement || ''}
+                              </td>
+                            );
+                          }
+                          return null;
+                        }
+                        
+                        // ★ 공정 기능 컬럼 (FM 역전개)
+                        if (col.name === '공정 기능') {
+                          if (row.isFirstRow) {
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={fmGroup.fmRowSpan}
+                                style={{
+                                  background: fmIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                }}
+                              >
+                                {fmGroup.fmProcessFunction || ''}
+                              </td>
+                            );
+                          }
+                          return null;
+                        }
+                        
+                        // ★ 제품특성 컬럼 (FM 역전개)
+                        if (col.name === '제품특성') {
+                          if (row.isFirstRow) {
+                            return (
+                              <td 
+                                key={colIdx}
+                                rowSpan={fmGroup.fmRowSpan}
+                                style={{
+                                  background: fmIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
+                                  height: `${HEIGHTS.body}px`,
+                                  padding: '3px 4px',
+                                  border: '1px solid #ccc',
+                                  fontSize: '11px',
+                                  textAlign: col.align,
+                                  verticalAlign: 'middle',
+                                }}
+                              >
+                                {fmGroup.fmProductChar || ''}
                               </td>
                             );
                           }

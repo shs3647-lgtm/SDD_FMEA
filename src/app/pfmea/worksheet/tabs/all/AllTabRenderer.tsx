@@ -93,18 +93,59 @@ export default function AllTabRenderer({
     }
   });
 
+  // ★ FM 역전개를 위한 맵 생성 (state.l2에서)
+  // fmId → { processFunction, productChar } 매핑
+  const fmToL2Map = new Map<string, { processFunction: string; productChar: string; processNo: string; processName: string }>();
+  (state.l2 || []).forEach((proc: any) => {
+    if (!proc.name) return;
+    (proc.failureModes || []).forEach((fm: any) => {
+      if (!fm.id) return;
+      
+      // productCharId로 제품특성 → 공정기능 역추적
+      let processFunction = '';
+      let productChar = '';
+      
+      if (fm.productCharId) {
+        (proc.functions || []).forEach((fn: any) => {
+          (fn.productChars || []).forEach((pc: any) => {
+            if (pc.id === fm.productCharId) {
+              processFunction = fn.name || '';
+              productChar = pc.name || '';
+            }
+          });
+        });
+      }
+      // fallback: 첫 번째 function과 productChar 사용
+      if (!processFunction && (proc.functions || []).length > 0) {
+        const firstFunc = proc.functions[0];
+        processFunction = firstFunc.name || '';
+        if ((firstFunc.productChars || []).length > 0) {
+          productChar = firstFunc.productChars[0].name || '';
+        }
+      }
+      
+      fmToL2Map.set(fm.id, {
+        processFunction,
+        productChar,
+        processNo: proc.no || '',
+        processName: proc.name || '',
+      });
+    });
+  });
+
   // ★ 고장연결 데이터 추출 (state.failureLinks에서) + 기능분석 역전개
   const rawFailureLinks = (state as any).failureLinks || [];
   const failureLinks = rawFailureLinks.map((link: any) => {
     const feId = link.feId || '';
     const feText = link.feText || link.cache?.feText || '';
+    const fmId = link.fmId || '';
     
-    // ★ 1순위: link에 저장된 역전개 정보 사용 (confirmLink에서 저장)
+    // ★ FE 역전개: 1순위 - link에 저장된 역전개 정보 사용
     let feCategory = link.feScope || '';
     let feFunctionName = link.feFunctionName || '';
     let feRequirement = link.feRequirement || '';
     
-    // ★ 2순위: 없으면 reqId 역추적
+    // ★ FE 역전개: 2순위 - reqId 역추적
     if (!feFunctionName) {
       const reqId = feToReqMap.get(feId) || feToReqMap.get(feText) || '';
       if (reqId) {
@@ -117,7 +158,7 @@ export default function AllTabRenderer({
       }
     }
     
-    // ★ 3순위: failureScope에서 직접 찾기
+    // ★ FE 역전개: 3순위 - failureScope에서 직접 찾기
     if (!feCategory) {
       const scope = failureScopes.find((fs: any) => fs.id === feId || fs.effect === feText);
       if (scope) {
@@ -126,16 +167,27 @@ export default function AllTabRenderer({
       }
     }
     
+    // ★ FM 역전개: state.l2에서 공정기능, 제품특성 찾기
+    const fmL2Data = fmToL2Map.get(fmId);
+    const fmProcessFunction = fmL2Data?.processFunction || '';
+    const fmProductChar = fmL2Data?.productChar || '';
+    const fmProcessNo = fmL2Data?.processNo || '';
+    const fmProcessName = fmL2Data?.processName || link.fmProcess || '';
+    
     return {
-      fmId: link.fmId || '',
+      fmId,
       fmText: link.fmText || link.cache?.fmText || '',
+      fmProcessNo,       // ★ 공정번호
+      fmProcessName,     // ★ 공정명
+      fmProcessFunction, // ★ 공정기능 (역전개)
+      fmProductChar,     // ★ 제품특성 (역전개)
       feId,
       feText,
       // ★ 심각도: severity 또는 feSeverity 둘 다 확인
       feSeverity: link.severity || link.feSeverity || link.cache?.feSeverity || 0,
       fcId: link.fcId || '',
       fcText: link.fcText || link.cache?.fcText || '',
-      // ★ 역전개 데이터
+      // ★ FE 역전개 데이터
       feCategory,        // 구분 (Your Plant / Ship to Plant / User)
       feFunctionName,    // 완제품기능
       feRequirement,     // 요구사항

@@ -57,7 +57,10 @@ interface FMItem {
   id: string; 
   fmNo: string; 
   processName: string; 
-  text: string; 
+  text: string;
+  // ★ 역전개 정보 (공정기능, 제품특성)
+  processFunction?: string;  // 공정기능
+  productChar?: string;      // 제품특성
 }
 
 interface FCItem { 
@@ -266,11 +269,36 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
         }
         seen.add(key);
         
+        // ★ 역전개: productCharId로 제품특성 → 공정기능 역추적
+        let processFunction = '';
+        let productChar = '';
+        if (fm.productCharId) {
+          (proc.functions || []).forEach((fn: any) => {
+            (fn.productChars || []).forEach((pc: any) => {
+              if (pc.id === fm.productCharId) {
+                processFunction = fn.name || '';
+                productChar = pc.name || '';
+              }
+            });
+          });
+        }
+        // fallback: 첫 번째 function과 productChar 사용
+        if (!processFunction && (proc.functions || []).length > 0) {
+          const firstFunc = proc.functions[0];
+          processFunction = firstFunc.name || '';
+          if ((firstFunc.productChars || []).length > 0) {
+            productChar = firstFunc.productChars[0].name || '';
+          }
+        }
+        
         items.push({ 
           id: fm.id, 
           fmNo: `M${counter}`, 
           processName: proc.name, 
-          text: fm.name 
+          text: fm.name,
+          // ★ 역전개 정보
+          processFunction,
+          productChar,
         });
         counter++;
       });
