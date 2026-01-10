@@ -371,7 +371,6 @@ export default function SpecialCharMasterModal({ isOpen, onClose }: SpecialCharM
         if (syncCount > 0) {
           console.log(`[특별특성 마스터] FMEA 분석 결과 ${syncCount}건 동기화`);
         }
-      }
     } catch (e) {
       console.error('FMEA 분석 결과 동기화 오류:', e);
     }
