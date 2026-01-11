@@ -21,40 +21,44 @@ interface DbData {
 
 // 주요 FMEA 테이블 목록 (새 DB 구조 반영)
 const IMPORTANT_TABLES = [
-  // ===== 새 DB 구조 테이블 (2026-01-11 추가) =====
-  { name: 'fmea_projects', label: '🗂️ 프로젝트', desc: '프로젝트 기본 정보' },
-  { name: 'fmea_registrations', label: '📝 등록정보', desc: '1단계 등록' },
-  { name: 'fmea_cft_members', label: '👥 CFT멤버', desc: 'CFT 팀원' },
-  { name: 'fmea_worksheet_data', label: '📊 워크시트', desc: '워크시트 JSON' },
-  { name: 'fmea_confirmed_states', label: '✅ 확정상태', desc: '탭별 확정' },
-  // ===== 레거시 =====
-  { name: 'fmea_legacy_data', label: '📦 레거시(Prisma)', desc: 'FMEA JSON' },
-  // ===== 구조분석 =====
-  { name: 'l1_structures', label: '🏭 1L 구조', desc: '완제품' },
-  { name: 'l2_structures', label: '⚙️ 2L 구조', desc: '메인공정' },
-  { name: 'l3_structures', label: '🔧 3L 구조', desc: '작업요소' },
-  // ===== 기능분석 =====
-  { name: 'l1_functions', label: '📋 1L 기능', desc: '완제품 기능' },
-  { name: 'l2_functions', label: '📋 2L 기능', desc: '공정 기능' },
-  { name: 'l3_functions', label: '📋 3L 기능', desc: '작업요소 기능' },
-  // ===== 4ST 고장분석 (FE/FM/FC 개별 항목) =====
-  { name: 'failure_effects', label: '💥 1L고장영향', desc: '4ST-FE' },
-  { name: 'failure_modes', label: '🔴 2L고장형태', desc: '4ST-FM' },
-  { name: 'failure_causes', label: '🟠 3L고장원인', desc: '4ST-FC' },
-  // ===== 고장연결 (FE-FM-FC 연결관계) =====
-  { name: 'failure_links', label: '🔗 고장연결', desc: 'FE↔FM↔FC' },
-  // ===== 리스크/최적화 =====
-  { name: 'risk_analyses', label: '📊 리스크', desc: 'S/O/D/AP' },
-  { name: 'optimizations', label: '🎯 최적화', desc: '개선계획' },
-  // ===== 기초정보 =====
-  { name: 'pfmea_master_datasets', label: '📁 기초정보', desc: '마스터셋' },
-  { name: 'pfmea_master_flat_items', label: '📄 기초항목', desc: '플랫 데이터' },
+  // ===== 공용 (public) =====
+  { name: 'fmea_projects', label: '🗂️ 프로젝트 리스트', desc: '공용: 전체 프로젝트 목록', scope: 'public' },
+  { name: 'fmea_registrations', label: '📝 FMEA 기초정보', desc: '공용: 1단계 등록 정보 (고객사, 차종 등)', scope: 'public' },
+  { name: 'fmea_cft_members', label: '👥 CFT 멤버', desc: '공용: 프로젝트별 CFT 팀원', scope: 'public' },
+  { name: 'apqp_projects', label: '📜 개정이력(APQP)', desc: '공용: 프로젝트 개정 관리 이력', scope: 'public' },
+  { name: 'users', label: '👤 사용자 마스터', desc: '공용: 전체 사용자 정보', scope: 'public' },
+  { name: 'pfmea_master_datasets', label: '📁 기초정보 마스터', desc: '공용: Import된 마스터셋', scope: 'public' },
+  { name: 'fmea_confirmed_states', label: '✅ 확정 상태', desc: '공용: 탭별 확정 상태 이력', scope: 'public' },
+  
+  // ===== 프로젝트별: 구조분석 (pfmea_...) =====
+  { name: 'l1_structures', label: '🏭 1L 구조', desc: '프로젝트: 완제품 구조', scope: 'project' },
+  { name: 'l2_structures', label: '⚙️ 2L 구조', desc: '프로젝트: 메인공정 구조', scope: 'project' },
+  { name: 'l3_structures', label: '🔧 3L 구조', desc: '프로젝트: 작업요소 구조', scope: 'project' },
+  
+  // ===== 프로젝트별: 기능분석 (pfmea_...) =====
+  { name: 'l1_functions', label: '🎯 1L 기능', desc: '프로젝트: 완제품 기능/요구사항', scope: 'project' },
+  { name: 'l2_functions', label: '🎯 2L 기능', desc: '프로젝트: 메인공정 기능/제품특성', scope: 'project' },
+  { name: 'l3_functions', label: '🎯 3L 기능', desc: '프로젝트: 작업요소 기능/공정특성', scope: 'project' },
+  
+  // ===== 프로젝트별: 고장분석 (pfmea_...) =====
+  { name: 'failure_effects', label: '💥 고장영향(FE)', desc: '프로젝트: 1L 고장영향 (Severity)', scope: 'project' },
+  { name: 'failure_modes', label: '⚠️ 고장형태(FM)', desc: '프로젝트: 2L 고장형태', scope: 'project' },
+  { name: 'failure_causes', label: '🔍 고장원인(FC)', desc: '프로젝트: 3L 고장원인 (Occurrence)', scope: 'project' },
+  { name: 'failure_links', label: '🔗 고장연결', desc: '프로젝트: FM-FE-FC 연결 관계', scope: 'project' },
+  { name: 'failure_analyses', label: '🧩 고장분석(통합)', desc: '프로젝트: All화면용 통합 데이터', scope: 'project' },
+  
+  // ===== 프로젝트별: 리스크/최적화 (pfmea_...) =====
+  { name: 'risk_analyses', label: '📊 리스크 분석', desc: '프로젝트: RPN 계산 결과', scope: 'project' },
+  { name: 'optimizations', label: '🛠️ 최적화', desc: '프로젝트: 개선 조치 사항', scope: 'project' },
+  
+  // ===== 프로젝트별: 백업 (pfmea_...) =====
+  { name: 'fmea_legacy_data', label: '📦 전체JSON 백업', desc: '프로젝트: 무결성 보장용 전체 JSON', scope: 'project' },
 ];
 
 export default function DbViewerPage() {
   const [schemas, setSchemas] = useState<string[]>([]);
   const [tables, setTables] = useState<TableInfo[]>([]);
-  const [selectedSchema, setSelectedSchema] = useState<string>('new_fmea');
+  const [selectedSchema, setSelectedSchema] = useState<string>('public');
   const [selectedTable, setSelectedTable] = useState<string>('');
   const [dbData, setDbData] = useState<DbData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -221,20 +225,26 @@ export default function DbViewerPage() {
           <div className="flex flex-wrap gap-2">
             {IMPORTANT_TABLES.map(t => {
               const rows = getTableRows(t.name);
-              const hasData = rows > 0;
               const isSelected = selectedTable === t.name;
+              const isScopeMatch = (t.scope === 'public' && selectedSchema === 'public') || 
+                                  (t.scope === 'project' && selectedSchema.startsWith('pfmea_'));
+              const hasData = rows > 0;
+              
               return (
                 <button
                   key={t.name}
                   onClick={() => handleQuickSelect(t.name)}
-                  className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded text-xs font-medium transition-all border ${
                     isSelected 
-                      ? 'bg-blue-600 text-white' 
-                      : hasData 
-                        ? 'bg-green-100 text-green-800 hover:bg-green-200 border border-green-300' 
-                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      ? 'bg-blue-600 text-white border-blue-700 shadow-inner scale-95' 
+                      : !isScopeMatch
+                        ? 'bg-gray-50 text-gray-300 border-gray-200 cursor-not-allowed'
+                        : hasData 
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200 border-green-300' 
+                          : 'bg-white text-gray-500 hover:bg-gray-100 border-gray-300'
                   }`}
-                  title={t.desc}
+                  title={!isScopeMatch ? `이 테이블은 ${t.scope === 'public' ? '공용(public)' : '프로젝트(pfmea_...)'} 스키마에 있습니다.` : t.desc}
+                  disabled={!isScopeMatch && !isSelected}
                 >
                   {t.label} ({rows})
                 </button>
@@ -256,7 +266,7 @@ export default function DbViewerPage() {
               <select
                 value={selectedSchema}
                 onChange={(e) => setSelectedSchema(e.target.value)}
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-3 py-2 border rounded font-bold text-blue-700"
               >
                 <option value="">선택하세요</option>
                 {schemas.map(schema => {
@@ -264,16 +274,16 @@ export default function DbViewerPage() {
                   const isPublic = schema === 'public';
                   return (
                     <option key={schema} value={schema}>
-                      {isPublic ? '⭐ ' : isFmea ? '🔷 ' : ''}{schema}
-                      {isPublic ? ' (Prisma 메인)' : isFmea ? ' (프로젝트 메타)' : ''}
+                      {isPublic ? '⭐ public (공용)' : isFmea ? `📂 ${schema}` : schema}
                     </option>
                   );
                 })}
               </select>
-              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs">
-                <strong>📌 현재 DB 구조 (2026-01-11):</strong><br/>
-                • <code className="bg-gray-100 px-1">public</code>: 모든 FMEA 데이터가 이 스키마에 저장됨<br/>
-                • 프로젝트 구분: 각 테이블의 <code className="bg-gray-100 px-1">fmeaId</code> 컬럼으로 분리
+              <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-[11px] text-blue-800">
+                <strong>💡 중요 안내:</strong><br/>
+                • <strong>공용(public)</strong>: 프로젝트 리스트, 사용자, 기초정보 마스터 저장<br/>
+                • <strong>프로젝트(pfmea_...)</strong>: 개별 FMEA 워크시트(구조/기능/고장분석) 저장<br/>
+                <span className="text-red-600 font-bold">※ 구조분석 데이터를 보려면 해당 프로젝트 스키마를 선택하세요!</span>
               </div>
             </div>
 

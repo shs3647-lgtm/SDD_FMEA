@@ -36,3 +36,4 @@ Write-Host "확인 명령어: Get-ScheduledTask -TaskName '$taskName'" -Foregrou
 Write-Host "삭제 명령어: Unregister-ScheduledTask -TaskName '$taskName'" -ForegroundColor Yellow
 
 
+

@@ -12,6 +12,10 @@ import { Client } from 'pg';
 
 // PFMEA에서 프로젝트별로 분리 저장할 테이블들 (prisma @@map 기준)
 const PROJECT_TABLES = [
+  'fmea_projects',
+  'fmea_registrations',
+  'fmea_cft_members',
+  'apqp_projects',
   'l1_structures',
   'l2_structures',
   'l3_structures',
@@ -22,7 +26,7 @@ const PROJECT_TABLES = [
   'failure_modes',
   'failure_causes',
   'failure_links',
-  'failure_analyses', // ✅ 고장분석 통합 데이터 (2026-01-11 추가)
+  'failure_analyses',
   'risk_analyses',
   'optimizations',
   'fmea_confirmed_states',

@@ -317,3 +317,4 @@ PostgreSQL: users 테이블
 - 작성자: AI Assistant
 - 상태: ✅ DB 스키마 및 API 완성, 마이그레이션 대기
 
+

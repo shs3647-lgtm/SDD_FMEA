@@ -74,12 +74,15 @@ export async function POST(request: NextRequest) {
     const legacyData = requestBody.legacyData; // ✅ 레거시 데이터 (Single Source of Truth)
     const forceOverwrite = Boolean(requestBody.forceOverwrite); // ✅ 서버 가드 우회 (디버깅/관리자용)
     
+    console.log(`[API] FMEA 저장 시작: ID=${db.fmeaId}, 스키마 타겟팅 준비`);
+    
     // ✅ FMEA ID는 항상 대문자로 정규화 (DB 일관성 보장)
     if (db.fmeaId) {
       db.fmeaId = db.fmeaId.toUpperCase();
     }
     
     if (!db.fmeaId) {
+      console.error('[API] FMEA ID가 없습니다.');
       return NextResponse.json(
         { error: 'FMEA ID is required' },
         { status: 400 }
@@ -88,6 +91,7 @@ export async function POST(request: NextRequest) {
 
     // ✅ 프로젝트별 DB(스키마) 규칙: fmeaId 기준으로 스키마 자동 생성/초기화 후 그 스키마에 저장
     const schema = getProjectSchemaName(db.fmeaId);
+    console.log(`[API] 프로젝트 스키마: ${schema}`);
     await ensureProjectSchemaReady({ baseDatabaseUrl: baseUrl, schema });
     const prisma = getPrismaForSchema(schema);
     if (!prisma) {
@@ -170,21 +174,19 @@ export async function POST(request: NextRequest) {
 
     // 트랜잭션으로 모든 데이터 저장 (배치 처리)
     await prisma.$transaction(async (tx: any) => {
+      // ✅ 강력한 스키마 강제: 트랜잭션 시작 시 search_path 명시적 설정
+      console.log(`[API] 트랜잭션 시작: SET search_path TO ${schema}, public`);
+      await tx.$executeRawUnsafe(`SET search_path TO ${schema}, public`);
+
       // ✅ 표준화: 원자성 DB는 "현재 payload"와 정확히 일치해야 함
-      // - 기존에 id가 비어 uid()가 매번 생성되던 케이스로 인해 동일 fmeaId에 중복 row가 누적됨
-      // - legacyData가 충분히 있는 정상 저장에서는 원자성 DB를 한 번 비우고(구조부터 cascade),
-      //   payload 기준으로 재생성하여 항상 1:1 일치 보장
       if (legacyData && incomingLegacyScore > 0) {
-        console.log('[API] 🧹 원자성 DB 정규화: 기존 fmeaId 데이터 purge 후 재생성', {
-          fmeaId: db.fmeaId,
-          incomingLegacyScore,
-        });
-        // L1Structure 삭제 시 onDelete: Cascade로 하위 대부분이 함께 삭제됨
+        console.log(`[API] 원자성 DB 초기화: ${schema}.l1_structures 삭제 중...`);
         await tx.l1Structure.deleteMany({ where: { fmeaId: db.fmeaId } });
       }
 
       // 1. L1Structure 저장
       if (db.l1Structure) {
+        console.log(`[API] L1Structure 저장: ${db.l1Structure.name}`);
         await tx.l1Structure.create({
           data: {
             id: db.l1Structure.id,
@@ -197,6 +199,7 @@ export async function POST(request: NextRequest) {
 
       // 2. L2Structures 배치 저장
       if (db.l2Structures.length > 0) {
+        console.log(`[API] L2Structures 저장: ${db.l2Structures.length}개`);
         await tx.l2Structure.createMany({
           data: db.l2Structures.map(l2 => ({
             id: l2.id,
@@ -711,6 +714,9 @@ export async function GET(request: NextRequest) {
       console.warn('[API] Prisma 미활성(null), null 반환 (localStorage 폴백 사용)');
       return NextResponse.json(null);
     }
+    
+    // ✅ 강력한 스키마 강제: 조회 전 search_path 설정
+    await prisma.$executeRawUnsafe(`SET search_path TO ${schema}, public`);
     
     // ★★★ 1단계: 레거시 데이터 우선 로드 (Single Source of Truth) ★★★
     let legacyDataRecord: any = null;

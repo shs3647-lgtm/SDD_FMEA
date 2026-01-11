@@ -28,6 +28,8 @@ interface ProcessSelectModalProps {
   existingProcessNames?: string[];
   existingProcessesInfo?: ProcessWithL3Info[];
   productLineName?: string;  // 완제품공정명 (상위항목)
+  // ✅ 연속입력 모드: 저장 시 워크시트에 즉시 반영 + 새 행 추가
+  onContinuousAdd?: (process: ProcessItem, addNewRow: boolean) => void;
 }
 
 // DB에서 마스터 FMEA 공정 로드
@@ -89,7 +91,8 @@ export default function ProcessSelectModal({
   onDelete,
   existingProcessNames = [],
   existingProcessesInfo = [],
-  productLineName = '완제품 제조라인'
+  productLineName = '완제품 제조라인',
+  onContinuousAdd,
 }: ProcessSelectModalProps) {
   const [processes, setProcesses] = useState<ProcessItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -101,6 +104,10 @@ export default function ProcessSelectModal({
 
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<string>('');
+  
+  // ✅ 연속입력 모드 상태
+  const [continuousMode, setContinuousMode] = useState(false);
+  const [addedCount, setAddedCount] = useState(0);
   
   // 드래그 상태
   const [isDragging, setIsDragging] = useState(false);
@@ -414,10 +421,10 @@ export default function ProcessSelectModal({
           </div>
           {/* 두 번째 줄: 버튼들 - 모두 보이도록 flex-wrap */}
           <div className="flex items-center gap-1 flex-wrap">
-            <button onClick={selectAll} className="px-1.5 py-0.5 text-[9px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600 shrink-0">전체</button>
-            <button onClick={deselectAll} className="px-1.5 py-0.5 text-[9px] font-bold bg-gray-300 text-gray-700 rounded hover:bg-gray-400 shrink-0">해제</button>
-            <button onClick={handleSave} className="px-1.5 py-0.5 text-[9px] font-bold bg-green-600 text-white rounded hover:bg-green-700 shrink-0">적용</button>
-            <button onClick={clearAndSave} className="px-1.5 py-0.5 text-[9px] font-bold bg-red-500 text-white rounded hover:bg-red-600 shrink-0">삭제</button>
+            <button onClick={selectAll} className="px-3 py-1.5 text-[15px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600 shrink-0">전체</button>
+            <button onClick={deselectAll} className="px-3 py-1.5 text-[15px] font-bold bg-gray-300 text-gray-700 rounded hover:bg-gray-400 shrink-0">해제</button>
+            <button onClick={handleSave} className="ml-2 px-3 py-1.5 text-[15px] font-bold bg-green-600 text-white rounded hover:bg-green-700 shrink-0">적용</button>
+            <button onClick={clearAndSave} className="ml-4 px-3 py-1.5 text-[15px] font-bold bg-red-500 text-white rounded hover:bg-red-600 shrink-0">삭제</button>
           </div>
         </div>
 

@@ -32,6 +32,8 @@ interface WorkElementSelectModalProps {
   existingElements?: string[];
   processList?: ProcessItem[];
   onProcessChange?: (processNo: string) => void;
+  // ✅ 연속입력 모드: 저장 시 워크시트에 즉시 반영 + 새 행 추가
+  onContinuousAdd?: (element: WorkElement, addNewRow: boolean) => void;
 }
 
 const M4_OPTIONS = [
@@ -93,6 +95,7 @@ export default function WorkElementSelectModal({
   existingElements = [],
   processList = [],
   onProcessChange,
+  onContinuousAdd,
 }: WorkElementSelectModalProps) {
   const [elements, setElements] = useState<WorkElement[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -101,6 +104,10 @@ export default function WorkElementSelectModal({
   const [currentProcessNo, setCurrentProcessNo] = useState(processNo);
   const [newValue, setNewValue] = useState('');
   const [newM4, setNewM4] = useState('MN');
+  
+  // ✅ 연속입력 모드 상태
+  const [continuousMode, setContinuousMode] = useState(false);
+  const [addedCount, setAddedCount] = useState(0);
 
   // 초기화
   useEffect(() => {
@@ -119,6 +126,9 @@ export default function WorkElementSelectModal({
       setSearch('');
       setFilterM4('all');
       setNewValue('');
+      // ✅ 연속입력 상태 초기화
+      setContinuousMode(false);
+      setAddedCount(0);
     }
   }, [isOpen, processNo, existingElements]);
 
@@ -274,10 +284,10 @@ export default function WorkElementSelectModal({
           />
 
           {/* 버튼: [전체][해제][적용][삭제] */}
-          <button onClick={selectAll} className="px-2 py-1 text-[10px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600">전체</button>
-          <button onClick={deselectAll} className="px-2 py-1 text-[10px] font-bold bg-gray-300 text-gray-700 rounded hover:bg-gray-400">해제</button>
-          <button onClick={handleApply} className="px-2 py-1 text-[10px] font-bold bg-green-600 text-white rounded hover:bg-green-700">적용</button>
-          <button onClick={handleDeleteAll} className="px-2 py-1 text-[10px] font-bold bg-red-500 text-white rounded hover:bg-red-600">삭제</button>
+          <button onClick={selectAll} className="px-3 py-1.5 text-[15px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600">전체</button>
+          <button onClick={deselectAll} className="px-3 py-1.5 text-[15px] font-bold bg-gray-300 text-gray-700 rounded hover:bg-gray-400">해제</button>
+          <button onClick={handleApply} className="ml-2 px-3 py-1.5 text-[15px] font-bold bg-green-600 text-white rounded hover:bg-green-700">적용</button>
+          <button onClick={handleDeleteAll} className="ml-4 px-3 py-1.5 text-[15px] font-bold bg-red-500 text-white rounded hover:bg-red-600">삭제</button>
         </div>
 
         {/* ===== 하위항목 라벨 ===== */}

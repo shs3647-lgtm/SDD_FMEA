@@ -389,11 +389,11 @@ export default function BaseSelectModal({
             placeholder={searchPlaceholder}
             className={`flex-1 px-2 py-1 text-[10px] border rounded focus:outline-none focus:ring-1 focus:${colors.ring}`}
           />
-          <button onClick={selectAll} className="px-2 py-1 text-[10px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600">전체</button>
-          <button onClick={deselectAll} className="px-2 py-1 text-[10px] font-bold bg-gray-300 text-gray-700 rounded hover:bg-gray-400">해제</button>
-          <button onClick={handleApply} className="px-2 py-1 text-[10px] font-bold bg-green-600 text-white rounded hover:bg-green-700">적용</button>
+          <button onClick={selectAll} className="px-3 py-1.5 text-[15px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600">전체</button>
+          <button onClick={deselectAll} className="px-3 py-1.5 text-[15px] font-bold bg-gray-300 text-gray-700 rounded hover:bg-gray-400">해제</button>
+          <button onClick={handleApply} className="ml-2 px-3 py-1.5 text-[15px] font-bold bg-green-600 text-white rounded hover:bg-green-700">적용</button>
           {showDeleteAll && (
-            <button onClick={handleDeleteAll} className="px-2 py-1 text-[10px] font-bold bg-red-500 text-white rounded hover:bg-red-600">삭제</button>
+            <button onClick={handleDeleteAll} className="ml-4 px-3 py-1.5 text-[15px] font-bold bg-red-500 text-white rounded hover:bg-red-600">삭제</button>
           )}
           {/* AI 추천 토글 버튼 */}
           {aiRecommendType && aiReady && aiRecommendations.length > 0 && (

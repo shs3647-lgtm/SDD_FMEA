@@ -255,3 +255,4 @@ git commit -m "새 기능 추가"
 - 날짜: 2026-01-11
 - 작성자: AI Assistant
 
+

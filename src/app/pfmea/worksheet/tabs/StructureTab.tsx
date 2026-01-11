@@ -45,7 +45,7 @@ interface StructureTabProps {
   setIsWorkElementModalOpen: (open: boolean) => void;
   setTargetL2Id: (id: string | null) => void;
   saveToLocalStorage?: () => void; // 영구 저장 함수
-  saveAtomicDB?: () => void;  // ✅ DB 저장 함수 추가
+  saveAtomicDB?: (force?: boolean) => Promise<void>;  // ✅ DB 저장 함수 (force=true: 강제 저장)
 }
 
 // 스타일 함수
@@ -655,11 +655,22 @@ export default function StructureTab(props: StructureTabProps) {
     // ✅ 저장 보장 (stateRef가 동기적으로 업데이트되었으므로 즉시 저장 가능)
     // 렌더링 완료 후 저장하도록 requestAnimationFrame + setTimeout 사용
     requestAnimationFrame(() => {
-      setTimeout(() => {
+      setTimeout(async () => {
         console.log('[StructureTab] 저장 실행');
+        console.log('[StructureTab] saveAtomicDB 함수 존재:', typeof saveAtomicDB);
         if (saveToLocalStorage) {
           saveToLocalStorage();
-          saveAtomicDB?.();  // ✅ DB 저장 추가
+          if (saveAtomicDB) {
+            console.log('[StructureTab] saveAtomicDB(true) 호출 시작');
+            try {
+              await saveAtomicDB(true);  // ✅ await로 완료 대기
+              console.log('[StructureTab] ✅ saveAtomicDB(true) 호출 완료');
+            } catch (e) {
+              console.error('[StructureTab] ❌ saveAtomicDB(true) 오류:', e);
+            }
+          } else {
+            console.warn('[StructureTab] saveAtomicDB 함수가 없습니다!');
+          }
           console.log('[StructureTab] 확정 후 localStorage + DB 저장 완료');
         } else {
           console.error('[StructureTab] saveToLocalStorage가 없습니다!');
@@ -669,7 +680,7 @@ export default function StructureTab(props: StructureTabProps) {
     
     alert('✅ 구조분석(2단계)이 확정되었습니다.\n\n이제 기능분석(3단계) 탭이 활성화되었습니다.');
     console.log('[StructureTab] ========== 확정 완료 ==========');
-  }, [missingCounts, isConfirmed, state.l2, setState, setStateSynced, setDirty, saveToLocalStorage]);
+  }, [missingCounts, isConfirmed, state.l2, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB, workElementCount]);
 
   // ✅ 수정 핸들러 (고장분석 패턴 적용)
   const handleEdit = useCallback(() => {

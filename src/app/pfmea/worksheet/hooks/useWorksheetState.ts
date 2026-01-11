@@ -64,7 +64,7 @@ interface UseWorksheetStateReturn {
   // 원자성 DB 접근
   atomicDB: FMEAWorksheetDB | null;
   flattenedRows: FlattenedRow[];
-  saveAtomicDB: () => void;
+  saveAtomicDB: (force?: boolean) => void;
 }
 
 export function useWorksheetState(): UseWorksheetStateReturn {
@@ -210,12 +210,24 @@ export function useWorksheetState(): UseWorksheetStateReturn {
   }, []);
 
   // 원자성 DB 저장
-  const saveAtomicDB = useCallback(async () => {
-    if (!atomicDB) return;
-    if (suppressAutoSaveRef.current) {
+  const saveAtomicDB = useCallback(async (force?: boolean) => {
+    // ✅ FMEA ID 결정: atomicDB.fmeaId > selectedFmeaId > currentFmea?.id
+    const targetFmeaId = atomicDB?.fmeaId || selectedFmeaId || currentFmea?.id;
+    
+    if (!targetFmeaId) {
+      console.warn('[원자성 DB 저장] FMEA ID가 없어 저장 불가');
+      return;
+    }
+    
+    if (!force && suppressAutoSaveRef.current) {
       console.warn('[원자성 DB 저장] suppressAutoSave=true 이므로 저장 스킵');
       return;
     }
+    if (force) {
+      console.log('[원자성 DB 저장] 강제 저장 모드 (suppressAutoSave 무시)');
+    }
+    
+    console.log('[원자성 DB 저장] 시작:', { targetFmeaId, hasAtomicDB: !!atomicDB });
     
     setIsSaving(true);
     try {
@@ -224,7 +236,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       
       // 현재 state를 원자성 DB로 마이그레이션
       const legacyData = {
-        fmeaId: atomicDB.fmeaId,
+        fmeaId: targetFmeaId,  // ✅ atomicDB 없어도 fmeaId 사용
         l1: currentState.l1, // ✅ stateRef.current 사용
         l2: currentState.l2, // ✅ stateRef.current 사용
         failureLinks: (currentState as any).failureLinks || [],
@@ -296,7 +308,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     } finally {
       setIsSaving(false);
     }
-  }, [atomicDB]); // ✅ state 의존성 제거, stateRef 사용
+  }, [atomicDB, selectedFmeaId, currentFmea]); // ✅ FMEA ID 폴백 지원
 
   /**
    * ✅ 성능 최적화용 저장 함수 (localStorage ONLY)

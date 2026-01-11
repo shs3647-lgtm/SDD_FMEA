@@ -117,10 +117,15 @@ export function getPrismaForSchema(schema: string): PrismaClient | null {
 
   const url = buildDatabaseUrlWithSchema(process.env.DATABASE_URL, targetSchema);
 
+  // pg.Pool does not automatically set search_path from query param
+  // We need to set it explicitly or ensure Prisma handles it.
+  // Prisma with adapter-pg requires the search path to be set on the connection.
   const pool =
     globalForPrisma.pgPoolBySchema.get(cacheKey) ??
     new Pool({
       connectionString: url,
+      // For PostgreSQL, we can set the search path in the connection options
+      options: `-c search_path=${targetSchema},public`
     });
   globalForPrisma.pgPoolBySchema.set(cacheKey, pool);
 

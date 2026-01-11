@@ -238,10 +238,10 @@ export default function ProcessSelectModal({
               className="w-full px-3 py-1.5 text-xs border rounded focus:ring-1 focus:ring-blue-500 outline-none"
             />
           </div>
-          <button onClick={selectAll} className="px-2 py-1 text-[10px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600">전체</button>
-          <button onClick={deselectAll} className="px-2 py-1 text-[10px] font-bold bg-gray-200 text-gray-700 rounded hover:bg-gray-300">해제</button>
-          <button onClick={handleSave} className="px-2 py-1 text-[10px] font-bold bg-green-600 text-white rounded hover:bg-green-700">적용</button>
-          <button onClick={clearAndSave} className="px-2 py-1 text-[10px] font-bold bg-red-500 text-white rounded hover:bg-red-600">삭제</button>
+          <button onClick={selectAll} className="px-3 py-1.5 text-[15px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600">전체</button>
+          <button onClick={deselectAll} className="px-3 py-1.5 text-[15px] font-bold bg-gray-200 text-gray-700 rounded hover:bg-gray-300">해제</button>
+          <button onClick={handleSave} className="ml-2 px-3 py-1.5 text-[15px] font-bold bg-green-600 text-white rounded hover:bg-green-700">적용</button>
+          <button onClick={clearAndSave} className="ml-4 px-3 py-1.5 text-[15px] font-bold bg-red-500 text-white rounded hover:bg-red-600">삭제</button>
         </div>
 
         {/* 컴팩트 테이블 - 고정 높이 */}
