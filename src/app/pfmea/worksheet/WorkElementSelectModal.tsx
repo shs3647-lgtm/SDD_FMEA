@@ -351,12 +351,12 @@ export default function WorkElementSelectModal({
             />
           </div>
 
-          {/* 두 번째 줄: 버튼들 - 모두 보이도록 flex-wrap */}
-          <div className="flex items-center gap-1 flex-wrap">
-            <button onClick={selectAll} className="px-3 py-1.5 text-[15px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600 shrink-0">전체</button>
-            <button onClick={deselectAll} className="px-3 py-1.5 text-[15px] font-bold bg-gray-300 text-gray-700 rounded hover:bg-gray-400 shrink-0">해제</button>
-            <button onClick={handleApply} className="ml-2 px-3 py-1.5 text-[15px] font-bold bg-green-600 text-white rounded hover:bg-green-700 shrink-0">적용</button>
-            <button onClick={handleDeleteAll} className="ml-4 px-3 py-1.5 text-[15px] font-bold bg-red-500 text-white rounded hover:bg-red-600 shrink-0">삭제</button>
+          {/* 두 번째 줄: 버튼들 (표준화: 가로 배치) */}
+          <div className="flex items-center gap-2">
+            <button onClick={selectAll} className="px-4 py-1.5 text-[13px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600">전체</button>
+            <button onClick={deselectAll} className="px-4 py-1.5 text-[13px] font-bold bg-gray-300 text-gray-700 rounded hover:bg-gray-400">해제</button>
+            <button onClick={handleApply} className="px-4 py-1.5 text-[13px] font-bold bg-green-600 text-white rounded hover:bg-green-700">적용</button>
+            <button onClick={handleDeleteAll} className="px-4 py-1.5 text-[13px] font-bold bg-red-500 text-white rounded hover:bg-red-600">삭제</button>
           </div>
         </div>
 

@@ -464,8 +464,8 @@ export default function DataSelectModal({
           </div>
         </div>
 
-        {/* ===== 검색/입력 통합 + 버튼: 엔터=추가, [전체][해제][적용][삭제] ===== */}
-        <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-2">
+        {/* ===== 검색 영역 ===== */}
+        <div className="px-3 py-2 border-b bg-gray-50">
           {/* 검색/입력 통합 (엔터 치면 추가) */}
           <input
             type="text"
@@ -505,15 +505,17 @@ export default function DataSelectModal({
               }
             }}
             placeholder={`🔍 ${itemInfo.label} 검색 또는 입력 후 Enter...`}
-            className="flex-1 px-2 py-1 text-[10px] border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full px-2 py-1.5 text-[11px] border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
             autoFocus
           />
+        </div>
 
-          {/* 버튼들 */}
-          <button onClick={selectAll} className="px-3 py-1.5 text-[15px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600">전체</button>
-          <button onClick={deselectAll} className="px-3 py-1.5 text-[15px] font-bold bg-gray-300 text-gray-700 rounded hover:bg-gray-400">해제</button>
-          <button onClick={handleApply} className="ml-2 px-3 py-1.5 text-[15px] font-bold bg-green-600 text-white rounded hover:bg-green-700">적용</button>
-          <button onClick={handleDeleteAll} className="ml-4 px-3 py-1.5 text-[15px] font-bold bg-red-500 text-white rounded hover:bg-red-600">삭제</button>
+        {/* ===== 버튼 영역 (검색 아래, 가로 배치) ===== */}
+        <div className="px-3 py-2 border-b bg-white flex items-center gap-2">
+          <button onClick={selectAll} className="px-4 py-1.5 text-[13px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600">전체</button>
+          <button onClick={deselectAll} className="px-4 py-1.5 text-[13px] font-bold bg-gray-300 text-gray-700 rounded hover:bg-gray-400">해제</button>
+          <button onClick={handleApply} className="px-4 py-1.5 text-[13px] font-bold bg-green-600 text-white rounded hover:bg-green-700">적용</button>
+          <button onClick={handleDeleteAll} className="px-4 py-1.5 text-[13px] font-bold bg-red-500 text-white rounded hover:bg-red-600">삭제</button>
         </div>
 
         {/* ===== 하위항목 라벨 ===== */}
