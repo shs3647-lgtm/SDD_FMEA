@@ -92,6 +92,7 @@ export async function POST(request: NextRequest) {
       hasLegacyData: !!legacyData,
       legacyL1Name: legacyData?.l1?.name,
       legacyL2Count: legacyData?.l2?.length || 0,
+      legacyRiskDataCount: Object.keys(legacyData?.riskData || {}).length,
     });
     
     // ★★★ 고장 데이터 상세 로깅 ★★★
