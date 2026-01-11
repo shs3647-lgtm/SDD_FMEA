@@ -499,21 +499,40 @@ export async function POST(request: NextRequest) {
       
       // ★★★ 14. FmeaLegacyData 저장 (Single Source of Truth) ★★★
       // 레거시 데이터를 JSON으로 직접 저장하여 원자성 DB ↔ 레거시 변환 문제 방지
+      // ✅ 기존 등록정보(fmeaInfo, project, cftMembers)는 유지하고 워크시트 데이터만 업데이트
       if (legacyData) {
         try {
+          // 기존 데이터 조회 (등록정보 보존용)
+          const existingLegacy = await tx.fmeaLegacyData.findUnique({
+            where: { fmeaId: db.fmeaId }
+          }).catch(() => null);
+          
+          // 기존 등록정보 보존 (있으면 유지, 없으면 새 데이터 사용)
+          const existingData = existingLegacy?.data as any || {};
+          const mergedLegacyData = {
+            ...legacyData,  // 워크시트 데이터 (l1, l2, failureLinks 등)
+            // ✅ 기존 등록정보 보존 (워크시트 저장 시 덮어쓰지 않음)
+            fmeaInfo: legacyData.fmeaInfo || existingData.fmeaInfo,
+            project: legacyData.project || existingData.project,
+            cftMembers: legacyData.cftMembers || existingData.cftMembers,
+            fmeaType: legacyData.fmeaType || existingData.fmeaType,
+            parentFmeaId: legacyData.parentFmeaId || existingData.parentFmeaId,
+            parentFmeaType: legacyData.parentFmeaType || existingData.parentFmeaType,
+          };
+          
           await tx.fmeaLegacyData.upsert({
             where: { fmeaId: db.fmeaId },
             create: {
               fmeaId: db.fmeaId,
-              data: legacyData,
+              data: mergedLegacyData,
               version: LEGACY_DATA_VERSION,
             },
             update: {
-              data: legacyData,
+              data: mergedLegacyData,
               version: LEGACY_DATA_VERSION,
             },
           });
-          console.log('[API] ✅ 레거시 데이터 DB 저장 완료 (Single Source of Truth)');
+          console.log('[API] ✅ 레거시 데이터 DB 저장 완료 (등록정보 보존됨)');
         } catch (e: any) {
           // 테이블이 없으면 스킵 (마이그레이션 전)
           if (e?.code !== 'P2021') {

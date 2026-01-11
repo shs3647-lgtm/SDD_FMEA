@@ -1,346 +1,336 @@
 /**
- * FMEA 프로젝트 목록 API
- * - GET: DB에서 FMEA 프로젝트 목록 조회
- * - POST: 새 FMEA 프로젝트 생성
+ * FMEA 프로젝트 API - 분리된 테이블 구조
+ * 
+ * 테이블 구조:
+ * - fmea_projects: 프로젝트 기본 정보
+ * - fmea_registrations: 등록 정보 (기획 및 준비 1단계)
+ * - fmea_cft_members: CFT 멤버 정보
+ * - fmea_worksheet_data: 워크시트 데이터
+ * - fmea_confirmed_states: 확정 상태
+ * 
+ * GET /api/fmea/projects - 프로젝트 목록 조회
+ * GET /api/fmea/projects?id=xxx - 특정 프로젝트 조회
+ * POST /api/fmea/projects - 프로젝트 생성/수정
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { Pool } from 'pg';
+import { getPrisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
 
-// DB 연결
-function getPool() {
-  return new Pool({ connectionString: process.env.DATABASE_URL });
-}
-
-// GET: FMEA 프로젝트 목록 조회 (id 파라미터로 특정 프로젝트 조회 가능)
+// ============ GET: 프로젝트 목록 조회 ============
 export async function GET(request: NextRequest) {
-  const pool = getPool();
+  const prisma = getPrisma();
+  if (!prisma) {
+    return NextResponse.json({ success: false, error: 'Database not configured', projects: [] }, { status: 500 });
+  }
+
   const searchParams = request.nextUrl.searchParams;
-  // ✅ FMEA ID는 항상 대문자로 정규화 (DB 일관성 보장)
-  const targetId = searchParams.get('id')?.toUpperCase() || null; // 특정 ID로 조회
-  
+  const targetId = searchParams.get('id')?.toUpperCase() || null;
+
   try {
-    // ★ public 스키마의 fmea_legacy_data 테이블에서 등록정보 조회 (SSOT)
-    const legacyMap = new Map<string, any>();
-    try {
-      const legacyQuery = targetId 
-        ? `SELECT "fmeaId", data FROM public.fmea_legacy_data WHERE UPPER("fmeaId") = $1`
-        : `SELECT "fmeaId", data FROM public.fmea_legacy_data`;
-      const legacyResult = targetId 
-        ? await pool.query(legacyQuery, [targetId])
-        : await pool.query(legacyQuery);
+    // 프로젝트 목록 조회 (등록정보, CFT 멤버 포함)
+    const whereClause = targetId ? { fmeaId: targetId } : {};
+    
+    const projects = await prisma.fmeaProject.findMany({
+      where: whereClause,
+      include: {
+        registration: true,
+        cftMembers: {
+          orderBy: { order: 'asc' }
+        },
+      },
+      orderBy: [
+        { fmeaType: 'asc' },
+        { createdAt: 'desc' }
+      ]
+    });
+
+    // 레거시 데이터도 확인 (마이그레이션 중 하위호환)
+    const legacyProjects = await prisma.fmeaLegacyData.findMany({
+      where: targetId ? { fmeaId: targetId } : {}
+    });
+    const legacyMap = new Map(legacyProjects.map(l => [l.fmeaId, l.data as any]));
+
+    // 응답 형식으로 변환
+    const result = projects.map(p => {
+      const legacyData = legacyMap.get(p.fmeaId);
       
-      for (const row of legacyResult.rows) {
-        const fmeaId = row.fmeaId?.toUpperCase();
-        if (fmeaId && row.data) {
-          legacyMap.set(fmeaId, row.data);
-        }
-      }
-      console.log(`[API] public.fmea_legacy_data에서 ${legacyMap.size}개 프로젝트 로드`);
-    } catch (e) {
-      console.warn('[API] public.fmea_legacy_data 조회 실패 (테이블 없을 수 있음):', e);
-    }
-    
-    // 1. 모든 FMEA 스키마 조회 (또는 특정 ID의 스키마만)
-    let schemasQuery = `
-      SELECT schema_name 
-      FROM information_schema.schemata 
-      WHERE schema_name LIKE 'pfmea_pfm%' 
-      ORDER BY schema_name
-    `;
-    
-    if (targetId) {
-      const targetSchema = `pfmea_${targetId.replace(/-/g, '_').toLowerCase()}`;
-      schemasQuery = `
-        SELECT schema_name 
-        FROM information_schema.schemata 
-        WHERE schema_name = '${targetSchema}'
-      `;
-    }
-    
-    const schemasResult = await pool.query(schemasQuery);
-    
-    const projects: any[] = [];
-    
-    for (const row of schemasResult.rows) {
-      const schemaName = row.schema_name;
-      // pfmea_pfm26_m001 → PFM26-M001 (완전 대문자)
-      const fmeaId = schemaName
-        .replace('pfmea_', '')
-        .replace(/_/g, '-')
-        .toUpperCase(); // ★ 완전 대문자로 변환
-      
-      // ★ public.fmea_legacy_data에서 등록정보 가져오기 (우선)
-      const legacyData = legacyMap.get(fmeaId);
-      
-      try {
-        // FmeaInfo 테이블에서 정보 조회
-        const infoResult = await pool.query(`
-          SELECT * FROM "${schemaName}"."FmeaInfo" LIMIT 1
-        `);
-        
-        if (infoResult.rows.length > 0) {
-          const info = infoResult.rows[0];
-          // ★ public.fmea_legacy_data에서 등록정보 병합 (SSOT - 우선순위 높음)
-          const legacyFmeaInfo = legacyData?.fmeaInfo || {};
-          const legacyCftMembers = legacyData?.cftMembers || [];
-          
-          // 스키마별 FmeaInfo와 legacyData 병합 (legacyData 우선)
-          const mergedFmeaInfo = {
-            ...info.fmeaInfo,
-            ...legacyFmeaInfo,  // legacyData가 있으면 덮어씀
-          };
-          const mergedCftMembers = legacyCftMembers.length > 0 ? legacyCftMembers : (info.cftMembers || []);
-          
-          projects.push({
-            id: fmeaId,
-            project: info.project || legacyData?.project || {},
-            fmeaInfo: mergedFmeaInfo,  // ★ 병합된 정보
-            fmeaType: info.fmeaType || 'P',
-            parentFmeaId: info.parentFmeaId || null,  // ✅ 상위 FMEA ID
-            parentFmeaType: info.parentFmeaType || null,  // ✅ 상위 FMEA 유형
-            cftMembers: mergedCftMembers,  // ★ 병합된 CFT 멤버
-            structureConfirmed: info.structureConfirmed || false,
-            createdAt: info.createdAt,
-            updatedAt: info.updatedAt,
-            status: 'active',
-            step: calculateStep(info),
-            revisionNo: 'Rev.01'
-          });
-        } else if (legacyData) {
-          // ★ 스키마별 FmeaInfo 없으면 legacyData에서 가져옴
-          const type = extractType(fmeaId);
-          projects.push({
-            id: fmeaId,
-            project: legacyData.project || { projectName: fmeaId },
-            fmeaInfo: legacyData.fmeaInfo || { subject: fmeaId },
-            fmeaType: type,
-            parentFmeaId: type === 'M' ? fmeaId : null,
-            parentFmeaType: type === 'M' ? 'M' : null,
-            cftMembers: legacyData.cftMembers || [],
-            createdAt: new Date().toISOString(),
-            status: 'active',
-            step: 1,
-            revisionNo: 'Rev.01'
-          });
-        } else {
-          // FmeaInfo 없으면 스키마만으로 기본 정보 생성
-          const type = extractType(fmeaId);
-          projects.push({
-            id: fmeaId,
-            project: { projectName: fmeaId },
-            fmeaInfo: { subject: fmeaId },
-            fmeaType: type,
-            parentFmeaId: type === 'M' ? fmeaId : null,  // ✅ Master는 본인 ID
-            parentFmeaType: type === 'M' ? 'M' : null,
-            createdAt: new Date().toISOString(),
-            status: 'active',
-            step: 1,
-            revisionNo: 'Rev.01'
-          });
-        }
-      } catch (e) {
-        // 테이블이 없으면 legacyData 또는 기본 정보 사용
-        const type = extractType(fmeaId);
-        projects.push({
+      return {
+        id: p.fmeaId,
+        fmeaType: p.fmeaType,
+        parentFmeaId: p.parentFmeaId,
+        parentFmeaType: p.parentFmeaType,
+        status: p.status,
+        step: p.step,
+        revisionNo: p.revisionNo,
+        createdAt: p.createdAt.toISOString(),
+        updatedAt: p.updatedAt.toISOString(),
+        // 등록 정보 (fmea_registrations 테이블)
+        fmeaInfo: p.registration ? {
+          companyName: p.registration.companyName || '',
+          engineeringLocation: p.registration.engineeringLocation || '',
+          customerName: p.registration.customerName || '',
+          modelYear: p.registration.modelYear || '',
+          subject: p.registration.subject || '',
+          fmeaStartDate: p.registration.fmeaStartDate || '',
+          fmeaRevisionDate: p.registration.fmeaRevisionDate || '',
+          fmeaProjectName: p.registration.fmeaProjectName || '',
+          fmeaId: p.fmeaId,
+          fmeaType: p.fmeaType,
+          designResponsibility: p.registration.designResponsibility || '',
+          confidentialityLevel: p.registration.confidentialityLevel || '',
+          fmeaResponsibleName: p.registration.fmeaResponsibleName || '',
+        } : (legacyData?.fmeaInfo || { subject: p.fmeaId }),
+        // 프로젝트 정보 (등록정보에서 파생)
+        project: p.registration ? {
+          projectName: p.registration.fmeaProjectName || p.registration.subject || p.fmeaId,
+          customer: p.registration.customerName || '',
+          productName: p.registration.subject || '',
+          department: p.registration.designResponsibility || '',
+          leader: p.registration.fmeaResponsibleName || '',
+          startDate: p.registration.fmeaStartDate || '',
+        } : (legacyData?.project || { projectName: p.fmeaId }),
+        // CFT 멤버 (fmea_cft_members 테이블)
+        cftMembers: p.cftMembers.length > 0 
+          ? p.cftMembers.map(m => ({
+              id: m.id,
+              role: m.role,
+              name: m.name || '',
+              department: m.department || '',
+              position: m.position || '',
+              responsibility: m.responsibility || '',
+              email: m.email || '',
+              phone: m.phone || '',
+              remarks: m.remarks || '',
+            }))
+          : (legacyData?.cftMembers || []),
+      };
+    });
+
+    // 레거시에만 있고 프로젝트 테이블에 없는 데이터 추가 (마이그레이션 중)
+    for (const [fmeaId, data] of legacyMap.entries()) {
+      if (!projects.find(p => p.fmeaId === fmeaId)) {
+        const type = fmeaId.includes('-M') ? 'M' : fmeaId.includes('-F') ? 'F' : 'P';
+        result.push({
           id: fmeaId,
-          project: legacyData?.project || { projectName: fmeaId },
-          fmeaInfo: legacyData?.fmeaInfo || { subject: fmeaId },
           fmeaType: type,
-          cftMembers: legacyData?.cftMembers || [],
-          parentFmeaId: type === 'M' ? fmeaId : null,  // ✅ Master는 본인 ID
+          parentFmeaId: type === 'M' ? fmeaId : null,
           parentFmeaType: type === 'M' ? 'M' : null,
-          createdAt: new Date().toISOString(),
           status: 'active',
           step: 1,
-          revisionNo: 'Rev.01'
+          revisionNo: 'Rev.01',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          fmeaInfo: data?.fmeaInfo || { subject: fmeaId },
+          project: data?.project || { projectName: fmeaId },
+          cftMembers: data?.cftMembers || [],
         });
       }
     }
-    
+
     // 유형별 정렬 (M → F → P)
     const typeOrder: Record<string, number> = { 'M': 1, 'F': 2, 'P': 3 };
-    projects.sort((a, b) => {
+    result.sort((a, b) => {
       const orderA = typeOrder[a.fmeaType] || 3;
       const orderB = typeOrder[b.fmeaType] || 3;
       if (orderA !== orderB) return orderA - orderB;
-      return (b.createdAt || '').localeCompare(a.createdAt || '');
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-    
-    return NextResponse.json({ success: true, projects });
-    
+
+    return NextResponse.json({ success: true, projects: result });
+
   } catch (error: any) {
     console.error('❌ FMEA 목록 조회 실패:', error.message);
     return NextResponse.json({ success: false, error: error.message, projects: [] }, { status: 500 });
-  } finally {
-    await pool.end();
   }
 }
 
-// POST: 새 FMEA 프로젝트 생성
+// ============ POST: 프로젝트 생성/수정 ============
 export async function POST(req: NextRequest) {
-  const pool = getPool();
-  
+  const prisma = getPrisma();
+  if (!prisma) {
+    return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 500 });
+  }
+
   try {
     const body = await req.json();
-    // ✅ FMEA ID는 항상 대문자로 정규화 (DB 일관성 보장)
     const fmeaId = body.fmeaId?.toUpperCase();
-    const { fmeaType, project, fmeaInfo, cftMembers } = body;
+    const { fmeaType, project, fmeaInfo, cftMembers, parentFmeaId, parentFmeaType } = body;
+
+    if (!fmeaId) {
+      return NextResponse.json({ success: false, error: 'fmeaId is required' }, { status: 400 });
+    }
+
+    const actualType = fmeaType || (fmeaId.includes('-M') ? 'M' : fmeaId.includes('-F') ? 'F' : 'P');
+    const parentId = parentFmeaId || (actualType === 'M' ? fmeaId : null);
+    const parentType = parentFmeaType || (actualType === 'M' ? 'M' : null);
+
+    // 트랜잭션으로 모든 테이블 저장
+    await prisma.$transaction(async (tx) => {
+      // 1. fmea_projects 테이블 저장/수정
+      await tx.fmeaProject.upsert({
+        where: { fmeaId },
+        create: {
+          fmeaId,
+          fmeaType: actualType,
+          parentFmeaId: parentId,
+          parentFmeaType: parentType,
+          status: 'active',
+          step: 1,
+        },
+        update: {
+          fmeaType: actualType,
+          parentFmeaId: parentId,
+          parentFmeaType: parentType,
+          updatedAt: new Date(),
+        },
+      });
+
+      // 2. fmea_registrations 테이블 저장/수정
+      if (fmeaInfo) {
+        await tx.fmeaRegistration.upsert({
+          where: { fmeaId },
+          create: {
+            fmeaId,
+            companyName: fmeaInfo.companyName || '',
+            engineeringLocation: fmeaInfo.engineeringLocation || '',
+            customerName: fmeaInfo.customerName || '',
+            modelYear: fmeaInfo.modelYear || '',
+            subject: fmeaInfo.subject || '',
+            fmeaStartDate: fmeaInfo.fmeaStartDate || '',
+            fmeaRevisionDate: fmeaInfo.fmeaRevisionDate || '',
+            fmeaProjectName: fmeaInfo.fmeaProjectName || project?.projectName || '',
+            designResponsibility: fmeaInfo.designResponsibility || '',
+            confidentialityLevel: fmeaInfo.confidentialityLevel || '',
+            fmeaResponsibleName: fmeaInfo.fmeaResponsibleName || '',
+          },
+          update: {
+            companyName: fmeaInfo.companyName || undefined,
+            engineeringLocation: fmeaInfo.engineeringLocation || undefined,
+            customerName: fmeaInfo.customerName || undefined,
+            modelYear: fmeaInfo.modelYear || undefined,
+            subject: fmeaInfo.subject || undefined,
+            fmeaStartDate: fmeaInfo.fmeaStartDate || undefined,
+            fmeaRevisionDate: fmeaInfo.fmeaRevisionDate || undefined,
+            fmeaProjectName: fmeaInfo.fmeaProjectName || project?.projectName || undefined,
+            designResponsibility: fmeaInfo.designResponsibility || undefined,
+            confidentialityLevel: fmeaInfo.confidentialityLevel || undefined,
+            fmeaResponsibleName: fmeaInfo.fmeaResponsibleName || undefined,
+            updatedAt: new Date(),
+          },
+        });
+      }
+
+      // 3. fmea_cft_members 테이블 저장 (전체 교체)
+      if (cftMembers && Array.isArray(cftMembers)) {
+        // 기존 멤버 삭제
+        await tx.fmeaCftMember.deleteMany({ where: { fmeaId } });
+        
+        // 새 멤버 추가
+        if (cftMembers.length > 0) {
+          await tx.fmeaCftMember.createMany({
+            data: cftMembers.map((m: any, idx: number) => ({
+              fmeaId,
+              role: m.role || 'CFT 팀원',
+              name: m.name || '',
+              department: m.department || '',
+              position: m.position || '',
+              responsibility: m.responsibility || '',
+              email: m.email || '',
+              phone: m.phone || '',
+              remarks: m.remarks || '',
+              order: idx,
+            })),
+          });
+        }
+      }
+
+      // 4. fmea_legacy_data에도 저장 (하위호환)
+      const existingLegacy = await tx.fmeaLegacyData.findUnique({ where: { fmeaId } });
+      const existingData = (existingLegacy?.data as any) || {};
+      
+      await tx.fmeaLegacyData.upsert({
+        where: { fmeaId },
+        create: {
+          fmeaId,
+          data: {
+            ...existingData,
+            fmeaInfo,
+            project,
+            cftMembers,
+            fmeaType: actualType,
+            parentFmeaId: parentId,
+            parentFmeaType: parentType,
+            savedAt: new Date().toISOString(),
+          },
+        },
+        update: {
+          data: {
+            ...existingData,
+            fmeaInfo,
+            project,
+            cftMembers,
+            fmeaType: actualType,
+            parentFmeaId: parentId,
+            parentFmeaType: parentType,
+            savedAt: new Date().toISOString(),
+          },
+        },
+      });
+    });
+
+    console.log(`✅ FMEA 프로젝트 저장 완료: ${fmeaId}`);
+
+    return NextResponse.json({
+      success: true,
+      fmeaId,
+      parentFmeaId: parentId,
+      parentFmeaType: parentType,
+      message: 'FMEA 프로젝트가 저장되었습니다.',
+    });
+
+  } catch (error: any) {
+    console.error('❌ FMEA 프로젝트 저장 실패:', error.message);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+// ============ DELETE: 프로젝트 삭제 ============
+export async function DELETE(req: NextRequest) {
+  const prisma = getPrisma();
+  if (!prisma) {
+    return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 500 });
+  }
+
+  try {
+    const { fmeaId } = await req.json();
     
     if (!fmeaId) {
       return NextResponse.json({ success: false, error: 'fmeaId is required' }, { status: 400 });
     }
-    
-    // 스키마 이름 생성: pfm26-M001 → pfmea_pfm26_m001
-    const schemaName = `pfmea_${fmeaId.replace(/-/g, '_').toLowerCase()}`;
-    
-    // 1. 스키마 생성
-    await pool.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
-    
-    // 2. FmeaInfo 테이블 생성 (cftMembers, parentFmeaId 필드 포함)
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS "${schemaName}"."FmeaInfo" (
-        id TEXT PRIMARY KEY,
-        "fmeaId" TEXT NOT NULL,
-        "fmeaType" TEXT,
-        "parentFmeaId" TEXT,
-        "parentFmeaType" TEXT,
-        "inheritedAt" TIMESTAMP,
-        project JSONB,
-        "fmeaInfo" JSONB,
-        "cftMembers" JSONB,
-        "structureConfirmed" BOOLEAN DEFAULT FALSE,
-        "createdAt" TIMESTAMP DEFAULT NOW(),
-        "updatedAt" TIMESTAMP DEFAULT NOW()
-      )
-    `);
-    
-    // 2-1. 기존 테이블에 컬럼 추가 (호환성)
-    await pool.query(`
-      ALTER TABLE "${schemaName}"."FmeaInfo" 
-      ADD COLUMN IF NOT EXISTS "cftMembers" JSONB,
-      ADD COLUMN IF NOT EXISTS "parentFmeaId" TEXT,
-      ADD COLUMN IF NOT EXISTS "parentFmeaType" TEXT,
-      ADD COLUMN IF NOT EXISTS "inheritedAt" TIMESTAMP
-    `);
-    
-    // 3. 기본 테이블들 생성
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS "${schemaName}"."L1Structure" (
-        id TEXT PRIMARY KEY,
-        "fmeaId" TEXT NOT NULL,
-        "processNo" TEXT,
-        "processName" TEXT,
-        "fourM" TEXT,
-        "createdAt" TIMESTAMP DEFAULT NOW(),
-        "updatedAt" TIMESTAMP DEFAULT NOW()
-      )
-    `);
-    
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS "${schemaName}"."L2Structure" (
-        id TEXT PRIMARY KEY,
-        "fmeaId" TEXT NOT NULL,
-        "l1Id" TEXT,
-        "processNo" TEXT,
-        "processName" TEXT,
-        "processFunction" TEXT,
-        "createdAt" TIMESTAMP DEFAULT NOW(),
-        "updatedAt" TIMESTAMP DEFAULT NOW()
-      )
-    `);
-    
-    // 4. FmeaInfo 저장 (cftMembers 포함) - 모든 필드 명시적으로 포함
-    const fmeaInfoToSave = {
-      companyName: fmeaInfo?.companyName || '',
-      engineeringLocation: fmeaInfo?.engineeringLocation || '',
-      customerName: fmeaInfo?.customerName || '',
-      modelYear: fmeaInfo?.modelYear || '',
-      subject: fmeaInfo?.subject || '',
-      fmeaStartDate: fmeaInfo?.fmeaStartDate || '',
-      fmeaRevisionDate: fmeaInfo?.fmeaRevisionDate || '',
-      fmeaProjectName: fmeaInfo?.fmeaProjectName || '',
-      fmeaId: fmeaId,
-      fmeaType: fmeaType || 'P',
-      designResponsibility: fmeaInfo?.designResponsibility || '',
-      confidentialityLevel: fmeaInfo?.confidentialityLevel || '',
-      fmeaResponsibleName: fmeaInfo?.fmeaResponsibleName || '',
-    };
-    
-    console.log(`[API] 저장할 fmeaInfo (${fmeaId}):`, JSON.stringify(fmeaInfoToSave, null, 2));
-    console.log(`[API] 저장할 project:`, JSON.stringify(project || {}, null, 2));
-    console.log(`[API] 저장할 cftMembers:`, JSON.stringify(cftMembers || [], null, 2));
-    
-    // ✅ FMEA 리스트와 DB는 1:1 관계 - 동일 fmeaId의 모든 기존 행 삭제 후 최신본만 저장
-    const infoId = `info-${fmeaId}`;
-    
-    // ✅ parentFmeaId 결정: 클라이언트에서 전달받거나, Master FMEA는 본인 ID
-    // Master(M): parentFmeaId = 본인 ID (자기 자신이 Parent)
-    // Family(F), Part(P): parentFmeaId = 클라이언트에서 전달받은 상위 FMEA ID
-    const actualFmeaType = fmeaType || extractType(fmeaId) || 'P';
-    const parentId = body.parentFmeaId || (actualFmeaType === 'M' ? fmeaId : null);
-    const parentType = body.parentFmeaType || (actualFmeaType === 'M' ? 'M' : null);
-    
-    // 1. 동일 fmeaId의 모든 기존 행 삭제 (중복 방지)
-    await pool.query(`
-      DELETE FROM "${schemaName}"."FmeaInfo"
-      WHERE "fmeaId" = $1
-    `, [fmeaId]);
-    
-    // 2. 최신본만 INSERT (1:1 관계 보장, parentFmeaId 포함)
-    await pool.query(`
-      INSERT INTO "${schemaName}"."FmeaInfo" 
-      (id, "fmeaId", "fmeaType", "parentFmeaId", "parentFmeaType", project, "fmeaInfo", "cftMembers")
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    `, [
-      infoId,
-      fmeaId,
-      actualFmeaType,
-      parentId,  // ✅ Master는 본인 ID, Family/Part는 상위 FMEA ID
-      parentType,
-      JSON.stringify(project || {}),
-      JSON.stringify(fmeaInfoToSave),  // ✅ 모든 필드 포함
-      JSON.stringify(cftMembers || [])
-    ]);
-    
-    console.log(`✅ [API] parentFmeaId 설정: ${fmeaId} → parent: ${parentId} (type: ${parentType})`);
-    
-    console.log(`✅ [API] FMEA 저장 완료 (1:1 관계 보장): ${fmeaId} → ${infoId}`);
-    
-    console.log(`✅ FMEA 프로젝트 생성: ${fmeaId} (스키마: ${schemaName})`);
-    
-    return NextResponse.json({ 
-      success: true, 
-      fmeaId, 
-      schemaName,
-      parentFmeaId: parentId,  // ✅ 저장된 상위 FMEA ID 반환
-      parentFmeaType: parentType,
-      message: 'FMEA 프로젝트가 생성되었습니다.' 
+
+    const normalizedId = fmeaId.toUpperCase();
+
+    // CASCADE 삭제 (registration, cftMembers, worksheetData 자동 삭제)
+    await prisma.fmeaProject.delete({
+      where: { fmeaId: normalizedId }
     });
-    
+
+    // 레거시 데이터도 삭제
+    await prisma.fmeaLegacyData.deleteMany({
+      where: { fmeaId: normalizedId }
+    });
+
+    console.log(`✅ FMEA 프로젝트 삭제 완료: ${normalizedId}`);
+
+    return NextResponse.json({
+      success: true,
+      fmeaId: normalizedId,
+      message: 'FMEA 프로젝트가 삭제되었습니다.',
+    });
+
   } catch (error: any) {
-    console.error('❌ FMEA 프로젝트 생성 실패:', error.message);
+    console.error('❌ FMEA 프로젝트 삭제 실패:', error.message);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-  } finally {
-    await pool.end();
   }
 }
-
-// 유틸: ID에서 유형 추출
-function extractType(id: string): string {
-  const match = id.match(/pfm\d{2}-([MFP])/i);
-  return match ? match[1].toUpperCase() : 'P';
-}
-
-// 유틸: 단계 계산
-function calculateStep(info: any): number {
-  if (info.optConfirmed) return 7;
-  if (info.riskConfirmed) return 6;
-  if (info.failureLinkConfirmed) return 5;
-  if (info.l3Confirmed) return 4;
-  if (info.l2Confirmed) return 3;
-  if (info.l1Confirmed || info.structureConfirmed) return 2;
-  return 1;
-}
-

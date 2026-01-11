@@ -322,7 +322,106 @@ model Optimization {
   @@map("optimizations")
 }
 
-// ============ 레거시 데이터 (단일 진실 소스 - Single Source of Truth) ============
+// ============================================================================
+// ============ FMEA 프로젝트 관리 테이블들 (화면별 분리) ============
+// ============================================================================
+
+// ============ 1. FMEA 프로젝트 기본 정보 (리스트 화면용) ============
+model FmeaProject {
+  id              String   @id @default(uuid())
+  fmeaId          String   @unique // PFM26-M001 형식
+  fmeaType        String   @default("P") // 'M' | 'F' | 'P' (Master/Family/Part)
+  parentFmeaId    String?  // 상위 FMEA ID (Master는 본인 ID)
+  parentFmeaType  String?  // 상위 FMEA 유형
+  status          String   @default("active") // 'active' | 'archived' | 'deleted'
+  step            Int      @default(1) // 현재 단계 (1-7)
+  revisionNo      String   @default("Rev.01")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  registration    FmeaRegistration?
+  cftMembers      FmeaCftMember[]
+  worksheetData   FmeaWorksheetData?
+  // confirmedState는 논리적 연결 (fmeaId로 조인)
+
+  @@index([fmeaType])
+  @@index([parentFmeaId])
+  @@index([status])
+  @@map("fmea_projects")
+}
+
+// ============ 2. FMEA 등록 정보 (등록화면 - 기획 및 준비 1단계) ============
+model FmeaRegistration {
+  id                    String   @id @default(uuid())
+  fmeaId                String   @unique // FK: FmeaProject.fmeaId
+  companyName           String?  // 회사명
+  engineeringLocation   String?  // 엔지니어링 위치
+  customerName          String?  // 고객명
+  modelYear             String?  // 모델 연식/플랫폼
+  subject               String?  // FMEA명 (주제)
+  fmeaStartDate         String?  // 시작일자 (YYYY-MM-DD)
+  fmeaRevisionDate      String?  // 개정일자 (YYYY-MM-DD)
+  fmeaProjectName       String?  // 프로젝트명
+  designResponsibility  String?  // 공정책임 (부서)
+  confidentialityLevel  String?  // 기밀유지수준
+  fmeaResponsibleName   String?  // 담당자 성명
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  project FmeaProject @relation(fields: [fmeaId], references: [fmeaId], onDelete: Cascade)
+
+  @@index([fmeaId])
+  @@map("fmea_registrations")
+}
+
+// ============ 3. CFT 멤버 정보 (등록화면 - CFT 리스트) ============
+model FmeaCftMember {
+  id             String   @id @default(uuid())
+  fmeaId         String   // FK: FmeaProject.fmeaId
+  role           String   // 역할: 'Champion' | 'Leader' | 'PM' | 'Moderator' | 'CFT 팀원'
+  name           String?  // 성명
+  department     String?  // 부서
+  position       String?  // 직급
+  responsibility String?  // 담당업무
+  email          String?  // 이메일
+  phone          String?  // 전화번호
+  remarks        String?  // 비고
+  order          Int      @default(0) // 순서
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  project FmeaProject @relation(fields: [fmeaId], references: [fmeaId], onDelete: Cascade)
+
+  @@index([fmeaId])
+  @@index([role])
+  @@map("fmea_cft_members")
+}
+
+// ============ 4. 워크시트 데이터 (워크시트 화면용) ============
+model FmeaWorksheetData {
+  id           String   @id @default(uuid())
+  fmeaId       String   @unique // FK: FmeaProject.fmeaId
+  l1Data       Json?    // L1 구조 데이터 (완제품 공정명, failureScopes 등)
+  l2Data       Json?    // L2 공정 배열 데이터
+  riskData     Json?    // 리스크분석/최적화 데이터
+  failureLinks Json?    // 고장연결 데이터
+  tab          String?  // 현재 탭
+  version      String   @default("1.0.0")
+  savedAt      DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  project FmeaProject @relation(fields: [fmeaId], references: [fmeaId], onDelete: Cascade)
+
+  @@index([fmeaId])
+  @@map("fmea_worksheet_data")
+}
+
+// ============ 레거시 데이터 (하위호환용 - 점진적 마이그레이션) ============
 // 원자성 DB와의 불일치 방지를 위해 레거시 형식을 JSON으로 직접 저장
 
 model FmeaLegacyData {
@@ -337,11 +436,11 @@ model FmeaLegacyData {
   @@map("fmea_legacy_data")
 }
 
-// ============ 확정 상태 (단계별 확정 상태 저장) ============
+// ============ 5. 확정 상태 (단계별 확정 상태 저장) ============
 
 model FmeaConfirmedState {
   id                   String   @id @default(uuid())
-  fmeaId               String   @unique // FK: FMEA 프로젝트 ID (1:1 관계)
+  fmeaId               String   @unique // FK: FmeaProject.fmeaId (논리적 연결)
   structureConfirmed   Boolean  @default(false)  // 구조분석 확정
   l1FunctionConfirmed  Boolean  @default(false)  // 1L 기능분석 확정
   l2FunctionConfirmed  Boolean  @default(false)  // 2L 기능분석 확정
@@ -354,6 +453,9 @@ model FmeaConfirmedState {
   optimizationConfirmed Boolean @default(false)  // 최적화 확정
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+
+  // Note: FK relation은 데이터 마이그레이션 후 추가 예정
+  // project FmeaProject @relation(fields: [fmeaId], references: [fmeaId], onDelete: Cascade)
 
   @@map("fmea_confirmed_states")
 }
