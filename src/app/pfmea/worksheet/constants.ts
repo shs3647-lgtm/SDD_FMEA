@@ -280,6 +280,84 @@ export const LEVELS = [] as const;
 
 export const uid = () => 'id_' + Math.random().toString(16).slice(2) + '_' + Date.now().toString(16);
 
+/**
+ * ★★★ 고유 INDEXING ID 생성 함수 ★★★
+ * 단계(Level), 행(Row), 열(Col), 병합여부(Merge)를 ID에 인코딩
+ * 
+ * 포맷: {TYPE}{LEVEL}-P{PROC}W{WE}F{FUNC}C{CHAR}I{ITEM}-M{MERGE}
+ * 예시:
+ *   - FM2-P01W00F01C01I001-M0 = FailureMode L2, 공정1, 기능1, 특성1, 항목1, 비병합
+ *   - FC3-P02W03F02C01I002-M1 = FailureCause L3, 공정2, 작업요소3, 기능2, 특성1, 항목2, 병합
+ *   - FE1-P00W00F01C00I001-M0 = FailureEffect L1, 기능1, 항목1, 비병합
+ *   - LK0-P01W03F00C00I001-M1 = FailureLink, 공정1, 작업요소3, 항목1, 병합
+ */
+export interface IndexedIdParams {
+  type: 'FM' | 'FE' | 'FC' | 'LK' | 'L1S' | 'L2S' | 'L3S' | 'L1F' | 'L2F' | 'L3F';
+  level: 0 | 1 | 2 | 3;
+  procIdx?: number;    // 공정 인덱스 (0-based)
+  weIdx?: number;      // 작업요소 인덱스 (0-based)
+  funcIdx?: number;    // 기능 인덱스 (0-based)
+  charIdx?: number;    // 특성 인덱스 (0-based)
+  itemIdx?: number;    // 항목 인덱스 (0-based)
+  isMerged?: boolean;  // 병합 여부
+  suffix?: string;     // 추가 식별자 (선택)
+}
+
+export const createIndexedId = ({
+  type,
+  level,
+  procIdx = 0,
+  weIdx = 0,
+  funcIdx = 0,
+  charIdx = 0,
+  itemIdx = 0,
+  isMerged = false,
+  suffix = '',
+}: IndexedIdParams): string => {
+  const L = level.toString();
+  const P = procIdx.toString().padStart(2, '0');
+  const W = weIdx.toString().padStart(2, '0');
+  const F = funcIdx.toString().padStart(2, '0');
+  const C = charIdx.toString().padStart(2, '0');
+  const I = itemIdx.toString().padStart(3, '0');
+  const M = isMerged ? '1' : '0';
+  const S = suffix ? `-${suffix}` : '';
+  // 고유성 보장: 타임스탬프 + 랜덤 추가
+  const TS = Date.now().toString(36).slice(-4);
+  const RND = Math.random().toString(36).slice(2, 6);
+  return `${type}${L}-P${P}W${W}F${F}C${C}I${I}-M${M}-${TS}${RND}${S}`;
+};
+
+/**
+ * 인덱싱 ID에서 위치 정보 추출
+ */
+export interface ParsedIndexedId {
+  type: string;
+  level: number;
+  procIdx: number;
+  weIdx: number;
+  funcIdx: number;
+  charIdx: number;
+  itemIdx: number;
+  isMerged: boolean;
+}
+
+export const parseIndexedId = (id: string): ParsedIndexedId | null => {
+  // 포맷: {TYPE}{LEVEL}-P{PROC}W{WE}F{FUNC}C{CHAR}I{ITEM}-M{MERGE}-...
+  const match = id.match(/^([A-Z]+)(\d)-P(\d{2})W(\d{2})F(\d{2})C(\d{2})I(\d{3})-M([01])/);
+  if (!match) return null;
+  return {
+    type: match[1],
+    level: parseInt(match[2], 10),
+    procIdx: parseInt(match[3], 10),
+    weIdx: parseInt(match[4], 10),
+    funcIdx: parseInt(match[5], 10),
+    charIdx: parseInt(match[6], 10),
+    itemIdx: parseInt(match[7], 10),
+    isMerged: match[8] === '1',
+  };
+};
+
 export const getTabLabel = (tabId: string): string => TABS.find(t => t.id === tabId)?.label || tabId;
 export const getTabStep = (tabId: string): number => TABS.find(t => t.id === tabId)?.step || 0;
 
