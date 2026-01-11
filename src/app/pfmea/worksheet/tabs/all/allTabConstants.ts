@@ -271,3 +271,4 @@ export function calculateGroupSpans(columns: ColumnDef[]): GroupSpan[] {
   return spans;
 }
 
+

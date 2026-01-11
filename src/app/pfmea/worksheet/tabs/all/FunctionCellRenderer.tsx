@@ -94,6 +94,8 @@ export function FunctionCellRenderer({
   // ★ FE 기반 역전개 (구분, 완제품기능, 요구사항)
   const feFunctionCols = ['구분', '완제품기능', '요구사항'];
   if (feFunctionCols.includes(col.name)) {
+    // ★ rowSpan=0이면 병합된 범위 → 렌더링 안함
+    if (row.feRowSpan === 0) return null;
     // 누적 범위 체크: 이전 행의 feRowSpan 범위 안에 있으면 렌더링하지 않음
     if (rowInFM === 0 || !isInMergedRange('fe')) {
       let value = '';

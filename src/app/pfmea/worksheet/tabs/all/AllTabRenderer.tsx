@@ -99,8 +99,8 @@ export default function AllTabRenderer({
   });
 
   // ★ FC 역전개를 위한 맵 생성 (state.l2에서)
-  // fcId → { workFunction, processChar, causeText } 매핑
-  const fcToL3Map = new Map<string, { workFunction: string; processChar: string }>();
+  // fcId → { workFunction, processChar, m4, workElem } 매핑
+  const fcToL3Map = new Map<string, { workFunction: string; processChar: string; m4: string; workElem: string }>();
   const fcToTextMap = new Map<string, string>();  // ★ fcId → cause 텍스트 매핑
   
   (state.l2 || []).forEach((proc: any) => {
@@ -116,6 +116,10 @@ export default function AllTabRenderer({
     });
     
     (proc.l3 || []).forEach((we: any) => {
+      // ★★★ 핵심: 4M과 작업요소명 저장 ★★★
+      const m4 = we.m4 || we.category || '';
+      const workElem = we.name || we.element || '';
+      
       (we.functions || []).forEach((fn: any) => {
         (fn.processChars || []).forEach((pc: any) => {
           // 이 공정특성에 연결된 고장원인들 찾기
@@ -124,6 +128,8 @@ export default function AllTabRenderer({
               fcToL3Map.set(fc.id, {
                 workFunction: fn.name || '',
                 processChar: pc.name || '',
+                m4,        // ★ 4M 추가
+                workElem,  // ★ 작업요소 추가
               });
             }
           });
@@ -133,6 +139,7 @@ export default function AllTabRenderer({
   });
   
   console.log('🟠 fcToTextMap:', { count: fcToTextMap.size, sample: Array.from(fcToTextMap.entries()).slice(0, 3) });
+  console.log('🟠 fcToL3Map (with 4M, workElem):', { count: fcToL3Map.size, sample: Array.from(fcToL3Map.entries()).slice(0, 3) });
 
   // ★ FM 역전개를 위한 맵 생성 (state.l2에서)
   // fmId → { processFunction, productChar } 매핑
@@ -272,9 +279,9 @@ export default function AllTabRenderer({
       // ★ FC 역전개 데이터 (고장원인 → 3L 기능분석)
       fcWorkFunction: link.fcWorkFunction || fcToL3Map.get(link.fcId || '')?.workFunction || '',  // 작업요소 기능
       fcProcessChar: link.fcProcessChar || fcToL3Map.get(link.fcId || '')?.processChar || '',    // 공정특성
-      // ★ FC 역전개 데이터 (고장원인 → 2L 구조분석)
-      fcM4: link.fcM4 || '',          // 4M
-      fcWorkElem: link.fcWorkElem || '',  // 작업요소
+      // ★★★ FC 역전개 데이터 (고장원인 → 2L 구조분석) - fcToL3Map에서 fallback ★★★
+      fcM4: link.fcM4 || fcToL3Map.get(link.fcId || '')?.m4 || '',          // 4M
+      fcWorkElem: link.fcWorkElem || fcToL3Map.get(link.fcId || '')?.workElem || '',  // 작업요소
     };
   });
   

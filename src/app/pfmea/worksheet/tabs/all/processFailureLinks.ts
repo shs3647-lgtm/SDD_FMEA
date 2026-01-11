@@ -151,30 +151,43 @@ export function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[]
     const rows: ProcessedFMGroup['rows'] = [];
     
     for (let i = 0; i < maxRows; i++) {
-      const fe = feList[i];
-      const fc = fcList[i];
+      // ★★★ 핵심 수정: 개수 불일치 시 마지막 데이터를 빈 행에 할당 ★★★
+      // FE가 부족하면 마지막 FE 데이터 재사용
+      const feIndex = feList.length > 0 ? Math.min(i, feList.length - 1) : -1;
+      const fe = feIndex >= 0 ? feList[feIndex] : null;
       
-      // 마지막 행 셀합치기 계산
+      // FC가 부족하면 마지막 FC 데이터 재사용
+      const fcIndex = fcList.length > 0 ? Math.min(i, fcList.length - 1) : -1;
+      const fc = fcIndex >= 0 ? fcList[fcIndex] : null;
+      
+      // ★ rowSpan 계산: 마지막 실제 데이터 행에서만 병합
       let feRowSpan = 1;
       let fcRowSpan = 1;
       
-      // ★ feList 개수 < fcList 개수: 마지막 FE가 남은 행을 모두 병합
+      // FE 개수 < FC 개수: 마지막 FE가 남은 행을 모두 병합
       if (feList.length < fcList.length && i === feList.length - 1 && feList.length > 0) {
         feRowSpan = maxRows - i;
       }
-      // ★ fcList 개수 < feList 개수: 마지막 FC가 남은 행을 모두 병합
+      // FC 개수 < FE 개수: 마지막 FC가 남은 행을 모두 병합
       if (fcList.length < feList.length && i === fcList.length - 1 && fcList.length > 0) {
         fcRowSpan = maxRows - i;
       }
       
-      // ★★★ 디버깅 로그 ★★★
-      console.log(`[processFailureLinks] FM=${group.fmText.slice(0,10)}, row=${i}/${maxRows}, fe=${fe?.text?.slice(0,8) || 'null'}, fc=${fc?.text?.slice(0,8) || 'null'}, feSpan=${feRowSpan}, fcSpan=${fcRowSpan}`);
+      // ★ 병합된 행(마지막 이후)에서는 rowSpan=0으로 표시하지 않음
+      // i가 실제 FE/FC 인덱스 범위를 벗어나면 rowSpan=0 (렌더링 스킵용)
+      const isFeSpanned = i > feList.length - 1 && feList.length > 0;
+      const isFcSpanned = i > fcList.length - 1 && fcList.length > 0;
+      
+      if (isFeSpanned) feRowSpan = 0; // 병합된 범위 - 렌더링 안함
+      if (isFcSpanned) fcRowSpan = 0; // 병합된 범위 - 렌더링 안함
+      
+      console.log(`[processFailureLinks] FM=${group.fmText.slice(0,10)}, row=${i}/${maxRows}, feIdx=${feIndex}, fcIdx=${fcIndex}, feSpan=${feRowSpan}, fcSpan=${fcRowSpan}`);
       
       rows.push({
-        feId: fe?.id || '',        // ★ 고유 키용
+        feId: fe?.id || '',
         feText: fe?.text || '',
         feSeverity: fe?.severity || 0,
-        fcId: fc?.id || '',        // ★ 고유 키용
+        fcId: fc?.id || '',
         fcText: fc?.text || '',
         feRowSpan,
         fcRowSpan,

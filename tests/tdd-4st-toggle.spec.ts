@@ -67,3 +67,4 @@ test('4ST 토글 시 발생도 컬럼 검증', async ({ page }) => {
   console.log('\n✅ 스크린샷 저장: tests/screenshots/4st-toggle.png');
 });
 
+

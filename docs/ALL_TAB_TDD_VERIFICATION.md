@@ -228,3 +228,4 @@ fcToL3Map.get(fcId || '')         // ✅ 빈 키 안전 처리
 **검증자**: AI Assistant (TDD 방식)  
 **승인**: ✅ 코드프리즈 승인됨
 
+

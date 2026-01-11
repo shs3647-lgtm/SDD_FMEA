@@ -93,6 +93,8 @@ export function FailureCellRenderer({
 
   // ★ 고장영향(FE) - FE별 병합, (S)형식 표시
   if (col.name === '고장영향(FE)') {
+    // ★ rowSpan=0이면 병합된 범위 → 렌더링 안함
+    if (row.feRowSpan === 0) return null;
     // 누적 범위 체크: 이전 행의 feRowSpan 범위 안에 있으면 렌더링하지 않음
     if (rowInFM === 0 || !isInMergedRange('fe')) {
       const severityDisplay = row.feSeverity > 0 ? `(${row.feSeverity})` : '';
@@ -131,6 +133,8 @@ export function FailureCellRenderer({
 
   // ★ 고장원인(FC) - FC별 병합
   if (col.name === '고장원인(FC)') {
+    // ★ rowSpan=0이면 병합된 범위 → 렌더링 안함
+    if (row.fcRowSpan === 0) return null;
     // 누적 범위 체크: 이전 행의 fcRowSpan 범위 안에 있으면 렌더링하지 않음
     if (rowInFM === 0 || !isInMergedRange('fc')) {
       return (
