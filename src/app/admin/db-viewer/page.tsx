@@ -391,6 +391,7 @@ export default function DbViewerPage() {
                         <div><strong>고장형태 (FM):</strong> {ld.l2?.reduce((acc: number, p: any) => acc + (p.failureModes?.length || 0), 0) || 0}개</div>
                         <div><strong>고장원인 (FC):</strong> {ld.l2?.reduce((acc: number, p: any) => acc + (p.failureCauses?.length || 0), 0) || 0}개</div>
                         <div><strong>고장연결:</strong> {ld.failureLinks?.length || 0}건</div>
+                        <div><strong>리스크 분석:</strong> {Object.keys(ld.riskData || {}).length}개</div>
                       </div>
                       {ld.l2?.length > 0 && (
                         <details className="mt-2">
