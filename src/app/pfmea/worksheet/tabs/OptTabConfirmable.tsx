@@ -10,6 +10,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { WorksheetState } from '../constants';
 import { btnConfirm, btnEdit, badgeConfirmed, badgeOk, badgeMissing } from '@/styles/worksheet';
+import { triggerAutoBackup } from '@/lib/backup/backup-manager';
 
 interface OptTabProps {
   state: WorksheetState;
@@ -162,6 +163,20 @@ export default function OptTabConfirmable({
       saveAtomicDB?.();
       console.log('[OptTab] 확정 후 localStorage + DB 저장 완료');
     }, 50);
+    
+    // ✅ 자동 백업 트리거 (최적화 확정 시)
+    setTimeout(async () => {
+      const fmeaId = (state as any).fmeaId || '';
+      const fmeaName = (state as any).fmeaName || state.l1?.name || fmeaId;
+      try {
+        const backupResult = await triggerAutoBackup(fmeaId, fmeaName, state);
+        if (backupResult) {
+          console.log('[OptTab] 자동 백업 완료:', backupResult);
+        }
+      } catch (error) {
+        console.error('[OptTab] 자동 백업 실패:', error);
+      }
+    }, 300);
     
     // 🚀 FMEA 완성 후 승인 확인
     setTimeout(() => {

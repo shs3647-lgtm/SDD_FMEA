@@ -640,6 +640,10 @@ model User {
   phone       String?  // 전화번호
   email       String?  // 이메일
   remark      String?  // 비고
+  // ✅ 사용자 인증 필드
+  password    String?  // 비밀번호 (해시)
+  isActive    Boolean  @default(true) // 활성화 여부
+  lastLoginAt DateTime? // 마지막 로그인 일시
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -647,5 +651,40 @@ model User {
   @@index([name])
   @@index([department])
   @@index([factory])
+  @@index([isActive])
   @@map("users")
+}
+
+// ============ 고객사 정보 마스터 (전체 프로젝트 공유) ============
+model Customer {
+  id          String   @id @default(uuid())
+  name        String   // 고객명 (예: 현대자동차)
+  code        String?  // 고객 코드 (예: HMC)
+  factory     String?  // 공장 (예: 울산공장)
+  description String?  // 설명
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([code])
+  @@index([name])
+  @@map("customers")
+}
+
+// ============ 프로젝트 기초정보 마스터 (전체 프로젝트 공유) ============
+model BizInfoProject {
+  id           String   @id @default(uuid())
+  customerName String   // 고객명 (예: 현대자동차)
+  customerCode String?  // 고객 코드 (예: HMC)
+  factory      String?  // 공장 (예: 울산공장)
+  modelYear    String?  // 모델년도 (예: 2025)
+  program      String?  // 프로그램 (예: NE1)
+  productName  String?  // 품명 (예: 도어패널)
+  partNo       String?  // 품번 (예: DP-001)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([customerName])
+  @@index([customerCode])
+  @@index([productName])
+  @@map("bizinfo_projects")
 }

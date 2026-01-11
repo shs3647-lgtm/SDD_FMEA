@@ -17,6 +17,8 @@ export interface SODModalState {
   feIndex?: number;
   feText?: string;
   feId?: string;   // ★ 2026-01-11: 개별 FE ID 추가
+  fmId?: string;   // ★ 2026-01-11: 발생도/검출도 키용
+  fcId?: string;   // ★ 2026-01-11: 발생도/검출도 키용
 }
 
 /** 컨트롤 모달 상태 타입 */
@@ -59,9 +61,11 @@ export function useAllTabModals(setState?: React.Dispatch<React.SetStateAction<W
     currentValue?: number,
     scope?: string,
     feId?: string,    // ★ 2026-01-11: 개별 FE ID
-    feText?: string   // ★ FE 텍스트 (표시용)
+    feText?: string,  // ★ FE 텍스트 (표시용)
+    fmId?: string,    // ★ 2026-01-11: 발생도/검출도 키용
+    fcId?: string     // ★ 2026-01-11: 발생도/검출도 키용
   ) => {
-    console.log('🔥 SOD 클릭:', { category, targetType, rowIndex, currentValue, scope, feId, feText });
+    console.log('🔥 SOD 클릭:', { category, targetType, rowIndex, currentValue, scope, feId, feText, fmId, fcId });
     setSodModal({
       isOpen: true,
       category,
@@ -70,7 +74,9 @@ export function useAllTabModals(setState?: React.Dispatch<React.SetStateAction<W
       currentValue,
       scope: scope as 'Your Plant' | 'Ship to Plant' | 'User' | undefined,
       feId,    // ★ 개별 FE ID 전달
-      feText
+      feText,
+      fmId,    // ★ 발생도/검출도 키용
+      fcId     // ★ 발생도/검출도 키용
     });
   };
 
@@ -164,8 +170,14 @@ export function useAllTabModals(setState?: React.Dispatch<React.SetStateAction<W
       
       let riskKey: string;
       if (sodModal.category === 'S' && sodModal.feText) {
+        // 심각도 (개별 FE 텍스트 기준)
         riskKey = `S-fe-${sodModal.feText}`;
+      } else if (sodModal.fmId && sodModal.fcId) {
+        // ★★★ 2026-01-11: 최적화 단계 포함 - fmId-fcId 조합 키 사용 ★★★
+        const uniqueKey = `${sodModal.fmId}-${sodModal.fcId}`;
+        riskKey = `${sodModal.targetType}-${uniqueKey}-${sodModal.category}`;
       } else {
+        // 폴백: rowIndex 기반
         riskKey = `${sodModal.targetType}-${sodModal.rowIndex}-${sodModal.category}`;
       }
       

@@ -199,6 +199,9 @@ export default function ProcessSelectModal({
       loadData();
       setSearch('');
       setEditingId(null);
+      // ✅ 연속입력 상태 초기화
+      setContinuousMode(false);
+      setAddedCount(0);
     }
   }, [isOpen, existingProcessNames]);
 
@@ -333,6 +336,13 @@ export default function ProcessSelectModal({
       console.error('저장 오류:', e);
     }
     
+    // ✅ 연속입력 모드: 워크시트에 즉시 반영 + 새 행 추가
+    if (continuousMode && onContinuousAdd) {
+      onContinuousAdd(newProc, true); // 새 행 추가 요청
+      setAddedCount(prev => prev + 1);
+      console.log(`[연속입력] "${newProc.name}" 추가 완료 (총 ${addedCount + 1}개)`);
+    }
+    
     setNewNo('');
     setNewName('');
   };
@@ -372,38 +382,65 @@ export default function ProcessSelectModal({
           <span className="px-2 py-1 text-[10px] font-bold bg-blue-600 text-white rounded">{productLineName}</span>
         </div>
 
-        {/* ===== 하위항목 라벨 + 데이터 소스 ===== */}
+        {/* ===== 하위항목 라벨 + 데이터 소스 + 연속입력 토글 ===== */}
         <div className="px-3 py-1 border-b bg-gradient-to-r from-green-50 to-emerald-50 flex items-center justify-between">
           <span className="text-[10px] font-bold text-green-700">▼ 하위항목: 메인공정명</span>
-          <span className={`text-[9px] px-2 py-0.5 rounded ${dataSource.includes('Master') ? 'bg-blue-100 text-blue-700' : dataSource.includes('local') ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>
-            {loading ? '로딩중...' : `📂 ${dataSource} (${processes.length}개)`}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className={`text-[9px] px-2 py-0.5 rounded ${dataSource.includes('Master') ? 'bg-blue-100 text-blue-700' : dataSource.includes('local') ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>
+              {loading ? '로딩중...' : `📂 ${dataSource} (${processes.length}개)`}
+            </span>
+            {/* ✅ 연속입력 토글 */}
+            {onContinuousAdd && (
+              <button
+                onClick={() => {
+                  setContinuousMode(!continuousMode);
+                  if (!continuousMode) setAddedCount(0);
+                }}
+                className={`px-2 py-0.5 text-[10px] font-bold rounded transition-all ${
+                  continuousMode 
+                    ? 'bg-purple-600 text-white ring-2 ring-purple-300' 
+                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                }`}
+                title={continuousMode ? '연속입력 모드 ON: 저장 시 워크시트에 즉시 반영 + 새 행 추가' : '연속입력 모드 OFF'}
+              >
+                🔄 연속입력 {continuousMode ? 'ON' : 'OFF'}
+                {continuousMode && addedCount > 0 && <span className="ml-1 px-1 bg-white/30 rounded">{addedCount}</span>}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ===== 신규 공정 추가 ===== */}
-        <div className="px-3 py-1.5 border-b bg-green-50 flex items-center gap-1">
-          <span className="text-[10px] font-bold text-green-700 shrink-0">+ 신규:</span>
+        <div className={`px-3 py-1.5 border-b flex items-center gap-1 ${continuousMode ? 'bg-purple-50' : 'bg-green-50'}`}>
+          <span className={`text-[10px] font-bold shrink-0 ${continuousMode ? 'text-purple-700' : 'text-green-700'}`}>+</span>
           <input
             type="text"
             value={newNo}
             onChange={(e) => setNewNo(e.target.value)}
             placeholder="No"
-            className="w-12 px-1 py-0.5 text-[10px] border rounded focus:outline-none focus:ring-1 focus:ring-green-500 text-center"
+            className={`w-12 px-1 py-0.5 text-[10px] border rounded focus:outline-none focus:ring-1 text-center ${
+              continuousMode ? 'focus:ring-purple-500 border-purple-300' : 'focus:ring-green-500'
+            }`}
           />
           <input
             type="text"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); handleAddNew(); } }}
-            placeholder="공정명 입력..."
-            className="flex-1 px-2 py-0.5 text-[10px] border rounded focus:outline-none focus:ring-1 focus:ring-green-500"
+            placeholder={continuousMode ? "입력 후 Enter → 즉시 반영 + 새 행 추가" : "공정명 입력..."}
+            className={`flex-1 px-2 py-0.5 text-[10px] border rounded focus:outline-none focus:ring-1 ${
+              continuousMode ? 'focus:ring-purple-500 border-purple-300' : 'focus:ring-green-500'
+            }`}
+            autoFocus={continuousMode}
           />
           <button
             onClick={handleAddNew}
             disabled={!newName.trim()}
-            className="px-2 py-0.5 text-[10px] font-bold bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`px-2 py-0.5 text-[10px] font-bold text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed ${
+              continuousMode ? 'bg-purple-600' : 'bg-green-600'
+            }`}
           >
-            추가
+            저장
           </button>
         </div>
 

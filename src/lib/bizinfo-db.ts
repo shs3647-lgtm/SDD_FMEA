@@ -20,36 +20,110 @@ function generateUUID(): string {
   });
 }
 
-// ========== 프로젝트 기초정보 CRUD (통합) ==========
-export function getAllProjects(): BizInfoProject[] {
+// ========== 프로젝트 기초정보 CRUD (DB 우선, localStorage 폴백) ==========
+export async function getAllProjects(): Promise<BizInfoProject[]> {
   if (typeof window === 'undefined') return [];
+  
+  try {
+    // DB에서 조회 시도
+    const response = await fetch('/api/bizinfo/projects');
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && data.projects) {
+        console.log('[bizinfo-db] DB에서 프로젝트 기초정보 로드:', data.projects.length, '개');
+        return data.projects;
+      }
+    }
+  } catch (error) {
+    console.warn('[bizinfo-db] DB 조회 실패, localStorage 폴백:', error);
+  }
+  
+  // localStorage 폴백
   const data = localStorage.getItem(BIZINFO_STORAGE_KEYS.projects);
   return data ? JSON.parse(data) : [];
 }
 
-export function createProject(project: Omit<BizInfoProject, 'id' | 'createdAt' | 'updatedAt'>): BizInfoProject {
+export async function createProject(project: Omit<BizInfoProject, 'id' | 'createdAt' | 'updatedAt'>): Promise<BizInfoProject> {
   const now = new Date().toISOString();
+  
+  try {
+    // DB에 저장 시도
+    const response = await fetch('/api/bizinfo/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(project),
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && data.project) {
+        console.log('[bizinfo-db] DB에 프로젝트 기초정보 저장 완료:', data.project.customerName);
+        return data.project;
+      }
+    }
+  } catch (error) {
+    console.warn('[bizinfo-db] DB 저장 실패, localStorage 폴백:', error);
+  }
+  
+  // localStorage 폴백
   const newProject: BizInfoProject = {
     id: generateUUID(),
     ...project,
     createdAt: now,
     updatedAt: now,
   };
-  const projects = getAllProjects();
+  const projects = await getAllProjects();
   projects.push(newProject);
   localStorage.setItem(BIZINFO_STORAGE_KEYS.projects, JSON.stringify(projects));
   return newProject;
 }
 
-export function deleteProject(id: string): void {
-  const projects = getAllProjects().filter(p => p.id !== id);
-  localStorage.setItem(BIZINFO_STORAGE_KEYS.projects, JSON.stringify(projects));
+export async function deleteProject(id: string): Promise<void> {
+  try {
+    // DB에서 삭제 시도
+    const response = await fetch(`/api/bizinfo/projects?id=${id}`, {
+      method: 'DELETE',
+    });
+    
+    if (response.ok) {
+      console.log('[bizinfo-db] DB에서 프로젝트 기초정보 삭제 완료:', id);
+      return;
+    }
+  } catch (error) {
+    console.warn('[bizinfo-db] DB 삭제 실패, localStorage 폴백:', error);
+  }
+  
+  // localStorage 폴백
+  const projects = await getAllProjects();
+  const filtered = projects.filter(p => p.id !== id);
+  localStorage.setItem(BIZINFO_STORAGE_KEYS.projects, JSON.stringify(filtered));
 }
 
 // 프로젝트 저장 (신규 또는 수정)
-export function saveProject(project: BizInfoProject): BizInfoProject {
+export async function saveProject(project: BizInfoProject): Promise<BizInfoProject> {
   const now = new Date().toISOString();
-  const projects = getAllProjects();
+  
+  try {
+    // DB에 저장 시도 (PUT)
+    const response = await fetch('/api/bizinfo/projects', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(project),
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && data.project) {
+        console.log('[bizinfo-db] DB에 프로젝트 기초정보 저장 완료:', data.project.customerName);
+        return data.project;
+      }
+    }
+  } catch (error) {
+    console.warn('[bizinfo-db] DB 저장 실패, localStorage 폴백:', error);
+  }
+  
+  // localStorage 폴백
+  const projects = await getAllProjects();
   const existingIndex = projects.findIndex(p => p.id === project.id);
   
   if (existingIndex >= 0) {
@@ -88,30 +162,83 @@ export function createSampleProjects(): void {
   console.log('✅ 프로젝트 기초정보 샘플 데이터 생성 완료 (10개)');
 }
 
-// ========== 고객 CRUD ==========
-export function getAllCustomers(): BizInfoCustomer[] {
+// ========== 고객 CRUD (DB 우선, localStorage 폴백) ==========
+export async function getAllCustomers(): Promise<BizInfoCustomer[]> {
   if (typeof window === 'undefined') return [];
+  
+  try {
+    // DB에서 조회 시도
+    const response = await fetch('/api/customers');
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && data.customers) {
+        console.log('[bizinfo-db] DB에서 고객사 로드:', data.customers.length, '개');
+        return data.customers;
+      }
+    }
+  } catch (error) {
+    console.warn('[bizinfo-db] DB 조회 실패, localStorage 폴백:', error);
+  }
+  
+  // localStorage 폴백
   const data = localStorage.getItem(BIZINFO_STORAGE_KEYS.customers);
   return data ? JSON.parse(data) : [];
 }
 
-export function createCustomer(customer: Omit<BizInfoCustomer, 'id' | 'createdAt' | 'updatedAt'>): BizInfoCustomer {
+export async function createCustomer(customer: Omit<BizInfoCustomer, 'id' | 'createdAt' | 'updatedAt'>): Promise<BizInfoCustomer> {
   const now = new Date().toISOString();
+  
+  try {
+    // DB에 저장 시도
+    const response = await fetch('/api/customers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(customer),
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && data.customer) {
+        console.log('[bizinfo-db] DB에 고객사 저장 완료:', data.customer.name);
+        return data.customer;
+      }
+    }
+  } catch (error) {
+    console.warn('[bizinfo-db] DB 저장 실패, localStorage 폴백:', error);
+  }
+  
+  // localStorage 폴백
   const newCustomer: BizInfoCustomer = {
     id: generateUUID(),
     ...customer,
     createdAt: now,
     updatedAt: now,
   };
-  const customers = getAllCustomers();
+  const customers = await getAllCustomers();
   customers.push(newCustomer);
   localStorage.setItem(BIZINFO_STORAGE_KEYS.customers, JSON.stringify(customers));
   return newCustomer;
 }
 
-export function deleteCustomer(id: string): void {
-  const customers = getAllCustomers().filter(c => c.id !== id);
-  localStorage.setItem(BIZINFO_STORAGE_KEYS.customers, JSON.stringify(customers));
+export async function deleteCustomer(id: string): Promise<void> {
+  try {
+    // DB에서 삭제 시도
+    const response = await fetch(`/api/customers?id=${id}`, {
+      method: 'DELETE',
+    });
+    
+    if (response.ok) {
+      console.log('[bizinfo-db] DB에서 고객사 삭제 완료:', id);
+      return;
+    }
+  } catch (error) {
+    console.warn('[bizinfo-db] DB 삭제 실패, localStorage 폴백:', error);
+  }
+  
+  // localStorage 폴백
+  const customers = await getAllCustomers();
+  const filtered = customers.filter(c => c.id !== id);
+  localStorage.setItem(BIZINFO_STORAGE_KEYS.customers, JSON.stringify(filtered));
 }
 
 // ========== 품명 CRUD ==========

@@ -1097,6 +1097,13 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       };
 
       const dbLegacyCandidate = (loadedDB && (loadedDB as any)._isLegacyDirect) ? (loadedDB as any) : null;
+      
+      // ★★★ 2026-01-11: DB 레거시에서 riskData 추출 ★★★
+      if (dbLegacyCandidate && dbLegacyCandidate.riskData) {
+        dbRiskData = dbLegacyCandidate.riskData;
+        console.log('[로드] DB 레거시에서 riskData 발견:', Object.keys(dbRiskData).length, '개');
+      }
+      
       let atomicAsLegacy: any = null;
       if (loadedAtomicDB && (loadedAtomicDB as any).l2Structures) {
         try {
@@ -1164,11 +1171,14 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         };
         const normalizedConfirmed = normalizeConfirmedFlags(confirmedFlags);
 
+        // ★★★ 2026-01-11: riskData 복원 (DB 우선, localStorage 폴백) ★★★
+        const restoredRiskData = src.riskData || legacyRiskData || {};
+        
         const newState: WorksheetState = {
           l1: src.l1 || createInitialState().l1,
           l2: src.l2 || [],
           tab: legacyTab,
-          riskData: legacyRiskData,
+          riskData: restoredRiskData,  // ★ DB에서 로드된 riskData 사용
           search: String(src.search || ''),
           selected: src.selected || null,
           levelView: src.levelView || 'L1',
@@ -1176,6 +1186,12 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           ...normalizedConfirmed,
           failureLinks: src.failureLinks || [],  // ✅ 고장연결 데이터 복원
         };
+        
+        console.log('[로드] ✅ riskData 복원:', {
+          source: src.riskData ? 'DB' : legacyRiskData ? 'localStorage' : '없음',
+          count: Object.keys(restoredRiskData).length,
+          keys: Object.keys(restoredRiskData).slice(0, 5),
+        });
 
         console.log('[로드] ✅ failureLinks 복원:', (newState as any).failureLinks?.length || 0, '건');
         setStateSynced(newState);

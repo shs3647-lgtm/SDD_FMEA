@@ -292,6 +292,7 @@ export default function AllTabEmpty({
                             prevFcRowSpan={1}
                             fmId={fmGroup.fmId}
                             fcId={row.fcId}
+                            fcText={row.fcText}
                             state={state}
                             setState={setState}
                             setDirty={setDirty}
@@ -356,64 +357,182 @@ export default function AllTabEmpty({
           onClose={closeControlModal}
           onSave={(selectedValues) => {
             if (setState && selectedValues.length > 0) {
-              const selectedValue = selectedValues[0];
+              // ★★★ 2026-01-11: 여러 개 선택 시 줄바꿈으로 연결하여 하나의 셀에 저장 ★★★
+              const selectedValue = selectedValues.join('\n');
+              
               // ★ 고유 키: fmId-fcId 조합 사용 (없으면 rowIndex 폴백)
               const uniqueKey = controlModal.fmId && controlModal.fcId 
                 ? `${controlModal.fmId}-${controlModal.fcId}` 
                 : String(controlModal.rowIndex);
               const key = `${controlModal.type}-${uniqueKey}`;
               
-              // ✅ 예방관리(PC) 자동연결: 동일한 고장원인에 동일한 예방관리 자동 연결
-              // ⚠️ 예방관리개선(prevention-opt)은 자동연결하지 않음
-              let autoLinkedCount = 0;
-              let currentFcText = '';
-              const currentFcId = controlModal.fcId || '';
+              // ★★★ 2026-01-11: 동일원인 자동연결 - 예방관리(PC) + 검출관리(DC) 모두 지원 ★★★
+              // ⚠️ 예방관리개선/검출관리개선(prevention-opt/detection-opt)은 자동연결하지 않음
+              const autoLinkTypes = ['prevention', 'detection'];
+              const isAutoLinkType = autoLinkTypes.includes(controlModal.type);
               
-              if (controlModal.type === 'prevention' && failureLinks && processedFMGroups.length > 0) {
-                // 현재 행의 고장원인 텍스트 찾기
+              let autoLinkedCount = 0;
+              const currentFcId = controlModal.fcId || '';
+              // ★ fcText는 모달에서 직접 전달받음 (더 이상 검색 불필요)
+              const currentFcText = controlModal.fcText || '';
+              
+              // 디버깅 로그
+              console.log('[자동연결] 시작:', { 
+                type: controlModal.type, 
+                isAutoLinkType,
+                currentFcId, 
+                currentFcText,
+                fmId: controlModal.fmId,
+                processedFMGroups: processedFMGroups.length
+              });
+              
+              if (isAutoLinkType && processedFMGroups.length > 0 && currentFcText) {
+                // 동일한 고장원인을 가진 다른 행들 찾기
                 processedFMGroups.forEach((group) => {
                   group.rows.forEach((r) => {
-                    if (r.fcId === currentFcId) {
-                      currentFcText = r.fcText || '';
+                    // 현재 fcId가 아니고, 동일한 고장원인 텍스트를 가진 행
+                    if (r.fcId !== currentFcId && r.fcText === currentFcText) {
+                      autoLinkedCount++;
+                      console.log('[자동연결] 발견:', { fmId: group.fmId, fcId: r.fcId, fcText: r.fcText });
                     }
                   });
                 });
+              }
+              
+              console.log('[자동연결] 결과:', { autoLinkedCount, currentFcText });
+              
+              // ★★★ 2026-01-11: 발생도/검출도 자동연결용 변수 (알림 표시용) ★★★
+              // 현재 상태에서 발생도/검출도 확인 (setState 전에 미리 계산)
+              let occurrenceAutoLinkedCount = 0;
+              let currentOccurrenceValue: number | null = null;
+              let detectionAutoLinkedCount = 0;
+              let currentDetectionValue: number | null = null;
+              
+              // 예방관리 → 발생도 자동연결
+              if (controlModal.type === 'prevention' && state) {
+                const currentOccurrenceKey = controlModal.fmId && controlModal.fcId
+                  ? `risk-${controlModal.fmId}-${controlModal.fcId}-O`
+                  : `risk-${controlModal.rowIndex}-O`;
+                const currentOccurrence = state.riskData?.[currentOccurrenceKey];
                 
-                // 동일한 고장원인을 가진 다른 행들 찾기
-                if (currentFcText) {
-                  processedFMGroups.forEach((group) => {
-                    group.rows.forEach((r) => {
-                      // 현재 fcId가 아니고, 동일한 고장원인 텍스트를 가진 행
-                      if (r.fcId !== currentFcId && r.fcText === currentFcText) {
-                        const autoUniqueKey = `${group.fmId}-${r.fcId}`;
-                        const autoKey = `${controlModal.type}-${autoUniqueKey}`;
-                        const existingValue = state?.riskData?.[autoKey];
-                        if (!existingValue || existingValue !== selectedValue) {
-                          autoLinkedCount++;
+                if (typeof currentOccurrence === 'number' && currentOccurrence >= 1 && currentOccurrence <= 10) {
+                  currentOccurrenceValue = currentOccurrence;
+                  
+                  // 같은 예방관리를 가진 다른 행들 찾기
+                  if (processedFMGroups.length > 0) {
+                    processedFMGroups.forEach((group) => {
+                      group.rows.forEach((r) => {
+                        const targetUniqueKey = `${group.fmId}-${r.fcId}`;
+                        const targetPreventionKey = `prevention-${targetUniqueKey}`;
+                        const targetPreventionValue = state?.riskData?.[targetPreventionKey] || '';
+                        
+                        // 예방관리 값이 일치하고, 현재 행이 아니며, 발생도가 없거나 다른 행
+                        if (targetPreventionValue === selectedValue && 
+                            (group.fmId !== controlModal.fmId || r.fcId !== currentFcId)) {
+                          const targetOccurrenceKey = `risk-${targetUniqueKey}-O`;
+                          const existingOccurrence = state?.riskData?.[targetOccurrenceKey];
+                          if (!existingOccurrence || existingOccurrence !== currentOccurrence) {
+                            occurrenceAutoLinkedCount++;
+                          }
                         }
-                      }
+                      });
                     });
-                  });
+                  }
                 }
               }
               
-              // 현재 행 저장 + 자동연결된 행들 저장 (예방관리 PC만)
+              // ★★★ 2026-01-11: 검출관리 → 검출도 자동연결 ★★★
+              if (controlModal.type === 'detection' && state) {
+                const currentDetectionKey = controlModal.fmId && controlModal.fcId
+                  ? `risk-${controlModal.fmId}-${controlModal.fcId}-D`
+                  : `risk-${controlModal.rowIndex}-D`;
+                const currentDetection = state.riskData?.[currentDetectionKey];
+                
+                if (typeof currentDetection === 'number' && currentDetection >= 1 && currentDetection <= 10) {
+                  currentDetectionValue = currentDetection;
+                  
+                  // 같은 검출관리를 가진 다른 행들 찾기
+                  if (processedFMGroups.length > 0) {
+                    processedFMGroups.forEach((group) => {
+                      group.rows.forEach((r) => {
+                        const targetUniqueKey = `${group.fmId}-${r.fcId}`;
+                        const targetDetectionKey = `detection-${targetUniqueKey}`;
+                        const targetDetectionValue = state?.riskData?.[targetDetectionKey] || '';
+                        
+                        // 검출관리 값이 일치하고, 현재 행이 아니며, 검출도가 없거나 다른 행
+                        if (targetDetectionValue === selectedValue && 
+                            (group.fmId !== controlModal.fmId || r.fcId !== currentFcId)) {
+                          const targetDetectionOccurrenceKey = `risk-${targetUniqueKey}-D`;
+                          const existingDetection = state?.riskData?.[targetDetectionOccurrenceKey];
+                          if (!existingDetection || existingDetection !== currentDetection) {
+                            detectionAutoLinkedCount++;
+                          }
+                        }
+                      });
+                    });
+                  }
+                }
+              }
+              
+              // 현재 행 저장 + 자동연결된 행들 저장
               setState((prev: WorksheetState) => {
                 const newRiskData = { ...(prev.riskData || {}) };
                 
                 // 현재 행 저장
                 newRiskData[key] = selectedValue;
                 
-                // ✅ 자동연결 (예방관리 PC만)
-                if (controlModal.type === 'prevention' && autoLinkedCount > 0 && currentFcText) {
+                // ✅ 자동연결 1: 동일원인에 예방관리/검출관리 자동연결 (예방관리 PC + 검출관리 DC)
+                if (isAutoLinkType && autoLinkedCount > 0 && currentFcText) {
                   processedFMGroups.forEach((group) => {
                     group.rows.forEach((r) => {
                       if (r.fcId !== currentFcId && r.fcText === currentFcText) {
                         const autoUniqueKey = `${group.fmId}-${r.fcId}`;
                         const autoKey = `${controlModal.type}-${autoUniqueKey}`;
-                        const existingValue = prev.riskData?.[autoKey];
-                        if (!existingValue || existingValue !== selectedValue) {
-                          newRiskData[autoKey] = selectedValue;
+                        newRiskData[autoKey] = selectedValue;
+                        console.log('[자동연결-원인] 적용:', autoKey, '=', selectedValue);
+                      }
+                    });
+                  });
+                }
+                
+                // ★★★ 2026-01-11: 자동연결 2: 동일 예방관리에 동일 발생도 자동연결 ★★★
+                if (controlModal.type === 'prevention' && processedFMGroups.length > 0 && currentOccurrenceValue !== null) {
+                  processedFMGroups.forEach((group) => {
+                    group.rows.forEach((r) => {
+                      const targetUniqueKey = `${group.fmId}-${r.fcId}`;
+                      const targetPreventionKey = `prevention-${targetUniqueKey}`;
+                      const targetPreventionValue = prev.riskData?.[targetPreventionKey] || '';
+                      
+                      // 예방관리 값이 일치하고, 현재 행이 아니며, 발생도가 없거나 다른 행
+                      if (targetPreventionValue === selectedValue && 
+                          (group.fmId !== controlModal.fmId || r.fcId !== currentFcId)) {
+                        const targetOccurrenceKey = `risk-${targetUniqueKey}-O`;
+                        const existingOccurrence = prev.riskData?.[targetOccurrenceKey];
+                        if (!existingOccurrence || existingOccurrence !== currentOccurrenceValue) {
+                          newRiskData[targetOccurrenceKey] = currentOccurrenceValue;
+                          console.log('[자동연결-발생도] 적용:', targetOccurrenceKey, '=', currentOccurrenceValue, '(예방관리:', selectedValue, ')');
+                        }
+                      }
+                    });
+                  });
+                }
+                
+                // ★★★ 2026-01-11: 자동연결 3: 동일 검출관리에 동일 검출도 자동연결 ★★★
+                if (controlModal.type === 'detection' && processedFMGroups.length > 0 && currentDetectionValue !== null) {
+                  processedFMGroups.forEach((group) => {
+                    group.rows.forEach((r) => {
+                      const targetUniqueKey = `${group.fmId}-${r.fcId}`;
+                      const targetDetectionKey = `detection-${targetUniqueKey}`;
+                      const targetDetectionValue = prev.riskData?.[targetDetectionKey] || '';
+                      
+                      // 검출관리 값이 일치하고, 현재 행이 아니며, 검출도가 없거나 다른 행
+                      if (targetDetectionValue === selectedValue && 
+                          (group.fmId !== controlModal.fmId || r.fcId !== currentFcId)) {
+                        const targetDetectionOccurrenceKey = `risk-${targetUniqueKey}-D`;
+                        const existingDetection = prev.riskData?.[targetDetectionOccurrenceKey];
+                        if (!existingDetection || existingDetection !== currentDetectionValue) {
+                          newRiskData[targetDetectionOccurrenceKey] = currentDetectionValue;
+                          console.log('[자동연결-검출도] 적용:', targetDetectionOccurrenceKey, '=', currentDetectionValue, '(검출관리:', selectedValue, ')');
                         }
                       }
                     });
@@ -423,6 +542,14 @@ export default function AllTabEmpty({
                 return { ...prev, riskData: newRiskData };
               });
               
+              if (occurrenceAutoLinkedCount > 0 && currentOccurrenceValue !== null) {
+                console.log(`[자동연결-발생도] 완료: ${occurrenceAutoLinkedCount}건 자동 연결 (발생도: ${currentOccurrenceValue})`);
+              }
+              
+              if (detectionAutoLinkedCount > 0 && currentDetectionValue !== null) {
+                console.log(`[자동연결-검출도] 완료: ${detectionAutoLinkedCount}건 자동 연결 (검출도: ${currentDetectionValue})`);
+              }
+              
               // ✅ DB 저장 트리거
               if (setDirty) {
                 setDirty(true);
@@ -430,10 +557,25 @@ export default function AllTabEmpty({
               }
               
               // 자동연결 알림
-              if (controlModal.type === 'prevention' && autoLinkedCount > 0 && currentFcText) {
+              if (isAutoLinkType && autoLinkedCount > 0 && currentFcText) {
+                const typeName = controlModal.type === 'prevention' ? '예방관리' : '검출관리';
                 setTimeout(() => {
-                  alert(`✨ 자동연결: 동일한 고장원인 "${currentFcText}"에 "${selectedValue}" 예방관리가 ${autoLinkedCount}건 자동 연결되었습니다.`);
+                  alert(`✨ 자동연결: 동일한 고장원인 "${currentFcText}"에\n"${selectedValue.split('\n').join(', ')}"\n${typeName}가 ${autoLinkedCount}건 자동 연결되었습니다.`);
                 }, 100);
+              }
+              
+              // ★★★ 2026-01-11: 발생도 자동연결 알림 (예방관리 저장 후) ★★★
+              if (controlModal.type === 'prevention' && occurrenceAutoLinkedCount > 0 && currentOccurrenceValue !== null) {
+                setTimeout(() => {
+                  alert(`✨ 발생도 자동연결: 동일한 예방관리 "${selectedValue.split('\n').join(', ')}"에\n발생도 ${currentOccurrenceValue}점이 ${occurrenceAutoLinkedCount}건 자동 연결되었습니다.`);
+                }, 300); // 원인 알림 이후 표시
+              }
+              
+              // ★★★ 2026-01-11: 검출도 자동연결 알림 (검출관리 저장 후) ★★★
+              if (controlModal.type === 'detection' && detectionAutoLinkedCount > 0 && currentDetectionValue !== null) {
+                setTimeout(() => {
+                  alert(`✨ 검출도 자동연결: 동일한 검출관리 "${selectedValue.split('\n').join(', ')}"에\n검출도 ${currentDetectionValue}점이 ${detectionAutoLinkedCount}건 자동 연결되었습니다.`);
+                }, 300); // 원인 알림 이후 표시
               }
             }
             closeControlModal();
@@ -452,13 +594,14 @@ export default function AllTabEmpty({
             }
             closeControlModal();
           }}
-          singleSelect={true}
-          currentValues={[(() => {
+          singleSelect={false}
+          currentValues={(() => {
             const uniqueKey = controlModal.fmId && controlModal.fcId 
               ? `${controlModal.fmId}-${controlModal.fcId}` 
               : String(controlModal.rowIndex);
-            return (state.riskData || {})[`${controlModal.type}-${uniqueKey}`] || '';
-          })()].filter(Boolean).map(String)}
+            const savedValue = (state.riskData || {})[`${controlModal.type}-${uniqueKey}`] || '';
+            return savedValue ? savedValue.split('\n').filter(Boolean) : [];
+          })()}
         />
       )}
       

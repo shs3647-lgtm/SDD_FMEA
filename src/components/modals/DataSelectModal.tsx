@@ -235,24 +235,28 @@ export default function DataSelectModal({
     return result;
   }, [items, categoryFilter, search, parentCategory, hasBelongsToFilter]);
 
-  const toggleSelect = useCallback((id: string) => {
-    console.log('[DataSelectModal] toggleSelect 호출', { id, singleSelect });
+  // ★★★ 2026-01-11: singleSelect를 함수 내부에서 직접 참조 (closure 문제 방지) ★★★
+  const toggleSelect = (id: string) => {
+    console.log('[DataSelectModal] toggleSelect 호출', { id, singleSelect, title });
     setSelectedIds(prev => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
         newSet.delete(id);
         console.log('[DataSelectModal] 선택 해제', { id, 남은개수: newSet.size });
       } else {
-        if (singleSelect) {
+        // ★ singleSelect가 true일 때만 기존 선택 초기화
+        if (singleSelect === true) {
           console.log('[DataSelectModal] 단일선택 모드 - 기존 선택 초기화');
           newSet.clear();
+        } else {
+          console.log('[DataSelectModal] 다중선택 모드 - 기존 선택 유지');
         }
         newSet.add(id);
-        console.log('[DataSelectModal] 선택 추가', { id, 총개수: newSet.size });
+        console.log('[DataSelectModal] 선택 추가', { id, 총개수: newSet.size, singleSelect });
       }
       return newSet;
     });
-  }, [singleSelect]);
+  };
 
   // 더블클릭 편집 시작
   const handleDoubleClick = useCallback((item: DataItem) => {
@@ -521,6 +525,35 @@ export default function DataSelectModal({
         {/* ===== 하위항목 라벨 ===== */}
         <div className="px-3 py-1 border-b bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
           <span className="text-[11px] font-bold text-blue-700">▼ 하위항목: {itemInfo.label}</span>
+        </div>
+
+        {/* ===== 하위항목 수동입력 (WorkElementSelectModal 스타일) ===== */}
+        <div className="px-3 py-1.5 border-b bg-green-50 flex items-center gap-1">
+          <span className="text-[10px] font-bold text-green-700 shrink-0">+</span>
+          <select
+            value={newCategory}
+            onChange={(e) => setNewCategory(e.target.value)}
+            className="px-1 py-0.5 text-[10px] border rounded"
+          >
+            <option value="추가">추가</option>
+            <option value="기본">기본</option>
+            <option value="사용자">사용자</option>
+          </select>
+          <input
+            type="text"
+            value={newValue}
+            onChange={(e) => setNewValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); handleAddSave(); } }}
+            placeholder={`${itemInfo.label} 입력 후 Enter...`}
+            className="flex-1 px-2 py-0.5 text-[10px] border rounded focus:outline-none focus:ring-1 focus:ring-green-500"
+          />
+          <button
+            onClick={handleAddSave}
+            disabled={!newValue.trim()}
+            className="px-2 py-0.5 text-[10px] font-bold bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            저장
+          </button>
         </div>
 
         {/* ===== 리스트 (고정 높이, 2열 그리드) ===== */}
