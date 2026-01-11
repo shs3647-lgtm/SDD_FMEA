@@ -102,12 +102,15 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     } catch (e) { /* ignore */ }
     
     try {
-      // ★★★ 2026-01-11: 잘못된 riskData 완전 삭제 (일회성 정리) ★★★
-      const cleanupKey = `pfmea_riskData_cleanup_v2_${fmeaId}`;
+      // ★★★ 2026-01-11: 잘못된 riskData 완전 삭제 (일회성 정리 v3) ★★★
+      const cleanupKey = `pfmea_riskData_cleanup_v3_${fmeaId}`;
       if (!localStorage.getItem(cleanupKey)) {
+        // 모든 관련 키 삭제
         localStorage.removeItem(`pfmea_riskData_${fmeaId}`);
+        localStorage.removeItem(`pfmea_riskData_cleanup_v2_${fmeaId}`);
+        localStorage.removeItem(`pfmea_riskData_cleanup_${fmeaId}`);
         localStorage.setItem(cleanupKey, 'done');
-        console.log('[riskData] 잘못된 localStorage 데이터 완전 삭제 완료');
+        console.log('[riskData v3] 잘못된 localStorage 데이터 완전 삭제 완료');
       }
       
       const riskDataStr = localStorage.getItem(`pfmea_riskData_${fmeaId}`);

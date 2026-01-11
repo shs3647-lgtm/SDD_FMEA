@@ -152,37 +152,40 @@ export function RiskOptCellRenderer({
     );
   }
 
-  // ★ 발생도 / 검출도 셀 - 숫자만 표시 (문자열은 완전히 무시)
-  // ★★★ 중요: col.name과 col.step을 엄격하게 검증 ★★★
-  if ((col.name === '발생도' || col.name === '검출도') && (col.step === '리스크분석' || col.step === '최적화')) {
-    const category: 'O' | 'D' = col.name === '발생도' ? 'O' : 'D';
-    const key = `${targetType}-${uniqueKey}-${category}`;
-    const rawValue = state?.riskData?.[key];
-    
-    // ★★★★★ 숫자만 허용, 문자열/객체/null/undefined 모두 무시 ★★★★★
-    let currentValue: number = 0;
-    if (typeof rawValue === 'number' && !isNaN(rawValue) && isFinite(rawValue) && rawValue > 0 && rawValue <= 10) {
-      currentValue = rawValue;
-    } else {
-      // 잘못된 데이터가 있으면 삭제
-      if (rawValue !== null && rawValue !== undefined && typeof rawValue !== 'number') {
-        console.warn(`[RiskOptCellRenderer] 발생도/검출도 잘못된 데이터 삭제: ${key} = "${rawValue}" (타입: ${typeof rawValue})`);
-        if (setState) {
-          setState((prev: WorksheetState) => {
-            const newRiskData = { ...(prev.riskData || {}) };
-            delete newRiskData[key];
-            return { ...prev, riskData: newRiskData };
-          });
-        }
-      }
-      currentValue = 0;
+  // ★★★★★ 2026-01-11: 발생도 / 검출도 셀 - 완전히 새로 작성 ★★★★★
+  // ★★★ 이 컬럼은 반드시 숫자(1-10)만 표시, 그 외는 무조건 빈 문자열 ★★★
+  if (col.name === '발생도' || col.name === '검출도') {
+    // 리스크분석 또는 최적화 단계인지 확인
+    if (col.step !== '리스크분석' && col.step !== '최적화') {
+      return <td key={colIdx} rowSpan={fcRowSpan} style={style}></td>;
     }
     
-    // ★ 항상 숫자 또는 빈 문자열만 표시 (텍스트 절대 금지)
-    const displayValue = currentValue > 0 && currentValue <= 10 ? String(currentValue) : '';
+    const category: 'O' | 'D' = col.name === '발생도' ? 'O' : 'D';
+    const key = `${targetType}-${uniqueKey}-${category}`;
+    
+    // ★★★★★ riskData에서 값 추출 - 숫자만 허용 ★★★★★
+    let displayValue = '';
+    let numericValue = 0;
+    
+    try {
+      const rawValue = state?.riskData?.[key];
+      // 오직 숫자이고 1-10 범위인 경우에만 표시
+      if (typeof rawValue === 'number' && rawValue >= 1 && rawValue <= 10) {
+        displayValue = String(rawValue);
+        numericValue = rawValue;
+      }
+      // 그 외 모든 경우 (문자열, null, undefined, 범위 외 숫자) → 빈 문자열
+    } catch (e) {
+      displayValue = '';
+    }
     
     return (
-      <td key={colIdx} rowSpan={fcRowSpan} onDoubleClick={() => handleSODClick(category, targetType as 'risk' | 'opt', globalRowIdx, currentValue)} style={{ ...style, fontWeight: currentValue ? 700 : 400 }}>
+      <td 
+        key={colIdx} 
+        rowSpan={fcRowSpan} 
+        onDoubleClick={() => handleSODClick(category, targetType as 'risk' | 'opt', globalRowIdx, numericValue)} 
+        style={{ ...style, fontWeight: numericValue > 0 ? 700 : 400 }}
+      >
         {displayValue}
       </td>
     );
