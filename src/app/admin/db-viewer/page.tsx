@@ -19,25 +19,33 @@ interface DbData {
   data: any[];
 }
 
-// 주요 FMEA 테이블 목록 (PascalCase: Raw SQL, snake_case: Prisma)
+// 주요 FMEA 테이블 목록 (새 DB 구조 반영)
 const IMPORTANT_TABLES = [
-  // Raw SQL 테이블 (프로젝트 스키마에서 사용)
-  { name: 'FmeaInfo', label: '📋 FMEA 정보', desc: '프로젝트 메타' },
-  { name: 'FmeaLegacyData', label: '📦 레거시 데이터', desc: 'FMEA 전체 JSON' },
-  // Prisma 테이블 (public 스키마)
-  { name: 'fmea_legacy_data', label: '📦 레거시(Prisma)', desc: 'FMEA JSON' },
+  // ===== 새 DB 구조 테이블 (2026-01-11 추가) =====
+  { name: 'fmea_projects', label: '🗂️ 프로젝트', desc: '프로젝트 기본 정보' },
+  { name: 'fmea_registrations', label: '📝 등록정보', desc: '1단계 등록' },
+  { name: 'fmea_cft_members', label: '👥 CFT멤버', desc: 'CFT 팀원' },
+  { name: 'fmea_worksheet_data', label: '📊 워크시트', desc: '워크시트 JSON' },
   { name: 'fmea_confirmed_states', label: '✅ 확정상태', desc: '탭별 확정' },
+  // ===== 레거시 =====
+  { name: 'fmea_legacy_data', label: '📦 레거시(Prisma)', desc: 'FMEA JSON' },
+  // ===== 구조분석 =====
   { name: 'l1_structures', label: '🏭 1L 구조', desc: '완제품' },
   { name: 'l2_structures', label: '⚙️ 2L 구조', desc: '메인공정' },
   { name: 'l3_structures', label: '🔧 3L 구조', desc: '작업요소' },
+  // ===== 기능분석 =====
   { name: 'l1_functions', label: '📋 1L 기능', desc: '완제품 기능' },
   { name: 'l2_functions', label: '📋 2L 기능', desc: '공정 기능' },
   { name: 'l3_functions', label: '📋 3L 기능', desc: '작업요소 기능' },
+  // ===== 고장분석 =====
   { name: 'failure_effects', label: '💥 고장영향', desc: 'FE' },
   { name: 'failure_modes', label: '🔴 고장형태', desc: 'FM' },
   { name: 'failure_causes', label: '🟠 고장원인', desc: 'FC' },
   { name: 'failure_links', label: '🔗 고장연결', desc: 'FE-FM-FC' },
+  // ===== 리스크/최적화 =====
   { name: 'risk_analyses', label: '📊 리스크', desc: 'S/O/D/AP' },
+  { name: 'optimizations', label: '🎯 최적화', desc: '개선계획' },
+  // ===== 기초정보 =====
   { name: 'pfmea_master_datasets', label: '📁 기초정보', desc: '마스터셋' },
   { name: 'pfmea_master_flat_items', label: '📄 기초항목', desc: '플랫 데이터' },
 ];
@@ -261,10 +269,10 @@ export default function DbViewerPage() {
                   );
                 })}
               </select>
-              <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
-                <strong>📌 중요:</strong><br/>
-                • <code className="bg-gray-100 px-1">public</code>: Prisma 테이블 (확정상태, 구조, 기능, 고장분석 등)<br/>
-                • <code className="bg-gray-100 px-1">pfmea_*</code>: 프로젝트 메타 (FmeaInfo, FmeaLegacyData)
+              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs">
+                <strong>📌 현재 DB 구조 (2026-01-11):</strong><br/>
+                • <code className="bg-gray-100 px-1">public</code>: 모든 FMEA 데이터가 이 스키마에 저장됨<br/>
+                • 프로젝트 구분: 각 테이블의 <code className="bg-gray-100 px-1">fmeaId</code> 컬럼으로 분리
               </div>
             </div>
 
