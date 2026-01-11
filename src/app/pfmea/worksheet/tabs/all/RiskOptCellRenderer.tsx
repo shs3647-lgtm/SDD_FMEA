@@ -568,7 +568,9 @@ export function RiskOptCellRenderer({
   // ★ 텍스트 입력 셀 (습득교훈, 개선결과근거, 책임자성명, 비고)
   if (FIELD_MAP[col.name] && !col.name.includes('일자')) {
     const field = FIELD_MAP[col.name];
-    const key = `${field}-${globalRowIdx}`;
+    // ★★★ 2026-01-11: 최적화 단계는 fmId-fcId 기반 키 사용 ★★★
+    const uniqueKey = (col.step === '최적화' && fmId && fcId) ? `${fmId}-${fcId}` : String(globalRowIdx);
+    const key = `${field}-${col.step === '최적화' ? 'opt-' : ''}${uniqueKey}`;
     const value = (state?.riskData?.[key] as string) || '';
     return (
       <td key={colIdx} rowSpan={fcRowSpan} onDoubleClick={() => {
