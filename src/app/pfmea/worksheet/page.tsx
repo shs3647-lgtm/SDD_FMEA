@@ -346,6 +346,60 @@ function FMEAWorksheetPageContent() {
     requestAnimationFrame(() => saveToLocalStorage?.());
   }, [targetL2Id, state, setState, setDirty, saveToLocalStorage]);
 
+  // 작업요소 모달 연속입력 핸들러 (수동입력 후 즉시 워크시트 반영)
+  const handleWorkElementContinuousAdd = useCallback((element: { id: string; m4: string; name: string }, addNewRow: boolean) => {
+    if (!targetL2Id) {
+      console.warn('[작업요소 연속입력] targetL2Id 없음 - 중단');
+      return;
+    }
+    
+    console.log('[작업요소 연속입력] 시작', { targetL2Id, element: element.name, addNewRow });
+    
+    setState(prev => {
+      const newL2 = prev.l2.map(proc => {
+        if (proc.id !== targetL2Id) return proc;
+        
+        // 기존 작업요소 목록 복사
+        const existingL3 = [...proc.l3];
+        
+        // placeholder 행 제거 (클릭하여 추가 메시지가 있는 행)
+        const meaningfulL3 = existingL3.filter(we => 
+          we.name && !we.name.includes('클릭하여') && !we.name.includes('추가')
+        );
+        
+        // 새 작업요소 추가
+        const newWorkElement: WorkElement = {
+          id: uid(),
+          m4: element.m4 || 'MN',
+          name: element.name,
+          order: (meaningfulL3.length + 1) * 10,
+          functions: [],
+          processChars: [],
+        };
+        
+        const updatedL3 = [...meaningfulL3, newWorkElement];
+        
+        // 새 행 추가 요청이 있으면 placeholder 행 추가
+        if (addNewRow) {
+          updatedL3.push({
+            id: uid(),
+            m4: '',
+            name: '(클릭하여 작업요소 추가)',
+            order: updatedL3.length * 10,
+            functions: [],
+            processChars: [],
+          });
+        }
+        
+        console.log('[작업요소 연속입력] 완료, 최종 l3:', updatedL3.length, '개');
+        return { ...proc, l3: updatedL3 };
+      });
+      return { ...prev, l2: newL2 };
+    });
+    setDirty(true);
+    requestAnimationFrame(() => saveToLocalStorage?.());
+  }, [targetL2Id, setState, setDirty, saveToLocalStorage]);
+
   // 작업요소 모달 삭제 핸들러 (2개 이상이면 행 삭제, 1개면 내용만 삭제)
   const handleWorkElementDelete = useCallback((deletedNames: string[]) => {
     console.log('[삭제] targetL2Id:', targetL2Id, 'deletedNames:', deletedNames);
@@ -753,6 +807,7 @@ function FMEAWorksheetPageContent() {
           processNo={state.l2.find(p => p.id === targetL2Id)?.no || ''}
           processName={state.l2.find(p => p.id === targetL2Id)?.name || ''}
           existingElements={state.l2.find(p => p.id === targetL2Id)?.l3.filter(w => !w.name.includes('추가')).map(w => w.name) || []}
+          onContinuousAdd={handleWorkElementContinuousAdd}
         />
 
         {/* 특별특성 마스터 모달 */}
