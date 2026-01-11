@@ -1099,6 +1099,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       const dbLegacyCandidate = (loadedDB && (loadedDB as any)._isLegacyDirect) ? (loadedDB as any) : null;
       
       // ★★★ 2026-01-11: DB 레거시에서 riskData 추출 ★★★
+      let dbRiskData: { [key: string]: number | string } = {};
       if (dbLegacyCandidate && dbLegacyCandidate.riskData) {
         dbRiskData = dbLegacyCandidate.riskData;
         console.log('[로드] DB 레거시에서 riskData 발견:', Object.keys(dbRiskData).length, '개');
