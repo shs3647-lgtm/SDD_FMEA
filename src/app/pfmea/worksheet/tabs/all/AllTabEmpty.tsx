@@ -208,64 +208,54 @@ export default function AllTabEmpty({
                     data-last-row={isLastRowOfFM ? 'true' : undefined}
                   >
                     {columns.map((col, colIdx) => {
+                      // ★★★ 2026-01-11 핵심 수정: rowSpan 범위 체크 헬퍼 함수 ★★★
+                      // 이전 행의 rowSpan 범위에 포함되면 true (셀 렌더링 안 함)
+                      const isInMergedRange = (type: 'fe' | 'fc' | 'fm'): boolean => {
+                        if (rowInFM === 0) return false; // 첫 행은 항상 렌더링
+                        for (let prevIdx = 0; prevIdx < rowInFM; prevIdx++) {
+                          const prevRow = fmGroup.rows[prevIdx];
+                          if (!prevRow) continue;
+                          let span = 1;
+                          if (type === 'fe') span = prevRow.feRowSpan;
+                          else if (type === 'fc') span = prevRow.fcRowSpan;
+                          else if (type === 'fm') span = fmGroup.fmRowSpan;
+                          if (span > 1 && prevIdx + span > rowInFM) {
+                            return true;
+                          }
+                        }
+                        return false;
+                      };
+                      
                       // ★ 고장분석 컬럼 - FailureCellRenderer 사용 (모듈화)
+                      // ★★★ 수정: null 반환 시 빈 td 렌더링 안 함 (rowSpan 범위 존중) ★★★
                       if (col.step === '고장분석') {
-                        const failureResult = FailureCellRenderer({
+                        return FailureCellRenderer({
                           col, colIdx, fmGroup, fmIdx, row, rowInFM, globalRowIdx,
                         });
-                        if (failureResult !== null) {
-                          // ★ 디버깅: 고장원인(FC) 컬럼 렌더링 확인
-                          if (col.name === '고장원인(FC)' && rowInFM === 0) {
-                            console.log(`[AllTabEmpty] 고장원인(FC) 렌더링: colIdx=${colIdx}, col.id=${col.id}, fcText="${row.fcText}"`);
-                          }
-                          return failureResult;
-                        }
                       }
                       
                       // ★ 구조분석 컬럼 - StructureCellRenderer 사용 (모듈화)
+                      // ★★★ 수정: null 반환 시 빈 td 렌더링 안 함 (rowSpan 범위 존중) ★★★
                       if (col.step === '구조분석') {
-                        const structureResult = StructureCellRenderer({
+                        return StructureCellRenderer({
                           col, colIdx, fmGroup, fmIdx, row, rowInFM, globalRowIdx,
                           l1ProductName: fmGroup.l1ProductName,
                         });
-                        if (structureResult !== null) return structureResult;
                       }
                       
                       // ★ 기능분석 컬럼 - FunctionCellRenderer 사용 (모듈화)
+                      // ★★★ 수정: null 반환 시 빈 td 렌더링 안 함 (rowSpan 범위 존중) ★★★
                       if (col.step === '기능분석') {
-                        const functionResult = FunctionCellRenderer({
+                        return FunctionCellRenderer({
                           col, colIdx, fmGroup, fmIdx, row, rowInFM, globalRowIdx,
                         });
-                        if (functionResult !== null) return functionResult;
                       }
                       
                       // ★ 리스크분석 / 최적화 컬럼 - RiskOptCellRenderer 사용 (모듈화)
-                      // ★★★ 2026-01-11: rowSpan 병합은 고장원인(FC)과 동일하게 적용 ★★★
+                      // ★★★ FC와 동일한 병합 조건 사용 ★★★
                       if (col.step === '리스크분석' || col.step === '최적화') {
-                        // ★ 디버깅: 컬럼별 렌더링 상태 확인
-                        if (rowInFM === 0 && globalRowIdx < 3) {
-                          console.log(`[AllTabEmpty] ${col.name}: rowInFM=${rowInFM}, fcRowSpan=${row.fcRowSpan}, fcText="${row.fcText}"`);
-                        }
-                        
-                        // ★★★ 핵심 수정: FC와 동일한 병합 조건 사용 ★★★
-                        // 고장원인(FC)이 렌더링되면 리스크분석도 렌더링
-                        // 고장원인(FC)이 null이면 리스크분석도 null
-                        // FailureCellRenderer의 isInMergedRange('fc')와 동일한 로직
-                        const shouldSkip = (): boolean => {
-                          if (rowInFM === 0) return false; // 첫 행은 항상 렌더링
-                          for (let prevIdx = 0; prevIdx < rowInFM; prevIdx++) {
-                            const prevRow = fmGroup.rows[prevIdx];
-                            if (!prevRow) continue;
-                            // 이전 행의 fcRowSpan이 현재 행까지 커버하면 스킵
-                            if (prevRow.fcRowSpan > 1 && prevIdx + prevRow.fcRowSpan > rowInFM) {
-                              return true;
-                            }
-                          }
-                          return false;
-                        };
-                        
-                        // ★ 이전 행의 rowSpan에 포함되면 null 반환
-                        if (shouldSkip()) {
+                        // ★ 이전 행의 fcRowSpan 범위에 포함되면 null 반환
+                        if (isInMergedRange('fc')) {
                           return null;
                         }
                         
@@ -290,24 +280,9 @@ export default function AllTabEmpty({
                         );
                       }
                       
-                      // 다른 컬럼은 빈 셀로 렌더링
-                      return (
-                        <td 
-                          key={colIdx} 
-                          style={{
-                            background: globalRowIdx % 2 === 0 ? col.cellColor : col.cellAltColor,
-                            height: `${HEIGHTS.body}px`,
-                            padding: '3px 4px',
-                            border: '1px solid #ccc',
-                            fontSize: '11px',
-                            textAlign: col.align,
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                          }}
-                        >
-                        </td>
-                      );
+                      // ★ 그 외 알 수 없는 단계 컬럼 (존재하지 않아야 함)
+                      console.warn(`[AllTabEmpty] 알 수 없는 단계: ${col.step}, 컬럼: ${col.name}`);
+                      return null;
                     })}
                   </tr>
                 );

@@ -281,28 +281,149 @@ export const LEVELS = [] as const;
 export const uid = () => 'id_' + Math.random().toString(16).slice(2) + '_' + Date.now().toString(16);
 
 /**
- * ★★★ 고유 INDEXING ID 생성 함수 ★★★
- * 단계(Level), 행(Row), 열(Col), 병합여부(Merge)를 ID에 인코딩
+ * ★★★ 하이브리드 ID 시스템 (v2.0) ★★★
  * 
- * 포맷: {TYPE}{LEVEL}-P{PROC}W{WE}F{FUNC}C{CHAR}I{ITEM}-M{MERGE}
+ * 설계 원칙:
+ * 1. ID로 대략적 위치 파악 (디버깅 용이)
+ * 2. parentId로 모자관계 추적 (계층 탐색)
+ * 3. mergeGroupId로 병합 데이터 동기화 (같은 그룹 = 같은 데이터)
+ * 4. 고장연결에 FM-FE-FC ID 포함 (연결 관계 명확)
+ * 
+ * ID 포맷: {FMEA_SEQ}-{TYPE}-{PATH}-{SEQ}
+ * 
  * 예시:
- *   - FM2-P01W00F01C01I001-M0 = FailureMode L2, 공정1, 기능1, 특성1, 항목1, 비병합
- *   - FC3-P02W03F02C01I002-M1 = FailureCause L3, 공정2, 작업요소3, 기능2, 특성1, 항목2, 병합
- *   - FE1-P00W00F01C00I001-M0 = FailureEffect L1, 기능1, 항목1, 비병합
- *   - LK0-P01W03F00C00I001-M1 = FailureLink, 공정1, 작업요소3, 항목1, 병합
+ *   L1S: M001-L1S-000                  완제품 구조
+ *   L1F: M001-L1F-T1F1R1-001           구분1.기능1.요구사항1
+ *   FE:  M001-FE-T1R1-001              구분1.요구사항1의 고장영향
+ *   
+ *   L2S: M001-L2S-P01-001              공정1
+ *   L2F: M001-L2F-P01F1C1-001          공정1.기능1.특성1
+ *   FM:  M001-FM-P01C1-001             공정1.특성1의 고장형태
+ *   
+ *   L3S: M001-L3S-P01W1-001            공정1.작업요소1
+ *   L3F: M001-L3F-P01W1F1C1-001        공정1.작업요소1.기능1.특성1
+ *   FC:  M001-FC-P01W1C1-001           공정1.작업요소1.특성1의 고장원인
+ *   
+ *   LK:  M001-LK-FM001-FE001-FC001     고장연결 (FM-FE-FC)
  */
+
+// ===== 타입 정의 =====
+export type AtomicType = 
+  | 'L1S' | 'L1F' | 'FE'      // L1 레벨: 구조, 기능, 고장영향
+  | 'L2S' | 'L2F' | 'FM'      // L2 레벨: 구조, 기능, 고장형태
+  | 'L3S' | 'L3F' | 'FC'      // L3 레벨: 구조, 기능, 고장원인
+  | 'LK';                      // 고장연결
+
+// ===== 하이브리드 ID 생성 파라미터 =====
+export interface HybridIdParams {
+  fmeaSeq: string;       // FMEA 시퀀스 (예: M001)
+  type: AtomicType;      // 타입
+  path: string;          // 경로 (예: P01W1C1)
+  seq: number;           // 순번 (1-based)
+}
+
+// ===== 하이브리드 ID 생성 함수 =====
+export const createHybridId = ({ fmeaSeq, type, path, seq }: HybridIdParams): string => {
+  const seqStr = seq.toString().padStart(3, '0');
+  return `${fmeaSeq}-${type}-${path}-${seqStr}`;
+};
+
+// ===== 경로 생성 헬퍼 함수들 =====
+export const createL1Path = (typeIdx: number, funcIdx: number, reqIdx: number): string => {
+  return `T${typeIdx}F${funcIdx}R${reqIdx}`;
+};
+
+export const createL2Path = (procIdx: number, funcIdx?: number, charIdx?: number): string => {
+  let path = `P${procIdx.toString().padStart(2, '0')}`;
+  if (funcIdx !== undefined) path += `F${funcIdx}`;
+  if (charIdx !== undefined) path += `C${charIdx}`;
+  return path;
+};
+
+export const createL3Path = (procIdx: number, weIdx: number, funcIdx?: number, charIdx?: number): string => {
+  let path = `P${procIdx.toString().padStart(2, '0')}W${weIdx}`;
+  if (funcIdx !== undefined) path += `F${funcIdx}`;
+  if (charIdx !== undefined) path += `C${charIdx}`;
+  return path;
+};
+
+// ===== 고장연결 ID 생성 =====
+export const createLinkId = (fmeaSeq: string, fmSeq: number, feSeq: number, fcSeq: number): string => {
+  const fm = `FM${fmSeq.toString().padStart(3, '0')}`;
+  const fe = `FE${feSeq.toString().padStart(3, '0')}`;
+  const fc = `FC${fcSeq.toString().padStart(3, '0')}`;
+  return `${fmeaSeq}-LK-${fm}-${fe}-${fc}`;
+};
+
+// ===== 병합 그룹 ID 생성 =====
+export const createMergeGroupId = (fmeaSeq: string, type: AtomicType, path: string): string => {
+  return `${fmeaSeq}-MG-${type}-${path}`;
+};
+
+// ===== ID 파싱 =====
+export interface ParsedHybridId {
+  fmeaSeq: string;
+  type: string;
+  path: string;
+  seq: number;
+}
+
+export const parseHybridId = (id: string): ParsedHybridId | null => {
+  // 포맷: {FMEA_SEQ}-{TYPE}-{PATH}-{SEQ}
+  const match = id.match(/^(M\d+)-([A-Z0-9]+)-(.+)-(\d{3})$/);
+  if (!match) return null;
+  return {
+    fmeaSeq: match[1],
+    type: match[2],
+    path: match[3],
+    seq: parseInt(match[4], 10),
+  };
+};
+
+// ===== 고장연결 ID 파싱 =====
+export interface ParsedLinkId {
+  fmeaSeq: string;
+  fmSeq: number;
+  feSeq: number;
+  fcSeq: number;
+}
+
+export const parseLinkId = (id: string): ParsedLinkId | null => {
+  // 포맷: {FMEA_SEQ}-LK-FM{SEQ}-FE{SEQ}-FC{SEQ}
+  const match = id.match(/^(M\d+)-LK-FM(\d{3})-FE(\d{3})-FC(\d{3})$/);
+  if (!match) return null;
+  return {
+    fmeaSeq: match[1],
+    fmSeq: parseInt(match[2], 10),
+    feSeq: parseInt(match[3], 10),
+    fcSeq: parseInt(match[4], 10),
+  };
+};
+
+// ===== FMEA ID에서 시퀀스 추출 =====
+export const extractFmeaSeq = (fmeaId: string): string => {
+  // PFM26-M001 → M001, pfm26-001 → M001
+  const match = fmeaId.match(/[Mm]?(\d+)$/);
+  if (match) {
+    return `M${match[1].padStart(3, '0')}`;
+  }
+  return 'M001';
+};
+
+// ===== 레거시 호환: 기존 createIndexedId (deprecated) =====
 export interface IndexedIdParams {
   type: 'FM' | 'FE' | 'FC' | 'LK' | 'L1S' | 'L2S' | 'L3S' | 'L1F' | 'L2F' | 'L3F';
   level: 0 | 1 | 2 | 3;
-  procIdx?: number;    // 공정 인덱스 (0-based)
-  weIdx?: number;      // 작업요소 인덱스 (0-based)
-  funcIdx?: number;    // 기능 인덱스 (0-based)
-  charIdx?: number;    // 특성 인덱스 (0-based)
-  itemIdx?: number;    // 항목 인덱스 (0-based)
-  isMerged?: boolean;  // 병합 여부
-  suffix?: string;     // 추가 식별자 (선택)
+  procIdx?: number;
+  weIdx?: number;
+  funcIdx?: number;
+  charIdx?: number;
+  itemIdx?: number;
+  isMerged?: boolean;
+  suffix?: string;
 }
 
+/** @deprecated 하이브리드 ID 사용 권장: createHybridId() */
 export const createIndexedId = ({
   type,
   level,
@@ -311,26 +432,25 @@ export const createIndexedId = ({
   funcIdx = 0,
   charIdx = 0,
   itemIdx = 0,
-  isMerged = false,
-  suffix = '',
 }: IndexedIdParams): string => {
-  const L = level.toString();
-  const P = procIdx.toString().padStart(2, '0');
-  const W = weIdx.toString().padStart(2, '0');
-  const F = funcIdx.toString().padStart(2, '0');
-  const C = charIdx.toString().padStart(2, '0');
-  const I = itemIdx.toString().padStart(3, '0');
-  const M = isMerged ? '1' : '0';
-  const S = suffix ? `-${suffix}` : '';
-  // 고유성 보장: 타임스탬프 + 랜덤 추가
-  const TS = Date.now().toString(36).slice(-4);
-  const RND = Math.random().toString(36).slice(2, 6);
-  return `${type}${L}-P${P}W${W}F${F}C${C}I${I}-M${M}-${TS}${RND}${S}`;
+  // 레거시 호환을 위해 하이브리드 ID 포맷으로 변환
+  const fmeaSeq = 'M001'; // 기본값
+  let path = '';
+  
+  if (type === 'L1S' || type === 'L1F' || type === 'FE') {
+    path = createL1Path(1, funcIdx + 1, charIdx + 1);
+  } else if (type === 'L2S' || type === 'L2F' || type === 'FM') {
+    path = createL2Path(procIdx + 1, funcIdx + 1, charIdx + 1);
+  } else if (type === 'L3S' || type === 'L3F' || type === 'FC') {
+    path = createL3Path(procIdx + 1, weIdx + 1, funcIdx + 1, charIdx + 1);
+  } else if (type === 'LK') {
+    return createLinkId(fmeaSeq, itemIdx + 1, 1, 1);
+  }
+  
+  return createHybridId({ fmeaSeq, type, path, seq: itemIdx + 1 });
 };
 
-/**
- * 인덱싱 ID에서 위치 정보 추출
- */
+/** @deprecated 하이브리드 ID 사용 권장: parseHybridId() */
 export interface ParsedIndexedId {
   type: string;
   level: number;
@@ -343,18 +463,21 @@ export interface ParsedIndexedId {
 }
 
 export const parseIndexedId = (id: string): ParsedIndexedId | null => {
-  // 포맷: {TYPE}{LEVEL}-P{PROC}W{WE}F{FUNC}C{CHAR}I{ITEM}-M{MERGE}-...
-  const match = id.match(/^([A-Z]+)(\d)-P(\d{2})W(\d{2})F(\d{2})C(\d{2})I(\d{3})-M([01])/);
-  if (!match) return null;
+  const parsed = parseHybridId(id);
+  if (!parsed) return null;
+  
+  // 경로에서 인덱스 추출 시도
+  const pathMatch = parsed.path.match(/P(\d+)?W?(\d+)?F?(\d+)?C?(\d+)?/);
+  
   return {
-    type: match[1],
-    level: parseInt(match[2], 10),
-    procIdx: parseInt(match[3], 10),
-    weIdx: parseInt(match[4], 10),
-    funcIdx: parseInt(match[5], 10),
-    charIdx: parseInt(match[6], 10),
-    itemIdx: parseInt(match[7], 10),
-    isMerged: match[8] === '1',
+    type: parsed.type,
+    level: parsed.type.includes('1') ? 1 : parsed.type.includes('2') ? 2 : 3,
+    procIdx: pathMatch?.[1] ? parseInt(pathMatch[1], 10) - 1 : 0,
+    weIdx: pathMatch?.[2] ? parseInt(pathMatch[2], 10) - 1 : 0,
+    funcIdx: pathMatch?.[3] ? parseInt(pathMatch[3], 10) - 1 : 0,
+    charIdx: pathMatch?.[4] ? parseInt(pathMatch[4], 10) - 1 : 0,
+    itemIdx: parsed.seq - 1,
+    isMerged: false,
   };
 };
 

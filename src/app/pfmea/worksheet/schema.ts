@@ -26,9 +26,17 @@
 
 // ============ 기본 원자 단위 ============
 export interface AtomicRecord {
-  id: string;           // 고유 ID (PK)
+  id: string;           // 고유 ID (PK) - 하이브리드 포맷: {FMEA_SEQ}-{TYPE}-{PATH}-{SEQ}
   createdAt?: string;   // 생성일
   updatedAt?: string;   // 수정일
+  
+  // ★★★ 모자관계 (부모-자식) ★★★
+  parentId?: string;    // 부모 ID (계층 추적용)
+  
+  // ★★★ 병합 그룹 (같은 그룹 = 같은 데이터) ★★★
+  mergeGroupId?: string;  // 병합 그룹 ID
+  rowSpan?: number;       // 병합된 행 수 (1 = 비병합)
+  colSpan?: number;       // 병합된 열 수 (1 = 비병합)
 }
 
 // ============ 구조분석 (2단계) - Structure Tables ============
@@ -230,18 +238,30 @@ export interface FailureAnalysis extends AtomicRecord {
  * 고장연결 (FM을 중심으로 FE, FC 연결)
  * - FM 1 : N FE (고장형태 하나에 여러 고장영향)
  * - FM 1 : N FC (고장형태 하나에 여러 고장원인)
+ * 
+ * ★★★ 하이브리드 ID 포맷 ★★★
+ * ID: {FMEA_SEQ}-LK-FM{SEQ}-FE{SEQ}-FC{SEQ}
+ * 예: M001-LK-FM001-FE002-FC003 = FMEA1의 FM1-FE2-FC3 연결
  */
 export interface FailureLink extends AtomicRecord {
   fmeaId: string;         // FK: FMEA 프로젝트 ID
   
   // 고장형태 (중심축)
   fmId: string;           // FK: FailureMode.id
+  fmSeq?: number;         // FM 순번 (ID에서 추출 가능)
   
   // 고장영향 (1:N 관계에서 개별 연결)
   feId: string;           // FK: FailureEffect.id
+  feSeq?: number;         // FE 순번 (ID에서 추출 가능)
   
   // 고장원인 (1:N 관계에서 개별 연결)
   fcId: string;           // FK: FailureCause.id
+  fcSeq?: number;         // FC 순번 (ID에서 추출 가능)
+  
+  // ★★★ 경로 정보 (역전개 추적용) ★★★
+  fmPath?: string;        // FM 경로 (예: P01C1)
+  fePath?: string;        // FE 경로 (예: T1R1)
+  fcPath?: string;        // FC 경로 (예: P01W1C1)
   
   // 캐시된 데이터 (조회 성능 최적화)
   cache?: {

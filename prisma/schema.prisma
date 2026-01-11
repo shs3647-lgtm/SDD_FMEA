@@ -38,11 +38,19 @@ model L1Structure {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // ★★★ 하이브리드 ID 시스템 필드 ★★★
+  parentId     String?  // 부모 ID (모자관계 추적)
+  mergeGroupId String?  // 병합 그룹 ID
+  rowSpan      Int?     @default(1) // 병합된 행 수
+  colSpan      Int?     @default(1) // 병합된 열 수
+
   // Relations
   l2Structures L2Structure[]
   l1Functions  L1Function[]
 
   @@index([fmeaId])
+  @@index([parentId])
+  @@index([mergeGroupId])
   @@map("l1_structures")
 }
 
@@ -56,6 +64,12 @@ model L2Structure {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // ★★★ 하이브리드 ID 시스템 필드 ★★★
+  parentId     String?  // 부모 ID (모자관계 추적)
+  mergeGroupId String?  // 병합 그룹 ID
+  rowSpan      Int?     @default(1)
+  colSpan      Int?     @default(1)
+
   // Relations
   l1Structure L1Structure @relation(fields: [l1Id], references: [id], onDelete: Cascade)
   l3Structures L3Structure[]
@@ -64,6 +78,8 @@ model L2Structure {
 
   @@index([fmeaId])
   @@index([l1Id])
+  @@index([parentId])
+  @@index([mergeGroupId])
   @@map("l2_structures")
 }
 
@@ -78,6 +94,12 @@ model L3Structure {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // ★★★ 하이브리드 ID 시스템 필드 ★★★
+  parentId     String?  // 부모 ID (모자관계 추적)
+  mergeGroupId String?  // 병합 그룹 ID
+  rowSpan      Int?     @default(1)
+  colSpan      Int?     @default(1)
+
   // Relations
   l2Structure L2Structure @relation(fields: [l2Id], references: [id], onDelete: Cascade)
   l3Functions  L3Function[]
@@ -86,6 +108,8 @@ model L3Structure {
   @@index([fmeaId])
   @@index([l1Id])
   @@index([l2Id])
+  @@index([parentId])
+  @@index([mergeGroupId])
   @@map("l3_structures")
 }
 
@@ -101,24 +125,38 @@ model L1Function {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // ★★★ 하이브리드 ID 시스템 필드 ★★★
+  parentId     String?
+  mergeGroupId String?
+  rowSpan      Int?     @default(1)
+  colSpan      Int?     @default(1)
+
   // Relations
   l1Structure   L1Structure @relation(fields: [l1StructId], references: [id], onDelete: Cascade)
   failureEffects FailureEffect[]
 
   @@index([fmeaId])
   @@index([l1StructId])
+  @@index([parentId])
+  @@index([mergeGroupId])
   @@map("l1_functions")
 }
 
 model L2Function {
   id           String   @id @default(uuid())
   fmeaId       String   // FK: FMEA 프로젝트 ID
-  l2StructId  String   // FK: L2Structure.id
+  l2StructId   String   // FK: L2Structure.id
   functionName String   // 기능명
   productChar  String   // 제품특성
   specialChar  String?  // 특별특성
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  // ★★★ 하이브리드 ID 시스템 필드 ★★★
+  parentId     String?
+  mergeGroupId String?
+  rowSpan      Int?     @default(1)
+  colSpan      Int?     @default(1)
 
   // Relations
   l2Structure L2Structure @relation(fields: [l2StructId], references: [id], onDelete: Cascade)
@@ -126,6 +164,8 @@ model L2Function {
 
   @@index([fmeaId])
   @@index([l2StructId])
+  @@index([parentId])
+  @@index([mergeGroupId])
   @@map("l2_functions")
 }
 
@@ -140,6 +180,12 @@ model L3Function {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // ★★★ 하이브리드 ID 시스템 필드 ★★★
+  parentId     String?
+  mergeGroupId String?
+  rowSpan      Int?     @default(1)
+  colSpan      Int?     @default(1)
+
   // Relations
   l3Structure L3Structure @relation(fields: [l3StructId], references: [id], onDelete: Cascade)
   failureCauses FailureCause[]
@@ -147,6 +193,8 @@ model L3Function {
   @@index([fmeaId])
   @@index([l3StructId])
   @@index([l2StructId])
+  @@index([parentId])
+  @@index([mergeGroupId])
   @@map("l3_functions")
 }
 
@@ -162,12 +210,20 @@ model FailureEffect {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // ★★★ 하이브리드 ID 시스템 필드 ★★★
+  parentId     String?
+  mergeGroupId String?
+  rowSpan      Int?     @default(1)
+  colSpan      Int?     @default(1)
+
   // Relations
   l1Function L1Function @relation(fields: [l1FuncId], references: [id], onDelete: Cascade)
   failureLinks FailureLink[]
 
   @@index([fmeaId])
   @@index([l1FuncId])
+  @@index([parentId])
+  @@index([mergeGroupId])
   @@map("failure_effects")
 }
 
@@ -182,6 +238,12 @@ model FailureMode {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // ★★★ 하이브리드 ID 시스템 필드 ★★★
+  parentId     String?
+  mergeGroupId String?
+  rowSpan      Int?     @default(1)
+  colSpan      Int?     @default(1)
+
   // Relations
   l2Function L2Function @relation(fields: [l2FuncId], references: [id], onDelete: Cascade)
   l2Structure L2Structure @relation(fields: [l2StructId], references: [id], onDelete: Cascade)
@@ -190,19 +252,28 @@ model FailureMode {
   @@index([fmeaId])
   @@index([l2FuncId])
   @@index([l2StructId])
+  @@index([parentId])
+  @@index([mergeGroupId])
   @@map("failure_modes")
 }
 
 model FailureCause {
-  id         String   @id @default(uuid())
-  fmeaId     String   // FK: FMEA 프로젝트 ID
-  l3FuncId  String   // FK: L3Function.id
-  l3StructId String   // FK: L3Structure.id (역전개용)
-  l2StructId String   // FK: L2Structure.id (연결용)
-  cause      String   // 고장원인 내용
-  occurrence Int?     // 발생도 (1-10)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id           String   @id @default(uuid())
+  fmeaId       String   // FK: FMEA 프로젝트 ID
+  l3FuncId     String   // FK: L3Function.id
+  l3StructId   String   // FK: L3Structure.id (역전개용)
+  l2StructId   String   // FK: L2Structure.id (연결용)
+  processCharId String?  // FK: 공정특성 연결용
+  cause        String   // 고장원인 내용
+  occurrence   Int?     // 발생도 (1-10)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // ★★★ 하이브리드 ID 시스템 필드 ★★★
+  parentId     String?
+  mergeGroupId String?
+  rowSpan      Int?     @default(1)
+  colSpan      Int?     @default(1)
 
   // Relations
   l3Function L3Function @relation(fields: [l3FuncId], references: [id], onDelete: Cascade)
@@ -213,6 +284,8 @@ model FailureCause {
   @@index([l3FuncId])
   @@index([l3StructId])
   @@index([l2StructId])
+  @@index([parentId])
+  @@index([mergeGroupId])
   @@map("failure_causes")
 }
 
@@ -260,6 +333,20 @@ model FailureLink {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // ★★★ 하이브리드 ID: {FMEA_SEQ}-LK-FM{SEQ}-FE{SEQ}-FC{SEQ} ★★★
+  fmSeq    Int?     // FM 순번 (ID에서 추출 가능)
+  feSeq    Int?     // FE 순번 (ID에서 추출 가능)
+  fcSeq    Int?     // FC 순번 (ID에서 추출 가능)
+  fmPath   String?  // FM 경로 (역전개 추적용)
+  fePath   String?  // FE 경로 (역전개 추적용)
+  fcPath   String?  // FC 경로 (역전개 추적용)
+
+  // ★★★ 하이브리드 ID 시스템 필드 ★★★
+  parentId     String?
+  mergeGroupId String?
+  rowSpan      Int?     @default(1)
+  colSpan      Int?     @default(1)
+
   // Relations
   failureMode   FailureMode   @relation(fields: [fmId], references: [id], onDelete: Cascade)
   failureEffect FailureEffect @relation(fields: [feId], references: [id], onDelete: Cascade)
@@ -271,6 +358,8 @@ model FailureLink {
   @@index([fmId])
   @@index([feId])
   @@index([fcId])
+  @@index([parentId])
+  @@index([mergeGroupId])
   @@map("failure_links")
 }
 

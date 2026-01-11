@@ -81,10 +81,43 @@ export async function POST(request: NextRequest) {
       l1StructureName: db.l1Structure?.name,
       l2StructuresCount: db.l2Structures?.length || 0,
       l3StructuresCount: db.l3Structures?.length || 0,
+      l1FunctionsCount: db.l1Functions?.length || 0,
+      l2FunctionsCount: db.l2Functions?.length || 0,
+      l3FunctionsCount: db.l3Functions?.length || 0,
+      // ★★★ 고장 데이터 개수 로깅 ★★★
+      failureEffectsCount: db.failureEffects?.length || 0,
+      failureModesCount: db.failureModes?.length || 0,
+      failureCausesCount: db.failureCauses?.length || 0,
+      failureLinksCount: db.failureLinks?.length || 0,
       hasLegacyData: !!legacyData,
       legacyL1Name: legacyData?.l1?.name,
       legacyL2Count: legacyData?.l2?.length || 0,
     });
+    
+    // ★★★ 고장 데이터 상세 로깅 ★★★
+    if (db.failureModes?.length > 0) {
+      console.log('[API] 📋 FM 샘플:', db.failureModes.slice(0, 2).map(fm => ({
+        id: fm.id,
+        mode: fm.mode?.substring(0, 20),
+        l2FuncId: fm.l2FuncId,
+        l2StructId: fm.l2StructId,
+      })));
+    }
+    if (db.failureCauses?.length > 0) {
+      console.log('[API] 📋 FC 샘플:', db.failureCauses.slice(0, 2).map(fc => ({
+        id: fc.id,
+        cause: fc.cause?.substring(0, 20),
+        l3FuncId: fc.l3FuncId,
+        l3StructId: fc.l3StructId,
+      })));
+    }
+    if (db.failureEffects?.length > 0) {
+      console.log('[API] 📋 FE 샘플:', db.failureEffects.slice(0, 2).map(fe => ({
+        id: fe.id,
+        effect: fe.effect?.substring(0, 20),
+        l1FuncId: fe.l1FuncId,
+      })));
+    }
     
     // ✅ FMEA ID는 항상 대문자로 정규화 (DB 일관성 보장)
     if (db.fmeaId) {
@@ -310,6 +343,11 @@ export async function POST(request: NextRequest) {
               category: fe.category,
               effect: fe.effect,
               severity: fe.severity,
+              // ★★★ 하이브리드 ID 시스템 필드 ★★★
+              parentId: fe.parentId || null,
+              mergeGroupId: fe.mergeGroupId || null,
+              rowSpan: fe.rowSpan || 1,
+              colSpan: fe.colSpan || 1,
             })),
             skipDuplicates: true,
           });
@@ -346,6 +384,11 @@ export async function POST(request: NextRequest) {
               productCharId: fm.productCharId || null,
               mode: fm.mode,
               specialChar: fm.specialChar ?? false,
+              // ★★★ 하이브리드 ID 시스템 필드 ★★★
+              parentId: fm.parentId || null,
+              mergeGroupId: fm.mergeGroupId || null,
+              rowSpan: fm.rowSpan || 1,
+              colSpan: fm.colSpan || 1,
             })),
             skipDuplicates: true,
           });
@@ -380,8 +423,14 @@ export async function POST(request: NextRequest) {
               l3FuncId: fc.l3FuncId,
               l3StructId: fc.l3StructId,
               l2StructId: fc.l2StructId,
+              processCharId: fc.processCharId || null,
               cause: fc.cause,
               occurrence: fc.occurrence || null,
+              // ★★★ 하이브리드 ID 시스템 필드 ★★★
+              parentId: fc.parentId || null,
+              mergeGroupId: fc.mergeGroupId || null,
+              rowSpan: fc.rowSpan || 1,
+              colSpan: fc.colSpan || 1,
             })),
             skipDuplicates: true,
           });
@@ -427,6 +476,17 @@ export async function POST(request: NextRequest) {
             fmId: link.fmId,
             feId: link.feId,
             fcId: link.fcId,
+            // ★★★ 하이브리드 ID 시스템 필드 ★★★
+            fmSeq: link.fmSeq || null,
+            feSeq: link.feSeq || null,
+            fcSeq: link.fcSeq || null,
+            fmPath: link.fmPath || null,
+            fePath: link.fePath || null,
+            fcPath: link.fcPath || null,
+            parentId: link.parentId || null,
+            mergeGroupId: link.mergeGroupId || null,
+            rowSpan: link.rowSpan || 1,
+            colSpan: link.colSpan || 1,
           })),
           skipDuplicates: true,
         });
