@@ -285,51 +285,108 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // 7. FailureEffects 배치 저장
+      // 7. FailureEffects 배치 저장 - ★★★ FK 검증 후 저장 ★★★
       if (db.failureEffects.length > 0) {
-        await tx.failureEffect.createMany({
-          data: db.failureEffects.map(fe => ({
-            id: fe.id,
-            fmeaId: db.fmeaId,
-            l1FuncId: fe.l1FuncId,
-            category: fe.category,
-            effect: fe.effect,
-            severity: fe.severity,
-          })),
-          skipDuplicates: true,
-        });
+        const l1FuncIdSet = new Set(db.l1Functions.map(f => f.id));
+        
+        const validFEs = db.failureEffects.filter(fe => 
+          !!fe.l1FuncId && l1FuncIdSet.has(fe.l1FuncId)
+        );
+        
+        if (validFEs.length !== db.failureEffects.length) {
+          console.warn('[API] ⚠️ FailureEffects FK 불일치 제외:', {
+            total: db.failureEffects.length,
+            valid: validFEs.length,
+            dropped: db.failureEffects.length - validFEs.length,
+          });
+        }
+        
+        if (validFEs.length > 0) {
+          await tx.failureEffect.createMany({
+            data: validFEs.map(fe => ({
+              id: fe.id,
+              fmeaId: db.fmeaId,
+              l1FuncId: fe.l1FuncId,
+              category: fe.category,
+              effect: fe.effect,
+              severity: fe.severity,
+            })),
+            skipDuplicates: true,
+          });
+          console.log(`[API] ✅ FailureEffects 저장: ${validFEs.length}개`);
+        }
       }
 
-      // 8. FailureModes 배치 저장
+      // 8. FailureModes 배치 저장 - ★★★ FK 검증 후 저장 ★★★
       if (db.failureModes.length > 0) {
-        await tx.failureMode.createMany({
-          data: db.failureModes.map(fm => ({
-            id: fm.id,
-            fmeaId: db.fmeaId,
-            l2FuncId: fm.l2FuncId,
-            l2StructId: fm.l2StructId,
-            productCharId: fm.productCharId || null,
-            mode: fm.mode,
-            specialChar: fm.specialChar ?? false,
-          })),
-          skipDuplicates: true,
-        });
+        const l2FuncIdSet = new Set(db.l2Functions.map(f => f.id));
+        const l2StructIdSet = new Set(db.l2Structures.map(s => s.id));
+        
+        const validFMs = db.failureModes.filter(fm => 
+          !!fm.l2FuncId && !!fm.l2StructId &&
+          l2FuncIdSet.has(fm.l2FuncId) &&
+          l2StructIdSet.has(fm.l2StructId)
+        );
+        
+        if (validFMs.length !== db.failureModes.length) {
+          console.warn('[API] ⚠️ FailureModes FK 불일치 제외:', {
+            total: db.failureModes.length,
+            valid: validFMs.length,
+            dropped: db.failureModes.length - validFMs.length,
+          });
+        }
+        
+        if (validFMs.length > 0) {
+          await tx.failureMode.createMany({
+            data: validFMs.map(fm => ({
+              id: fm.id,
+              fmeaId: db.fmeaId,
+              l2FuncId: fm.l2FuncId,
+              l2StructId: fm.l2StructId,
+              productCharId: fm.productCharId || null,
+              mode: fm.mode,
+              specialChar: fm.specialChar ?? false,
+            })),
+            skipDuplicates: true,
+          });
+          console.log(`[API] ✅ FailureModes 저장: ${validFMs.length}개`);
+        }
       }
 
-      // 9. FailureCauses 배치 저장
+      // 9. FailureCauses 배치 저장 - ★★★ FK 검증 후 저장 ★★★
       if (db.failureCauses.length > 0) {
-        await tx.failureCause.createMany({
-          data: db.failureCauses.map(fc => ({
-            id: fc.id,
-            fmeaId: db.fmeaId,
-            l3FuncId: fc.l3FuncId,
-            l3StructId: fc.l3StructId,
-            l2StructId: fc.l2StructId,
-            cause: fc.cause,
-            occurrence: fc.occurrence || null,
-          })),
-          skipDuplicates: true,
-        });
+        const l3FuncIdSet = new Set(db.l3Functions.map(f => f.id));
+        const l3StructIdSet = new Set(db.l3Structures.map(s => s.id));
+        
+        const validFCs = db.failureCauses.filter(fc => 
+          !!fc.l3FuncId && !!fc.l3StructId &&
+          l3FuncIdSet.has(fc.l3FuncId) &&
+          l3StructIdSet.has(fc.l3StructId)
+        );
+        
+        if (validFCs.length !== db.failureCauses.length) {
+          console.warn('[API] ⚠️ FailureCauses FK 불일치 제외:', {
+            total: db.failureCauses.length,
+            valid: validFCs.length,
+            dropped: db.failureCauses.length - validFCs.length,
+          });
+        }
+        
+        if (validFCs.length > 0) {
+          await tx.failureCause.createMany({
+            data: validFCs.map(fc => ({
+              id: fc.id,
+              fmeaId: db.fmeaId,
+              l3FuncId: fc.l3FuncId,
+              l3StructId: fc.l3StructId,
+              l2StructId: fc.l2StructId,
+              cause: fc.cause,
+              occurrence: fc.occurrence || null,
+            })),
+            skipDuplicates: true,
+          });
+          console.log(`[API] ✅ FailureCauses 저장: ${validFCs.length}개`);
+        }
       }
 
       // 10. FailureLinks 저장 (기존 링크 삭제 후 재생성)

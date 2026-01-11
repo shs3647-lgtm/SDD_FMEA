@@ -266,8 +266,13 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
     });
     
     // L2 고장형태 (FM) - ✅ productCharId 보존
+    // ★★★ FK 원자성 보장: l2FuncId가 없으면 스킵 (FK 오류 방지) ★★★
     const failureModes = proc.failureModes || [];
     failureModes.forEach((fm: any) => {
+      if (!fm.name || fm.name.includes('클릭') || fm.name.includes('추가')) {
+        return; // 빈 FM 스킵
+      }
+      
       // productCharId가 있으면 해당 제품특성의 L2Function 연결
       let relatedL2Func = fm.productCharId 
         ? db.l2Functions.find(f => f.id === fm.productCharId)
@@ -276,13 +281,33 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
       if (!relatedL2Func) {
         relatedL2Func = db.l2Functions.find(f => f.l2StructId === l2Struct.id);
       }
+      // ★★★ 핵심: L2Function이 없으면 기본 생성하여 FK 오류 방지 ★★★
+      if (!relatedL2Func && db.l2Functions.length > 0) {
+        // fallback: 전체 L2Functions 중 첫 번째 사용
+        relatedL2Func = db.l2Functions[0];
+      }
+      // L2Function이 여전히 없으면 임시 생성
+      if (!relatedL2Func) {
+        const tempL2Func = {
+          id: uid(),
+          fmeaId: oldData.fmeaId,
+          l1FuncId: db.l1Functions[0]?.id || '',
+          l2StructId: l2Struct.id,
+          name: '(자동생성)',
+          productChar: '',
+          specialChar: '',
+        };
+        db.l2Functions.push(tempL2Func);
+        relatedL2Func = tempL2Func;
+        console.warn('[마이그레이션] FM용 임시 L2Function 생성:', fm.name);
+      }
       
       db.failureModes.push({
         id: fm.id || uid(),
         fmeaId: oldData.fmeaId,
-        l2FuncId: relatedL2Func?.id || '',
+        l2FuncId: relatedL2Func.id, // ★ 항상 유효한 ID
         l2StructId: l2Struct.id,
-        productCharId: fm.productCharId || '', // ✅ productCharId 저장
+        productCharId: fm.productCharId || null, // ✅ null로 변경 (빈 문자열 대신)
         mode: fm.name,
         specialChar: fm.sc,
       });
@@ -340,9 +365,13 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
     });
     
     // ✅ L3 고장원인 (FC) - proc.failureCauses에서 읽기 (FailureMode 패턴과 동일)
-    // processCharId를 직접 저장하여 데이터 손실 방지
+    // ★★★ FK 원자성 보장: l3FuncId/l3StructId가 없으면 스킵 (FK 오류 방지) ★★★
     const procFailureCauses = proc.failureCauses || [];
     procFailureCauses.forEach((fc: any) => {
+      if (!fc.name || fc.name.includes('클릭') || fc.name.includes('추가')) {
+        return; // 빈 FC 스킵
+      }
+      
       // processCharId가 있으면 해당 공정특성의 L3Function 연결
       let relatedL3Func = fc.processCharId 
         ? db.l3Functions.find(f => f.id === fc.processCharId)
@@ -351,14 +380,19 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
       if (!relatedL3Func) {
         relatedL3Func = db.l3Functions.find(f => f.l2StructId === l2Struct.id);
       }
+      // ★★★ 핵심: L3Function이 없으면 스킵 (FK 오류 방지) ★★★
+      if (!relatedL3Func || !relatedL3Func.l3StructId) {
+        console.warn('[마이그레이션] FC 스킵 (L3Function 없음):', fc.name);
+        return; // FK가 없으면 저장 불가
+      }
       
       db.failureCauses.push({
         id: fc.id || uid(),
         fmeaId: oldData.fmeaId,
-        l3FuncId: relatedL3Func?.id || '',
-        l3StructId: relatedL3Func?.l3StructId || '',
+        l3FuncId: relatedL3Func.id, // ★ 항상 유효한 ID
+        l3StructId: relatedL3Func.l3StructId, // ★ 항상 유효한 ID
         l2StructId: l2Struct.id,
-        processCharId: fc.processCharId || '', // ✅ processCharId 직접 저장 (FailureMode 패턴)
+        processCharId: fc.processCharId || null, // ✅ null로 변경 (빈 문자열 대신)
         cause: fc.name,
         occurrence: fc.occurrence,
       });
@@ -393,10 +427,14 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
   
   // 4. 기존 고장연결 데이터 마이그레이션
   const oldLinks = oldData.failureLinks || [];
+  // ★★★ FK 원자성 보장: fmId, feId, fcId 모두 유효해야 저장 ★★★
   oldLinks.forEach((oldLink: any) => {
     // FM 찾기
     const fm = db.failureModes.find(m => m.id === oldLink.fmId || m.mode === oldLink.fmText);
-    if (!fm) return;
+    if (!fm) {
+      console.warn('[마이그레이션] FailureLink 스킵 (FM 없음):', oldLink.fmText?.substring(0, 20));
+      return;
+    }
     
     // FE 찾기 (ID 또는 텍스트로)
     let fe = db.failureEffects.find(e => e.id === oldLink.feId);
@@ -410,23 +448,31 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
       fc = db.failureCauses.find(c => c.cause === oldLink.fcText);
     }
     
-    if (fe || fc) {
+    // ★★★ 핵심: FM, FE, FC 모두 유효해야 저장 (FK 오류 방지) ★★★
+    if (fm && fe && fc) {
       db.failureLinks.push({
         id: uid(),
         fmeaId: oldData.fmeaId,
         fmId: fm.id,
-        feId: fe?.id || '',
-        fcId: fc?.id || '',
+        feId: fe.id, // ★ 항상 유효한 ID
+        fcId: fc.id, // ★ 항상 유효한 ID
         cache: {
           fmText: fm.mode,
           fmProcess: oldLink.fmProcess || '',
-          feText: fe?.effect || oldLink.feText || '',
-          feCategory: fe?.category || oldLink.feScope || '',
-          feSeverity: fe?.severity || oldLink.severity || 0,
-          fcText: fc?.cause || oldLink.fcText || '',
+          feText: fe.effect || oldLink.feText || '',
+          feCategory: fe.category || oldLink.feScope || '',
+          feSeverity: fe.severity || oldLink.severity || 0,
+          fcText: fc.cause || oldLink.fcText || '',
           fcWorkElem: oldLink.fcWorkElem || '',
           fcProcess: oldLink.fcProcess || '',
         },
+      });
+    } else {
+      console.warn('[마이그레이션] FailureLink 스킵 (FK 불완전):', {
+        hasFM: !!fm,
+        hasFE: !!fe,
+        hasFC: !!fc,
+        fmText: oldLink.fmText?.substring(0, 20),
       });
     }
   });
