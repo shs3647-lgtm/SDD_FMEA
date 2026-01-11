@@ -239,18 +239,23 @@ export default function AllTabEmpty({
                       }
                       
                       // ★ 리스크분석 / 최적화 컬럼 - RiskOptCellRenderer 사용 (모듈화)
-                      // ★ 중요: rowSpan 병합 체크는 FailureCellRenderer와 동일한 조건 사용
+                      // ★★★ 2026-01-11: rowSpan 병합은 고장원인(FC)과 동일하게 적용 ★★★
                       if (col.step === '리스크분석' || col.step === '최적화') {
-                        // ★ 디버깅: 발생도 컬럼 렌더링 확인
-                        if (col.name === '발생도' && rowInFM === 0) {
-                          console.log(`[AllTabEmpty] 발생도 렌더링: colIdx=${colIdx}, col.id=${col.id}, col.name="${col.name}"`);
+                        // ★ 디버깅: 컬럼별 렌더링 상태 확인
+                        if (rowInFM === 0 && globalRowIdx < 3) {
+                          console.log(`[AllTabEmpty] ${col.name}: rowInFM=${rowInFM}, fcRowSpan=${row.fcRowSpan}, fcText="${row.fcText}"`);
                         }
                         
-                        // ★ FC별 rowSpan 조건: FailureCellRenderer와 동일
-                        const isInMergedRange = (): boolean => {
+                        // ★★★ 핵심 수정: FC와 동일한 병합 조건 사용 ★★★
+                        // 고장원인(FC)이 렌더링되면 리스크분석도 렌더링
+                        // 고장원인(FC)이 null이면 리스크분석도 null
+                        // FailureCellRenderer의 isInMergedRange('fc')와 동일한 로직
+                        const shouldSkip = (): boolean => {
+                          if (rowInFM === 0) return false; // 첫 행은 항상 렌더링
                           for (let prevIdx = 0; prevIdx < rowInFM; prevIdx++) {
                             const prevRow = fmGroup.rows[prevIdx];
                             if (!prevRow) continue;
+                            // 이전 행의 fcRowSpan이 현재 행까지 커버하면 스킵
                             if (prevRow.fcRowSpan > 1 && prevIdx + prevRow.fcRowSpan > rowInFM) {
                               return true;
                             }
@@ -259,7 +264,7 @@ export default function AllTabEmpty({
                         };
                         
                         // ★ 이전 행의 rowSpan에 포함되면 null 반환
-                        if (rowInFM > 0 && isInMergedRange()) {
+                        if (shouldSkip()) {
                           return null;
                         }
                         

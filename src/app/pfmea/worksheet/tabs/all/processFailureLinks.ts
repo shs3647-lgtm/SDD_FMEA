@@ -158,12 +158,17 @@ export function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[]
       let feRowSpan = 1;
       let fcRowSpan = 1;
       
+      // ★ feList 개수 < fcList 개수: 마지막 FE가 남은 행을 모두 병합
       if (feList.length < fcList.length && i === feList.length - 1 && feList.length > 0) {
         feRowSpan = maxRows - i;
       }
+      // ★ fcList 개수 < feList 개수: 마지막 FC가 남은 행을 모두 병합
       if (fcList.length < feList.length && i === fcList.length - 1 && fcList.length > 0) {
         fcRowSpan = maxRows - i;
       }
+      
+      // ★★★ 디버깅 로그 ★★★
+      console.log(`[processFailureLinks] FM=${group.fmText.slice(0,10)}, row=${i}/${maxRows}, fe=${fe?.text?.slice(0,8) || 'null'}, fc=${fc?.text?.slice(0,8) || 'null'}, feSpan=${feRowSpan}, fcSpan=${fcRowSpan}`);
       
       rows.push({
         feId: fe?.id || '',        // ★ 고유 키용
