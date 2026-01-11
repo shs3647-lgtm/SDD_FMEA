@@ -743,6 +743,67 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
     db.failureAnalyses = [];
   }
   
+  // ============ 리스크분석 데이터 생성 ============
+  // riskData를 riskAnalyses로 변환
+  const riskData = (oldData as any).riskData || {};
+  db.riskAnalyses = [];
+  
+  if (db.failureLinks.length > 0 && Object.keys(riskData).length > 0) {
+    db.failureLinks.forEach((link) => {
+      const uniqueKey = `${link.fmId}-${link.fcId}`;
+      
+      // riskData에서 SOD 값 추출
+      const oKey = `risk-${uniqueKey}-O`;
+      const dKey = `risk-${uniqueKey}-D`;
+      const preventionKey = `prevention-${uniqueKey}`;
+      const detectionKey = `detection-${uniqueKey}`;
+      
+      const occurrence = typeof riskData[oKey] === 'number' && riskData[oKey] >= 1 && riskData[oKey] <= 10 
+        ? riskData[oKey] 
+        : 0;
+      const detection = typeof riskData[dKey] === 'number' && riskData[dKey] >= 1 && riskData[dKey] <= 10 
+        ? riskData[dKey] 
+        : 0;
+      
+      // 심각도는 failureLink에서 가져오거나 failureEffects에서 최대값
+      let severity = 0;
+      if (link.cache?.feSeverity) {
+        severity = link.cache.feSeverity;
+      } else {
+        // failureEffects에서 해당 feId의 심각도 찾기
+        const fe = db.failureEffects.find(e => e.id === link.feId);
+        if (fe && fe.severity) {
+          severity = fe.severity;
+        }
+      }
+      
+      // SOD 값이 모두 있으면 RiskAnalysis 생성
+      if (severity > 0 && occurrence > 0 && detection > 0) {
+        const ap = calculateAP(severity, occurrence, detection);
+        const preventionControl = typeof riskData[preventionKey] === 'string' ? riskData[preventionKey] : undefined;
+        const detectionControl = typeof riskData[detectionKey] === 'string' ? riskData[detectionKey] : undefined;
+        
+        const riskAnalysis: RiskAnalysis = {
+          id: uid(),
+          fmeaId: db.fmeaId,
+          linkId: link.id,
+          severity,
+          occurrence,
+          detection,
+          ap,
+          preventionControl,
+          detectionControl,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        
+        db.riskAnalyses.push(riskAnalysis);
+      }
+    });
+    
+    console.log('[마이그레이션] 리스크분석 데이터 생성:', db.riskAnalyses.length, '개');
+  }
+  
   console.log('[마이그레이션] 완료:', {
     l1Structure: db.l1Structure?.name,
     l2Structures: db.l2Structures.length,
@@ -755,6 +816,7 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
     failureCauses: db.failureCauses.length,
     failureLinks: db.failureLinks.length,
     failureAnalyses: db.failureAnalyses.length,
+    riskAnalyses: db.riskAnalyses.length,
   });
   
   return db;
