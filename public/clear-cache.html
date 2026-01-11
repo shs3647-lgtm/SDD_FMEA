@@ -34,30 +34,22 @@
     
     function clearRiskData() {
       const keys = listKeys();
-      let count = 0;
+      let cleared = 0;
       
       keys.forEach(key => {
         try {
           const data = JSON.parse(localStorage.getItem(key));
           if (data && data.riskData) {
-            // riskData에서 S/O/D 키 중 숫자가 아닌 것 삭제
-            const toDelete = Object.keys(data.riskData).filter(k => {
-              const val = data.riskData[k];
-              return (k.includes('-O') || k.includes('-D') || k.includes('-S')) && typeof val !== 'number';
-            });
-            
-            toDelete.forEach(k => {
-              delete data.riskData[k];
-              count++;
-            });
-            
+            // riskData 완전 초기화
+            data.riskData = {};
             localStorage.setItem(key, JSON.stringify(data));
+            cleared++;
           }
         } catch (e) {}
       });
       
       document.getElementById('result').innerHTML = 
-        '<div class="success">✅ ' + count + '개 잘못된 riskData 키 삭제 완료!</div>' +
+        '<div class="success">✅ ' + cleared + '개 파일의 riskData 완전 초기화 완료!</div>' +
         '<p><a href="/pfmea/worksheet?id=PFM26-M001">워크시트로 돌아가기</a></p>';
     }
     
