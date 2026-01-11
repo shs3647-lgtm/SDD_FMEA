@@ -375,7 +375,7 @@ export default function DataSelectModal({
 
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     <div 
       className="fixed inset-0 z-[99999] bg-black/40"
       onClick={onClose}
@@ -659,4 +659,6 @@ export default function DataSelectModal({
       </div>
     </div>
   );
+
+  return typeof window !== 'undefined' ? createPortal(modalContent, document.body) : null;
 }
