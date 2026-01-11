@@ -98,10 +98,23 @@ export default function AllTabRenderer({
     }
   });
 
-  // ★ FC 역전개를 위한 맵 생성 (state.l3에서)
-  // fcId → { workFunction, processChar } 매핑
+  // ★ FC 역전개를 위한 맵 생성 (state.l2에서)
+  // fcId → { workFunction, processChar, causeText } 매핑
   const fcToL3Map = new Map<string, { workFunction: string; processChar: string }>();
+  const fcToTextMap = new Map<string, string>();  // ★ fcId → cause 텍스트 매핑
+  
   (state.l2 || []).forEach((proc: any) => {
+    // ★ 먼저 모든 failureCauses의 cause 텍스트 수집
+    (proc.failureCauses || []).forEach((fc: any) => {
+      if (fc.id) {
+        // cause 또는 name 필드에서 고장원인 텍스트 가져오기
+        const causeText = fc.cause || fc.name || '';
+        if (causeText) {
+          fcToTextMap.set(fc.id, causeText);
+        }
+      }
+    });
+    
     (proc.l3 || []).forEach((we: any) => {
       (we.functions || []).forEach((fn: any) => {
         (fn.processChars || []).forEach((pc: any) => {
@@ -118,12 +131,27 @@ export default function AllTabRenderer({
       });
     });
   });
+  
+  console.log('🟠 fcToTextMap:', { count: fcToTextMap.size, sample: Array.from(fcToTextMap.entries()).slice(0, 3) });
 
   // ★ FM 역전개를 위한 맵 생성 (state.l2에서)
   // fmId → { processFunction, productChar } 매핑
   const fmToL2Map = new Map<string, { processFunction: string; productChar: string; processNo: string; processName: string }>();
+  const fmToTextMap = new Map<string, string>();  // ★ fmId → mode 텍스트 매핑
+  
   (state.l2 || []).forEach((proc: any) => {
     if (!proc.name) return;
+    
+    // ★ 먼저 모든 failureModes의 mode 텍스트 수집
+    (proc.failureModes || []).forEach((fm: any) => {
+      if (fm.id) {
+        const modeText = fm.mode || fm.name || '';
+        if (modeText) {
+          fmToTextMap.set(fm.id, modeText);
+        }
+      }
+    });
+    
     (proc.failureModes || []).forEach((fm: any) => {
       if (!fm.id) return;
       
@@ -158,6 +186,20 @@ export default function AllTabRenderer({
       });
     });
   });
+  
+  // ★ FE 텍스트 매핑 (failureScopes에서)
+  const feToTextMap = new Map<string, { text: string; severity: number }>();
+  failureScopes.forEach((fs: any) => {
+    if (fs.id) {
+      feToTextMap.set(fs.id, {
+        text: fs.effect || fs.name || '',
+        severity: fs.severity || 0,
+      });
+    }
+  });
+  
+  console.log('🟠 fmToTextMap:', { count: fmToTextMap.size });
+  console.log('🟠 feToTextMap:', { count: feToTextMap.size });
 
   // ★ 고장연결 데이터 추출 (state.failureLinks에서) + 기능분석 역전개
   const rawFailureLinks = (state as any).failureLinks || [];
@@ -200,9 +242,15 @@ export default function AllTabRenderer({
     const fmProcessNo = fmL2Data?.processNo || '';
     const fmProcessName = fmL2Data?.processName || link.fmProcess || '';
     
+    // ★ DB에서 텍스트 조회 (fallback)
+    const dbFmText = fmToTextMap.get(fmId) || '';
+    const dbFeData = feToTextMap.get(feId);
+    const dbFcText = fcToTextMap.get(link.fcId || '') || '';
+    
     return {
       fmId,
-      fmText: link.fmText || link.cache?.fmText || '',
+      // ★ fmText: 1순위 link, 2순위 cache, 3순위 DB 조회
+      fmText: link.fmText || link.cache?.fmText || dbFmText,
       // ★ L1 역전개 데이터 (완제품명)
       l1ProductName,     // ★ 완제품 공정명
       fmProcessNo,       // ★ 공정번호
@@ -210,11 +258,13 @@ export default function AllTabRenderer({
       fmProcessFunction, // ★ 공정기능 (역전개)
       fmProductChar,     // ★ 제품특성 (역전개)
       feId,
-      feText,
-      // ★ 심각도: severity 또는 feSeverity 둘 다 확인
-      feSeverity: link.severity || link.feSeverity || link.cache?.feSeverity || 0,
+      // ★ feText: 1순위 link, 2순위 cache, 3순위 DB 조회
+      feText: feText || dbFeData?.text || '',
+      // ★ 심각도: 1순위 link, 2순위 cache, 3순위 DB 조회
+      feSeverity: link.severity || link.feSeverity || link.cache?.feSeverity || dbFeData?.severity || 0,
       fcId: link.fcId || '',
-      fcText: link.fcText || link.cache?.fcText || '',
+      // ★ fcText: 1순위 link, 2순위 cache, 3순위 DB 조회
+      fcText: link.fcText || link.cache?.fcText || dbFcText,
       // ★ FE 역전개 데이터
       feCategory,        // 구분 (Your Plant / Ship to Plant / User)
       feFunctionName,    // 완제품기능
