@@ -1,12 +1,12 @@
 /**
  * @file FailureCellRenderer.tsx
  * @description 고장분석(4단계) 셀 렌더링 - 고장영향(FE), 심각도, 고장형태(FM), 고장원인(FC)
+ * @updated 2026-01-11 - 셀 스타일 최적화 (패딩 1px, 폰트 120% 한줄)
  */
 'use client';
 
 import React from 'react';
-
-const HEIGHTS = { body: 28 };
+import { HEIGHTS, CELL_STYLE, STEP_DIVIDER, STEP_FIRST_COLUMN_IDS } from './allTabConstants';
 
 interface ColumnDef {
   id: number;
@@ -23,6 +23,7 @@ interface FMGroupRow {
   isFirstRow: boolean;
   feIdx?: number;
   fcIdx?: number;
+  feId?: string;    // ★ 2026-01-11: FE 고유 ID 추가
   feText: string;
   feSeverity: number;
   fcText: string;
@@ -57,6 +58,17 @@ interface FailureCellRendererProps {
   row: FMGroupRow;
   rowInFM: number;
   globalRowIdx: number;
+  // ★ 2026-01-11: 심각도 클릭 핸들러 추가
+  // ★ 2026-01-11: feId 파라미터 추가 - 개별 FE에 점수 부여
+  handleSODClick?: (
+    category: 'S' | 'O' | 'D', 
+    targetType: 'risk' | 'opt' | 'failure', 
+    rowIndex: number, 
+    currentValue?: number, 
+    feCategory?: string,
+    feId?: string,  // ★ 개별 FE ID
+    feText?: string // ★ FE 텍스트 (표시용)
+  ) => void;
 }
 
 export function FailureCellRenderer({
@@ -67,17 +79,23 @@ export function FailureCellRenderer({
   row,
   rowInFM,
   globalRowIdx,
+  handleSODClick,
 }: FailureCellRendererProps): React.ReactElement | null {
-  // ✅ shorthand/non-shorthand 충돌 방지: 개별 border 속성 사용
+  // ★ 2026-01-11: 셀 스타일 최적화 (패딩 1px, 폰트 120% 한줄) + 단계 구분선
+  const isStepFirst = STEP_FIRST_COLUMN_IDS.includes(col.id);
   const cellStyle = (rowSpan: number, useGlobalIdx = false) => ({
     background: (useGlobalIdx ? globalRowIdx : fmIdx) % 2 === 0 ? col.cellColor : col.cellAltColor,
     height: `${HEIGHTS.body}px`,
-    padding: '3px 4px',
+    padding: CELL_STYLE.padding,
     borderTop: '1px solid #ccc',
     borderRight: '1px solid #ccc',
     borderBottom: '1px solid #ccc',
-    borderLeft: '1px solid #ccc',
-    fontSize: '11px',
+    borderLeft: isStepFirst ? `${STEP_DIVIDER.borderWidth} ${STEP_DIVIDER.borderStyle} ${STEP_DIVIDER.borderColor}` : '1px solid #ccc',
+    fontSize: CELL_STYLE.fontSize,
+    lineHeight: CELL_STYLE.lineHeight,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    wordBreak: 'break-word' as const,
     textAlign: col.align,
     verticalAlign: 'middle' as const,
   });
@@ -95,28 +113,72 @@ export function FailureCellRenderer({
     return false;
   };
 
-  // ★ 고장영향(FE) - FE별 병합, (S)형식 표시
+  // ★ 고장영향(FE) - FE별 병합, 클릭하여 점수 부여
   if (col.name === '고장영향(FE)') {
     // ★ rowSpan=0이면 병합된 범위 → 렌더링 안함
     if (row.feRowSpan === 0) return null;
     // 누적 범위 체크: 이전 행의 feRowSpan 범위 안에 있으면 렌더링하지 않음
     if (rowInFM === 0 || !isInMergedRange('fe')) {
-      const severityDisplay = row.feSeverity > 0 ? `(${row.feSeverity})` : '';
+      const severityDisplay = row.feSeverity > 0 ? ` (S${row.feSeverity})` : '';
       return (
-        <td key={colIdx} rowSpan={row.feRowSpan} style={{ ...cellStyle(row.feRowSpan), borderBottom: rowInFM === fmGroup.rows.length - 1 ? '2px solid #303f9f' : '1px solid #ccc' }}>
-          {row.feText}{severityDisplay}
+        <td 
+          key={colIdx} 
+          rowSpan={row.feRowSpan} 
+          style={{ 
+            ...cellStyle(row.feRowSpan), 
+            borderBottom: rowInFM === fmGroup.rows.length - 1 ? '2px solid #303f9f' : '1px solid #ccc',
+            cursor: 'pointer',
+            // ★ 점수가 있으면 배경색 표시
+            backgroundColor: row.feSeverity > 0 ? '#fff3e0' : undefined,
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (handleSODClick) {
+              // ★ 개별 FE에 점수 부여 - feId와 feText 전달
+              handleSODClick('S', 'failure', globalRowIdx, row.feSeverity, row.feCategory, row.feId, row.feText);
+            }
+          }}
+          title={`클릭하여 "${row.feText}" 심각도 설정`}
+        >
+          <span style={{ fontWeight: row.feSeverity > 0 ? 600 : 400 }}>
+            {row.feText}
+          </span>
+          {severityDisplay && (
+            <span style={{ color: '#e65100', fontWeight: 700, marginLeft: '4px' }}>
+              {severityDisplay}
+            </span>
+          )}
         </td>
       );
     }
     return null;
   }
 
-  // ★ 심각도 - FM 전체 병합, 최대값
+  // ★ 심각도 - FM 전체 병합, 최대값 표시 (클릭 시 전체 FE에 점수 부여)
   if (col.name === '심각도') {
     if (row.isFirstRow) {
       return (
-        <td key={colIdx} rowSpan={fmGroup.fmRowSpan} style={{ ...cellStyle(fmGroup.fmRowSpan), fontSize: '12px', textAlign: 'center', fontWeight: 700 }}>
-          {fmGroup.maxSeverity > 0 ? fmGroup.maxSeverity : ''}
+        <td 
+          key={colIdx} 
+          rowSpan={fmGroup.fmRowSpan} 
+          style={{ 
+            ...cellStyle(fmGroup.fmRowSpan), 
+            fontSize: '12px', 
+            textAlign: 'center', 
+            fontWeight: 700,
+            cursor: 'pointer',
+            backgroundColor: fmGroup.maxSeverity > 0 ? '#ffccbc' : '#fff3e0',
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (handleSODClick) {
+              // ★ feId, feText를 undefined로 전달하여 전체 FE 업데이트
+              handleSODClick('S', 'failure', globalRowIdx, fmGroup.maxSeverity, row.feCategory, undefined, undefined);
+            }
+          }}
+          title="클릭하여 모든 고장영향의 심각도 일괄 수정"
+        >
+          {fmGroup.maxSeverity > 0 ? fmGroup.maxSeverity : '-'}
         </td>
       );
     }

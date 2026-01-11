@@ -25,7 +25,8 @@ import { processFailureLinks, FailureLinkRow, ProcessedFMGroup } from './process
 import { 
   COLORS, HEIGHTS, COLUMNS_BASE, STEP_COLORS, STEP_LABELS,
   getColumnsWithRPN, calculateStepSpans, calculateGroupSpans,
-  ColumnDef, StepSpan, GroupSpan 
+  ColumnDef, StepSpan, GroupSpan,
+  CELL_STYLE, FM_DIVIDER, STEP_DIVIDER, STEP_FIRST_COLUMN_IDS  // ★ 2026-01-11: 셀 스타일 최적화 + 단계 구분선
 } from './allTabConstants';
 import type { WorksheetState } from '../../constants';
 
@@ -133,7 +134,10 @@ export default function AllTabEmpty({
                   color: '#fff',
                   height: `${HEIGHTS.header1}px`,
                   padding: '4px 8px',
-                  border: '1px solid #ccc',
+                  borderTop: '1px solid #ccc',
+                  borderRight: '1px solid #ccc',
+                  borderBottom: '1px solid #ccc',
+                  borderLeft: `${STEP_DIVIDER.borderWidth} ${STEP_DIVIDER.borderStyle} ${STEP_DIVIDER.borderColor}`,
                   fontWeight: 800,
                   fontSize: '12px',
                   textAlign: 'center',
@@ -149,47 +153,59 @@ export default function AllTabEmpty({
           
           {/* 2행: 분류 (중분류) - 레벨별 색상, 네이비 배경은 흰색 글씨 */}
           <tr>
-            {groupSpans.map((span, idx) => (
-              <th
-                key={idx}
-                colSpan={span.colSpan}
-                style={{
-                  background: span.color,
-                  color: span.isDark ? '#fff' : '#000',
-                  height: `${HEIGHTS.header2}px`,
-                  padding: '4px 6px',
-                  border: '1px solid #ccc',
-                  fontWeight: 600,
-                  fontSize: '11px',
-                  textAlign: 'center',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {span.group}
-              </th>
-            ))}
+            {groupSpans.map((span, idx) => {
+              const isStepFirst = STEP_FIRST_COLUMN_IDS.includes(span.startColId);
+              return (
+                <th
+                  key={idx}
+                  colSpan={span.colSpan}
+                  style={{
+                    background: span.color,
+                    color: span.isDark ? '#fff' : '#000',
+                    height: `${HEIGHTS.header2}px`,
+                    padding: '4px 6px',
+                    borderTop: '1px solid #ccc',
+                    borderRight: '1px solid #ccc',
+                    borderBottom: '1px solid #ccc',
+                    borderLeft: isStepFirst ? `${STEP_DIVIDER.borderWidth} ${STEP_DIVIDER.borderStyle} ${STEP_DIVIDER.borderColor}` : '1px solid #ccc',
+                    fontWeight: 600,
+                    fontSize: '11px',
+                    textAlign: 'center',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {span.group}
+                </th>
+              );
+            })}
           </tr>
           
           {/* 3행: 컬럼명 (소분류) - 네이비 배경은 흰색 글씨 */}
           <tr>
-            {columns.map((col, idx) => (
-              <th
-                key={idx}
-                style={{
-                  background: col.isDark ? col.headerColor : col.cellAltColor,
-                  color: col.isDark ? '#fff' : '#000',
-                  height: `${HEIGHTS.header3}px`,
-                  padding: '3px 4px',
-                  border: '1px solid #ccc',
-                  fontWeight: 600,
-                  fontSize: '11px',
-                  textAlign: 'center',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {col.name}
-              </th>
-            ))}
+            {columns.map((col, idx) => {
+              const isStepFirst = STEP_FIRST_COLUMN_IDS.includes(col.id);
+              return (
+                <th
+                  key={idx}
+                  style={{
+                    background: col.isDark ? col.headerColor : col.cellAltColor,
+                    color: col.isDark ? '#fff' : '#000',
+                    height: `${HEIGHTS.header3}px`,
+                    padding: '3px 4px',
+                    borderTop: '1px solid #ccc',
+                    borderRight: '1px solid #ccc',
+                    borderBottom: '1px solid #ccc',
+                    borderLeft: isStepFirst ? `${STEP_DIVIDER.borderWidth} ${STEP_DIVIDER.borderStyle} ${STEP_DIVIDER.borderColor}` : '1px solid #ccc',
+                    fontWeight: 600,
+                    fontSize: '11px',
+                    textAlign: 'center',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {col.name}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         
@@ -201,11 +217,16 @@ export default function AllTabEmpty({
                 const globalRowIdx = processedFMGroups.slice(0, fmIdx).reduce((acc, g) => acc + g.rows.length, 0) + rowInFM;
                 const isLastRowOfFM = rowInFM === fmGroup.rows.length - 1;
                 
-                // ✅ 마지막 행 표시를 위한 플래그 (td에서 처리)
+                // ★ 2026-01-11: FM 그룹 구분선 및 최적화 스타일
+                const fmDividerStyle = isLastRowOfFM ? {
+                  borderBottom: `${FM_DIVIDER.borderWidth} ${FM_DIVIDER.borderStyle} ${FM_DIVIDER.borderColor}`,
+                } : {};
+                
                 return (
                   <tr 
                     key={`fm-${fmGroup.fmId}-${rowInFM}`}
                     data-last-row={isLastRowOfFM ? 'true' : undefined}
+                    style={fmDividerStyle}
                   >
                     {columns.map((col, colIdx) => {
                       // ★★★ 2026-01-11 핵심 수정: rowSpan 범위 체크 헬퍼 함수 ★★★
@@ -231,6 +252,7 @@ export default function AllTabEmpty({
                       if (col.step === '고장분석') {
                         return FailureCellRenderer({
                           col, colIdx, fmGroup, fmIdx, row, rowInFM, globalRowIdx,
+                          handleSODClick,  // ★ 2026-01-11: 심각도 클릭 핸들러 전달
                         });
                       }
                       

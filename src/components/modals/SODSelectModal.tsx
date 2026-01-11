@@ -272,20 +272,24 @@ export default function SODSelectModal({
                   let content: string | undefined = '';
                   if (category === 'S') {
                     // ✅ scope 값 명시적 비교 (대소문자 구분)
-                    if (scope === 'Your Plant') {
+                    // ★ scope 단축키 지원: YP, SP, User 또는 전체 이름
+                  const normalizedScope = 
+                    scope === 'YP' || scope === 'Your Plant' ? 'Your Plant' :
+                    scope === 'SP' || scope === 'Ship to Plant' ? 'Ship to Plant' :
+                    scope === 'User' || scope === 'End User' ? 'User' : scope;
+                  
+                  if (normalizedScope === 'Your Plant') {
                       content = item.yourPlant;
-                    } else if (scope === 'Ship to Plant') {
+                    } else if (normalizedScope === 'Ship to Plant') {
                       content = item.shipToPlant;
                       // ✅ shipToPlant가 없으면 명시적으로 확인
                       if (!content) {
-                        console.warn('[SODSelectModal] shipToPlant 필드가 비어있습니다. item:', item);
                         content = item.yourPlant || item.endUser || item.description;
                       }
-                    } else if (scope === 'User') {
+                    } else if (normalizedScope === 'User') {
                       content = item.endUser;
                     } else {
-                      // scope가 없으면 기본값
-                      console.warn('[SODSelectModal] scope가 정의되지 않았습니다. scope:', scope);
+                      // scope가 없으면 기본값 (yourPlant 우선)
                       content = item.yourPlant || item.endUser || item.description;
                     }
                   } else {

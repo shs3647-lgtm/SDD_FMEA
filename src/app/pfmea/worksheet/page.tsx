@@ -73,14 +73,14 @@ function FMEAWorksheetPageContent() {
   const router = useRouter();
   
   // ✅ FMEA 워크시트 기본 배율 110% 설정
-  React.useEffect(() => {
-    // 워크시트 메인 컨테이너에 110% zoom 적용
-    const worksheetContainer = document.getElementById('fmea-worksheet-container');
-    if (worksheetContainer) {
-      worksheetContainer.style.zoom = '1.1';
-      worksheetContainer.style.transformOrigin = '0 0';
-    }
-  }, []);
+  // ⚠️ 2026-01-11: zoom은 클릭 이벤트에 영향을 줄 수 있어 비활성화
+  // React.useEffect(() => {
+  //   const worksheetContainer = document.getElementById('fmea-worksheet-container');
+  //   if (worksheetContainer) {
+  //     worksheetContainer.style.zoom = '1.1';
+  //     worksheetContainer.style.transformOrigin = '0 0';
+  //   }
+  // }, []);
   
   // ✅ 상속 정보 상태
   const [inheritInfo, setInheritInfo] = React.useState<{
@@ -613,8 +613,8 @@ function FMEAWorksheetPageContent() {
         {/* ========== 메인 레이아웃 (메뉴 아래, 상속 배너 고려) ========== */}
         <div className={`fixed ${inheritInfo ? 'top-[128px]' : 'top-[100px]'} left-[50px] right-0 bottom-0 flex flex-row overflow-hidden`}>
           
-          {/* ===== 좌측: 워크시트 영역 (110% 기본 배율) ===== */}
-          <div id="fmea-worksheet-container" className="flex-1 flex flex-col min-w-0 bg-white overflow-hidden" style={{ zoom: '1.1', transformOrigin: '0 0' }}>
+          {/* ===== 좌측: 워크시트 영역 ===== */}
+          <div id="fmea-worksheet-container" className="flex-1 flex flex-col min-w-0 bg-white overflow-hidden">
 
             {/* 구조분석 제목 바는 StructureTab 내부 헤더로 이동됨 (표준화 완료) */}
 

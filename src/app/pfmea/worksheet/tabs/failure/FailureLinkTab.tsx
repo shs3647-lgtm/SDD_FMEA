@@ -243,6 +243,7 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     items.sort((a, b) => (scopeOrder[a.scope] ?? 9) - (scopeOrder[b.scope] ?? 9));
     
     console.log('[FE 데이터]', items.length, '개 (확정됨 + 중복 제거됨 + 정렬됨):', items.map(f => `${f.feNo}:${f.text.substring(0, 20)}`));
+    console.log('[FE 데이터] 심각도 확인:', items.map(f => ({ feNo: f.feNo, severity: f.severity })));
     return items;
   }, [state.l1, isL1Confirmed]);
 
@@ -1054,6 +1055,7 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     });
     
     console.log('[연결 확정]', currentFM.text, '→ FE:', feArray.length, 'FC:', fcArray.length, '총:', newLinks.length);
+    console.log('[연결 확정] 심각도 확인:', newLinks.map(l => ({ feText: l.feText?.slice(0,10), severity: l.severity })));
     
     // ✅ 핵심: useEffect가 linkedFEs/linkedFCs를 덮어쓰지 않도록 플래그 설정
     justConfirmedRef.current = true;

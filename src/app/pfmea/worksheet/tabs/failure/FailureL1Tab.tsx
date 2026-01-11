@@ -843,9 +843,20 @@ export default function FailureL1Tab({ state, setState, setStateSynced, setDirty
                     minWidth: '30px',
                     maxWidth: '30px',
                     background: row.severity && row.severity >= 8 ? '#ffe0b2' : row.severity && row.severity >= 5 ? '#fff9c4' : zebra.failure,
-                    cursor: row.effectId ? 'pointer' : 'default'
+                    cursor: 'pointer',
+                    position: 'relative',
+                    zIndex: 10
                   }}
-                  onClick={() => {
+                  onMouseDown={(e) => {
+                    console.log('🟡 심각도 onMouseDown:', e.target);
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log('🔴 심각도 셀 클릭됨:', { effectId: row.effectId, typeName: row.typeName, effect: row.effect });
+                    if (!row.effectId) {
+                      alert('⚠️ 고장영향(FE)을 먼저 선택해주세요.');
+                      return;
+                    }
                     if (row.effectId) {
                       // ✅ scope 값 명시적 확인 및 전달 (약어 'SP', 'YP'도 처리)
                       const tn = row.typeName?.trim();

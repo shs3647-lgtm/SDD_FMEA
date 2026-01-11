@@ -1,12 +1,12 @@
 /**
  * @file StructureCellRenderer.tsx
  * @description 구조분석(2단계) 셀 렌더링 - 완제품공정명, NO+공정명, 4M, 작업요소
+ * @updated 2026-01-11 - 셀 스타일 최적화 (패딩 1px, 폰트 120% 한줄)
  */
 'use client';
 
 import React from 'react';
-
-const HEIGHTS = { body: 28 };
+import { HEIGHTS, CELL_STYLE, STEP_DIVIDER, STEP_FIRST_COLUMN_IDS } from './allTabConstants';
 
 interface ColumnDef {
   id: number;
@@ -54,18 +54,23 @@ export function StructureCellRenderer({
   globalRowIdx,
   l1ProductName,
 }: StructureCellRendererProps): React.ReactElement | null {
-  // ✅ shorthand/non-shorthand 충돌 방지: 개별 border 속성 사용
+  // ★ 2026-01-11: 셀 스타일 최적화 (패딩 1px, 폰트 120% 한줄) + 단계 구분선
+  const isStepFirst = STEP_FIRST_COLUMN_IDS.includes(col.id);
   const cellStyle = (rowSpan: number, useGlobalIdx = false) => ({
     background: (useGlobalIdx ? globalRowIdx : fmIdx) % 2 === 0 ? col.cellColor : col.cellAltColor,
     height: `${HEIGHTS.body}px`,
-    padding: '3px 4px',
+    padding: CELL_STYLE.padding,
     borderTop: '1px solid #ccc',
     borderRight: '1px solid #ccc',
     borderBottom: '1px solid #ccc',
-    borderLeft: '1px solid #ccc',
-    fontSize: '11px',
+    borderLeft: isStepFirst ? `${STEP_DIVIDER.borderWidth} ${STEP_DIVIDER.borderStyle} ${STEP_DIVIDER.borderColor}` : '1px solid #ccc',
+    fontSize: CELL_STYLE.fontSize,
+    lineHeight: CELL_STYLE.lineHeight,
     textAlign: col.align,
     verticalAlign: 'middle' as const,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    wordBreak: 'break-word' as const,
   });
 
   // ★ 누적 rowSpan 범위 체크 헬퍼 함수

@@ -2,11 +2,13 @@
  * @file RiskOptCellRenderer.tsx
  * @description 리스크분석/최적화 단계 셀 렌더링 컴포넌트
  * 컬럼 이름에 따라 적절한 셀 컴포넌트를 라우팅
+ * @updated 2026-01-11 - 셀 스타일 최적화 (패딩 1px, 폰트 120% 한줄)
  */
 'use client';
 
 import React from 'react';
 import type { WorksheetState } from '../../constants';
+import { HEIGHTS, CELL_STYLE, STEP_DIVIDER, STEP_FIRST_COLUMN_IDS } from './allTabConstants';
 
 /** 컬럼 정의 */
 interface ColumnDef {
@@ -48,9 +50,6 @@ interface RiskOptCellRendererProps {
   setApModal: React.Dispatch<React.SetStateAction<{ isOpen: boolean; stage: 5 | 6; data: any[] }>>;
 }
 
-/** 높이 상수 */
-const HEIGHTS = { body: 28 };
-
 /** 컬럼명과 필드 매핑 */
 const FIELD_MAP: Record<string, string> = {
   '습득교훈': 'lesson',
@@ -63,27 +62,34 @@ const FIELD_MAP: Record<string, string> = {
 
 const STATUS_OPTIONS = ['대기', '진행중', '완료', '보류'];
 
-/** 셀 스타일 생성 */
+/** ★ 2026-01-11: 셀 스타일 최적화 (패딩 1px, 폰트 120% 한줄) + 단계 구분선 */
 const getCellStyle = (
   globalRowIdx: number, 
   cellColor: string, 
   cellAltColor: string, 
   align: 'left' | 'center' | 'right',
-  isClickable = false
-) => ({
-  background: globalRowIdx % 2 === 0 ? cellColor : cellAltColor,
-  height: `${HEIGHTS.body}px`,
-  padding: '3px 4px',
-  // ✅ shorthand/non-shorthand 충돌 방지: 개별 border 속성 사용
-  borderTop: '1px solid #ccc',
-  borderRight: '1px solid #ccc',
-  borderBottom: '1px solid #ccc',
-  borderLeft: '1px solid #ccc',
-  fontSize: '11px',
-  textAlign: align,
-  verticalAlign: 'middle' as const,
-  cursor: isClickable ? 'pointer' : 'default',
-});
+  isClickable = false,
+  colId = 0  // ★ 단계 구분선 체크용
+) => {
+  const isStepFirst = STEP_FIRST_COLUMN_IDS.includes(colId);
+  return {
+    background: globalRowIdx % 2 === 0 ? cellColor : cellAltColor,
+    height: `${HEIGHTS.body}px`,
+    padding: CELL_STYLE.padding,
+    borderTop: '1px solid #ccc',
+    borderRight: '1px solid #ccc',
+    borderBottom: '1px solid #ccc',
+    borderLeft: isStepFirst ? `${STEP_DIVIDER.borderWidth} ${STEP_DIVIDER.borderStyle} ${STEP_DIVIDER.borderColor}` : '1px solid #ccc',
+    fontSize: CELL_STYLE.fontSize,
+    lineHeight: CELL_STYLE.lineHeight,
+    textAlign: align,
+    verticalAlign: 'middle' as const,
+    cursor: isClickable ? 'pointer' : 'default',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    wordBreak: 'break-word' as const,
+  };
+};
 
 /** AP 색상 반환 */
 const getAPColor = (ap: 'H' | 'M' | 'L' | null, cellColor: string, cellAltColor: string, globalRowIdx: number) => {
@@ -135,7 +141,7 @@ export function RiskOptCellRenderer({
   const uniqueKey = fmId && fcId ? `${fmId}-${fcId}` : String(globalRowIdx);
   
   // ★ rowSpan 조건은 AllTabEmpty에서 이미 체크함 - 여기서는 항상 렌더링
-  const style = getCellStyle(globalRowIdx, col.cellColor, col.cellAltColor, col.align, true);
+  const style = getCellStyle(globalRowIdx, col.cellColor, col.cellAltColor, col.align, true, col.id);
 
   // ★ 예방관리(PC) / 예방관리개선 / 검출관리(DC) / 검출관리개선 / 특별특성 셀
   const controlTypes: Record<string, ControlModalType> = {

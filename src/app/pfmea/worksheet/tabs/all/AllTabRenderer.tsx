@@ -268,7 +268,11 @@ export default function AllTabRenderer({
       // ★ feText: 1순위 link, 2순위 cache, 3순위 DB 조회
       feText: feText || dbFeData?.text || '',
       // ★ 심각도: 1순위 link, 2순위 cache, 3순위 DB 조회
-      feSeverity: link.severity || link.feSeverity || link.cache?.feSeverity || dbFeData?.severity || 0,
+      feSeverity: (() => {
+        const sev = link.severity || link.feSeverity || link.cache?.feSeverity || dbFeData?.severity || 0;
+        if (sev > 0) console.log(`🔴 심각도 발견: ${sev} (feId=${feId})`);
+        return sev;
+      })(),
       fcId: link.fcId || '',
       // ★ fcText: 1순위 link, 2순위 cache, 3순위 DB 조회
       fcText: link.fcText || link.cache?.fcText || dbFcText,

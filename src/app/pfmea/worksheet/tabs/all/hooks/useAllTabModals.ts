@@ -12,10 +12,11 @@ export interface SODModalState {
   category: 'S' | 'O' | 'D';
   currentValue?: number;
   scope?: 'Your Plant' | 'Ship to Plant' | 'User';
-  targetType: 'risk' | 'opt';
+  targetType: 'risk' | 'opt' | 'failure';  // ★ 2026-01-11: failure 추가
   rowIndex: number;
   feIndex?: number;
   feText?: string;
+  feId?: string;   // ★ 2026-01-11: 개별 FE ID 추가
 }
 
 /** 컨트롤 모달 상태 타입 */
@@ -53,14 +54,14 @@ export function useAllTabModals(setState?: React.Dispatch<React.SetStateAction<W
   /** SOD 셀 클릭 핸들러 */
   const handleSODClick = (
     category: 'S' | 'O' | 'D',
-    targetType: 'risk' | 'opt',
+    targetType: 'risk' | 'opt' | 'failure',  // ★ 2026-01-11: failure 추가
     rowIndex: number,
     currentValue?: number,
     scope?: string,
-    feIndex?: number,
-    feText?: string
+    feId?: string,    // ★ 2026-01-11: 개별 FE ID
+    feText?: string   // ★ FE 텍스트 (표시용)
   ) => {
-    console.log('🔥 SOD 클릭:', { category, targetType, rowIndex, currentValue, scope, feText });
+    console.log('🔥 SOD 클릭:', { category, targetType, rowIndex, currentValue, scope, feId, feText });
     setSodModal({
       isOpen: true,
       category,
@@ -68,7 +69,7 @@ export function useAllTabModals(setState?: React.Dispatch<React.SetStateAction<W
       rowIndex,
       currentValue,
       scope: scope as 'Your Plant' | 'Ship to Plant' | 'User' | undefined,
-      feIndex,
+      feId,    // ★ 개별 FE ID 전달
       feText
     });
   };
@@ -82,6 +83,7 @@ export function useAllTabModals(setState?: React.Dispatch<React.SetStateAction<W
       targetType: sodModal.targetType,
       rowIndex: sodModal.rowIndex,
       feText: sodModal.feText,
+      scope: sodModal.scope,
       rating,
       item
     });
@@ -93,6 +95,70 @@ export function useAllTabModals(setState?: React.Dispatch<React.SetStateAction<W
       return;
     }
     
+    // ★★★ 2026-01-11: 고장분석 심각도 - 개별 FE 또는 전체에 적용 ★★★
+    if (sodModal.targetType === 'failure' && sodModal.category === 'S') {
+      setState((prevState: WorksheetState) => {
+        const failureScopes = prevState.l1?.failureScopes || [];
+        const failureLinks = (prevState as any).failureLinks || [];
+        
+        // ★ feId가 있으면 해당 FE만 업데이트, 없으면 전체 업데이트
+        const targetFeId = sodModal.feId;
+        const targetFeText = sodModal.feText;
+        
+        let updatedScopes;
+        let updatedLinks;
+        
+        if (targetFeId || targetFeText) {
+          // ★ 개별 FE에만 점수 부여 (고장영향 셀 클릭 시)
+          console.log(`🎯 개별 FE 업데이트: feId=${targetFeId}, feText=${targetFeText}`);
+          
+          updatedScopes = failureScopes.map((scope: any) => {
+            // feId로 매칭 또는 effect(feText)로 매칭
+            if ((targetFeId && scope.id === targetFeId) || 
+                (targetFeText && scope.effect === targetFeText)) {
+              console.log(`✅ FE 심각도 ${rating} 적용: ${scope.effect}`);
+              return { ...scope, severity: rating };
+            }
+            return scope;
+          });
+          
+          updatedLinks = failureLinks.map((link: any) => {
+            if ((targetFeId && link.feId === targetFeId) ||
+                (targetFeText && link.feText === targetFeText)) {
+              return { ...link, feSeverity: rating, severity: rating };
+            }
+            return link;
+          });
+        } else {
+          // ★ 전체 FE에 점수 부여 (심각도 컬럼 클릭 시)
+          console.log('🎯 전체 FE 업데이트');
+          
+          updatedScopes = failureScopes.map((scope: any) => {
+            return { ...scope, severity: rating };
+          });
+          
+          updatedLinks = failureLinks.map((link: any) => {
+            return { ...link, feSeverity: rating, severity: rating };
+          });
+        }
+        
+        return {
+          ...prevState,
+          l1: {
+            ...prevState.l1,
+            failureScopes: updatedScopes
+          },
+          failureLinks: updatedLinks
+        };
+      });
+      
+      setSodModal(prev => ({ ...prev, isOpen: false }));
+      const targetInfo = sodModal.feText ? `"${sodModal.feText}"` : '전체 FE';
+      console.log(`✅ [failure] ${categoryName} ${rating}점 저장 완료 (${targetInfo})`);
+      return;
+    }
+    
+    // ★ 리스크분석/최적화 - riskData에 저장
     setState((prevState: WorksheetState) => {
       console.log('📦 이전 상태:', prevState.riskData);
       

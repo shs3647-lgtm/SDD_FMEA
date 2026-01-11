@@ -61,8 +61,34 @@ export const HEIGHTS = {
   header1: 28,
   header2: 26,
   header3: 24,
-  body: 24,
+  body: 22, // 2px 축소하여 더 컴팩트하게
 };
+
+// ============ 셀 스타일 최적화 (2026-01-11) ============
+export const CELL_STYLE = {
+  padding: '1px 2px',       // 최소 패딩 (가로 2px, 세로 1px)
+  fontSize: '10px',         // 기본 폰트 크기
+  fontSizeCompact: '9px',   // 컴팩트 폰트 크기
+  lineHeight: 1.2,          // 120% 줄 높이
+  maxLines: 2,              // 최대 2줄 (120% 이상 시 줄바꿈)
+};
+
+// ============ FM 구분선 스타일 (2026-01-11) ============
+export const FM_DIVIDER = {
+  borderWidth: '2px',
+  borderColor: '#5c6bc0',   // FM 헤더 색상과 동일
+  borderStyle: 'solid',
+};
+
+// ============ 단계별 세로 구분선 (2026-01-11) ============
+export const STEP_DIVIDER = {
+  borderWidth: '2px',
+  borderColor: '#333',      // 진한 회색
+  borderStyle: 'solid',
+};
+
+// 각 단계의 첫 번째 컬럼 ID (세로 구분선 적용 대상)
+export const STEP_FIRST_COLUMN_IDS = [1, 5, 12, 16, 23]; // 구조분석, 기능분석, 고장분석, 리스크분석, 최적화
 
 // ============ 컬럼 정의 ============
 export interface ColumnDef {
@@ -88,23 +114,23 @@ export const COLUMNS_BASE: ColumnDef[] = [
     headerColor: COLORS.structure.main.headerLight, cellColor: COLORS.structure.main.cell, cellAltColor: COLORS.structure.main.cellAlt, align: 'left' },
   { id: 3, step: '구조분석', group: '3. 작업 요소명', name: '4M', width: 50, 
     headerColor: COLORS.structure.m4.headerLight, cellColor: COLORS.structure.m4.cell, cellAltColor: COLORS.structure.m4.cellAlt, align: 'center' },
-  { id: 4, step: '구조분석', group: '3. 작업 요소명', name: '작업요소', width: 120, 
+  { id: 4, step: '구조분석', group: '3. 작업 요소명', name: '작업요소', width: 140, 
     headerColor: COLORS.structure.workElement.headerLight, cellColor: COLORS.structure.workElement.cell, cellAltColor: COLORS.structure.workElement.cellAlt, align: 'left' },
   
   // ■ 3단계: 기능분석 (7컬럼)
   { id: 5, step: '기능분석', group: '1. 완제품 공정기능/요구사항', name: '구분', width: 50, 
     headerColor: COLORS.function.division.headerLight, cellColor: COLORS.function.division.cell, cellAltColor: COLORS.function.division.cellAlt, align: 'center' },
-  { id: 6, step: '기능분석', group: '1. 완제품 공정기능/요구사항', name: '완제품기능', width: 160, 
+  { id: 6, step: '기능분석', group: '1. 완제품 공정기능/요구사항', name: '완제품기능', width: 170, 
     headerColor: COLORS.function.productFunc.headerLight, cellColor: COLORS.function.productFunc.cell, cellAltColor: COLORS.function.productFunc.cellAlt, align: 'left' },
   { id: 7, step: '기능분석', group: '1. 완제품 공정기능/요구사항', name: '요구사항', width: 160, 
     headerColor: COLORS.function.requirement.headerLight, cellColor: COLORS.function.requirement.cell, cellAltColor: COLORS.function.requirement.cellAlt, align: 'left' },
   { id: 8, step: '기능분석', group: '2. 메인공정기능 및 제품특성', name: '공정 기능', width: 140, 
     headerColor: COLORS.function.processFunc.headerLight, cellColor: COLORS.function.processFunc.cell, cellAltColor: COLORS.function.processFunc.cellAlt, align: 'left' },
-  { id: 9, step: '기능분석', group: '2. 메인공정기능 및 제품특성', name: '제품특성', width: 120, 
+  { id: 9, step: '기능분석', group: '2. 메인공정기능 및 제품특성', name: '제품특성', width: 110, 
     headerColor: COLORS.function.productChar.headerLight, cellColor: COLORS.function.productChar.cell, cellAltColor: COLORS.function.productChar.cellAlt, align: 'left' },
   { id: 10, step: '기능분석', group: '3. 작업요소 기능 및 공정특성', name: '작업요소 기능', width: 140, 
     headerColor: COLORS.function.workFunc.headerLight, cellColor: COLORS.function.workFunc.cell, cellAltColor: COLORS.function.workFunc.cellAlt, align: 'left' },
-  { id: 11, step: '기능분석', group: '3. 작업요소 기능 및 공정특성', name: '공정특성', width: 120, 
+  { id: 11, step: '기능분석', group: '3. 작업요소 기능 및 공정특성', name: '공정특성', width: 110, 
     headerColor: COLORS.function.processChar.headerLight, cellColor: COLORS.function.processChar.cell, cellAltColor: COLORS.function.processChar.cellAlt, align: 'left' },
   
   // ■ 4단계: 고장분석 (4컬럼)
@@ -112,7 +138,7 @@ export const COLUMNS_BASE: ColumnDef[] = [
     headerColor: COLORS.failure.fe.headerLight, cellColor: COLORS.failure.fe.cell, cellAltColor: COLORS.failure.fe.cellAlt, align: 'left' },
   { id: 13, step: '고장분석', group: '1. 고장영향(FE)', name: '심각도', width: 50, 
     headerColor: COLORS.optimization.severity.headerLight, cellColor: COLORS.optimization.severity.cell, cellAltColor: COLORS.optimization.severity.cellAlt, align: 'center' },
-  { id: 14, step: '고장분석', group: '2. 고장형태(FM)', name: '고장형태(FM)', width: 140, 
+  { id: 14, step: '고장분석', group: '2. 고장형태(FM)', name: '고장형태(FM)', width: 135, 
     headerColor: COLORS.failure.fm.headerLight, cellColor: COLORS.failure.fm.cell, cellAltColor: COLORS.failure.fm.cellAlt, align: 'left', isDark: true },
   { id: 15, step: '고장분석', group: '3. 고장원인(FC)', name: '고장원인(FC)', width: 160, 
     headerColor: COLORS.failure.fc.headerLight, cellColor: COLORS.failure.fc.cell, cellAltColor: COLORS.failure.fc.cellAlt, align: 'left' },
@@ -241,6 +267,7 @@ export interface GroupSpan {
   colSpan: number;
   color: string;
   isDark?: boolean;
+  startColId: number;  // ★ 2026-01-11: 단계 구분선용
 }
 
 export function calculateGroupSpans(columns: ColumnDef[]): GroupSpan[] {
@@ -249,22 +276,24 @@ export function calculateGroupSpans(columns: ColumnDef[]): GroupSpan[] {
   let currentSpan = 0;
   let currentColor = '';
   let currentIsDark = false;
+  let currentStartColId = 0;
   
   columns.forEach((col, idx) => {
     if (col.group !== currentGroup) {
       if (currentSpan > 0) {
-        spans.push({ group: currentGroup, colSpan: currentSpan, color: currentColor, isDark: currentIsDark });
+        spans.push({ group: currentGroup, colSpan: currentSpan, color: currentColor, isDark: currentIsDark, startColId: currentStartColId });
       }
       currentGroup = col.group;
       currentSpan = 1;
       currentColor = col.headerColor;
       currentIsDark = col.isDark || false;
+      currentStartColId = col.id;  // ★ 그룹 시작 컬럼 ID 저장
     } else {
       currentSpan++;
     }
     
     if (idx === columns.length - 1) {
-      spans.push({ group: currentGroup, colSpan: currentSpan, color: currentColor, isDark: currentIsDark });
+      spans.push({ group: currentGroup, colSpan: currentSpan, color: currentColor, isDark: currentIsDark, startColId: currentStartColId });
     }
   });
   

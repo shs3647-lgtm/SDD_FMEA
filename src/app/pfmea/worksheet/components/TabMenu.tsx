@@ -75,6 +75,13 @@ export default function TabMenu({ state, setState, setStateSynced, setDirty, sav
                     return;
                   }
                   setState(prev => ({ ...prev, tab: tab.id }));
+                  // ★ 2026-01-11: 탭 위치 localStorage 저장 (새로고침 시 유지)
+                  const fmeaId = (state as any).fmeaId;
+                  if (fmeaId) {
+                    try {
+                      localStorage.setItem(`pfmea_tab_${fmeaId}`, tab.id);
+                    } catch (e) { /* ignore */ }
+                  }
                 }}
                 className={`
                   px-2 sm:px-3 lg:px-4 py-1 sm:py-1.5
