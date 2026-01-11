@@ -37,11 +37,12 @@ const IMPORTANT_TABLES = [
   { name: 'l1_functions', label: '📋 1L 기능', desc: '완제품 기능' },
   { name: 'l2_functions', label: '📋 2L 기능', desc: '공정 기능' },
   { name: 'l3_functions', label: '📋 3L 기능', desc: '작업요소 기능' },
-  // ===== 고장분석 =====
-  { name: 'failure_effects', label: '💥 고장영향', desc: 'FE' },
-  { name: 'failure_modes', label: '🔴 고장형태', desc: 'FM' },
-  { name: 'failure_causes', label: '🟠 고장원인', desc: 'FC' },
-  { name: 'failure_links', label: '🔗 고장연결', desc: 'FE-FM-FC' },
+  // ===== 4ST 고장분석 (FE/FM/FC 개별 항목) =====
+  { name: 'failure_effects', label: '💥 1L고장영향', desc: '4ST-FE' },
+  { name: 'failure_modes', label: '🔴 2L고장형태', desc: '4ST-FM' },
+  { name: 'failure_causes', label: '🟠 3L고장원인', desc: '4ST-FC' },
+  // ===== 고장연결 (FE-FM-FC 연결관계) =====
+  { name: 'failure_links', label: '🔗 고장연결', desc: 'FE↔FM↔FC' },
   // ===== 리스크/최적화 =====
   { name: 'risk_analyses', label: '📊 리스크', desc: 'S/O/D/AP' },
   { name: 'optimizations', label: '🎯 최적화', desc: '개선계획' },
