@@ -523,43 +523,122 @@ function RevisionManagementPageInner() {
       authorPosition: '',
     }));
 
-  // 회의록 로드/저장
+  // 회의록 로드 (DB API 우선 + localStorage 폴백)
   useEffect(() => {
     if (!selectedProjectId) {
       setMeetingMinutes(createDefaultMeetings());
       return;
     }
-    try {
-      const saved = localStorage.getItem(`fmea-meetings-${selectedProjectId}`);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // 최소 5개 행 보장
-        if (parsed.length < 5) {
-          const additional = Array.from({ length: 5 - parsed.length }, (_, i) => ({
-            id: `MEETING-${Date.now()}-${i}`,
-            no: parsed.length + i + 1,
-            date: '',
-            projectName: '',
-            content: '',
-            author: '',
-            authorPosition: '',
-          }));
-          setMeetingMinutes([...parsed, ...additional]);
-        } else {
-          setMeetingMinutes(parsed);
+
+    const loadMeetings = async () => {
+      try {
+        // 1. DB에서 회의록 조회
+        const response = await fetch(`/api/fmea/meetings?fmeaId=${selectedProjectId}`);
+        const result = await response.json();
+        
+        if (result.success && result.meetings.length > 0) {
+          console.log('✅ [개정관리] DB에서 회의록 로드:', result.meetings.length, '건');
+          // 최소 5개 행 보장
+          if (result.meetings.length < 5) {
+            const additional = Array.from({ length: 5 - result.meetings.length }, (_, i) => ({
+              id: `MEETING-${Date.now()}-${i}`,
+              no: result.meetings.length + i + 1,
+              date: '',
+              projectName: selectedInfo.projectName || '',
+              content: '',
+              author: '',
+              authorPosition: '',
+            }));
+            setMeetingMinutes([...result.meetings, ...additional]);
+          } else {
+            setMeetingMinutes(result.meetings);
+          }
+          return;
         }
-      } else {
+      } catch (error) {
+        console.warn('⚠️ [개정관리] DB API 호출 실패, localStorage 폴백:', error);
+      }
+      
+      // 2. localStorage 폴백
+      try {
+        const saved = localStorage.getItem(`fmea-meetings-${selectedProjectId}`);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          // 최소 5개 행 보장
+          if (parsed.length < 5) {
+            const additional = Array.from({ length: 5 - parsed.length }, (_, i) => ({
+              id: `MEETING-${Date.now()}-${i}`,
+              no: parsed.length + i + 1,
+              date: '',
+              projectName: selectedInfo.projectName || '',
+              content: '',
+              author: '',
+              authorPosition: '',
+            }));
+            setMeetingMinutes([...parsed, ...additional]);
+          } else {
+            setMeetingMinutes(parsed);
+          }
+        } else {
+          setMeetingMinutes(createDefaultMeetings());
+        }
+      } catch {
         setMeetingMinutes(createDefaultMeetings());
       }
-    } catch {
-      setMeetingMinutes(createDefaultMeetings());
-    }
-  }, [selectedProjectId]);
+    };
+    
+    loadMeetings();
+  }, [selectedProjectId, selectedInfo.projectName]);
 
-  // 회의록 자동 저장
+  // 회의록 저장 (DB API 우선 + localStorage 폴백)
+  const saveMeetings = async () => {
+    if (!selectedProjectId || meetingMinutes.length === 0) return;
+    
+    try {
+      // 1. DB에 저장 시도
+      const response = await fetch('/api/fmea/meetings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fmeaId: selectedProjectId, meetings: meetingMinutes }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('✅ [개정관리] DB에 회의록 저장 완료:', result.savedCount, '건');
+      } else {
+        console.warn('⚠️ [개정관리] DB 저장 실패, localStorage 폴백');
+      }
+    } catch (error) {
+      console.warn('⚠️ [개정관리] DB API 호출 실패, localStorage 폴백:', error);
+    }
+    
+    // 2. localStorage에도 저장 (폴백 & 동기화)
+    try {
+      localStorage.setItem(`fmea-meetings-${selectedProjectId}`, JSON.stringify(meetingMinutes));
+    } catch (error) {
+      console.error('❌ 회의록 localStorage 저장 실패:', error);
+    }
+  };
+
+  // 회의록 자동 저장 (디바운싱)
+  const meetingsSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
     if (!selectedProjectId || meetingMinutes.length === 0) return;
-    localStorage.setItem(`fmea-meetings-${selectedProjectId}`, JSON.stringify(meetingMinutes));
+    
+    if (meetingsSaveTimeoutRef.current) {
+      clearTimeout(meetingsSaveTimeoutRef.current);
+    }
+    
+    meetingsSaveTimeoutRef.current = setTimeout(() => {
+      saveMeetings();
+    }, 1000); // 1초 디바운싱
+    
+    return () => {
+      if (meetingsSaveTimeoutRef.current) {
+        clearTimeout(meetingsSaveTimeoutRef.current);
+      }
+    };
   }, [meetingMinutes, selectedProjectId]);
 
   return (

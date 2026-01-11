@@ -626,6 +626,57 @@ model FmeaConfirmedState {
   @@map("fmea_confirmed_states")
 }
 
+// ============ 6. 개정 이력 (개정관리 화면) ============
+model FmeaRevisionHistory {
+  id              String   @id @default(uuid())
+  fmeaId          String   // FK: FmeaProject.fmeaId
+  revisionNumber  String   // Rev.00, Rev.01, Rev.02...
+  revisionHistory String?  // 개정이력 설명
+  
+  // 작성
+  createPosition  String?  // 작성자 직급
+  createName      String?  // 작성자 성명
+  createDate      String?  // 작성일자
+  createStatus    String?  // 진행/승인/반려
+  
+  // 검토
+  reviewPosition  String?  // 검토자 직급
+  reviewName      String?  // 검토자 성명
+  reviewDate      String?  // 검토일자
+  reviewStatus    String?  // 진행/승인/반려
+  
+  // 승인
+  approvePosition String?  // 승인자 직급
+  approveName     String?  // 승인자 성명
+  approveDate     String?  // 승인일자
+  approveStatus   String?  // 진행/승인/반려
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([fmeaId])
+  @@index([revisionNumber])
+  @@map("fmea_revision_history")
+}
+
+// ============ 7. 회의록 (개정관리 화면) ============
+model FmeaMeetingMinute {
+  id            String   @id @default(uuid())
+  fmeaId        String   // FK: FmeaProject.fmeaId
+  no            Int      // 회의록 번호
+  date          String?  // 회의일자
+  projectName   String?  // 프로젝트명
+  content       String?  // 회의내용
+  author        String?  // 작성자
+  authorPosition String? // 작성자 직급
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([fmeaId])
+  @@index([no])
+  @@map("fmea_meeting_minutes")
+}
+
 // ============================================================================
 // ============ 마스터 데이터 테이블들 (전체 프로젝트 공유) ============
 // ============================================================================

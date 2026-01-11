@@ -1,94 +1,95 @@
 /**
  * @file route.ts
- * @description FMEA 등록정보 조회 API
+ * @description FMEA 등록정보 조회 API (Prisma 기반)
  * - GET: FMEA ID로 등록정보 조회 (작성자, 검토자, 승인자 정보 포함)
  */
-
 import { NextRequest, NextResponse } from 'next/server';
-import { Pool } from 'pg';
+import { getPrisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
 
-// DB 연결
-function getPool() {
-  return new Pool({ connectionString: process.env.DATABASE_URL });
-}
-
 // GET: FMEA 등록정보 조회
 export async function GET(request: NextRequest) {
-  const pool = getPool();
-  
+  const prisma = getPrisma();
+  if (!prisma) {
+    return NextResponse.json({ success: false, error: 'Database not configured', fmeaInfo: null }, { status: 500 });
+  }
+
   try {
     const searchParams = request.nextUrl.searchParams;
     // ✅ FMEA ID는 항상 대문자로 정규화 (DB 일관성 보장)
     const fmeaId = searchParams.get('fmeaId')?.toUpperCase();
     
     if (!fmeaId) {
-      return NextResponse.json({ success: false, error: 'fmeaId is required' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'fmeaId is required', fmeaInfo: null }, { status: 400 });
     }
     
-    // 스키마 이름 생성
-    const schemaName = `pfmea_${fmeaId.replace(/-/g, '_').toLowerCase()}`;
+    // Prisma로 FMEA 등록정보 조회
+    const registration = await prisma.fmeaRegistration.findUnique({
+      where: { fmeaId },
+      select: {
+        fmeaId: true,
+        subject: true,
+        customerName: true,
+        modelYear: true,
+        designResponsibility: true,
+        confidentialityLevel: true,
+        fmeaStartDate: true,
+        fmeaRevisionDate: true,
+        fmeaResponsibleName: true,
+      },
+    });
     
-    // FmeaInfo 테이블 조회
-    const result = await pool.query(`
-      SELECT 
-        "fmeaId",
-        "subject",
-        "customer",
-        "modelYear",
-        "designResponsibility",
-        "confidentialLevel",
-        "crossFunctionalTeam",
-        "fmeaStartDate",
-        "fmeaRevisionDate",
-        "fmeaResponsibleName",
-        "fmeaResponsiblePosition",
-        "reviewResponsibleName",
-        "reviewResponsiblePosition",
-        "approvalResponsibleName",
-        "approvalResponsiblePosition",
-        "revisionNo"
-      FROM "${schemaName}"."FmeaInfo"
-      WHERE "fmeaId" = $1
-      LIMIT 1
-    `, [fmeaId]);
-    
-    if (result.rows.length === 0) {
+    if (!registration) {
       return NextResponse.json({ 
         success: false, 
-        error: 'FMEA info not found',
+        error: 'FMEA registration not found',
         fmeaInfo: null 
-      });
+      }, { status: 404 });
     }
+    
+    // FmeaProject에서 revisionNo 조회
+    const project = await prisma.fmeaProject.findUnique({
+      where: { fmeaId },
+      select: { revisionNo: true },
+    });
+    
+    // CFT 멤버에서 검토자/승인자 정보 조회 (역할별)
+    const cftMembers = await prisma.fmeaCftMember.findMany({
+      where: { fmeaId },
+      select: {
+        role: true,
+        name: true,
+        position: true,
+      },
+    });
+    
+    // 역할별로 매핑
+    const reviewer = cftMembers.find(m => m.role === 'Reviewer' || m.role === '검토자');
+    const approver = cftMembers.find(m => m.role === 'Approver' || m.role === '승인자');
     
     console.log(`✅ [FMEA Info] ${fmeaId} 등록정보 조회 성공`);
     
     return NextResponse.json({ 
       success: true, 
-      fmeaInfo: result.rows[0] 
+      fmeaInfo: {
+        ...registration,
+        customer: registration.customerName,
+        revisionNo: project?.revisionNo || 'Rev.01',
+        fmeaResponsiblePosition: '', // FmeaRegistration에 없으므로 빈 문자열
+        reviewResponsibleName: reviewer?.name || '',
+        reviewResponsiblePosition: reviewer?.position || '',
+        approvalResponsibleName: approver?.name || '',
+        approvalResponsiblePosition: approver?.position || '',
+      }
     });
-    
   } catch (error: any) {
     console.error('❌ FMEA 등록정보 조회 실패:', error.message);
-    
-    // 테이블이 없으면 빈 결과 반환
-    if (error.message.includes('does not exist')) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'FMEA schema not found',
-        fmeaInfo: null 
-      });
-    }
     
     return NextResponse.json({ 
       success: false, 
       error: error.message,
       fmeaInfo: null 
     }, { status: 500 });
-  } finally {
-    await pool.end();
   }
 }
-
-
