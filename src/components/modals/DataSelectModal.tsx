@@ -22,6 +22,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   DataItem, 
   ITEM_CODE_LABELS, 
@@ -376,12 +377,17 @@ export default function DataSelectModal({
 
   return (
     <div 
-      className="fixed inset-0 z-[9999] bg-black/40"
+      className="fixed inset-0 z-[99999] bg-black/40"
       onClick={onClose}
+      style={{ zIndex: 99999 }}
     >
       <div 
         className="fixed bg-white rounded-lg shadow-2xl w-[350px] max-w-[350px] min-w-[350px] flex flex-col overflow-hidden max-h-[calc(100vh-120px)] cursor-move"
-        style={{ top: `${modalPosition.top}px`, right: `${modalPosition.right}px` }}
+        style={{ 
+          top: `${modalPosition.top}px`, 
+          right: `${modalPosition.right}px`,
+          zIndex: 99999 
+        }}
         onClick={e => e.stopPropagation()}
         onKeyDown={e => e.stopPropagation()}
       >
