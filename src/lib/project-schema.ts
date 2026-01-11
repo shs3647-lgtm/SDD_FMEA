@@ -22,6 +22,7 @@ const PROJECT_TABLES = [
   'failure_modes',
   'failure_causes',
   'failure_links',
+  'failure_analyses', // ✅ 고장분석 통합 데이터 (2026-01-11 추가)
   'risk_analyses',
   'optimizations',
   'fmea_confirmed_states',

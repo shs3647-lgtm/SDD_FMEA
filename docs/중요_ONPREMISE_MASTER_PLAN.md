@@ -4,6 +4,19 @@
 > **작성일**: 2026-01-10  
 > **상태**: 종합 진단 완료
 
+다른 주요 URL
+화면	URL
+루트 (Welcome Board)	http://localhost:3000
+FMEA 등록 (시작점)	http://localhost:3000/pfmea/register
+FMEA 리스트	http://localhost:3000/pfmea/list
+FMEA 작성화면	http://localhost:3000/pfmea/worksheet?id={fmeaId}<br/>예: http://localhost:3000/pfmea/worksheet?id=pfm26-P001
+FMEA 기초정보 등록	http://localhost:3000/pfmea/import
+DB 뷰어	http://localhost:3000/admin/db-viewer
+3. 빠른 접속 방법
+브라우저 주소창 열기
+URL 복사/붙여넣기:
+   http://localhost:3000/pfmea/register
+Enter 키 누르기
 ---
 
 ## 📋 FMEA 작성 순서 (표준 워크플로우)
@@ -25,6 +38,38 @@
 ---
 
 ## 📊 단계별 진단 결과
+
+### 🔴 **DB 구축 상태 (최우선)**
+
+#### ✅ DB 구축 완료된 화면
+
+| 화면 | DB 테이블 | API | 상태 |
+|------|----------|-----|------|
+| **FMEA 등록** | `fmea_projects`, `fmea_registrations`, `fmea_cft_members` | `/api/fmea/projects` | ✅ 완료 |
+| **FMEA 워크시트** | `l1_structures`, `l2_structures`, `l3_structures`<br/>`l1_functions`, `l2_functions`, `l3_functions`<br/>`failure_effects`, `failure_modes`, `failure_causes`<br/>`failure_links`, `risk_analyses`, `optimizations`<br/>`fmea_worksheet_data`, `fmea_confirmed_states` | `/api/fmea/save-legacy`<br/>원자성 DB 저장 | ✅ 완료 |
+| **FMEA 리스트** | `fmea_projects` | `/api/fmea/projects` | ✅ 완료 |
+| **FMEA 기초정보** | `pfmea_master_datasets`, `pfmea_master_flat_items` | `/api/pfmea/master` | ✅ 완료 |
+| **사용자 정보** | `users` | `/api/users` | ✅ 완료 (2026-01-11) |
+
+#### ❌ DB 구축 미완료된 화면 (localStorage만 사용)
+
+| 화면 | 현재 저장 방식 | 필요한 DB 테이블 | 우선순위 |
+|------|---------------|-----------------|---------|
+| **고객사 정보** (`/master/customer`) | ❌ localStorage만 | `customers` 테이블 필요 | 🔴 **높음** |
+| **프로젝트 기초정보** (`/master/customer` 모달) | ❌ localStorage만 | `bizinfo_projects` 테이블 필요 | 🔴 **높음** |
+| **APQP 프로젝트** | ⚠️ `apqp_projects` 테이블 있음<br/>❌ localStorage도 사용 | DB API 미완성 | 🟡 **중간** |
+| **Control Plan** | ❌ localStorage만 | `control_plan_projects`, `control_plan_items` 필요 | 🟡 **중간** |
+| **PFD (공정흐름도)** | ❌ localStorage만 | `pfd_projects`, `pfd_processes` 필요 | 🟡 **중간** |
+| **DFMEA** | ⚠️ 일부 DB 있음<br/>❌ localStorage 혼용 | DB 완전 전환 필요 | 🟡 **중간** |
+
+#### ⚠️ DB + localStorage 혼용 화면
+
+| 화면 | DB 저장 | localStorage 사용 | 문제점 |
+|------|---------|------------------|--------|
+| **FMEA 워크시트** | ✅ 원자성 DB 저장 | ⚠️ tab, riskData 캐시용 | 데이터 불일치 가능 |
+| **FMEA Import** | ✅ 마스터 데이터 DB | ⚠️ 임시 데이터 localStorage | 일관성 필요 |
+
+---
 
 ### 1️⃣ FMEA 등록 (`/pfmea/register`)
 
@@ -66,7 +111,8 @@
 | 항목 | 상태 | 비고 |
 |------|------|------|
 | UI 개발 | ✅ 완료 | `CFTRegistrationTable` 컴포넌트 |
-| CFT 저장 | ✅ 완료 | localStorage + 프로젝트 연동 |
+| CFT 저장 | ✅ 완료 | PostgreSQL DB 연동 및 지속성 확보 |
+| 지속성 검증 | ✅ 완료 | `codefreeze-20260111-cft-persistence-fixed` |
 | 접속 로그 | ✅ 완료 | `CFTAccessLogTable` 컴포넌트 |
 | 사이드바 메뉴 | ✅ 제거됨 | 등록화면에 통합 |
 
@@ -158,27 +204,89 @@
 
 ---
 
-## 🗄️ DB 원자성 진단
+## 🗄️ DB 구축 현황 및 진단
+
+### ✅ 완료된 DB 테이블 (22개)
+
+#### 1. FMEA 프로젝트 관리 (5개)
+- `fmea_projects` - 프로젝트 기본 정보
+- `fmea_registrations` - 등록 정보 (기획 및 준비 1단계)
+- `fmea_cft_members` - CFT 멤버 정보
+- `fmea_worksheet_data` - 워크시트 데이터 (JSON)
+- `fmea_confirmed_states` - 확정 상태
+
+#### 2. FMEA 워크시트 원자성 테이블 (13개)
+- `l1_structures` - 완제품 구조
+- `l2_structures` - 메인공정 구조
+- `l3_structures` - 작업요소 구조
+- `l1_functions` - 완제품 기능
+- `l2_functions` - 메인공정 기능
+- `l3_functions` - 작업요소 기능
+- `failure_effects` - 고장영향 (FE)
+- `failure_modes` - 고장형태 (FM)
+- `failure_causes` - 고장원인 (FC)
+- `failure_links` - 고장연결 (FE-FM-FC)
+- `risk_analyses` - 리스크분석
+- `optimizations` - 최적화
+- `fmea_legacy_data` - 레거시 데이터 (하위호환)
+
+#### 3. 마스터 데이터 (3개)
+- `pfmea_master_datasets` - PFMEA 기초정보 마스터
+- `pfmea_master_flat_items` - PFMEA 기초정보 플랫 아이템
+- `users` - 사용자 정보 (전체 프로젝트 공유)
+
+#### 4. 기타 (1개)
+- `apqp_projects` - APQP 프로젝트 (테이블만 있고 API 미완성)
+
+---
+
+### ❌ 미구축 DB 테이블 (필수)
+
+#### 1. 기초정보 마스터 데이터 (높음 우선순위)
+
+| 테이블명 | 용도 | 현재 상태 | 필요 작업 |
+|---------|------|----------|----------|
+| `customers` | 고객사 정보 | ❌ localStorage만 | DB 테이블 생성 + API + 마이그레이션 |
+| `bizinfo_projects` | 프로젝트 기초정보 | ❌ localStorage만 | DB 테이블 생성 + API + 마이그레이션 |
+| `factories` | 공장 정보 | ❌ localStorage만 | DB 테이블 생성 + API (선택사항) |
+| `products` | 품명 정보 | ❌ localStorage만 | DB 테이블 생성 + API (선택사항) |
+
+#### 2. 다른 모듈 DB (중간 우선순위)
+
+| 테이블명 | 용도 | 현재 상태 | 필요 작업 |
+|---------|------|----------|----------|
+| `control_plan_projects` | Control Plan 프로젝트 | ❌ localStorage만 | DB 테이블 생성 + API |
+| `control_plan_items` | Control Plan 항목 | ❌ localStorage만 | DB 테이블 생성 + API |
+| `pfd_projects` | PFD 프로젝트 | ❌ localStorage만 | DB 테이블 생성 + API |
+| `pfd_processes` | PFD 공정 | ❌ localStorage만 | DB 테이블 생성 + API |
+| `dfmea_projects` | DFMEA 프로젝트 | ⚠️ 일부 DB | 완전 전환 필요 |
+| `apqp_projects` | APQP 프로젝트 | ⚠️ 테이블만 있음 | API 완성 필요 |
+
+---
 
 ### 테이블 구조 (프로젝트별 스키마)
 
 ```
-pfmea_{fmeaId}/
-├── FmeaInfo          - FMEA 기초정보
-├── FmeaLegacyData    - 레거시 데이터 (Single Source of Truth)
-├── FmeaConfirmedState - 확정 상태
-├── L1Structure       - 완제품 구조
-├── L2Structure       - 메인공정 구조
-├── L3Structure       - 작업요소 구조
-├── L1Function        - 완제품 기능
-├── L2Function        - 메인공정 기능
-├── L3Function        - 작업요소 기능
-├── FailureEffect     - 고장영향 (FE)
-├── FailureMode       - 고장형태 (FM)
-├── FailureCause      - 고장원인 (FC)
-├── FailureLink       - 고장연결 (FE-FM-FC)
-├── RiskAnalysis      - 리스크분석
-└── Optimization      - 최적화
+fmea_projects (프로젝트 기본 정보)
+├── fmea_registrations (등록 정보)
+├── fmea_cft_members (CFT 멤버)
+├── fmea_worksheet_data (워크시트 JSON)
+├── fmea_confirmed_states (확정 상태)
+└── fmea_legacy_data (레거시 데이터)
+
+워크시트 원자성 테이블 (fmeaId 기준):
+├── l1_structures (완제품 구조)
+│   ├── l2_structures (메인공정 구조)
+│   │   └── l3_structures (작업요소 구조)
+│   └── l1_functions (완제품 기능)
+├── l2_functions (메인공정 기능)
+├── l3_functions (작업요소 기능)
+├── failure_effects (고장영향)
+├── failure_modes (고장형태)
+├── failure_causes (고장원인)
+├── failure_links (고장연결)
+├── risk_analyses (리스크분석)
+└── optimizations (최적화)
 ```
 
 ### 트랜잭션 처리
@@ -262,12 +370,18 @@ DB 확인 URL: http://localhost:3000/admin/db-viewer
 
 ## ⚠️ 보완 필요 사항
 
-### 🔴 높음 (출시 전 필수)
+### 🔴 높음 (출시 전 필수) - **DB 우선**
 
 | No | 항목 | 현황 | 조치 필요 |
 |----|------|------|----------|
+| **0** | **🔥 고객사 정보 DB 구축** | ❌ **localStorage만** | `customers` 테이블 생성 + API + 마이그레이션 |
+| **0** | **🔥 프로젝트 기초정보 DB 구축** | ❌ **localStorage만** | `bizinfo_projects` 테이블 생성 + API + 마이그레이션 |
 | 1 | ~~FMEA 개정관리 화면~~ | ✅ **완료** | DB API + 등록정보 자동연동 + 6ST 승인버튼 (codefreeze-20260110-revision-approval) |
 | 2 | AllViewTab 데이터 표시 | ⚠️ 부분 완료 | 전체 뷰 정합성 검증 필요 |
+| 3 | **온프레미스 DB 구축 가이드** | ⚠️ **누락** | PostgreSQL 설치, 스키마 생성, 초기 데이터 설정 가이드 |
+| 4 | **프로젝트별 백업 시스템** | ⚠️ **부분 완료** | FMEA 작성 시 자동 백업 (엑셀/JSON/화면 스냅샷) |
+| 5 | **사용자 인증 관리** | ❌ **미개발** | 로그인/로그아웃, 세션 관리, 인증 토큰 |
+| 6 | **사용자별 권한 설정** | ❌ **미개발** | 역할 기반 권한 (Admin/Editor/Viewer), 프로젝트별 접근 제어 |
 
 ### 🟡 중간 (출시 후 개선)
 
@@ -275,7 +389,9 @@ DB 확인 URL: http://localhost:3000/admin/db-viewer
 |----|------|------|----------|
 | 1 | Excel Export | ⚠️ 부분 완료 | 전체 FMEA 양식 Export |
 | 2 | PDF Export | ⚠️ 미개발 | 출력용 PDF 생성 |
-| 3 | 권한 관리 | ⚠️ 미개발 | 사용자별 권한 제어 |
+| 3 | **프로젝트별 복구/복사/이동** | ⚠️ **부분 완료** | export-package API 있으나 UI 화면 필요 |
+| 4 | **서버 이전 가이드** | ⚠️ **누락** | 프로젝트별 파일 이동, DB 마이그레이션 가이드 |
+| 5 | **화면 결과 백업** | ⚠️ **누락** | 스냅샷/스크린샷 자동 저장 |
 
 ### 🟢 낮음 (향후 개선)
 
@@ -287,7 +403,236 @@ DB 확인 URL: http://localhost:3000/admin/db-viewer
 
 ---
 
+---
+
+## 🏗️ 온프레미스 출시 필수 구축 사항
+
+### 1️⃣ DB 구축 (PostgreSQL)
+
+#### 필수 작업
+- [ ] PostgreSQL 설치 및 설정
+- [ ] 데이터베이스 생성 (`fmea_db`)
+- [ ] Prisma 마이그레이션 실행 (`npx prisma migrate deploy`)
+- [ ] 초기 데이터 설정 (마스터 데이터)
+- [ ] DB 백업 스케줄 설정 (일일 자동 백업)
+
+#### 참고 문서
+- `docs/DB_BACKUP_GUIDE.md` - 백업/복원 가이드
+- `docs/USER_MASTER_DB_MIGRATION.md` - 사용자 정보 DB 마이그레이션
+
+---
+
+### 2️⃣ 백업 시스템
+
+#### 프로젝트별 백업 요구사항
+
+**FMEA 작성 완료 시 자동 백업:**
+- [ ] **엑셀 파일** - 전체 FMEA 데이터 (Excel Export)
+- [ ] **JSON 파일** - 원본 데이터 (export-package API)
+- [ ] **화면 스냅샷** - 최종 화면 상태 (스크린샷)
+
+**백업 저장 위치:**
+```
+backups/
+├── projects/
+│   ├── {fmeaId}/
+│   │   ├── {fmeaId}_{YYYYMMDD_HHMMSS}.xlsx  # 엑셀 파일
+│   │   ├── {fmeaId}_{YYYYMMDD_HHMMSS}.json  # JSON 파일
+│   │   ├── {fmeaId}_{YYYYMMDD_HHMMSS}.png   # 화면 스냅샷
+│   │   └── metadata.json                     # 메타데이터
+```
+
+#### 구현 필요 항목
+- [ ] FMEA 확정 시 자동 백업 트리거
+- [ ] 백업 파일 자동 정리 (30일 이상 된 파일 삭제)
+- [ ] 백업 목록 조회 API
+- [ ] 백업 복원 UI 화면
+
+#### 현재 상태
+- ✅ export-package API 존재 (`/api/fmea/export-package`)
+- ✅ import-package API 존재 (`/api/fmea/import-package`)
+- ⚠️ 자동 백업 스케줄러 미구현
+- ⚠️ 화면 스냅샷 기능 미구현
+- ⚠️ 백업 관리 UI 미구현
+
+---
+
+### 3️⃣ 사용자 정보 및 기초정보 DB 구축
+
+#### ✅ 완료된 항목
+- ✅ **사용자 정보 DB** (`users` 테이블) - **완료 (2026-01-11)**
+  - 위치: PostgreSQL DB
+  - API: `/api/users`
+  - 전체 프로젝트 공유
+  - 파일: `prisma/schema.prisma` (User 모델)
+- ✅ **PFMEA 기초정보 DB** (`pfmea_master_datasets`, `pfmea_master_flat_items`)
+  - 위치: PostgreSQL DB
+  - API: `/api/pfmea/master`
+  - Excel Import 시 DB 저장
+
+#### ❌ 미완료 항목 (🔥 최우선)
+
+##### 1. 고객사 정보 DB (`customers` 테이블)
+- **현재 상태**: ❌ localStorage만 사용 (`bizinfo-db.ts`)
+- **저장 위치**: `localStorage['ss-bizinfo-customers']`
+- **필요 작업**:
+  - [ ] Prisma 스키마: `Customer` 모델 추가
+  - [ ] API 생성: `/api/customers` (GET, POST, PUT, DELETE)
+  - [ ] `bizinfo-db.ts` DB 연동 (localStorage 폴백)
+  - [ ] 기존 localStorage 데이터 마이그레이션
+  - [ ] 마이그레이션 실행 (`npx prisma migrate dev`)
+
+##### 2. 프로젝트 기초정보 DB (`bizinfo_projects` 테이블)
+- **현재 상태**: ❌ localStorage만 사용 (`bizinfo-db.ts`)
+- **저장 위치**: `localStorage['ss-bizinfo-projects']`
+- **필요 작업**:
+  - [ ] Prisma 스키마: `BizInfoProject` 모델 추가
+  - [ ] API 생성: `/api/bizinfo/projects` (GET, POST, PUT, DELETE)
+  - [ ] `bizinfo-db.ts` DB 연동 (localStorage 폴백)
+  - [ ] 기존 localStorage 데이터 마이그레이션
+  - [ ] 마이그레이션 실행
+
+##### 3. 기타 기초정보 (선택사항)
+- **공장 정보** (`factories` 테이블) - 현재 localStorage
+- **품명 정보** (`products` 테이블) - 현재 localStorage
+- 우선순위: 낮음 (고객사 정보와 프로젝트 기초정보 완료 후)
+
+---
+
+### 4️⃣ 사용자 인증 관리
+
+#### 필수 기능
+- [ ] **로그인/로그아웃**
+  - 아이디/비밀번호 인증
+  - 세션 관리 (JWT 또는 세션 쿠키)
+  - 자동 로그아웃 (세션 만료)
+- [ ] **사용자 등록**
+  - 관리자만 사용자 등록 가능
+  - 초기 비밀번호 설정
+  - 비밀번호 변경 기능
+- [ ] **인증 미들웨어**
+  - 모든 API 엔드포인트 인증 체크
+  - 권한 없는 접근 차단
+
+#### 구현 필요 항목
+- [ ] Prisma 스키마: `User` 모델에 `password`, `isActive` 필드 추가
+- [ ] 인증 API: `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`
+- [ ] 로그인 페이지: `/login`
+- [ ] 세션 관리: NextAuth.js 또는 JWT
+- [ ] API 미들웨어: 인증 체크 로직
+
+#### 현재 상태
+- ✅ 사용자 정보 DB 구축 완료
+- ❌ 비밀번호 필드 없음
+- ❌ 로그인/로그아웃 기능 없음
+- ❌ 인증 미들웨어 없음
+
+---
+
+### 5️⃣ 사용자별 권한 설정
+
+#### 필수 기능
+- [ ] **역할 기반 권한 (RBAC)**
+  - **Admin**: 모든 권한 (사용자 관리, 프로젝트 삭제, 설정 변경)
+  - **Editor**: FMEA 작성/수정 권한
+  - **Viewer**: 읽기 전용 권한
+- [ ] **프로젝트별 접근 제어**
+  - 프로젝트 소유자 설정
+  - 프로젝트별 편집자/뷰어 지정
+  - 공개/비공개 프로젝트 설정
+
+#### 구현 필요 항목
+- [ ] Prisma 스키마: `User` 모델에 `role` 필드 추가
+- [ ] Prisma 스키마: `FmeaProject` 모델에 `ownerId`, `accessControl` 필드 추가
+- [ ] 권한 체크 API: `/api/auth/check-permission`
+- [ ] 권한 관리 UI: 사용자별 권한 설정 화면
+- [ ] API 미들웨어: 권한 체크 로직
+
+#### 현재 상태
+- ❌ 권한 시스템 없음
+- ❌ 모든 사용자가 모든 프로젝트 접근 가능
+- ❌ 프로젝트 소유자 개념 없음
+
+---
+
+### 6️⃣ 프로젝트별 복구/복사/이동
+
+#### 필수 기능
+- [ ] **프로젝트 복사**
+  - 동일 DB 내에서 프로젝트 복사 (새 FMEA ID 생성)
+  - 다른 서버로 프로젝트 복사 (export → import)
+- [ ] **프로젝트 이동**
+  - 서버 간 프로젝트 이동
+  - DB 통째로 옮기지 않고 개별 프로젝트만 이동
+- [ ] **프로젝트 복구**
+  - 백업 파일에서 프로젝트 복구
+  - 특정 시점으로 롤백
+- [ ] **프로젝트 관리 UI**
+  - 프로젝트 목록에서 복사/이동/복구 버튼
+  - 백업 목록 조회 및 복구
+
+#### 구현 필요 항목
+- [ ] 프로젝트 복사 API: `/api/fmea/projects/copy`
+- [ ] 프로젝트 이동 UI: 서버 선택, 프로젝트 선택, 이동 실행
+- [ ] 프로젝트 복구 UI: 백업 목록, 복구 실행
+- [ ] 프로젝트 관리 페이지: `/admin/projects`
+
+#### 현재 상태
+- ✅ export-package API 존재 (JSON 내보내기)
+- ✅ import-package API 존재 (JSON 가져오기)
+- ⚠️ 복사 기능 없음 (새 ID 생성하여 복사)
+- ⚠️ 이동 UI 없음
+- ⚠️ 복구 UI 없음
+
+#### 서버 이전 시 프로세스
+```
+서버 A → 서버 B 이전:
+1. 서버 A: 프로젝트별 export-package 실행
+2. 백업 파일 (JSON) 다운로드
+3. 서버 B: import-package로 가져오기
+4. 서버 B: 프로젝트 검증 및 테스트
+5. 서버 A: 프로젝트 삭제 (선택사항)
+```
+
+**⚠️ 주의사항:**
+- DB 통째로 옮기지 말고 프로젝트별로 개별 이동
+- 각 프로젝트는 독립적으로 백업/복구 가능
+- 마스터 데이터 (사용자 정보, 기초정보)는 별도 마이그레이션 필요
+
+---
+
 ## 📅 출시 체크리스트
+
+### Phase 0: 인프라 구축 (5-7일) - **DB 우선**
+
+- [ ] **🔥 DB 구축 (최우선)**
+  - [ ] PostgreSQL 설치
+  - [ ] 데이터베이스 생성 (`fmea_db`)
+  - [ ] 기존 Prisma 마이그레이션 실행 (`npx prisma migrate deploy`)
+  - [ ] **고객사 정보 DB 구축** (`customers` 테이블)
+    - [ ] Prisma 스키마 추가
+    - [ ] API 생성 (`/api/customers`)
+    - [ ] `bizinfo-db.ts` DB 연동
+    - [ ] localStorage 데이터 마이그레이션
+  - [ ] **프로젝트 기초정보 DB 구축** (`bizinfo_projects` 테이블)
+    - [ ] Prisma 스키마 추가
+    - [ ] API 생성 (`/api/bizinfo/projects`)
+    - [ ] `bizinfo-db.ts` DB 연동
+    - [ ] localStorage 데이터 마이그레이션
+  - [ ] 초기 데이터 설정 (마스터 데이터)
+- [ ] **백업 시스템**
+  - [ ] 프로젝트별 자동 백업 구현
+  - [ ] 엑셀/JSON/스냅샷 백업 구현
+  - [ ] 백업 스케줄 설정
+  - [ ] 백업 관리 UI 구현
+- [ ] **사용자 인증**
+  - [ ] 로그인/로그아웃 구현
+  - [ ] 세션 관리 구현
+  - [ ] 인증 미들웨어 구현
+- [ ] **권한 관리**
+  - [ ] 역할 기반 권한 시스템 구현
+  - [ ] 프로젝트별 접근 제어 구현
+  - [ ] 권한 관리 UI 구현
 
 ### Phase 1: 기능 검증 (1-2일)
 
@@ -321,18 +666,66 @@ DB 확인 URL: http://localhost:3000/admin/db-viewer
 
 ## 🎯 결론
 
-### 현재 완성도: **95%**
+### 현재 완성도: **70%** (기능) / **35%** (온프레미스 구축) / **60%** (DB 구축)
 
 | 구분 | 완료 | 미완료 | 비율 |
 |------|------|--------|------|
 | 핵심 기능 | 16개 | 0개 | 100% |
-| DB 연동 | 15개 | 0개 | 100% |
+| **DB 구축** | **23개 테이블** | **5개 테이블** | **82%** |
+| - FMEA 관련 (✅ FailureAnalyses 추가 2026-01-11) | 19개 | 0개 | 100% |
+| - 마스터 데이터 | 3개 | 2개 | 60% |
+| - 기타 모듈 | 1개 | 3개 | 25% |
 | 코드프리즈 | 10개 탭 | 0개 | 100% |
-| 보완 필요 | - | 2개 | 90% |
+| **온프레미스 구축** | **2개** | **6개** | **25%** |
+| - DB 구축 가이드 | 1개 | - | - |
+| - 백업 시스템 | 1개 | 3개 | 25% |
+| - 사용자 인증 | 0개 | 1개 | 0% |
+| - 권한 관리 | 0개 | 1개 | 0% |
+| - 프로젝트 복구/이동 | 1개 | 2개 | 33% |
+| - 화면 결과 백업 | 0개 | 1개 | 0% |
 
-### 출시 가능 상태: ✅ **YES**
+#### 🔥 DB 구축 우선순위
 
-핵심 FMEA 작성 워크플로우가 모두 구현되어 있으며, 각 단계별 DB 원자성이 확보되어 있습니다.
+1. **최우선 (출시 전 필수)**
+   - ❌ 고객사 정보 DB (`customers` 테이블)
+   - ❌ 프로젝트 기초정보 DB (`bizinfo_projects` 테이블)
+
+2. **중간 우선순위 (출시 후)**
+   - ⚠️ Control Plan DB
+   - ⚠️ PFD DB
+   - ⚠️ DFMEA DB 완전 전환
+   - ⚠️ APQP API 완성
+
+3. **낮은 우선순위**
+   - 공장 정보 DB
+   - 품명 정보 DB
+
+### 출시 가능 상태: ⚠️ **조건부 YES** (기능 완성) / ❌ **NO** (온프레미스 구축)
+
+**기능 측면:**
+- ✅ 핵심 FMEA 작성 워크플로우가 모두 구현되어 있으며, 각 단계별 DB 원자성이 확보되어 있습니다.
+
+**온프레미스 구축 측면:**
+- ❌ **DB 구축 (최우선)**: 고객사 정보, 프로젝트 기초정보 DB 필수
+- ❌ 사용자 인증/권한 관리 필수
+- ❌ 프로젝트별 백업 시스템 필수
+- ❌ DB 구축 가이드 필요
+- ⚠️ 프로젝트 복구/이동 기능 부분 완료
+
+**추가 작업 필요 (우선순위 순):**
+
+1. **🔥 DB 구축 (최우선, 3-4일)**
+   - 고객사 정보 DB 구축 (`customers` 테이블) - 1-2일
+   - 프로젝트 기초정보 DB 구축 (`bizinfo_projects` 테이블) - 1-2일
+   - localStorage 데이터 마이그레이션 - 0.5일
+
+2. **사용자 인증 시스템 구현 (3-5일)**
+3. **권한 관리 시스템 구현 (2-3일)**
+4. **프로젝트별 자동 백업 시스템 구현 (2-3일)**
+5. **DB 구축 가이드 문서 작성 (1일)**
+6. **프로젝트 관리 UI 구현 (2-3일)**
+
+**예상 추가 작업 기간: 13-19일** (DB 구축 포함)
 
 ---
 
@@ -340,6 +733,9 @@ DB 확인 URL: http://localhost:3000/admin/db-viewer
 
 | 버전 | 일자 | 변경 내용 |
 |------|------|---------|
+| 2.2.0 | 2026-01-11 | ✅ **고장분석 통합 DB 구축 완료** (`failure_analyses` 테이블): 고장연결+역전개 기능분석+역전개 구조분석 통합 저장, All 화면 DB 기반 렌더링 구현 |
+| 2.1.0 | 2026-01-11 | DB 구축 현황 상세 추가: 화면별 DB 저장 상태 진단, 미구축 DB 테이블 명시, DB 구축 우선순위 강조 |
+| 2.0.0 | 2026-01-11 | 온프레미스 출시 필수 구축 사항 추가: DB 구축, 백업 시스템, 사용자 인증, 권한 관리, 프로젝트 복구/이동 |
 | 1.1.0 | 2026-01-10 | 룰 2번 추가: FMEA 리스트와 DB 1:1 관계 보장, 중복 ID 정리, 완전한 데이터 저장 필수 |
 | 1.0.0 | 2026-01-10 | 최초 작성 - 전체 진단 완료 |
 

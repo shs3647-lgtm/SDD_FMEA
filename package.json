@@ -4,13 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:4000": "next dev -p 4000",
+    "dev:5000": "next dev -p 5000",
     "build": "next build",
     "start": "next start",
+    "start:4000": "next start -p 4000",
     "lint": "eslint",
     "prepare": "simple-git-hooks",
     "guard:protected:staged": "tsx scripts/guard/protected-paths.ts --mode staged",
     "guard:protected:branch": "tsx scripts/guard/protected-paths.ts --mode branch",
-    "guard:protected:commitmsg": "tsx scripts/guard/commit-msg-approval.ts"
+    "guard:protected:commitmsg": "tsx scripts/guard/commit-msg-approval.ts",
+    "db:studio": "prisma studio",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push"
   },
   "simple-git-hooks": {
     "pre-commit": "npm run guard:protected:staged -- --warn-only",

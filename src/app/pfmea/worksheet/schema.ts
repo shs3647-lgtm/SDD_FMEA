@@ -158,6 +158,72 @@ export interface FailureCause extends AtomicRecord {
   occurrence?: number;    // 발생도 (1-10)
 }
 
+// ============ 고장분석 통합 테이블 (All 화면 렌더링용) ============
+
+/**
+ * 고장분석 통합 데이터 (FailureAnalysis)
+ * - 고장연결 결과 + 역전개 기능분석 + 역전개 구조분석 통합 저장
+ * - All 화면에서 정확한 렌더링을 위한 원자성 데이터
+ */
+export interface FailureAnalysis extends AtomicRecord {
+  fmeaId: string;         // FK: FMEA 프로젝트 ID
+  linkId: string;         // FK: FailureLink.id (고장연결)
+  
+  // ============ 고장연결 정보 (고장형태, 고장원인, 고장영향) ============
+  fmId: string;           // FK: FailureMode.id
+  fmText: string;         // 고장형태 내용
+  fmProcessName: string;  // 공정명 (L2 Structure.name)
+  
+  feId: string;           // FK: FailureEffect.id
+  feText: string;         // 고장영향 내용
+  feCategory: string;     // 구분 (Your Plant/Ship to Plant/User)
+  feSeverity: number;     // 심각도 (1-10)
+  
+  fcId: string;           // FK: FailureCause.id
+  fcText: string;         // 고장원인 내용
+  fcOccurrence?: number;  // 발생도 (1-10)
+  fcWorkElementName: string; // 작업요소명 (L3 Structure.name)
+  fcM4?: string;          // 4M 분류 (MN/MC/IM/EN)
+  
+  // ============ 역전개 기능분석 정보 ============
+  // L1 (완제품 기능)
+  l1FuncId: string;       // FK: L1Function.id
+  l1Category: string;     // 구분 (Your Plant/Ship to Plant/User)
+  l1FuncName: string;     // 완제품 기능명
+  l1Requirement: string;  // 요구사항
+  
+  // L2 (메인공정 기능)
+  l2FuncId: string;       // FK: L2Function.id
+  l2FuncName: string;     // 공정 기능명
+  l2ProductChar: string;  // 제품특성
+  l2SpecialChar?: string; // 특별특성
+  
+  // L3 (작업요소 기능)
+  l3FuncId: string;       // FK: L3Function.id
+  l3FuncName: string;     // 작업요소 기능명
+  l3ProcessChar: string;  // 공정특성
+  l3SpecialChar?: string; // 특별특성
+  
+  // ============ 역전개 구조분석 정보 ============
+  // L1 (완제품)
+  l1StructId: string;     // FK: L1Structure.id
+  l1StructName: string;   // 완제품 공정명
+  
+  // L2 (메인공정)
+  l2StructId: string;     // FK: L2Structure.id
+  l2StructNo: string;     // 공정 번호
+  l2StructName: string;   // 공정명
+  
+  // L3 (작업요소)
+  l3StructId: string;     // FK: L3Structure.id
+  l3StructM4?: string;    // 4M 분류
+  l3StructName: string;   // 작업요소명
+  
+  // ============ 메타데이터 ============
+  order: number;          // 정렬 순서
+  confirmed: boolean;     // 확정 여부
+}
+
 // ============ 고장연결 (Failure Link) - 관계 테이블 ============
 
 /**
@@ -262,6 +328,10 @@ export interface FMEAWorksheetDB {
   // 고장연결 (관계 테이블)
   failureLinks: FailureLink[];
   
+  // 고장분석 통합 데이터 (All 화면 렌더링용)
+  // 고장연결 + 역전개 기능분석 + 역전개 구조분석
+  failureAnalyses: FailureAnalysis[];
+  
   // 리스크분석/최적화 (5-6단계)
   riskAnalyses: RiskAnalysis[];
   optimizations: Optimization[];
@@ -298,6 +368,7 @@ export const createEmptyDB = (fmeaId: string): FMEAWorksheetDB => ({
   failureModes: [],
   failureCauses: [],
   failureLinks: [],
+  failureAnalyses: [], // 고장분석 통합 데이터
   riskAnalyses: [],
   optimizations: [],
   confirmed: {

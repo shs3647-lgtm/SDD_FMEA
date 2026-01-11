@@ -102,7 +102,8 @@ function generateFMEAId(fmeaType: FMEAType = 'P'): string {
     console.error('ID 생성 중 오류:', e);
   }
   
-  return `pfm${year}-${fmeaType}001`;
+  // ✅ 항상 대문자로 반환 (DB 일관성 보장)
+  return `PFM${year}-${fmeaType}001`.toUpperCase();
 }
 
 // =====================================================
@@ -220,16 +221,26 @@ function PFMEARegisterPageContent() {
   
   // FMEA 선택 완료
   const handleFmeaSelect = (selectedId: string) => {
-    setSelectedBaseFmea(selectedId);
+    // ✅ FMEA ID는 항상 대문자로 정규화
+    const normalizedId = selectedId.toUpperCase();
+    console.log('[PFMEA 등록] 상위 FMEA 선택:', normalizedId);
+    setSelectedBaseFmea(normalizedId);
     setFmeaSelectModalOpen(false);
     // 선택한 FMEA 기반으로 워크시트 이동
-    window.location.href = `/pfmea/worksheet?id=${fmeaId}&baseId=${selectedId}&mode=inherit`;
+    window.location.href = `/pfmea/worksheet?id=${fmeaId.toUpperCase()}&baseId=${normalizedId}&mode=inherit`;
   };
 
   // ✅ 초기화 및 수정 모드 데이터 로드 - DB API 우선, localStorage 폴백
+  // ⚠️ 중요: 수정 모드일 때만 실행 (신규 등록 시 사용자 입력 데이터 보호)
   useEffect(() => {
     const loadProjectData = async () => {
-      const targetId = isEditMode && editId ? editId : null;
+      // ✅ 수정 모드가 아니면 DB 로드 건너뛰기 (사용자 입력 데이터 유지)
+      if (!isEditMode || !editId) {
+        console.log('[PFMEA 등록] 신규 등록 모드 - DB 로드 건너뛰기 (사용자 입력 데이터 유지)');
+        return;
+      }
+      
+      const targetId = editId;
       
       if (targetId) {
         // ========== 수정 모드: DB API에서 데이터 로드 ==========
@@ -244,7 +255,8 @@ function PFMEARegisterPageContent() {
             
             if (project) {
               console.log('[PFMEA 등록] ✅ DB에서 프로젝트 로드 성공:', project.id);
-              setFmeaId(project.id);
+              // ✅ FMEA ID는 항상 대문자로 정규화
+              setFmeaId(project.id?.toUpperCase() || project.id);
               
               // DB 데이터를 등록화면 형식으로 변환
               const dbFmeaInfo: FMEAInfo = {
@@ -264,15 +276,22 @@ function PFMEARegisterPageContent() {
               };
               setFmeaInfo(dbFmeaInfo);
               
-              // CFT 멤버 로드
+              // ✅ CFT 멤버 로드 (상세 로그 추가)
               if (project.cftMembers && project.cftMembers.length > 0) {
+                console.log(`[PFMEA 등록] CFT 멤버 로드: ${project.cftMembers.length}명`, 
+                  project.cftMembers.map(m => ({ name: m.name, role: m.role, department: m.department }))
+                );
                 setCftMembers(project.cftMembers);
+              } else {
+                console.warn(`[PFMEA 등록] ⚠️ CFT 멤버가 없습니다 (프로젝트: ${project.id})`);
+                // DB에 멤버가 없으면 초기 멤버로 설정
+                setCftMembers(createInitialCFTMembers());
               }
               
-              // ✅ 상위 FMEA 로드
+              // ✅ 상위 FMEA 로드 (대문자로 정규화)
               if (project.parentFmeaId) {
-                setSelectedBaseFmea(project.parentFmeaId);
-                console.log('[PFMEA 등록] 상위 FMEA 로드:', project.parentFmeaId);
+                setSelectedBaseFmea(project.parentFmeaId.toUpperCase());
+                console.log('[PFMEA 등록] 상위 FMEA 로드:', project.parentFmeaId.toUpperCase());
               }
               
               // localStorage에도 동기화 (캐시)
@@ -292,7 +311,8 @@ function PFMEARegisterPageContent() {
             const existingProject = projects.find((p: { id: string }) => p.id === targetId);
             if (existingProject) {
               console.log('[PFMEA 등록] localStorage에서 로드:', targetId);
-              setFmeaId(existingProject.id);
+              // ✅ FMEA ID는 항상 대문자로 정규화
+              setFmeaId(existingProject.id?.toUpperCase() || existingProject.id);
               if (existingProject.fmeaInfo) {
                 setFmeaInfo(existingProject.fmeaInfo);
               }
@@ -306,69 +326,17 @@ function PFMEARegisterPageContent() {
         }
       } else {
         // ========== 신규 등록 모드 ==========
-        // DB에서 최근 프로젝트 확인
-        try {
-          const res = await fetch('/api/fmea/projects');
-          if (res.ok) {
-            const data = await res.json();
-            if (data.projects && data.projects.length > 0) {
-              const lastProject = data.projects[0];
-              console.log('[PFMEA 등록] DB에서 최근 프로젝트 로드:', lastProject.id);
-              setFmeaId(lastProject.id);
-              
-              const dbFmeaInfo: FMEAInfo = {
-                companyName: lastProject.project?.customer || '',
-                engineeringLocation: lastProject.fmeaInfo?.engineeringLocation || '',
-                customerName: lastProject.project?.customer || '',
-                modelYear: lastProject.fmeaInfo?.modelYear || '',
-                subject: lastProject.fmeaInfo?.subject || lastProject.project?.projectName || '',
-                fmeaStartDate: lastProject.fmeaInfo?.fmeaStartDate || '',
-                fmeaRevisionDate: lastProject.fmeaInfo?.fmeaRevisionDate || '',
-                fmeaProjectName: lastProject.project?.projectName || '',
-                fmeaId: lastProject.id,
-                fmeaType: (lastProject.fmeaType || 'P') as FMEAType,
-                designResponsibility: lastProject.fmeaInfo?.designResponsibility || '',
-                confidentialityLevel: lastProject.fmeaInfo?.confidentialityLevel || '',
-                fmeaResponsibleName: lastProject.fmeaInfo?.fmeaResponsibleName || '',
-              };
-              setFmeaInfo(dbFmeaInfo);
-              
-              if (lastProject.cftMembers && lastProject.cftMembers.length > 0) {
-                setCftMembers(lastProject.cftMembers);
-              }
-              
-              syncToLocalStorage(lastProject.id, dbFmeaInfo, lastProject.cftMembers || []);
-              return;
-            }
-          }
-        } catch (e) {
-          console.warn('[PFMEA 등록] DB 조회 실패:', e);
-        }
+        // ✅ 신규 등록 시에는 DB나 localStorage에서 데이터를 로드하지 않음
+        // ✅ 사용자가 입력한 데이터를 유지하기 위해 초기화만 수행
+        console.log('[PFMEA 등록] 신규 등록 모드 - 새 ID 생성 (사용자 입력 데이터 유지)');
         
-        // DB에 프로젝트 없으면 localStorage 확인
-        const storedProjects = localStorage.getItem('pfmea-projects');
-        if (storedProjects) {
-          try {
-            const projects = JSON.parse(storedProjects);
-            if (projects.length > 0) {
-              const lastProject = projects[0];
-              setFmeaId(lastProject.id);
-              if (lastProject.fmeaInfo) {
-                setFmeaInfo(lastProject.fmeaInfo);
-              }
-              if (lastProject.cftMembers && lastProject.cftMembers.length > 0) {
-                setCftMembers(lastProject.cftMembers);
-              }
-              console.log('[PFMEA 등록] localStorage에서 최근 프로젝트 로드:', lastProject.id);
-              return;
-            }
-          } catch (e) {
-            console.error('localStorage 로드 실패:', e);
-          }
-        }
+        // 새 ID 생성만 수행 (사용자 입력 데이터는 유지)
+        const newId = generateFMEAId().toUpperCase();
+        setFmeaId(newId);
+        console.log('[PFMEA 등록] 새 FMEA ID 생성:', newId);
         
-        // 아무 데이터도 없으면 새 ID 생성
-        setFmeaId(generateFMEAId());
+        // ✅ CFT 멤버는 초기 상태 유지 (사용자가 입력한 데이터 보호)
+        // setCftMembers 호출하지 않음 - 이미 초기화되어 있음
       }
     };
     
@@ -404,7 +372,8 @@ function PFMEARegisterPageContent() {
     if (confirm('새로운 FMEA를 등록하시겠습니까?\n현재 화면의 내용은 초기화됩니다.')) {
       setFmeaInfo(INITIAL_FMEA);
       setCftMembers(createInitialCFTMembers());
-      setFmeaId(generateFMEAId());
+      // ✅ FMEA ID는 항상 대문자로 정규화
+      setFmeaId(generateFMEAId().toUpperCase());
       localStorage.removeItem('pfmea-register-draft');
     }
   };
@@ -436,17 +405,45 @@ function PFMEARegisterPageContent() {
         fmeaResponsibleName: user.name || '',
         designResponsibility: user.department || '',
       }));
+      console.log('[사용자 선택] 담당자로 설정:', user.name);
     } else if (selectedMemberIndex !== null) {
+      // ✅ CFT 멤버에 사용자 정보 저장 (모든 필드 포함)
       const updated = [...cftMembers];
+      const beforeName = updated[selectedMemberIndex]?.name || '(없음)';
+      
       updated[selectedMemberIndex] = {
         ...updated[selectedMemberIndex],
-        name: user.name || '',
+        name: user.name || '', // ✅ name 필드 명시적으로 저장
         department: user.department || '',
         position: user.position || '',
         phone: user.phone || '',
         email: user.email || '',
+        // task/responsibility는 사용자가 직접 입력
       };
+      
+      // ✅ 상태 업데이트 전 검증
+      const updatedName = updated[selectedMemberIndex]?.name || '';
+      console.log(`[사용자 선택] CFT 멤버[${selectedMemberIndex}] 업데이트:`, {
+        이전name: beforeName,
+        새name: updatedName,
+        name비어있음: !updatedName || updatedName.trim() === '',
+        전체멤버수: updated.length,
+        업데이트된멤버: {
+          name: updated[selectedMemberIndex].name,
+          department: updated[selectedMemberIndex].department,
+          role: updated[selectedMemberIndex].role,
+        }
+      });
+      
       setCftMembers(updated);
+      
+      // ✅ 상태 업데이트 후 실제 상태 확인 (다음 렌더링에서)
+      setTimeout(() => {
+        console.log(`[사용자 선택] 상태 업데이트 완료 - CFT 멤버[${selectedMemberIndex}] name: "${updatedName}"`);
+      }, 0);
+    } else {
+      console.warn('[사용자 선택] selectedMemberIndex가 null입니다. CFT 멤버가 업데이트되지 않았습니다.');
+      alert('⚠️ CFT 멤버를 먼저 선택해주세요.\n\n💡 CFT 테이블에서 "성명" 셀을 클릭하여 사용자를 선택하세요.');
     }
     setUserModalOpen(false);
     setSelectedMemberIndex(null);
@@ -459,11 +456,11 @@ function PFMEARegisterPageContent() {
     setUserModalOpen(true);
   };
 
-  // CFT 저장
-  const handleCftSave = () => {
-    localStorage.setItem('pfmea-cft-data', JSON.stringify(cftMembers));
+  // CFT 저장 (DB 저장 포함)
+  const handleCftSave = async () => {
+    console.log('[PFMEA 등록] CFT 테이블에서 저장 요청 -> DB 저장 실행');
+    await handleSave();
     setCftSaveStatus('saved');
-    setShowMissingFields(false);  // CFT 저장 시 미입력 표시 숨김
     setTimeout(() => setCftSaveStatus('idle'), 3000);
   };
 
@@ -477,9 +474,37 @@ function PFMEARegisterPageContent() {
 
   // 저장 (신규 등록 또는 수정) - DB API 호출
   const handleSave = async () => {
+    // ✅ 저장 시작 로그
+    console.log('[PFMEA 등록] 💾 저장 버튼 클릭 - 저장 시작');
+    
     if (!fmeaInfo.subject.trim()) {
       alert('FMEA명을 입력해주세요.');
+      console.warn('[PFMEA 등록] ⚠️ 저장 실패: FMEA명이 없음');
       return;
+    }
+
+    // ✅ CFT 멤버 데이터 검증 및 로그
+    const validCftMembers = cftMembers.filter(m => m.name && m.name.trim() !== '');
+    console.log('[PFMEA 등록] 저장 전 CFT 멤버 검증:', {
+      총: cftMembers.length,
+      유효: validCftMembers.length,
+      빈행: cftMembers.length - validCftMembers.length,
+      유효멤버: validCftMembers.map(m => ({ role: m.role, name: m.name, department: m.department })),
+    });
+    
+    // ✅ 저장 전 빈 값 확인 (경고만, 저장은 진행)
+    const emptyMembers = cftMembers.filter(m => !m.name || m.name.trim() === '');
+    if (emptyMembers.length > 0) {
+      console.warn(`[PFMEA 등록] ⚠️ ${emptyMembers.length}명의 CFT 멤버가 이름이 없습니다 (제외됨)`);
+    }
+    
+    // ✅ name이 있는 멤버 수 확인
+    if (validCftMembers.length === 0) {
+      const shouldContinue = confirm('CFT 멤버가 없습니다. 그래도 저장하시겠습니까?');
+      if (!shouldContinue) {
+        console.warn('[PFMEA 등록] ⚠️ 저장 취소: 사용자 취소');
+        return;
+      }
     }
 
     setSaveStatus('saving' as any);
@@ -506,7 +531,7 @@ function PFMEARegisterPageContent() {
         fmeaStartDate: fmeaInfo.fmeaStartDate || '',
         fmeaRevisionDate: fmeaInfo.fmeaRevisionDate || '',
         fmeaProjectName: fmeaInfo.fmeaProjectName || '',
-        fmeaId: fmeaId,
+        fmeaId: fmeaId.toUpperCase(), // ✅ FMEA ID는 항상 대문자로 정규화
         fmeaType: fmeaInfo.fmeaType || 'P',
         designResponsibility: fmeaInfo.designResponsibility || '',
         confidentialityLevel: fmeaInfo.confidentialityLevel || '',
@@ -514,11 +539,72 @@ function PFMEARegisterPageContent() {
       };
       
       console.log('[PFMEA 등록] 저장할 fmeaInfo:', fmeaInfoToSave);
-      console.log('[PFMEA 등록] 저장할 CFT 멤버:', cftMembers);
+      
+      // ✅ CFT 멤버 상태 최종 확인 (저장 직전 실제 상태 - 현재 상태 직접 확인)
+      console.log('[PFMEA 등록] ⚠️ 저장 직전 CFT 멤버 상태 확인:');
+      console.log(`  - 전체 멤버 수: ${cftMembers.length}`);
+      
+      // ✅ 실제 상태 값 확인 (React 상태가 아닌 현재 값)
+      const actualMembers = [...cftMembers]; // 현재 상태 복사
+      
+      const cftMembersWithName = actualMembers.filter(m => m.name && String(m.name).trim() !== '');
+      const cftMembersWithoutName = actualMembers.filter(m => !m.name || String(m.name).trim() === '');
+      
+      console.log(`  - name 있는 멤버: ${cftMembersWithName.length}명`);
+      if (cftMembersWithName.length > 0) {
+        console.log('    ✅ name 있는 멤버:', cftMembersWithName.map((m, idx) => `[${idx}] ${m.name || '(없음)'} (${m.role || '(role없음)'})`).join(', '));
+      }
+      
+      console.log(`  - name 없는 멤버: ${cftMembersWithoutName.length}명`);
+      if (cftMembersWithoutName.length > 0) {
+        console.warn('    ⚠️ name 없는 멤버:', cftMembersWithoutName.map((m, idx) => `[${idx}] ${m.role || '(role없음)'}`).join(', '));
+      }
+      
+      // ✅ 저장할 CFT 멤버 상세 로그 (실제 전달되는 데이터 - 현재 상태 그대로)
+      console.log('[PFMEA 등록] 저장할 CFT 멤버 (상세 - 실제 전달 데이터):', 
+        JSON.stringify(actualMembers.map((m, idx) => ({
+          index: idx,
+          id: m.id || '(id없음)',
+          role: m.role || '(role없음)',
+          name: m.name || '(이름없음)',
+          nameType: typeof m.name,
+          nameValue: String(m.name || ''),
+          nameTrimmed: String(m.name || '').trim(),
+          nameEmpty: !m.name || String(m.name).trim() === '',
+          department: m.department || '(부서없음)',
+          position: m.position || '(직급없음)',
+          task: m.task || '(담당업무없음)',
+          email: m.email || '(이메일없음)',
+          phone: m.phone || '(전화없음)',
+          remark: m.remark || '(비고없음)',
+        })), null, 2)
+      );
+      
+      // ✅ name이 없는 멤버가 있으면 경고 (저장은 진행하되 경고)
+      if (cftMembersWithoutName.length > 0) {
+        console.error(`[PFMEA 등록] ⚠️ 주의: ${cftMembersWithoutName.length}명의 멤버가 name이 없어서 DB에 저장되지 않습니다!`);
+        const shouldContinue = confirm(
+          `⚠️ ${cftMembersWithoutName.length}명의 CFT 멤버에 이름이 없습니다.\n\n` +
+          `이름이 없는 멤버는 DB에 저장되지 않습니다.\n\n` +
+          `현재 입력된 멤버: ${cftMembersWithName.length}명 (name 있음)\n` +
+          `저장되지 않을 멤버: ${cftMembersWithoutName.length}명 (name 없음)\n\n` +
+          `계속 저장하시겠습니까?\n\n` +
+          `(확인: name 있는 멤버만 저장 / 취소: 저장 중단)`
+        );
+        if (!shouldContinue) {
+          console.warn('[PFMEA 등록] 저장 취소: 사용자 취소');
+          setSaveStatus('idle');
+          return;
+        }
+      }
+      
+      // ✅ 저장 시 실제 상태 값 사용 (명시적으로 현재 상태 전달)
+      const membersToSave = actualMembers;
       
       // ✅ parentFmeaId 결정: 선택된 상위 FMEA 또는 Master는 본인 ID
+      // ✅ FMEA ID는 항상 대문자로 정규화 (DB 일관성 보장)
       const actualFmeaType = fmeaInfo.fmeaType || 'P';
-      const parentId = selectedBaseFmea || (actualFmeaType === 'M' ? fmeaId : null);
+      const parentId = selectedBaseFmea ? selectedBaseFmea.toUpperCase() : (actualFmeaType === 'M' ? fmeaId.toUpperCase() : null);
       const parentType = selectedBaseFmea 
         ? (selectedBaseFmea.match(/PFM\d{2}-([MFP])/i)?.[1]?.toUpperCase() || 'M')
         : (actualFmeaType === 'M' ? 'M' : null);
@@ -530,12 +616,12 @@ function PFMEARegisterPageContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          fmeaId,
+          fmeaId: fmeaId.toUpperCase(), // ✅ FMEA ID는 항상 대문자로 정규화
           fmeaType: fmeaInfo.fmeaType,
           project: projectData,
           fmeaInfo: fmeaInfoToSave,  // ✅ 모든 필드 포함
-          cftMembers,  // ✅ CFT 멤버도 DB에 저장
-          parentFmeaId: parentId,  // ✅ 상위 FMEA ID 저장
+          cftMembers: membersToSave,  // ✅ CFT 멤버도 DB에 저장 (현재 상태 명시적으로 전달)
+          parentFmeaId: parentId,  // ✅ 상위 FMEA ID 저장 (이미 대문자로 변환됨)
           parentFmeaType: parentType,  // ✅ 상위 FMEA 유형 저장
         }),
       });
@@ -544,6 +630,53 @@ function PFMEARegisterPageContent() {
       
       if (!result.success) {
         throw new Error(result.error || '저장 실패');
+      }
+      
+      // ✅ 저장 성공 후 응답 확인
+      console.log('[PFMEA 등록] ✅ 저장 성공:', {
+        fmeaId: result.fmeaId,
+        저장된CFT멤버수: membersToSave.length,
+        name있는멤버수: membersToSave.filter(m => m.name && m.name.trim() !== '').length,
+        전달된멤버: membersToSave.map(m => ({ name: m.name || '(이름없음)', role: m.role || '(role없음)' })),
+      });
+      
+      // ✅ 저장 후 DB에서 다시 조회하여 확인 (저장이 제대로 되었는지 검증)
+      try {
+        const verifyRes = await fetch(`/api/fmea/projects?id=${fmeaId.toUpperCase()}`);
+        if (verifyRes.ok) {
+          const verifyData = await verifyRes.json();
+          const savedProject = verifyData.projects?.find((p: any) => p.id === fmeaId.toUpperCase());
+          if (savedProject && savedProject.cftMembers) {
+            console.log('[PFMEA 등록] ✅ 저장 확인: DB에 저장된 CFT 멤버:', {
+              DB저장멤버수: savedProject.cftMembers.length,
+              멤버목록: savedProject.cftMembers.map((m: any) => ({ name: m.name || '(이름없음)', role: m.role || '(role없음)' })),
+            });
+            
+            // ✅ 저장된 멤버 수가 다르면 에러 및 재시도
+            const name있는멤버수 = cftMembers.filter(m => m.name && m.name.trim() !== '').length;
+            
+            if (savedProject.cftMembers.length !== name있는멤버수) {
+              console.error(`[PFMEA 등록] ❌ 멤버 수 불일치!`);
+              console.error(`  - 전달한 name있는멤버: ${name있는멤버수}명`);
+              console.error(`  - DB에 저장된 멤버: ${savedProject.cftMembers.length}명`);
+              console.error(`  - 전달한 전체 멤버: ${cftMembers.length}명`);
+              
+              alert(`❌ CFT 멤버 저장 실패!\n\n전달: ${name있는멤버수}명 (name 있음)\nDB 저장: ${savedProject.cftMembers.length}명\n\n콘솔에서 상세 정보를 확인하세요.`);
+              
+              // ❌ 저장 실패 처리 - 사용자에게 알림
+              setSaveStatus('idle');
+              return; // 에러 상태 유지
+            } else {
+              console.log(`[PFMEA 등록] ✅ 멤버 수 일치: ${savedProject.cftMembers.length}명 모두 DB에 저장됨`);
+            }
+            
+            // ✅ 저장 확인 완료 후 화면 데이터 동기화 (6명 등 실제 저장된 데이터 유지)
+            console.log('[PFMEA 등록] ✅ DB 데이터로 화면 동기화:', savedProject.cftMembers.length, '명');
+            setCftMembers(savedProject.cftMembers);
+          }
+        }
+      } catch (verifyError) {
+        console.warn('[PFMEA 등록] 저장 확인 실패:', verifyError);
       }
       
       // 2. localStorage에도 백업 저장
@@ -576,17 +709,17 @@ function PFMEARegisterPageContent() {
       }
       
       setSaveStatus('saved');
-      setShowMissingFields(true);  // ✅ 저장 후 미입력 필드 표시 활성화
+      setShowMissingFields(true);
       console.log('✅ FMEA DB 저장 완료:', fmeaId);
       
       setTimeout(() => {
         setSaveStatus('idle');
-        window.location.href = '/pfmea/list';
-      }, 1500);
-      
-    } catch (error: any) {
+        console.log('[PFMEA 등록] 저장 완료 상태 유지 - 수정 가능');
+      }, 2000);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('❌ FMEA 저장 실패:', error);
-      alert('저장에 실패했습니다: ' + error.message);
+      alert('저장에 실패했습니다: ' + errorMessage);
       setSaveStatus('idle');
     }
   };
@@ -930,7 +1063,8 @@ function PFMEARegisterPageContent() {
                     const newType = e.target.value as FMEAType;
                     updateField('fmeaType', newType);
                     // 유형 변경 시 ID 재생성
-                    setFmeaId(generateFMEAId(newType));
+                    // ✅ FMEA ID는 항상 대문자로 정규화
+                    setFmeaId(generateFMEAId(newType).toUpperCase());
                   }}
                   className="w-full h-7 px-2 text-xs border border-gray-300 bg-white text-gray-700 font-semibold rounded focus:outline-none focus:border-blue-500 cursor-pointer"
                 >

@@ -23,6 +23,7 @@ import {
   linkFunctionToStructure,
   linkFailureToFunction,
 } from './schema';
+import { buildFailureAnalyses } from './utils/failure-analysis-builder';
 
 // Re-export for external use
 export { getLinkedDataByFK, linkFunctionToStructure, linkFailureToFunction };
@@ -446,6 +447,20 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
   
   console.log('[마이그레이션] 확정 상태:', db.confirmed);
   
+  // ============ 고장분석 통합 데이터 생성 ============
+  // 고장연결 확정 시 자동 생성 (역전개 기능분석 + 역전개 구조분석 포함)
+  if (db.failureLinks.length > 0 && db.confirmed.failureLink) {
+    try {
+      db.failureAnalyses = buildFailureAnalyses(db);
+      console.log('[마이그레이션] 고장분석 통합 데이터 생성:', db.failureAnalyses.length, '개');
+    } catch (error) {
+      console.warn('[마이그레이션] 고장분석 통합 데이터 생성 실패:', error);
+      db.failureAnalyses = [];
+    }
+  } else {
+    db.failureAnalyses = [];
+  }
+  
   console.log('[마이그레이션] 완료:', {
     l1Structure: db.l1Structure?.name,
     l2Structures: db.l2Structures.length,
@@ -457,6 +472,7 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
     failureModes: db.failureModes.length,
     failureCauses: db.failureCauses.length,
     failureLinks: db.failureLinks.length,
+    failureAnalyses: db.failureAnalyses.length,
   });
   
   return db;

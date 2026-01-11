@@ -8,7 +8,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { UserInfo, USER_STORAGE_KEY } from '@/types/user';
-import { getAllUsers, createSampleUsers, createUser, deleteUser } from '@/lib/user-db';
+import { getAllUsers, createSampleUsers, createUser, deleteUser, updateUser } from '@/lib/user-db';
 import { downloadStyledExcel } from '@/lib/excel-utils';
 import * as XLSX from 'xlsx';
 
@@ -41,12 +41,15 @@ export function UserSelectModal({
   // 데이터 로드
   useEffect(() => {
     if (!isOpen) return;
-    createSampleUsers();
-    refreshData();
+    const loadData = async () => {
+      await createSampleUsers();
+      await refreshData();
+    };
+    loadData();
   }, [isOpen]);
 
-  const refreshData = () => {
-    const loadedUsers = getAllUsers();
+  const refreshData = async () => {
+    const loadedUsers = await getAllUsers();
     setUsers(loadedUsers);
   };
 
@@ -86,35 +89,89 @@ export function UserSelectModal({
   };
 
   // 저장
-  const handleSave = () => {
+  const handleSave = async () => {
     if (editingUser) {
-      if (!editingUser.name) {
-        alert('성명은 필수입니다.');
+      if (!editingUser.name || editingUser.name.trim() === '') {
+        alert('❌ 성명은 필수입니다.');
         return;
       }
-      const existing = getAllUsers();
-      const idx = existing.findIndex(u => u.id === editingUser.id);
-      if (idx >= 0) {
-        existing[idx] = { ...editingUser, updatedAt: new Date().toISOString() };
-      } else {
-        existing.push(editingUser);
+      
+      // 필수 필드 검증
+      if (!editingUser.factory || editingUser.factory.trim() === '') {
+        alert('❌ 공장은 필수입니다.');
+        return;
       }
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(existing));
-      const savedId = editingUser.id;
-      setEditingUser(null);
-      // 즉시 최신 데이터 로드
-      const latestUsers = getAllUsers();
-      setUsers(latestUsers);
-      setSelectedId(savedId); // 저장된 항목 선택 유지
+      if (!editingUser.department || editingUser.department.trim() === '') {
+        alert('❌ 부서는 필수입니다.');
+        return;
+      }
+      
+      try {
+        const savedId = editingUser.id;
+        let savedUser: UserInfo | null = null;
+        
+        // DB에 저장 (createUser 또는 updateUser)
+        if (editingUser.id && users.find(u => u.id === editingUser.id)) {
+          // 기존 사용자 수정
+          console.log('[UserSelectModal] 사용자 수정:', editingUser.name);
+          await updateUser(editingUser.id, {
+            factory: editingUser.factory,
+            department: editingUser.department,
+            name: editingUser.name,
+            position: editingUser.position,
+            phone: editingUser.phone,
+            email: editingUser.email,
+            remark: editingUser.remark,
+          });
+          savedUser = users.find(u => u.id === savedId) || null;
+        } else {
+          // 새 사용자 생성
+          console.log('[UserSelectModal] 신규 사용자 생성:', editingUser.name);
+          savedUser = await createUser({
+            factory: editingUser.factory,
+            department: editingUser.department,
+            name: editingUser.name,
+            position: editingUser.position,
+            phone: editingUser.phone,
+            email: editingUser.email,
+            remark: editingUser.remark,
+          });
+        }
+        
+        // 목록 갱신
+        await refreshData();
+        
+        // 저장된 사용자 선택 (ID 갱신)
+        if (savedUser) {
+          setSelectedId(savedUser.id);
+          alert(`✅ 사용자 "${savedUser.name}" 저장 완료!`);
+        } else {
+          // refreshData로 최신 목록 가져온 후 다시 찾기
+          const updatedUsers = await getAllUsers();
+          const found = updatedUsers.find(u => u.name === editingUser.name && u.department === editingUser.department);
+          if (found) {
+            setSelectedId(found.id);
+            alert(`✅ 사용자 "${found.name}" 저장 완료!`);
+          } else {
+            alert(`✅ 사용자 저장 완료! 목록을 확인해주세요.`);
+          }
+        }
+        
+        setEditingUser(null);
+      } catch (error: any) {
+        console.error('[UserSelectModal] 저장 오류:', error);
+        alert(`❌ 저장 실패: ${error.message || '알 수 없는 오류'}\n\nlocalStorage로 임시 저장되었을 수 있습니다.`);
+        // 에러 발생해도 편집 모드 유지하여 재시도 가능하게
+      }
     }
   };
 
   // 삭제
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (selectedId) {
       if (confirm('선택한 사용자를 삭제하시겠습니까?')) {
-        deleteUser(selectedId);
-        refreshData();
+        await deleteUser(selectedId);
+        await refreshData();
         setSelectedId(null);
       }
     } else {
@@ -161,12 +218,10 @@ export function UserSelectModal({
         return;
       }
 
-      const now = new Date().toISOString();
       let importedCount = 0;
 
       for (const row of dataRows) {
-        const newUser: UserInfo = {
-          id: generateUUID(),
+        const userData = {
           factory: String(row[0] || ''),
           department: String(row[1] || ''),
           name: String(row[2] || ''),
@@ -174,19 +229,20 @@ export function UserSelectModal({
           phone: String(row[4] || ''),
           email: String(row[5] || ''),
           remark: String(row[6] || ''),
-          createdAt: now,
-          updatedAt: now
         };
 
-        if (newUser.name) {
-          const existing = getAllUsers();
-          existing.push(newUser);
-          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(existing));
-          importedCount++;
+        if (userData.name) {
+          // 이메일 중복 체크
+          const existingUsers = await getAllUsers();
+          const emailExists = userData.email && existingUsers.find(u => u.email === userData.email);
+          if (!emailExists) {
+            await createUser(userData);
+            importedCount++;
+          }
         }
       }
 
-      refreshData();
+      await refreshData();
       alert(`✅ ${importedCount}명 Import 완료!`);
     } catch (err) {
       console.error('Import 오류:', err);

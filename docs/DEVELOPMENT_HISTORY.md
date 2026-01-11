@@ -5,6 +5,38 @@
 
 ---
 
+## 📅 2026-01-11
+
+### v2.7.0 - CFT 데이터 지속성 확보 및 FMEA ID 정규화
+
+**핵심 변경사항**:
+
+1. ✅ **CFT 데이터 지속성 근본 해결**
+   - 신규 등록 모드에서 DB의 최근 프로젝트 로드 간섭 제거 (입력 데이터 보호)
+   - CFT 테이블 내 '저장' 버튼 클릭 시 즉시 DB 저장 API 호출 연동
+   - 저장 후 자동 초기화 로직 제거 및 데이터 유지 정책 확립 (수동 초기화만 허용)
+
+2. ✅ **FMEA ID 및 데이터 정규화**
+   - 모든 FMEA ID 및 상위 FMEA ID 대문자(`.toUpperCase()`) 정규화 강제
+   - `parentFmeaType`이 Master인 경우 'M'으로 정확히 저장되도록 수정
+   - 기존 DB 데이터 일괄 보정 스크립트 실행 (`scripts/fix-master-parent-fmea.ts`)
+
+3. ✅ **API 모듈화 및 룰 준수**
+   - `/api/fmea/projects`의 DB 로직을 `fmea-project-service.ts`로 분리
+   - API 라우트 파일 500라인 제한 룰 준수 및 가독성 향상
+
+4. ✅ **DB 정합성 검증 시스템**
+   - `scripts/check-cft-members.ts`를 통한 DB 직접 검증 도구 확보
+   - 저장 시 DB 데이터 실시간 재조회(Verify) 및 화면 동기화 로직 추가
+
+**수정된 파일**:
+- `src/lib/services/fmea-project-service.ts` - DB 서비스 레이어 분리
+- `src/app/api/fmea/projects/route.ts` - API 라우트 경량화
+- `src/app/pfmea/register/page.tsx` - 등록 화면 저장/유지 로직 개선
+- `src/app/api/users/route.ts` - 사용자 API 에러 핸들링 강화
+
+---
+
 ## 📅 2026-01-10
 
 ### v2.6.0 - 마스터/패밀리/파트 FMEA 상속 기능

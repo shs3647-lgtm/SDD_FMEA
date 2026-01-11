@@ -98,9 +98,123 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
     }
 
-    console.log(`[ALL-VIEW API] 원자성 DB에서 CASCADE JOIN 시작: ${fmeaId}`);
+    console.log(`[ALL-VIEW API] 원자성 DB에서 데이터 로드 시작: ${fmeaId}`);
 
-    // ★★★ 원자성 DB에서 JOIN으로 전체 데이터 가져오기 ★★★
+    // ★★★ 1단계: FailureAnalyses 테이블 우선 조회 (확정된 통합 데이터) ★★★
+    // FailureAnalyses는 고장연결 확정 시 역전개 정보와 함께 저장된 통합 데이터
+    const failureAnalyses = await prisma.failureAnalysis.findMany({
+      where: { fmeaId },
+      orderBy: { order: 'asc' },
+    }).catch(() => []);
+
+    if (failureAnalyses && failureAnalyses.length > 0) {
+      console.log(`[ALL-VIEW API] ✅ FailureAnalyses 테이블에서 로드: ${failureAnalyses.length}개`);
+      
+      // ★ FM/FE/FC 번호 생성
+      const fmIdToNo = new Map<string, string>();
+      const feIdToNo = new Map<string, string>();
+      const fcIdToNo = new Map<string, string>();
+      
+      const uniqueFMs = [...new Set(failureAnalyses.map(fa => fa.fmId))];
+      const uniqueFEs = [...new Set(failureAnalyses.map(fa => fa.feId).filter(Boolean))];
+      const uniqueFCs = [...new Set(failureAnalyses.map(fa => fa.fcId).filter(Boolean))];
+      
+      uniqueFMs.forEach((id, idx) => fmIdToNo.set(id, `M${idx + 1}`));
+      uniqueFEs.forEach((id, idx) => feIdToNo.set(id, `S${idx + 1}`));
+      uniqueFCs.forEach((id, idx) => fcIdToNo.set(id, `C${idx + 1}`));
+
+      // 리스크분석 데이터 조회 (linkId로 연결)
+      const riskAnalyses = await prisma.riskAnalysis.findMany({
+        where: { fmeaId },
+        include: { optimizations: true },
+      }).catch(() => []);
+      
+      const riskByLinkId = new Map<string, any>();
+      riskAnalyses.forEach(r => riskByLinkId.set(r.linkId, r));
+
+      // FailureAnalyses → AllViewRow 변환
+      const rows: AllViewRow[] = failureAnalyses.map(fa => {
+        const risk = riskByLinkId.get(fa.linkId);
+        const opt = risk?.optimizations?.[0];
+
+        return {
+          // 구조분석 (역전개 구조분석 정보 직접 사용)
+          l1StructName: fa.l1StructName || '',
+          l2StructNo: fa.l2StructNo || '',
+          l2StructName: fa.l2StructName || '',
+          l3M4: fa.l3StructM4 || '',
+          l3Name: fa.l3StructName || '',
+          
+          // 기능분석 (역전개 기능분석 정보 직접 사용)
+          l1FuncCategory: fa.l1Category || '',
+          l1FuncName: fa.l1FuncName || '',
+          l1Requirement: fa.l1Requirement || '',
+          l2FuncName: fa.l2FuncName || '',
+          l2ProductChar: fa.l2ProductChar || '',
+          l2SpecialChar: fa.l2SpecialChar || '',
+          l3FuncName: fa.l3FuncName || '',
+          l3ProcessChar: fa.l3ProcessChar || '',
+          l3SpecialChar: fa.l3SpecialChar || '',
+          
+          // 고장분석 (고장연결 정보 직접 사용)
+          feNo: feIdToNo.get(fa.feId) || '',
+          feEffect: fa.feText || '',
+          feSeverity: fa.feSeverity || 0,
+          fmNo: fmIdToNo.get(fa.fmId) || '',
+          fmMode: fa.fmText || '',
+          fcNo: fcIdToNo.get(fa.fcId) || '',
+          fcCause: fa.fcText || '',
+          fcOccurrence: fa.fcOccurrence || null,
+          
+          // 리스크분석
+          riskSeverity: risk?.severity || null,
+          riskOccurrence: risk?.occurrence || null,
+          riskDetection: risk?.detection || null,
+          riskAP: risk?.ap || null,
+          preventionControl: risk?.preventionControl || null,
+          detectionControl: risk?.detectionControl || null,
+          
+          // 최적화
+          optAction: opt?.recommendedAction || null,
+          optResponsible: opt?.responsible || null,
+          optTargetDate: opt?.targetDate || null,
+          optStatus: opt?.status || null,
+          optRemarks: opt?.remarks || null,
+          
+          // 메타
+          linkId: fa.linkId,
+          fmId: fa.fmId,
+          feId: fa.feId,
+          fcId: fa.fcId,
+        };
+      });
+
+      // 통계 정보
+      const stats = {
+        source: 'FailureAnalyses',
+        totalLinks: rows.length,
+        processCount: new Set(rows.map(r => r.l2StructNo).filter(Boolean)).size,
+        fmCount: new Set(rows.map(r => r.fmId)).size,
+        feCount: new Set(rows.map(r => r.feId).filter(Boolean)).size,
+        fcCount: new Set(rows.map(r => r.fcId).filter(Boolean)).size,
+        withRisk: rows.filter(r => r.riskSeverity !== null).length,
+        withOptimization: rows.filter(r => r.optAction !== null).length,
+      };
+
+      console.log(`[ALL-VIEW API] FailureAnalyses 변환 완료:`, stats);
+
+      return NextResponse.json({
+        success: true,
+        fmeaId,
+        rows,
+        stats,
+        loadedAt: new Date().toISOString(),
+      });
+    }
+
+    // ★★★ 2단계: FailureAnalyses 없으면 기존 JOIN 로직 사용 (하위 호환성) ★★★
+    console.log(`[ALL-VIEW API] ⚠️ FailureAnalyses 없음, CASCADE JOIN 폴백`);
+
     const failureLinks = await prisma.failureLink.findMany({
       where: { fmeaId },
       include: {
@@ -218,6 +332,7 @@ export async function GET(request: NextRequest) {
 
     // 통계 정보
     const stats = {
+      source: 'FailureLinks (CASCADE JOIN)',
       totalLinks: rows.length,
       processCount: new Set(rows.map(r => r.l2StructNo)).size,
       fmCount: new Set(rows.map(r => r.fmId)).size,
@@ -227,7 +342,7 @@ export async function GET(request: NextRequest) {
       withOptimization: rows.filter(r => r.optAction !== null).length,
     };
 
-    console.log(`[ALL-VIEW API] 변환 완료:`, stats);
+    console.log(`[ALL-VIEW API] FailureLinks CASCADE JOIN 변환 완료:`, stats);
 
     return NextResponse.json({
       success: true,

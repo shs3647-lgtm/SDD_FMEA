@@ -265,12 +265,89 @@ model FailureLink {
   failureEffect FailureEffect @relation(fields: [feId], references: [id], onDelete: Cascade)
   failureCause  FailureCause  @relation(fields: [fcId], references: [id], onDelete: Cascade)
   riskAnalyses  RiskAnalysis[]
+  failureAnalyses FailureAnalysis[] // 고장분석 통합 데이터
 
   @@index([fmeaId])
   @@index([fmId])
   @@index([feId])
   @@index([fcId])
   @@map("failure_links")
+}
+
+// ============ 고장분석 통합 테이블 (All 화면 렌더링용) ============
+// 고장연결 결과 + 역전개 기능분석 + 역전개 구조분석 통합 저장
+
+model FailureAnalysis {
+  id        String   @id @default(uuid())
+  fmeaId    String   // FK: FMEA 프로젝트 ID
+  linkId    String   // FK: FailureLink.id (고장연결)
+  
+  // ============ 고장연결 정보 (고장형태, 고장원인, 고장영향) ============
+  fmId      String   // FK: FailureMode.id
+  fmText    String   // 고장형태 내용
+  fmProcessName String // 공정명 (L2 Structure.name)
+  
+  feId      String   // FK: FailureEffect.id
+  feText    String   // 고장영향 내용
+  feCategory String  // 구분 (Your Plant/Ship to Plant/User)
+  feSeverity Int     // 심각도 (1-10)
+  
+  fcId      String   // FK: FailureCause.id
+  fcText    String   // 고장원인 내용
+  fcOccurrence Int?  // 발생도 (1-10)
+  fcWorkElementName String // 작업요소명 (L3 Structure.name)
+  fcM4      String?  // 4M 분류 (MN/MC/IM/EN)
+  
+  // ============ 역전개 기능분석 정보 ============
+  // L1 (완제품 기능)
+  l1FuncId      String   // FK: L1Function.id
+  l1Category    String   // 구분 (Your Plant/Ship to Plant/User)
+  l1FuncName    String   // 완제품 기능명
+  l1Requirement String   // 요구사항
+  
+  // L2 (메인공정 기능)
+  l2FuncId      String   // FK: L2Function.id
+  l2FuncName    String   // 공정 기능명
+  l2ProductChar String   // 제품특성
+  l2SpecialChar String?  // 특별특성
+  
+  // L3 (작업요소 기능)
+  l3FuncId      String   // FK: L3Function.id
+  l3FuncName    String   // 작업요소 기능명
+  l3ProcessChar String   // 공정특성
+  l3SpecialChar String?  // 특별특성
+  
+  // ============ 역전개 구조분석 정보 ============
+  // L1 (완제품)
+  l1StructId    String   // FK: L1Structure.id
+  l1StructName  String   // 완제품 공정명
+  
+  // L2 (메인공정)
+  l2StructId    String   // FK: L2Structure.id
+  l2StructNo    String   // 공정 번호
+  l2StructName  String   // 공정명
+  
+  // L3 (작업요소)
+  l3StructId    String   // FK: L3Structure.id
+  l3StructM4    String?  // 4M 분류
+  l3StructName  String   // 작업요소명
+  
+  // ============ 메타데이터 ============
+  order       Int      @default(0) // 정렬 순서
+  confirmed   Boolean  @default(false) // 확정 여부
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  failureLink FailureLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+
+  @@index([fmeaId])
+  @@index([linkId])
+  @@index([fmId])
+  @@index([feId])
+  @@index([fcId])
+  @@unique([linkId]) // 하나의 고장연결당 하나의 고장분석 데이터
+  @@map("failure_analyses")
 }
 
 // ============ 리스크분석/최적화 (5-6단계) ============
@@ -458,4 +535,28 @@ model FmeaConfirmedState {
   // project FmeaProject @relation(fields: [fmeaId], references: [fmeaId], onDelete: Cascade)
 
   @@map("fmea_confirmed_states")
+}
+
+// ============================================================================
+// ============ 마스터 데이터 테이블들 (전체 프로젝트 공유) ============
+// ============================================================================
+
+// ============ 사용자 정보 마스터 (전체 프로젝트 공유) ============
+model User {
+  id          String   @id @default(uuid())
+  factory     String   // 공장
+  department  String   // 부서
+  name        String   // 성명
+  position    String   // 직급
+  phone       String?  // 전화번호
+  email       String?  // 이메일
+  remark      String?  // 비고
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([email])
+  @@index([name])
+  @@index([department])
+  @@index([factory])
+  @@map("users")
 }

@@ -254,6 +254,16 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       console.log('[원자성 DB 저장] 확정(변환후):', newAtomicDB.confirmed);
       console.log('[원자성 DB 저장] l1Structure.name:', newAtomicDB.l1Structure?.name);
       
+      // ============ 고장분석 통합 데이터 자동 생성 ============
+      // 고장연결 확정 시 고장분석 통합 데이터 생성 (역전개 기능분석 + 역전개 구조분석 포함)
+      if (newAtomicDB.failureLinks.length > 0 && newAtomicDB.confirmed.failureLink) {
+        const { buildFailureAnalyses } = await import('../utils/failure-analysis-builder');
+        newAtomicDB.failureAnalyses = buildFailureAnalyses(newAtomicDB);
+        console.log('[원자성 DB 저장] 고장분석 통합 데이터 생성:', newAtomicDB.failureAnalyses.length, '개');
+      } else {
+        newAtomicDB.failureAnalyses = [];
+      }
+      
       // ★★★ 레거시 데이터를 Single Source of Truth로 함께 저장 ★★★
       // 원자성 DB 변환 과정에서의 데이터 손실 방지를 위해 레거시 데이터도 DB에 저장
       // ✅ await 추가하여 DB 저장 완료까지 대기

@@ -9,7 +9,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { UserInfo, USER_STORAGE_KEY } from '@/types/user';
-import { getAllUsers, createSampleUsers, deleteUser } from '@/lib/user-db';
+import { getAllUsers, createSampleUsers, deleteUser, createUser } from '@/lib/user-db';
 import { downloadStyledExcel } from '@/lib/excel-utils';
 import * as XLSX from 'xlsx';
 
@@ -31,12 +31,15 @@ export default function UserMasterPage() {
 
   // 데이터 로드
   useEffect(() => {
-    createSampleUsers();
-    refreshData();
+    const loadData = async () => {
+      await createSampleUsers();
+      await refreshData();
+    };
+    loadData();
   }, []);
 
-  const refreshData = () => {
-    const loadedUsers = getAllUsers();
+  const refreshData = async () => {
+    const loadedUsers = await getAllUsers();
     setUsers(loadedUsers);
   };
 
@@ -67,33 +70,52 @@ export default function UserMasterPage() {
   };
 
   // 저장
-  const handleSave = () => {
+  const handleSave = async () => {
     if (editingUser) {
       if (!editingUser.name) {
         alert('성명은 필수입니다.');
         return;
       }
-      const existing = getAllUsers();
-      const idx = existing.findIndex(u => u.id === editingUser.id);
-      if (idx >= 0) {
-        existing[idx] = { ...editingUser, updatedAt: new Date().toISOString() };
-      } else {
-        existing.push(editingUser);
-      }
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(existing));
+      
       const savedId = editingUser.id;
+      
+      // DB에 저장 (createUser 또는 updateUser)
+      if (editingUser.id && users.find(u => u.id === editingUser.id)) {
+        // 기존 사용자 수정
+        await updateUser(editingUser.id, {
+          factory: editingUser.factory,
+          department: editingUser.department,
+          name: editingUser.name,
+          position: editingUser.position,
+          phone: editingUser.phone,
+          email: editingUser.email,
+          remark: editingUser.remark,
+        });
+      } else {
+        // 새 사용자 생성
+        await createUser({
+          factory: editingUser.factory,
+          department: editingUser.department,
+          name: editingUser.name,
+          position: editingUser.position,
+          phone: editingUser.phone,
+          email: editingUser.email,
+          remark: editingUser.remark,
+        });
+      }
+      
       setEditingUser(null);
-      refreshData();
+      await refreshData();
       setSelectedId(savedId);
     }
   };
 
   // 삭제
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (selectedId) {
       if (confirm('선택한 사용자를 삭제하시겠습니까?')) {
-        deleteUser(selectedId);
-        refreshData();
+        await deleteUser(selectedId);
+        await refreshData();
         setSelectedId(null);
       }
     } else {
@@ -140,12 +162,10 @@ export default function UserMasterPage() {
         return;
       }
 
-      const now = new Date().toISOString();
       let importedCount = 0;
 
       for (const row of dataRows) {
-        const newUser: UserInfo = {
-          id: generateUUID(),
+        const userData = {
           factory: String(row[0] || ''),
           department: String(row[1] || ''),
           name: String(row[2] || ''),
@@ -153,19 +173,20 @@ export default function UserMasterPage() {
           phone: String(row[4] || ''),
           email: String(row[5] || ''),
           remark: String(row[6] || ''),
-          createdAt: now,
-          updatedAt: now
         };
 
-        if (newUser.name) {
-          const existing = getAllUsers();
-          existing.push(newUser);
-          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(existing));
-          importedCount++;
+        if (userData.name) {
+          // 이메일 중복 체크
+          const existingUsers = await getAllUsers();
+          const emailExists = userData.email && existingUsers.find(u => u.email === userData.email);
+          if (!emailExists) {
+            await createUser(userData);
+            importedCount++;
+          }
         }
       }
 
-      refreshData();
+      await refreshData();
       alert(`✅ ${importedCount}명 Import 완료!`);
     } catch (err) {
       console.error('Import 오류:', err);

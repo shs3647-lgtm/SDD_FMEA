@@ -362,7 +362,76 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // 11. RiskAnalyses 배치 저장
+      // 11. FailureAnalyses 저장 (고장분석 통합 데이터 - All 화면 렌더링용)
+      // 고장연결 확정 시 자동 생성된 고장분석 통합 데이터 저장
+      if (db.failureAnalyses && db.failureAnalyses.length > 0) {
+        // 기존 고장분석 데이터 삭제 (고장연결 재확정 시 재생성)
+        await tx.failureAnalysis.deleteMany({ where: { fmeaId: db.fmeaId } });
+        
+        await tx.failureAnalysis.createMany({
+          data: db.failureAnalyses.map(fa => ({
+            id: fa.id,
+            fmeaId: db.fmeaId,
+            linkId: fa.linkId,
+            
+            // 고장연결 정보
+            fmId: fa.fmId,
+            fmText: fa.fmText,
+            fmProcessName: fa.fmProcessName,
+            
+            feId: fa.feId,
+            feText: fa.feText,
+            feCategory: fa.feCategory,
+            feSeverity: fa.feSeverity,
+            
+            fcId: fa.fcId,
+            fcText: fa.fcText,
+            fcOccurrence: fa.fcOccurrence || null,
+            fcWorkElementName: fa.fcWorkElementName,
+            fcM4: fa.fcM4 || null,
+            
+            // 역전개 기능분석 정보
+            l1FuncId: fa.l1FuncId,
+            l1Category: fa.l1Category,
+            l1FuncName: fa.l1FuncName,
+            l1Requirement: fa.l1Requirement,
+            
+            l2FuncId: fa.l2FuncId,
+            l2FuncName: fa.l2FuncName,
+            l2ProductChar: fa.l2ProductChar,
+            l2SpecialChar: fa.l2SpecialChar || null,
+            
+            l3FuncId: fa.l3FuncId,
+            l3FuncName: fa.l3FuncName,
+            l3ProcessChar: fa.l3ProcessChar,
+            l3SpecialChar: fa.l3SpecialChar || null,
+            
+            // 역전개 구조분석 정보
+            l1StructId: fa.l1StructId,
+            l1StructName: fa.l1StructName,
+            
+            l2StructId: fa.l2StructId,
+            l2StructNo: fa.l2StructNo,
+            l2StructName: fa.l2StructName,
+            
+            l3StructId: fa.l3StructId,
+            l3StructM4: fa.l3StructM4 || null,
+            l3StructName: fa.l3StructName,
+            
+            // 메타데이터
+            order: fa.order || 0,
+            confirmed: fa.confirmed || false,
+          })),
+          skipDuplicates: true,
+        });
+        
+        console.log(`[API] ✅ FailureAnalyses 저장 완료: ${db.failureAnalyses.length}개`);
+      } else {
+        // 고장연결이 확정되지 않았거나 없으면 기존 데이터 삭제
+        await tx.failureAnalysis.deleteMany({ where: { fmeaId: db.fmeaId } });
+      }
+
+      // 12. RiskAnalyses 배치 저장
       if (db.riskAnalyses.length > 0) {
         await Promise.all(
           db.riskAnalyses.map(risk =>
@@ -393,7 +462,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // 12. Optimizations 배치 저장
+      // 13. Optimizations 배치 저장
       if (db.optimizations.length > 0) {
         await Promise.all(
           db.optimizations.map(opt =>
@@ -710,6 +779,22 @@ export async function GET(request: NextRequest) {
     }
 
     // 모든 데이터를 병렬로 조회 (하위 호환성)
+    // ✅ failureAnalysis는 별도로 처리 (테이블이 없을 수 있음)
+    let failureAnalyses: any[] = [];
+    try {
+      failureAnalyses = await prisma.failureAnalysis.findMany({ 
+        where: { fmeaId }, 
+        orderBy: { order: 'asc' } 
+      });
+    } catch (e: any) {
+      // 테이블이 없거나 모델이 없으면 빈 배열 반환 (하위 호환성)
+      if (e?.code === 'P2021' || e?.message?.includes('does not exist')) {
+        console.warn('[API] failure_analyses 테이블 없음, 빈 배열 반환 (하위 호환성)');
+      } else {
+        console.warn('[API] failure_analyses 조회 오류:', e.message);
+      }
+    }
+    
     const [
       l1Structure,
       l2Structures,
@@ -850,6 +935,52 @@ export async function GET(request: NextRequest) {
         fcId: link.fcId,
         createdAt: link.createdAt.toISOString(),
         updatedAt: link.updatedAt.toISOString(),
+      })),
+      // 고장분석 통합 데이터 (All 화면 렌더링용)
+      failureAnalyses: (failureAnalyses || []).map((fa: any) => ({
+        id: fa.id,
+        fmeaId: fa.fmeaId,
+        linkId: fa.linkId,
+        // 고장연결 정보
+        fmId: fa.fmId,
+        fmText: fa.fmText,
+        fmProcessName: fa.fmProcessName,
+        feId: fa.feId,
+        feText: fa.feText,
+        feCategory: fa.feCategory,
+        feSeverity: fa.feSeverity,
+        fcId: fa.fcId,
+        fcText: fa.fcText,
+        fcOccurrence: fa.fcOccurrence || undefined,
+        fcWorkElementName: fa.fcWorkElementName,
+        fcM4: fa.fcM4 || undefined,
+        // 역전개 기능분석
+        l1FuncId: fa.l1FuncId,
+        l1Category: fa.l1Category,
+        l1FuncName: fa.l1FuncName,
+        l1Requirement: fa.l1Requirement,
+        l2FuncId: fa.l2FuncId,
+        l2FuncName: fa.l2FuncName,
+        l2ProductChar: fa.l2ProductChar,
+        l2SpecialChar: fa.l2SpecialChar || undefined,
+        l3FuncId: fa.l3FuncId,
+        l3FuncName: fa.l3FuncName,
+        l3ProcessChar: fa.l3ProcessChar,
+        l3SpecialChar: fa.l3SpecialChar || undefined,
+        // 역전개 구조분석
+        l1StructId: fa.l1StructId,
+        l1StructName: fa.l1StructName,
+        l2StructId: fa.l2StructId,
+        l2StructNo: fa.l2StructNo,
+        l2StructName: fa.l2StructName,
+        l3StructId: fa.l3StructId,
+        l3StructM4: fa.l3StructM4 || undefined,
+        l3StructName: fa.l3StructName,
+        // 메타데이터
+        order: fa.order,
+        confirmed: fa.confirmed,
+        createdAt: fa.createdAt.toISOString(),
+        updatedAt: fa.updatedAt.toISOString(),
       })),
       riskAnalyses: riskAnalyses.map((risk: any) => ({
         id: risk.id,
