@@ -152,6 +152,7 @@ codefreeze-20260111-function-l3-zebra  (기능3L 메인공정명 줄무늬)
 codefreeze-20260111-structure-zebra  (구조분석 메인공정명 줄무늬)
 codefreeze-20260111-label-names-frozen  (⚠️ 레이블명 절대 수정 금지)
 codefreeze-20260111-batch-freeze  (일괄 코드프리즈 - 2026-01-11)
+codefreeze-20260111-pre-fmea-new-write  (FMEA 새로 작성 전 전체 시스템 코드프리즈)
 ```
 
 ---
@@ -187,4 +188,17 @@ codefreeze-20260111-batch-freeze  (일괄 코드프리즈 - 2026-01-11)
 
 ---
 
-## 📅 마지막 업데이트: 2026-01-11
+### 7. FMEA 새로 작성 전 전체 시스템 코드프리즈
+- **태그**: `codefreeze-20260111-pre-fmea-new-write`
+- **날짜**: 2026-01-11 15:53
+- **내용**: 
+  - DB 백업 가이드 추가 (`docs/DB_BACKUP_GUIDE.md`)
+  - 백업 스크립트 추가 (`scripts/backup-db.js`, `scripts/backup-db.ps1`)
+  - 복원 스크립트 추가 (`scripts/restore-db.js`)
+  - 백업 정리 스크립트 추가 (`scripts/cleanup-backups.js`)
+  - 코드 정리 및 문서 업데이트
+- **백업 태그**: `backup-20260111-1553`
+
+---
+
+## 📅 마지막 업데이트: 2026-01-11 15:53
