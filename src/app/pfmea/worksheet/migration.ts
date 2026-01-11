@@ -35,6 +35,8 @@ import {
   AtomicType,
 } from './constants';
 import { buildFailureAnalyses } from './utils/failure-analysis-builder';
+import { calculateAP } from '../tabs/all/apCalculator';
+import type { RiskAnalysis } from './schema';
 
 // Re-export for external use
 export { getLinkedDataByFK, linkFunctionToStructure, linkFailureToFunction };
