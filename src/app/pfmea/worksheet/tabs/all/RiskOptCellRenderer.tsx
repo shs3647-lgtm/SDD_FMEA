@@ -119,6 +119,11 @@ export function RiskOptCellRenderer({
   handleSODClick,
   setApModal,
 }: RiskOptCellRendererProps): React.ReactElement | null {
+  // ★★★★★ 디버깅: 컬럼 정보 확인 ★★★★★
+  if (col.name === '발생도' && rowInFM === 0 && globalRowIdx < 3) {
+    console.log(`[RiskOptCellRenderer] 발생도 컬럼: colIdx=${colIdx}, col.id=${col.id}, col.name="${col.name}", col.step="${col.step}"`);
+  }
+  
   const targetType = col.step === '리스크분석' ? 'risk' : 'opt';
   const stage = col.step === '리스크분석' ? 5 : 6;
   
@@ -148,7 +153,8 @@ export function RiskOptCellRenderer({
   }
 
   // ★ 발생도 / 검출도 셀 - 숫자만 표시 (문자열은 완전히 무시)
-  if (col.name === '발생도' || col.name === '검출도') {
+  // ★★★ 중요: col.name과 col.step을 엄격하게 검증 ★★★
+  if ((col.name === '발생도' || col.name === '검출도') && (col.step === '리스크분석' || col.step === '최적화')) {
     const category: 'O' | 'D' = col.name === '발생도' ? 'O' : 'D';
     const key = `${targetType}-${uniqueKey}-${category}`;
     const rawValue = state?.riskData?.[key];

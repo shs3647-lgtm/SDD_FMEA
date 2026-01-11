@@ -212,7 +212,13 @@ export default function AllTabEmpty({
                         const failureResult = FailureCellRenderer({
                           col, colIdx, fmGroup, fmIdx, row, rowInFM, globalRowIdx,
                         });
-                        if (failureResult !== null) return failureResult;
+                        if (failureResult !== null) {
+                          // ★ 디버깅: 고장원인(FC) 컬럼 렌더링 확인
+                          if (col.name === '고장원인(FC)' && rowInFM === 0) {
+                            console.log(`[AllTabEmpty] 고장원인(FC) 렌더링: colIdx=${colIdx}, col.id=${col.id}, fcText="${row.fcText}"`);
+                          }
+                          return failureResult;
+                        }
                       }
                       
                       // ★ 구조분석 컬럼 - StructureCellRenderer 사용 (모듈화)
@@ -235,6 +241,11 @@ export default function AllTabEmpty({
                       // ★ 리스크분석 / 최적화 컬럼 - RiskOptCellRenderer 사용 (모듈화)
                       // ★ 중요: rowSpan 병합 체크는 FailureCellRenderer와 동일한 조건 사용
                       if (col.step === '리스크분석' || col.step === '최적화') {
+                        // ★ 디버깅: 발생도 컬럼 렌더링 확인
+                        if (col.name === '발생도' && rowInFM === 0) {
+                          console.log(`[AllTabEmpty] 발생도 렌더링: colIdx=${colIdx}, col.id=${col.id}, col.name="${col.name}"`);
+                        }
+                        
                         // ★ FC별 rowSpan 조건: FailureCellRenderer와 동일
                         const isInMergedRange = (): boolean => {
                           for (let prevIdx = 0; prevIdx < rowInFM; prevIdx++) {
