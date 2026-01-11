@@ -102,9 +102,35 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     } catch (e) { /* ignore */ }
     
     try {
+      // ★★★ 2026-01-11: 잘못된 riskData 완전 삭제 (일회성 정리) ★★★
+      const cleanupKey = `pfmea_riskData_cleanup_v2_${fmeaId}`;
+      if (!localStorage.getItem(cleanupKey)) {
+        localStorage.removeItem(`pfmea_riskData_${fmeaId}`);
+        localStorage.setItem(cleanupKey, 'done');
+        console.log('[riskData] 잘못된 localStorage 데이터 완전 삭제 완료');
+      }
+      
       const riskDataStr = localStorage.getItem(`pfmea_riskData_${fmeaId}`);
       if (riskDataStr) {
-        savedRiskData = JSON.parse(riskDataStr);
+        const parsed = JSON.parse(riskDataStr);
+        // ★★★ 발생도/검출도(O/D)에 문자열이 저장된 경우 완전히 제거 ★★★
+        const cleaned: { [key: string]: number | string } = {};
+        Object.entries(parsed).forEach(([key, value]) => {
+          // O/D/S 키는 숫자만 허용 (1-10)
+          if (key.endsWith('-O') || key.endsWith('-D') || key.endsWith('-S')) {
+            if (typeof value === 'number' && value >= 1 && value <= 10) {
+              cleaned[key] = value;
+            } else {
+              console.warn(`[riskData 정리] 잘못된 값 삭제: ${key} = "${value}"`);
+            }
+          } else {
+            // 다른 키는 그대로 유지
+            cleaned[key] = value as number | string;
+          }
+        });
+        savedRiskData = cleaned;
+        // ★ 정리된 데이터로 localStorage 덮어쓰기
+        localStorage.setItem(`pfmea_riskData_${fmeaId}`, JSON.stringify(cleaned));
       }
     } catch (e) { /* ignore */ }
     
