@@ -732,7 +732,10 @@ export async function POST(request: NextRequest) {
               version: LEGACY_DATA_VERSION,
             },
           });
-          console.log('[API] ✅ 레거시 데이터 DB 저장 완료 (등록정보 보존됨)');
+          console.log('[API] ✅ 레거시 데이터 DB 저장 완료 (등록정보 보존됨)', {
+            riskDataCount: Object.keys(mergedLegacyData.riskData || {}).length,
+            riskDataKeys: Object.keys(mergedLegacyData.riskData || {}).slice(0, 5),
+          });
         } catch (e: any) {
           // 테이블이 없으면 스킵 (마이그레이션 전)
           if (e?.code !== 'P2021') {
