@@ -354,11 +354,64 @@ export default function DbViewerPage() {
             )}
             
             {dbData && dbData.data.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                ⚠️ 이 테이블에는 데이터가 없습니다 (0행)
+              <div className="text-center py-8">
+                <div className="text-gray-500 mb-4">⚠️ 이 테이블에는 데이터가 없습니다 (0행)</div>
+                {selectedSchema.startsWith('pfmea_') && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded p-4 text-left text-sm">
+                    <div className="font-bold text-yellow-800 mb-2">💡 데이터가 없는 이유:</div>
+                    <ul className="list-disc list-inside text-yellow-700 space-y-1">
+                      <li><strong>구조분석 미확정</strong>: 워크시트에서 "확정" 버튼을 클릭해야 DB에 저장됩니다</li>
+                      <li><strong>저장 오류</strong>: 브라우저 콘솔(F12)에서 오류 메시지를 확인하세요</li>
+                      <li><strong>레거시 데이터 확인</strong>: <code className="bg-gray-200 px-1 rounded">public.fmea_legacy_data</code> 테이블에 JSON 백업이 있는지 확인하세요</li>
+                    </ul>
+                    <div className="mt-3 text-xs text-gray-600">
+                      ※ 원자성 테이블(l1/l2/l3_structures 등)은 확정 시에만 저장됩니다.<br/>
+                      ※ fmea_legacy_data에 데이터가 있으면 저장은 정상이며, 원자성 변환만 실패한 것입니다.
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             
+            {/* 레거시 데이터 요약 (fmea_legacy_data 선택 시) */}
+            {dbData && dbData.data.length > 0 && selectedTable === 'fmea_legacy_data' && (
+              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded">
+                <h3 className="font-bold text-green-800 mb-2">📦 레거시 데이터 요약</h3>
+                {dbData.data.map((row: any, idx: number) => {
+                  const ld = row.data || row.legacy_data || row.legacyData;
+                  if (!ld) return null;
+                  return (
+                    <div key={idx} className="mb-2 p-2 bg-white rounded border text-sm">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div><strong>FMEA ID:</strong> {row.fmeaId || row.fmea_id}</div>
+                        <div><strong>완제품명 (L1):</strong> {ld.l1?.name || '(없음)'}</div>
+                        <div><strong>공정 개수 (L2):</strong> {ld.l2?.length || 0}개</div>
+                        <div><strong>작업요소 총계 (L3):</strong> {ld.l2?.reduce((acc: number, p: any) => acc + (p.l3?.length || 0), 0) || 0}개</div>
+                        <div><strong>고장영향 (FE):</strong> {ld.l1?.failureScopes?.length || 0}개</div>
+                        <div><strong>고장형태 (FM):</strong> {ld.l2?.reduce((acc: number, p: any) => acc + (p.failureModes?.length || 0), 0) || 0}개</div>
+                        <div><strong>고장원인 (FC):</strong> {ld.l2?.reduce((acc: number, p: any) => acc + (p.failureCauses?.length || 0), 0) || 0}개</div>
+                        <div><strong>고장연결:</strong> {ld.failureLinks?.length || 0}건</div>
+                      </div>
+                      {ld.l2?.length > 0 && (
+                        <details className="mt-2">
+                          <summary className="cursor-pointer text-blue-600 text-xs">📋 공정 목록 보기</summary>
+                          <div className="mt-1 text-xs bg-gray-50 p-2 rounded">
+                            {ld.l2.map((p: any, i: number) => (
+                              <div key={i} className="flex gap-2 border-b py-1">
+                                <span className="font-mono text-gray-500">{p.no}</span>
+                                <span>{p.name}</span>
+                                <span className="text-gray-400">({p.l3?.length || 0} 작업요소)</span>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {dbData && dbData.data.length > 0 && (
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm border-collapse">

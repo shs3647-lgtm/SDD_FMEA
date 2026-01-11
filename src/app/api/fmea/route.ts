@@ -75,6 +75,16 @@ export async function POST(request: NextRequest) {
     const forceOverwrite = Boolean(requestBody.forceOverwrite); // ✅ 서버 가드 우회 (디버깅/관리자용)
     
     console.log(`[API] FMEA 저장 시작: ID=${db.fmeaId}, 스키마 타겟팅 준비`);
+    console.log(`[API] 📊 전송받은 데이터:`, {
+      fmeaId: db.fmeaId,
+      hasL1Structure: !!db.l1Structure,
+      l1StructureName: db.l1Structure?.name,
+      l2StructuresCount: db.l2Structures?.length || 0,
+      l3StructuresCount: db.l3Structures?.length || 0,
+      hasLegacyData: !!legacyData,
+      legacyL1Name: legacyData?.l1?.name,
+      legacyL2Count: legacyData?.l2?.length || 0,
+    });
     
     // ✅ FMEA ID는 항상 대문자로 정규화 (DB 일관성 보장)
     if (db.fmeaId) {

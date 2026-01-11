@@ -26,6 +26,21 @@ export async function saveWorksheetDB(db: FMEAWorksheetDB, legacyData?: any): Pr
       legacyData: legacyData || null,
     };
     
+    // 📊 전송 전 데이터 확인 로그
+    console.log('[DB 저장] 📊 전송할 데이터:', {
+      fmeaId: db.fmeaId,
+      hasL1Structure: !!db.l1Structure,
+      l1StructureName: db.l1Structure?.name,
+      l2StructuresCount: db.l2Structures?.length || 0,
+      l3StructuresCount: db.l3Structures?.length || 0,
+      l1FunctionsCount: db.l1Functions?.length || 0,
+      l2FunctionsCount: db.l2Functions?.length || 0,
+      l3FunctionsCount: db.l3Functions?.length || 0,
+      hasLegacyData: !!legacyData,
+      legacyL1Name: legacyData?.l1?.name,
+      legacyL2Count: legacyData?.l2?.length || 0,
+    });
+    
     const response = await fetch('/api/fmea', {
       method: 'POST',
       headers: {
