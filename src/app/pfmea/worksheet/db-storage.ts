@@ -36,9 +36,14 @@ export async function saveWorksheetDB(db: FMEAWorksheetDB, legacyData?: any): Pr
       l1FunctionsCount: db.l1Functions?.length || 0,
       l2FunctionsCount: db.l2Functions?.length || 0,
       l3FunctionsCount: db.l3Functions?.length || 0,
+      // ★★★ 리스크분석 관련 로그 추가 ★★★
+      riskAnalysesCount: db.riskAnalyses?.length || 0,
+      failureLinksCount: db.failureLinks?.length || 0,
       hasLegacyData: !!legacyData,
       legacyL1Name: legacyData?.l1?.name,
       legacyL2Count: legacyData?.l2?.length || 0,
+      legacyRiskDataCount: Object.keys(legacyData?.riskData || {}).length,
+      legacyRiskDataKeys: Object.keys(legacyData?.riskData || {}).slice(0, 5),
     });
     
     const response = await fetch('/api/fmea', {

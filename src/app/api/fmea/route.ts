@@ -563,6 +563,7 @@ export async function POST(request: NextRequest) {
       }
 
       // 12. RiskAnalyses 배치 저장
+      console.log('[API] RiskAnalyses 저장 시작:', db.riskAnalyses.length, '개');
       if (db.riskAnalyses.length > 0) {
         await Promise.all(
           db.riskAnalyses.map(risk =>

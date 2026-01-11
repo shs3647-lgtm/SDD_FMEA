@@ -391,8 +391,24 @@ export default function DbViewerPage() {
                         <div><strong>고장형태 (FM):</strong> {ld.l2?.reduce((acc: number, p: any) => acc + (p.failureModes?.length || 0), 0) || 0}개</div>
                         <div><strong>고장원인 (FC):</strong> {ld.l2?.reduce((acc: number, p: any) => acc + (p.failureCauses?.length || 0), 0) || 0}개</div>
                         <div><strong>고장연결:</strong> {ld.failureLinks?.length || 0}건</div>
-                        <div><strong>리스크 분석:</strong> {Object.keys(ld.riskData || {}).length}개</div>
+                        <div><strong>리스크 분석 (riskData):</strong> {Object.keys(ld.riskData || {}).length}개</div>
                       </div>
+                      {Object.keys(ld.riskData || {}).length > 0 && (
+                        <details className="mt-2">
+                          <summary className="cursor-pointer text-purple-600 text-xs">📊 riskData 키 보기</summary>
+                          <div className="mt-1 text-xs bg-purple-50 p-2 rounded font-mono max-h-32 overflow-y-auto">
+                            {Object.keys(ld.riskData || {}).slice(0, 20).map((key: string, i: number) => (
+                              <div key={i} className="flex gap-2">
+                                <span className="text-gray-600">{key}:</span>
+                                <span className="text-purple-700">{String(ld.riskData[key])}</span>
+                              </div>
+                            ))}
+                            {Object.keys(ld.riskData || {}).length > 20 && (
+                              <div className="text-gray-400">... 외 {Object.keys(ld.riskData || {}).length - 20}개</div>
+                            )}
+                          </div>
+                        </details>
+                      )}
                       {ld.l2?.length > 0 && (
                         <details className="mt-2">
                           <summary className="cursor-pointer text-blue-600 text-xs">📋 공정 목록 보기</summary>

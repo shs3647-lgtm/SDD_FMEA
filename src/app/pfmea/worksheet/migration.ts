@@ -35,9 +35,7 @@ import {
   AtomicType,
 } from './constants';
 import { buildFailureAnalyses } from './utils/failure-analysis-builder';
-import { calculateAP } from '../tabs/all/apCalculator';
-import type { RiskAnalysis } from './schema';
-import { calculateAP } from '../tabs/all/apCalculator';
+import { calculateAP } from './tabs/all/apCalculator';
 import type { RiskAnalysis } from './schema';
 
 // Re-export for external use
@@ -748,58 +746,123 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
   const riskData = (oldData as any).riskData || {};
   db.riskAnalyses = [];
   
-  if (db.failureLinks.length > 0 && Object.keys(riskData).length > 0) {
-    db.failureLinks.forEach((link) => {
-      const uniqueKey = `${link.fmId}-${link.fcId}`;
-      
-      // riskData에서 SOD 값 추출
-      const oKey = `risk-${uniqueKey}-O`;
-      const dKey = `risk-${uniqueKey}-D`;
-      const preventionKey = `prevention-${uniqueKey}`;
-      const detectionKey = `detection-${uniqueKey}`;
-      
-      const occurrence = typeof riskData[oKey] === 'number' && riskData[oKey] >= 1 && riskData[oKey] <= 10 
-        ? riskData[oKey] 
-        : 0;
-      const detection = typeof riskData[dKey] === 'number' && riskData[dKey] >= 1 && riskData[dKey] <= 10 
-        ? riskData[dKey] 
-        : 0;
-      
-      // 심각도는 failureLink에서 가져오거나 failureEffects에서 최대값
-      let severity = 0;
-      if (link.cache?.feSeverity) {
-        severity = link.cache.feSeverity;
-      } else {
-        // failureEffects에서 해당 feId의 심각도 찾기
-        const fe = db.failureEffects.find(e => e.id === link.feId);
-        if (fe && fe.severity) {
-          severity = fe.severity;
+  console.log('[마이그레이션] 리스크 데이터 변환 시작:', {
+    failureLinksCount: db.failureLinks.length,
+    riskDataCount: Object.keys(riskData).length,
+    riskDataKeys: Object.keys(riskData).slice(0, 10),  // 처음 10개 키만 표시
+  });
+  
+  if (Object.keys(riskData).length > 0) {
+    // ★ 1. failureLinks가 있으면 fmId-fcId 기반으로 변환
+    if (db.failureLinks.length > 0) {
+      db.failureLinks.forEach((link, linkIdx) => {
+        const uniqueKey = `${link.fmId}-${link.fcId}`;
+        
+        // riskData에서 SOD 값 추출
+        const oKey = `risk-${uniqueKey}-O`;
+        const dKey = `risk-${uniqueKey}-D`;
+        const preventionKey = `prevention-${uniqueKey}`;
+        const detectionKey = `detection-${uniqueKey}`;
+        
+        const occurrence = typeof riskData[oKey] === 'number' && riskData[oKey] >= 1 && riskData[oKey] <= 10 
+          ? riskData[oKey] 
+          : 0;
+        const detection = typeof riskData[dKey] === 'number' && riskData[dKey] >= 1 && riskData[dKey] <= 10 
+          ? riskData[dKey] 
+          : 0;
+        
+        // 심각도는 failureLink에서 가져오거나 failureEffects에서 최대값
+        let severity = 0;
+        if (link.cache?.feSeverity) {
+          severity = link.cache.feSeverity;
+        } else {
+          // failureEffects에서 해당 feId의 심각도 찾기
+          const fe = db.failureEffects.find(e => e.id === link.feId);
+          if (fe && fe.severity) {
+            severity = fe.severity;
+          }
         }
-      }
-      
-      // SOD 값이 모두 있으면 RiskAnalysis 생성
-      if (severity > 0 && occurrence > 0 && detection > 0) {
-        const ap = calculateAP(severity, occurrence, detection);
+        
         const preventionControl = typeof riskData[preventionKey] === 'string' ? riskData[preventionKey] : undefined;
         const detectionControl = typeof riskData[detectionKey] === 'string' ? riskData[detectionKey] : undefined;
         
-        const riskAnalysis: RiskAnalysis = {
-          id: uid(),
-          fmeaId: db.fmeaId,
-          linkId: link.id,
-          severity,
-          occurrence,
-          detection,
-          ap,
-          preventionControl,
-          detectionControl,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
+        // ★★★ 하나라도 값이 있으면 RiskAnalysis 생성 (조건 완화) ★★★
+        if (severity > 0 || occurrence > 0 || detection > 0 || preventionControl || detectionControl) {
+          const ap = (severity > 0 && occurrence > 0 && detection > 0) 
+            ? calculateAP(severity, occurrence, detection) 
+            : '';
+          
+          const riskAnalysis: RiskAnalysis = {
+            id: uid(),
+            fmeaId: db.fmeaId,
+            linkId: link.id,
+            severity,
+            occurrence,
+            detection,
+            ap,
+            preventionControl,
+            detectionControl,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+          
+          db.riskAnalyses.push(riskAnalysis);
+        }
         
-        db.riskAnalyses.push(riskAnalysis);
-      }
-    });
+        // 첫 5개 링크에 대해 디버깅 출력
+        if (linkIdx < 5) {
+          console.log(`[마이그레이션] 링크 ${linkIdx}: uniqueKey=${uniqueKey}, S=${severity}, O=${occurrence}, D=${detection}`);
+        }
+      });
+    }
+    
+    // ★ 2. rowIndex 기반 키도 처리 (failureLinks가 없거나 rowIndex 기반 데이터가 있는 경우)
+    const rowIndexPattern = /^risk-(\d+)-[OD]$/;
+    const rowIndexKeys = Object.keys(riskData).filter(k => rowIndexPattern.test(k));
+    
+    if (rowIndexKeys.length > 0) {
+      console.log('[마이그레이션] rowIndex 기반 riskData 발견:', rowIndexKeys.length, '개');
+      
+      // rowIndex에서 고유 인덱스 추출
+      const rowIndices = new Set<number>();
+      rowIndexKeys.forEach(k => {
+        const match = k.match(rowIndexPattern);
+        if (match) rowIndices.add(parseInt(match[1], 10));
+      });
+      
+      rowIndices.forEach(rowIdx => {
+        const oKey = `risk-${rowIdx}-O`;
+        const dKey = `risk-${rowIdx}-D`;
+        
+        const occurrence = typeof riskData[oKey] === 'number' ? riskData[oKey] : 0;
+        const detection = typeof riskData[dKey] === 'number' ? riskData[dKey] : 0;
+        
+        // rowIndex 기반은 severity를 직접 가져올 수 없으므로 0으로 설정
+        // (실제 사용 시 failureLinks가 있어야 severity를 알 수 있음)
+        if (occurrence > 0 || detection > 0) {
+          // failureLinks에서 해당 rowIndex에 매칭되는 link 찾기 시도
+          const matchingLink = db.failureLinks[rowIdx];
+          const linkId = matchingLink?.id || `row-${rowIdx}`;
+          
+          // 이미 fmId-fcId 기반으로 추가된 것과 중복 방지
+          const alreadyExists = db.riskAnalyses.some(r => r.linkId === linkId);
+          if (!alreadyExists) {
+            const riskAnalysis: RiskAnalysis = {
+              id: uid(),
+              fmeaId: db.fmeaId,
+              linkId,
+              severity: 0,
+              occurrence,
+              detection,
+              ap: '',
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            };
+            db.riskAnalyses.push(riskAnalysis);
+          }
+        }
+      });
+    }
     
     console.log('[마이그레이션] 리스크분석 데이터 생성:', db.riskAnalyses.length, '개');
   }

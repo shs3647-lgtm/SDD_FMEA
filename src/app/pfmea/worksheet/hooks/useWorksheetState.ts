@@ -1835,12 +1835,13 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           
           console.log('[데이터 정리] 원본 공정 수:', parsed.l2.length, '→ 정리 후:', migratedL2.length);
 
-          // 원자성 DB로 마이그레이션
+          // 원자성 DB로 마이그레이션 (★ riskData 추가)
           const atomicData = migrateToAtomicDB({
             fmeaId: selectedFmeaId,
             l1: migratedL1,
             l2: migratedL2,
             failureLinks: parsed.failureLinks || [],
+            riskData: parsed.riskData || {},  // ★ riskData 추가
             structureConfirmed: parsed.structureConfirmed,
             l1Confirmed: parsed.l1Confirmed,
             l2Confirmed: parsed.l2Confirmed,
@@ -1850,7 +1851,8 @@ export function useWorksheetState(): UseWorksheetStateReturn {
             failureL3Confirmed: parsed.failureL3Confirmed,
           });
           setAtomicDB(atomicData);
-          saveWorksheetDB(atomicData).catch(e => console.error('[마이그레이션] DB 저장 오류:', e));
+          // ★ legacyData도 함께 저장 (riskData 포함)
+          saveWorksheetDB(atomicData, parsed).catch(e => console.error('[마이그레이션] DB 저장 오류:', e));
           
           // ========== 레거시 마이그레이션 후 일관성 검증 및 복구 ==========
           // ✅ 근본적인 해결: 원본 데이터(parsed.l2)에서 직접 추출
