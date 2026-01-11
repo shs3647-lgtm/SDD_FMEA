@@ -41,7 +41,7 @@ const headerStyle = (bg: string, color = '#fff'): React.CSSProperties => ({ ...c
 const dataCell = (bg: string): React.CSSProperties => ({ ...cellBase, background: bg });
 
 // ✅ 표준 줄무늬 색상 (codefreeze-20260103-zebra)
-import { getZebra, getZebraColors } from '@/styles/level-colors';
+import { getZebraColors } from '@/styles/level-colors';
 
 // 특별특성 배지 - 공통 컴포넌트 사용
 import SpecialCharBadge from '@/components/common/SpecialCharBadge';
@@ -659,8 +659,7 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
             let funcCounter = 0; // ✅ 메인공정기능 블록 인덱스
             return state.l2.map((proc, pIdx) => {
               const funcs = proc.functions || [];
-              // ✅ 3L기능 스타일: 블록 단위 줄무늬 (공정명=pIdx, 메인공정기능=funcCounter)
-              const procZebraBg = getZebra('structure', pIdx);
+              // ✅ 줄무늬: globalRowIdx 기준 (열 단위 일관성)
               // ✅ 의미 있는 기능과 제품특성만 고려하여 rowSpan 계산
               const meaningfulFuncs = funcs.filter((f: any) => {
                 const name = f.name || '';
@@ -682,21 +681,21 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
               // 공정에 기능이 없는 경우
               if (funcs.length === 0) {
                 const rowIdx = globalRowIdx++;
-                const currentFuncIdx = funcCounter++;
-                const funcZebra = getZebra('function', currentFuncIdx);
-                const failZebra = getZebra('failure', rowIdx);
+                funcCounter++;
+                // ✅ 수정: 모든 열에서 동일한 rowIdx 사용 (열단위 줄무늬 일관성)
+                const zebra = getZebraColors(rowIdx);
                 return (
                   <tr key={proc.id}>
-                    <td rowSpan={procRowSpan} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: procZebraBg }}>
+                    <td rowSpan={procRowSpan} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: zebra.structure }}>
                       {proc.no}. {proc.name}
                     </td>
-                    <td className={cellP0} style={{ background: funcZebra }}>
-                      <SelectableCell value="" placeholder="공정기능 선택" bgColor={funcZebra} onClick={() => handleCellClick({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
+                    <td className={cellP0} style={{ background: zebra.function }}>
+                      <SelectableCell value="" placeholder="공정기능 선택" bgColor={zebra.function} onClick={() => handleCellClick({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
                     </td>
-                    <td className={cellP0} style={{ background: failZebra }}>
-                      <SelectableCell value="" placeholder="제품특성 선택" bgColor={failZebra} textColor={'#e65100'} onClick={() => {}} />
+                    <td className={cellP0} style={{ background: zebra.failure }}>
+                      <SelectableCell value="" placeholder="제품특성 선택" bgColor={zebra.failure} textColor={'#e65100'} onClick={() => {}} />
                     </td>
-                    <td className="border border-[#ccc] p-1 text-center text-[#999] text-xs" style={{ background: failZebra }}>
+                    <td className="border border-[#ccc] p-1 text-center text-[#999] text-xs" style={{ background: zebra.failure }}>
                       -
                     </td>
                     </tr>
@@ -706,21 +705,21 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
                 // 의미 있는 기능이 없으면 빈 행 표시
                 if (meaningfulFuncs.length === 0) {
                   const rowIdx = globalRowIdx++;
-                  const currentFuncIdx = funcCounter++;
-                  const funcZebra = getZebra('function', currentFuncIdx);
-                  const failZebra = getZebra('failure', rowIdx);
+                  funcCounter++;
+                  // ✅ 수정: 모든 열에서 동일한 rowIdx 사용 (열단위 줄무늬 일관성)
+                  const zebra = getZebraColors(rowIdx);
                   return (
                     <tr key={proc.id}>
-                      <td rowSpan={1} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: procZebraBg }}>
+                      <td rowSpan={1} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: zebra.structure }}>
                         {proc.no}. {proc.name}
                       </td>
-                      <td className={cellP0} style={{ background: funcZebra }}>
-                        <SelectableCell value="" placeholder="공정기능 선택" bgColor={funcZebra} onClick={() => handleCellClick({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
+                      <td className={cellP0} style={{ background: zebra.function }}>
+                        <SelectableCell value="" placeholder="공정기능 선택" bgColor={zebra.function} onClick={() => handleCellClick({ type: 'l2Function', procId: proc.id, title: '메인공정 기능 선택', itemCode: 'A3' })} />
                       </td>
-                      <td className={cellP0} style={{ background: failZebra }}>
-                        <SelectableCell value="" placeholder="제품특성 선택" bgColor={failZebra} textColor={'#e65100'} onClick={() => {}} />
+                      <td className={cellP0} style={{ background: zebra.failure }}>
+                        <SelectableCell value="" placeholder="제품특성 선택" bgColor={zebra.failure} textColor={'#e65100'} onClick={() => {}} />
                       </td>
-                      <td className="border border-[#ccc] p-1 text-center text-[#999] text-xs" style={{ background: failZebra }}>
+                      <td className="border border-[#ccc] p-1 text-center text-[#999] text-xs" style={{ background: zebra.failure }}>
                         -
                       </td>
                     </tr>
@@ -728,9 +727,7 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
                 }
               
               return meaningfulFuncs.map((f, fIdx) => {
-                // ✅ 메인공정기능(rowSpan): funcCounter 기준 번갈아
-                const currentFuncIdx = funcCounter++;
-                const funcBlockZebra = getZebra('function', currentFuncIdx);
+                funcCounter++;
                 // ✅ 의미 있는 제품특성만 필터링 + 중복 제거
                 const meaningfulChars = (f.productChars || []).filter((c: any, idx: number, arr: any[]) => {
                   const name = c.name || '';
@@ -742,31 +739,35 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
                 });
                 const funcRowSpan = Math.max(1, meaningfulChars.length);
                 
+                // ✅ 기능 블록 첫 행의 globalRowIdx 캡처 (rowSpan 셀에 사용)
+                const funcFirstRowIdx = globalRowIdx;
+                
                 // 기능에 제품특성이 없는 경우
                 if (meaningfulChars.length === 0) {
                   const rowIdx = globalRowIdx++;
-                  const failureZebra = getZebra('failure', rowIdx);
+                  // ✅ 수정: 모든 열에서 동일한 rowIdx 사용 (열단위 줄무늬 일관성)
+                  const zebra = getZebraColors(rowIdx);
                   return (
-                    <tr key={f.id} style={{ background: funcBlockZebra }}>
+                    <tr key={f.id}>
                       {fIdx === 0 && (
-                        <td rowSpan={procRowSpan} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: procZebraBg }}>
+                        <td rowSpan={procRowSpan} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: zebra.structure }}>
                           {proc.no}. {proc.name}
                         </td>
                       )}
-                      {/* 메인공정기능 - funcCounter 기준 줄무늬 */}
-                      <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle" style={{ background: funcBlockZebra }}>
+                      {/* 메인공정기능 - 동일 행 줄무늬 */}
+                      <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle" style={{ background: zebra.function }}>
                         <SelectableCell 
                           value={f.name} 
                           placeholder="공정기능" 
-                          bgColor={funcBlockZebra} 
+                          bgColor={zebra.function} 
                           onClick={() => handleCellClick({ type: 'l2Function', procId: proc.id, funcId: f.id, title: '메인공정 기능 선택', itemCode: 'A3' })} 
                           onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, f.id, newValue)}
                         />
                       </td>
-                      <td className={cellP0} style={{ background: failureZebra }}>
-                        <SelectableCell value="" placeholder="제품특성 선택" bgColor={failureZebra} textColor={'#e65100'} onClick={() => handleCellClick({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, title: '제품특성 선택', itemCode: 'A4' })} />
+                      <td className={cellP0} style={{ background: zebra.failure }}>
+                        <SelectableCell value="" placeholder="제품특성 선택" bgColor={zebra.failure} textColor={'#e65100'} onClick={() => handleCellClick({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, title: '제품특성 선택', itemCode: 'A4' })} />
                       </td>
-                      <td className="border border-[#ccc] p-1 text-center text-[#999] text-xs" style={{ background: failureZebra }}>
+                      <td className="border border-[#ccc] p-1 text-center text-[#999] text-xs" style={{ background: zebra.failure }}>
                         -
                       </td>
                     </tr>
@@ -776,37 +777,40 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
                 // 기능에 제품특성이 있는 경우
                 return meaningfulChars.map((c, cIdx) => {
                   const rowIdx = globalRowIdx++;
-                  const failureZebra = getZebra('failure', rowIdx);
+                  // ✅ 수정: 모든 열에서 동일한 rowIdx 사용 (열단위 줄무늬 일관성)
+                  const zebra = getZebraColors(rowIdx);
+                  // ✅ rowSpan 셀은 첫 행 색상 사용
+                  const firstRowZebra = getZebraColors(funcFirstRowIdx);
                   return (
-                  <tr key={c.id} style={{ background: funcBlockZebra }}>
+                  <tr key={c.id}>
                     {fIdx === 0 && cIdx === 0 && (
-                      <td rowSpan={procRowSpan} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: procZebraBg }}>
+                      <td rowSpan={procRowSpan} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: firstRowZebra.structure }}>
                         {proc.no}. {proc.name}
                       </td>
                     )}
-                    {/* 메인공정기능 - funcCounter 기준 줄무늬 */}
+                    {/* 메인공정기능 - 첫 행 색상 사용 (rowSpan) */}
                     {cIdx === 0 && (
-                      <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle" style={{ background: funcBlockZebra }}>
+                      <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle" style={{ background: firstRowZebra.function }}>
                         <SelectableCell 
                           value={f.name} 
                           placeholder="공정기능" 
-                          bgColor={funcBlockZebra} 
+                          bgColor={firstRowZebra.function} 
                           onClick={() => handleCellClick({ type: 'l2Function', procId: proc.id, funcId: f.id, title: '메인공정 기능 선택', itemCode: 'A3' })} 
                           onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, f.id, newValue)}
                         />
                       </td>
                     )}
-                    <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0" style={{ background: failureZebra }}>
+                    <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0" style={{ background: zebra.failure }}>
                       <SelectableCell 
                         value={c.name} 
                         placeholder="제품특성" 
-                        bgColor={failureZebra} 
+                        bgColor={zebra.failure} 
                         textColor={'#e65100'}
                         onClick={() => handleCellClick({ type: 'l2ProductChar', procId: proc.id, funcId: f.id, charId: c.id, title: '제품특성 선택', itemCode: 'A4' })} 
                         onDoubleClickEdit={(newValue) => handleInlineEditProductChar(proc.id, f.id, c.id, newValue)}
                       />
                     </td>
-                    <td className="border border-[#ccc] p-0 text-center" style={{ background: failureZebra }}>
+                    <td className="border border-[#ccc] p-0 text-center" style={{ background: zebra.failure }}>
                       <SpecialCharBadge 
                         value={(c as any).specialChar || ''} 
                         onClick={() => setSpecialCharModal({ 

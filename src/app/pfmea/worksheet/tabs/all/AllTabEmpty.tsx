@@ -201,10 +201,11 @@ export default function AllTabEmpty({
                 const globalRowIdx = processedFMGroups.slice(0, fmIdx).reduce((acc, g) => acc + g.rows.length, 0) + rowInFM;
                 const isLastRowOfFM = rowInFM === fmGroup.rows.length - 1;
                 
+                // ✅ 마지막 행 표시를 위한 플래그 (td에서 처리)
                 return (
                   <tr 
                     key={`fm-${fmGroup.fmId}-${rowInFM}`}
-                    style={isLastRowOfFM ? { borderBottom: '2px solid #1a237e' } : undefined}
+                    data-last-row={isLastRowOfFM ? 'true' : undefined}
                   >
                     {columns.map((col, colIdx) => {
                       // ★ 고장분석 컬럼 - FailureCellRenderer 사용 (모듈화)

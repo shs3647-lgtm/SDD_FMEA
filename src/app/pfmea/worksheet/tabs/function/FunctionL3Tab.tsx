@@ -649,9 +649,8 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
               const l3List = proc.l3 || [];
               if (l3List.length === 0) return [];
               
-              // ✅ 메인공정명 줄무늬: 공정 인덱스 기준 (홀수/짝수)
-              const procZebra = getZebraColors(procIdx);
-              const procZebraBg = procZebra.structure; // 구조분석 색상 (파란색 계열)
+              // ✅ 수정: 공정명도 첫 행의 globalRowIdx 기준 (열단위 줄무늬 일관성)
+              const procFirstRowIdx = globalRowIdx; // 공정의 첫 행 인덱스 캡처
               
               const procRowSpan = getProcRowSpan(proc);
               let isFirstProcRow = true;
@@ -661,13 +660,18 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
                 const funcs = (we.functions || []).filter(isMeaningfulFunc);
                 const weRowSpan = getWeRowSpan(we);
                 
+                // ✅ 작업요소 첫 행 인덱스 캡처 (rowSpan 셀에 사용)
+                const weFirstRowIdx = globalRowIdx;
+                
                 // 작업요소에 기능이 없는 경우
                 if (funcs.length === 0) {
-                  const zebra = getZebraColors(globalRowIdx++); // 표준화된 색상
+                  const rowIdx = globalRowIdx++;
+                  const zebra = getZebraColors(rowIdx); // 표준화된 색상
+                  const procZebra = getZebraColors(procFirstRowIdx); // 공정명 첫 행 색상
                   const row = (
                     <tr key={we.id}>
                       {isFirstProcRow && (
-                        <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: procZebraBg }}>
+                        <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: procZebra.structure }}>
                           {proc.no}. {proc.name}
                         </td>
                       )}
@@ -698,22 +702,28 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
                   const chars = getMeaningfulChars(f.processChars);
                   const funcRowSpan = Math.max(1, chars.length);
                   
+                  // ✅ 기능 블록 첫 행 인덱스 캡처 (rowSpan 셀에 사용)
+                  const funcFirstRowIdx = globalRowIdx;
+                  
                   // 기능에 공정특성이 없는 경우
                   if (chars.length === 0) {
-                    const zebra = getZebraColors(globalRowIdx++); // 표준화된 색상
+                    const rowIdx = globalRowIdx++;
+                    const zebra = getZebraColors(rowIdx); // 표준화된 색상
+                    const procZebra = getZebraColors(procFirstRowIdx); // 공정명 첫 행 색상
+                    const weZebra = getZebraColors(weFirstRowIdx); // 작업요소 첫 행 색상
                     const row = (
                       <tr key={f.id}>
                         {isFirstProcRow && (
-                          <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: procZebraBg }}>
+                          <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: procZebra.structure }}>
                             {proc.no}. {proc.name}
                           </td>
                         )}
                         {fIdx === 0 && (
                           <>
-                            <td rowSpan={weRowSpan} className="border border-[#ccc] p-1 text-center text-xs font-medium align-middle" style={{ background: zebra.structure }}>
+                            <td rowSpan={weRowSpan} className="border border-[#ccc] p-1 text-center text-xs font-medium align-middle" style={{ background: weZebra.structure }}>
                               {we.m4}
                             </td>
-                            <td rowSpan={weRowSpan} className="border border-[#ccc] p-2 font-semibold text-xs align-middle" style={{ background: zebra.structure }}>
+                            <td rowSpan={weRowSpan} className="border border-[#ccc] p-2 font-semibold text-xs align-middle" style={{ background: weZebra.structure }}>
                               {we.name}
                             </td>
                           </>
@@ -741,30 +751,34 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
                   
                   // 기능에 공정특성이 있는 경우
                   return chars.map((c, cIdx) => {
-                    const zebra = getZebraColors(globalRowIdx++); // 표준화된 색상
+                    const rowIdx = globalRowIdx++;
+                    const zebra = getZebraColors(rowIdx); // 표준화된 색상
+                    const procZebra = getZebraColors(procFirstRowIdx); // 공정명 첫 행 색상
+                    const weZebra = getZebraColors(weFirstRowIdx); // 작업요소 첫 행 색상
+                    const funcZebra = getZebraColors(funcFirstRowIdx); // 기능 첫 행 색상
                     const row = (
                       <tr key={c.id}>
                         {isFirstProcRow && (
-                          <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: procZebraBg }}>
+                          <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: procZebra.structure }}>
                             {proc.no}. {proc.name}
                           </td>
                         )}
                         {fIdx === 0 && cIdx === 0 && (
                           <>
-                            <td rowSpan={weRowSpan} className="border border-[#ccc] p-1 text-center text-xs font-medium align-middle" style={{ background: zebra.structure }}>
+                            <td rowSpan={weRowSpan} className="border border-[#ccc] p-1 text-center text-xs font-medium align-middle" style={{ background: weZebra.structure }}>
                               {we.m4}
                             </td>
-                            <td rowSpan={weRowSpan} className="border border-[#ccc] p-2 font-semibold text-xs align-middle" style={{ background: zebra.structure }}>
+                            <td rowSpan={weRowSpan} className="border border-[#ccc] p-2 font-semibold text-xs align-middle" style={{ background: weZebra.structure }}>
                               {we.name}
                             </td>
                           </>
                         )}
                         {cIdx === 0 && (
-                          <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle" style={{ background: zebra.function }}>
+                          <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle" style={{ background: funcZebra.function }}>
                             <SelectableCell 
                               value={f.name} 
                               placeholder="작업요소기능" 
-                              bgColor={zebra.function} 
+                              bgColor={funcZebra.function} 
                               onClick={() => handleCellClick({ type: 'l3Function', procId: proc.id, l3Id: we.id, funcId: f.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} 
                               onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, we.id, f.id, newValue)}
                             />

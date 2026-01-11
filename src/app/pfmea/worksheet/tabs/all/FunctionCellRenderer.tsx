@@ -68,11 +68,15 @@ export function FunctionCellRenderer({
   rowInFM,
   globalRowIdx,
 }: FunctionCellRendererProps): React.ReactElement | null {
+  // ✅ shorthand/non-shorthand 충돌 방지: 개별 border 속성 사용
   const cellStyle = (rowSpan: number, useGlobalIdx = false) => ({
     background: (useGlobalIdx ? globalRowIdx : fmIdx) % 2 === 0 ? col.cellColor : col.cellAltColor,
     height: `${HEIGHTS.body}px`,
     padding: '3px 4px',
-    border: '1px solid #ccc',
+    borderTop: '1px solid #ccc',
+    borderRight: '1px solid #ccc',
+    borderBottom: '1px solid #ccc',
+    borderLeft: '1px solid #ccc',
     fontSize: '11px',
     textAlign: col.align,
     verticalAlign: 'middle' as const,

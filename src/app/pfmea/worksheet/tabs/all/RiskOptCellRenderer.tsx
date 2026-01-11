@@ -74,7 +74,11 @@ const getCellStyle = (
   background: globalRowIdx % 2 === 0 ? cellColor : cellAltColor,
   height: `${HEIGHTS.body}px`,
   padding: '3px 4px',
-  border: '1px solid #ccc',
+  // ✅ shorthand/non-shorthand 충돌 방지: 개별 border 속성 사용
+  borderTop: '1px solid #ccc',
+  borderRight: '1px solid #ccc',
+  borderBottom: '1px solid #ccc',
+  borderLeft: '1px solid #ccc',
   fontSize: '11px',
   textAlign: align,
   verticalAlign: 'middle' as const,
