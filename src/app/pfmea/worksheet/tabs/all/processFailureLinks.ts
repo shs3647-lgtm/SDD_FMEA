@@ -87,23 +87,47 @@ interface FMData {
   fcs: Map<string, FCData>;
 }
 
+/** FM 최신 데이터 타입 (state.l2에서 가져옴) */
+interface FMLatestData {
+  id: string;
+  name: string;
+  failureModes?: Array<{ id: string; text: string }>;
+}
+
 /**
  * 고장연결 데이터를 FM 중심으로 그룹핑하고 rowSpan 계산
  * - 고장형태(FM)를 중심으로 고장영향(FE)과 고장원인(FC)을 매칭
  * - FE/FC 갯수가 다를 때 마지막 행을 셀합치기
+ * @param links 고장연결 데이터
+ * @param l2Data state.l2 데이터 (최신 FM 텍스트 가져오기용)
  */
-export function processFailureLinks(links: FailureLinkRow[]): ProcessedFMGroup[] {
+export function processFailureLinks(links: FailureLinkRow[], l2Data?: FMLatestData[]): ProcessedFMGroup[] {
   if (!links || links.length === 0) return [];
+  
+  // ★ state.l2에서 최신 FM 텍스트 맵 생성
+  const latestFMTextMap = new Map<string, { text: string; processName: string }>();
+  if (l2Data) {
+    l2Data.forEach((proc: FMLatestData) => {
+      proc.failureModes?.forEach((fm: { id: string; text: string }) => {
+        latestFMTextMap.set(fm.id, { text: fm.text, processName: proc.name });
+      });
+    });
+  }
   
   const fmMap = new Map<string, FMData>();
   
   links.forEach(link => {
+    // ★ 최신 FM 텍스트/공정명 우선 사용
+    const latestFM = latestFMTextMap.get(link.fmId);
+    const fmText = latestFM?.text || link.fmText;
+    const fmProcessName = latestFM?.processName || link.fmProcessName || '';
+    
     if (!fmMap.has(link.fmId)) {
       fmMap.set(link.fmId, {
-        fmText: link.fmText,
+        fmText: fmText,           // ★ 최신 텍스트 사용
         l1ProductName: link.l1ProductName || '',
         fmProcessNo: link.fmProcessNo || '',
-        fmProcessName: link.fmProcessName || '',
+        fmProcessName: fmProcessName, // ★ 최신 공정명 사용
         fmProcessFunction: link.fmProcessFunction || '',
         fmProductChar: link.fmProductChar || '',
         fes: new Map(),

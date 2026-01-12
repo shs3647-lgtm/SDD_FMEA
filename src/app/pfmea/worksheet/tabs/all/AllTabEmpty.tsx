@@ -102,8 +102,8 @@ export default function AllTabEmpty({
     data: [],
   });
   
-  // 고장연결 데이터 처리
-  const processedFMGroups = React.useMemo(() => processFailureLinks(failureLinks), [failureLinks]);
+  // 고장연결 데이터 처리 (state.l2에서 최신 FM 텍스트 가져오기)
+  const processedFMGroups = React.useMemo(() => processFailureLinks(failureLinks, state?.l2), [failureLinks, state?.l2]);
   // visibleSteps가 지정되면 해당 단계만 필터링, 없으면 전체 표시
   const allColumns = showRPN ? getColumnsWithRPN() : COLUMNS_BASE;
   const columns = visibleSteps && visibleSteps.length > 0
