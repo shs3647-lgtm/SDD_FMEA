@@ -732,7 +732,22 @@ export default function FailureL2Tab({ state, setState, setStateSynced, setDirty
                         parentProductChar: row.charName,
                         processName: `${row.procNo}. ${row.procName}`
                       });
-                    }} 
+                    }}
+                    onDoubleClickEdit={row.modeId ? (newValue: string) => {
+                      // ★ 더블클릭 인라인 편집: 해당 고장형태 이름 직접 수정
+                      setState((prev: any) => {
+                        const newL2 = prev.l2.map((proc: any) => {
+                          if (proc.id !== row.procId) return proc;
+                          const newModes = (proc.failureModes || []).map((m: any) => {
+                            if (m.id !== row.modeId) return m;
+                            return { ...m, name: newValue };
+                          });
+                          return { ...proc, failureModes: newModes };
+                        });
+                        return { ...prev, l2: newL2 };
+                      });
+                      setDirty(true);
+                    } : undefined}
                   />
                 </td>
               </tr>

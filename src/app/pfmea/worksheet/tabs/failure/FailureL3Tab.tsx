@@ -837,7 +837,22 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
                           title: `${row.processChar.name} → 고장원인`, 
                           itemCode: 'FC1' 
                         });
-                      }} 
+                      }}
+                      onDoubleClickEdit={row.cause?.id ? (newValue: string) => {
+                        // ★ 더블클릭 인라인 편집: 해당 고장원인 이름 직접 수정
+                        setState((prev: any) => {
+                          const newL2 = prev.l2.map((proc: any) => {
+                            if (proc.id !== row.proc.id) return proc;
+                            const newCauses = (proc.failureCauses || []).map((c: any) => {
+                              if (c.id !== row.cause?.id) return c;
+                              return { ...c, name: newValue };
+                            });
+                            return { ...proc, failureCauses: newCauses };
+                          });
+                          return { ...prev, l2: newL2 };
+                        });
+                        setDirty(true);
+                      } : undefined}
                     />
                   ) : (
                     <span className="text-[#e65100] text-xs font-semibold p-2 block">-</span>
