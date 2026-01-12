@@ -63,6 +63,8 @@ interface RiskItem {
   ap: 'H' | 'M' | 'L';
   prevention?: string;
   detection?: string;
+  failureMode?: string;  // ★ 고장형태명 추가
+  uniqueKey?: string;    // ★ FM-FC 키 저장
 }
 
 function isInRange(value: number, min: number, max: number): boolean {
@@ -133,13 +135,40 @@ export default function APTable5({ state, setState }: APTable5Props) {
     
     console.log('[APTable5] 심각도 계산:', { maxSeverity, uniqueKeysCount: allUniqueKeys.size });
     
+    // ★ 고장형태명 맵 생성 (fmId -> failureMode)
+    const failureModeMap: Record<string, string> = {};
+    
+    // failureLinks에서 고장형태명 가져오기
+    ((state as any).failureLinks || []).forEach((link: any) => {
+      if (link.fmId && link.fmText) {
+        failureModeMap[link.fmId] = link.fmText;
+      }
+    });
+    
+    // l2에서도 고장형태명 가져오기
+    (state.l2 || []).forEach((proc: any) => {
+      (proc.failureModes || []).forEach((fm: any) => {
+        if (fm.id && fm.name) {
+          failureModeMap[fm.id] = fm.name;
+        }
+      });
+    });
+    
     let idx = 0;
     allUniqueKeys.forEach(uniqueKey => {
       const o = Number(riskData[`risk-${uniqueKey}-O`]) || 0;
       const d = Number(riskData[`risk-${uniqueKey}-D`]) || 0;
       const s = maxSeverity;
       
-      console.log(`[APTable5] uniqueKey=${uniqueKey}: S=${s}, O=${o}, D=${d}`);
+      // ★ 고장형태명 추출 (uniqueKey가 fmId-fcId 형식인 경우)
+      let failureMode = '';
+      const parts = uniqueKey.split('-');
+      if (parts.length >= 1) {
+        const fmId = parts[0];  // FM ID 추출
+        failureMode = failureModeMap[fmId] || failureModeMap[uniqueKey] || '';
+      }
+      
+      console.log(`[APTable5] uniqueKey=${uniqueKey}: S=${s}, O=${o}, D=${d}, FM=${failureMode}`);
       
       if (s > 0 && o > 0 && d > 0) {
         // AP 계산
@@ -162,6 +191,8 @@ export default function APTable5({ state, setState }: APTable5Props) {
           ap,
           prevention: riskData[`prevention-${uniqueKey}`] as string,
           detection: riskData[`detection-${uniqueKey}`] as string,
+          failureMode,  // ★ 고장형태명 추가
+          uniqueKey,    // ★ 키 저장
         });
       }
     });
@@ -273,8 +304,10 @@ export default function APTable5({ state, setState }: APTable5Props) {
             return (
               <div key={item.idx} className="bg-white rounded p-1.5 mb-1 text-[10px] border border-orange-200">
                 <div className="flex justify-between items-center mb-1">
-                  <span className="font-semibold">항목 #{item.idx + 1}</span>
-                  <span className="text-gray-500">S:{item.s} O:{item.o} D:{item.d}</span>
+                  <span className="font-bold text-[#1565c0]" title={item.failureMode || `항목 #${item.idx + 1}`}>
+                    {item.failureMode ? (item.failureMode.length > 20 ? item.failureMode.slice(0, 20) + '...' : item.failureMode) : `항목 #${item.idx + 1}`}
+                  </span>
+                  <span className="text-gray-500 shrink-0">S:{item.s} O:{item.o} D:{item.d}</span>
                 </div>
                 <div className="flex gap-2">
                   {/* 예방관리 개선 */}

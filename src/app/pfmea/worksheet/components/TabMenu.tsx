@@ -119,37 +119,12 @@ export default function TabMenu({ state, setState, setStateSynced, setDirty, sav
         {/* 구분선 */}
         <div className="hidden sm:block w-px h-5 bg-white/30 mx-1 lg:mx-2 shrink-0" />
         
-        {/* 5단계/6단계 확정 버튼 - ALL 버튼 뒤쪽에 배치 */}
+        {/* 6단계 확정 + 승인 버튼 */}
         <div className="flex gap-1 shrink-0">
           <button
             onClick={() => {
               if (!failureLinkConfirmed) {
                 alert('⚠️ 고장연결을 먼저 확정해주세요.');
-                return;
-              }
-              if (riskConfirmed) {
-                alert('✅ 이미 확정되었습니다.');
-                return;
-              }
-              // ✅ 5ST 확정: 고장연결 탭의 ALL 화면(전체보기)으로 이동
-              setState(prev => ({ ...prev, tab: 'failureLink', failureLinkViewMode: 'result' }));
-            }}
-            className={`
-              px-2 py-1 text-[10px] sm:text-xs rounded whitespace-nowrap border
-              ${riskConfirmed 
-                ? 'bg-green-600 text-white border-green-500 cursor-default' 
-                : failureLinkConfirmed
-                  ? 'bg-yellow-500 text-black border-yellow-400 hover:bg-yellow-400 cursor-pointer'
-                  : 'bg-gray-600 text-gray-300 border-gray-500 cursor-not-allowed opacity-70'
-              }
-            `}
-          >
-            {riskConfirmed ? '✓ 5ST확정' : '5ST확정'}
-          </button>
-          <button
-            onClick={() => {
-              if (!riskConfirmed) {
-                alert('⚠️ 리스크분석(5단계)을 먼저 확정해주세요.');
                 return;
               }
               if (optConfirmed) {
@@ -163,7 +138,7 @@ export default function TabMenu({ state, setState, setStateSynced, setDirty, sav
               px-2 py-1 text-[10px] sm:text-xs rounded whitespace-nowrap border
               ${optConfirmed 
                 ? 'bg-green-600 text-white border-green-500 cursor-default' 
-                : riskConfirmed
+                : failureLinkConfirmed
                   ? 'bg-yellow-500 text-black border-yellow-400 hover:bg-yellow-400 cursor-pointer'
                   : 'bg-gray-600 text-gray-300 border-gray-500 cursor-not-allowed opacity-70'
               }
