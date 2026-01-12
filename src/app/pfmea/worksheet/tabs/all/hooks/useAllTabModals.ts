@@ -169,24 +169,94 @@ export function useAllTabModals(setState?: React.Dispatch<React.SetStateAction<W
       console.log('📦 이전 상태:', prevState.riskData);
       
       let riskKey: string;
+      let uniqueKey = '';
       if (sodModal.category === 'S' && sodModal.feText) {
         // 심각도 (개별 FE 텍스트 기준)
         riskKey = `S-fe-${sodModal.feText}`;
       } else if (sodModal.fmId && sodModal.fcId) {
         // ★★★ 2026-01-11: 최적화 단계 포함 - fmId-fcId 조합 키 사용 ★★★
-        const uniqueKey = `${sodModal.fmId}-${sodModal.fcId}`;
+        uniqueKey = `${sodModal.fmId}-${sodModal.fcId}`;
         riskKey = `${sodModal.targetType}-${uniqueKey}-${sodModal.category}`;
       } else {
         // 폴백: rowIndex 기반
         riskKey = `${sodModal.targetType}-${sodModal.rowIndex}-${sodModal.category}`;
       }
       
-      const updatedRiskData = {
+      let updatedRiskData = {
         ...(prevState.riskData || {}),
         [riskKey]: rating
       };
       
       console.log(`✅ ${categoryName} 저장: riskData[${riskKey}] = ${rating}`);
+      
+      // ★★★ 2026-01-12: 발생도 입력 시 동일 예방관리에 동일 발생도 자동 적용 ★★★
+      if (sodModal.category === 'O' && sodModal.targetType === 'risk' && uniqueKey) {
+        const preventionKey = `prevention-${uniqueKey}`;
+        const currentPreventionValue = prevState.riskData?.[preventionKey] || '';
+        
+        if (currentPreventionValue) {
+          console.log(`🔗 [발생도 자동연결] 현재 예방관리: "${currentPreventionValue}"`);
+          
+          // failureLinks에서 동일 예방관리를 가진 다른 행 찾기
+          const failureLinks = (prevState as any).failureLinks || [];
+          let autoLinkedCount = 0;
+          
+          failureLinks.forEach((link: any) => {
+            const linkUniqueKey = `${link.fmId}-${link.fcId}`;
+            if (linkUniqueKey === uniqueKey) return; // 현재 행은 스킵
+            
+            const linkPreventionKey = `prevention-${linkUniqueKey}`;
+            const linkPreventionValue = prevState.riskData?.[linkPreventionKey] || '';
+            
+            // 예방관리가 일치하면 발생도 자동 적용
+            if (linkPreventionValue === currentPreventionValue) {
+              const linkOccurrenceKey = `risk-${linkUniqueKey}-O`;
+              updatedRiskData[linkOccurrenceKey] = rating;
+              autoLinkedCount++;
+              console.log(`  → 자동적용: ${linkOccurrenceKey} = ${rating}`);
+            }
+          });
+          
+          if (autoLinkedCount > 0) {
+            console.log(`✅ [발생도 자동연결] 총 ${autoLinkedCount}개 행에 동일 발생도(${rating}) 적용`);
+          }
+        }
+      }
+      
+      // ★★★ 2026-01-12: 검출도 입력 시 동일 검출관리에 동일 검출도 자동 적용 ★★★
+      if (sodModal.category === 'D' && sodModal.targetType === 'risk' && uniqueKey) {
+        const detectionKey = `detection-${uniqueKey}`;
+        const currentDetectionValue = prevState.riskData?.[detectionKey] || '';
+        
+        if (currentDetectionValue) {
+          console.log(`🔗 [검출도 자동연결] 현재 검출관리: "${currentDetectionValue}"`);
+          
+          // failureLinks에서 동일 검출관리를 가진 다른 행 찾기
+          const failureLinks = (prevState as any).failureLinks || [];
+          let autoLinkedCount = 0;
+          
+          failureLinks.forEach((link: any) => {
+            const linkUniqueKey = `${link.fmId}-${link.fcId}`;
+            if (linkUniqueKey === uniqueKey) return; // 현재 행은 스킵
+            
+            const linkDetectionKey = `detection-${linkUniqueKey}`;
+            const linkDetectionValue = prevState.riskData?.[linkDetectionKey] || '';
+            
+            // 검출관리가 일치하면 검출도 자동 적용
+            if (linkDetectionValue === currentDetectionValue) {
+              const linkDetectionOKey = `risk-${linkUniqueKey}-D`;
+              updatedRiskData[linkDetectionOKey] = rating;
+              autoLinkedCount++;
+              console.log(`  → 자동적용: ${linkDetectionOKey} = ${rating}`);
+            }
+          });
+          
+          if (autoLinkedCount > 0) {
+            console.log(`✅ [검출도 자동연결] 총 ${autoLinkedCount}개 행에 동일 검출도(${rating}) 적용`);
+          }
+        }
+      }
+      
       console.log('📦 업데이트된 riskData:', updatedRiskData);
       
       const newState = {

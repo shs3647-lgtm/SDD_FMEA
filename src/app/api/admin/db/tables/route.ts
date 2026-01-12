@@ -39,12 +39,21 @@ export async function GET(request: NextRequest) {
             SELECT COUNT(*) as count 
             FROM "${schema}"."${row.table_name}"
           `);
+          const count = parseInt(countResult.rows[0].count, 10);
+          // 리스크분석 테이블의 경우 디버깅 로그 추가
+          if (row.table_name === 'risk_analyses') {
+            console.log(`[DB 뷰어] ${schema}.risk_analyses 행 수:`, count);
+          }
           return {
             schema,
             table: row.table_name,
-            rows: parseInt(countResult.rows[0].count, 10)
+            rows: count
           };
-        } catch {
+        } catch (error: any) {
+          // 에러 발생 시 로그 출력 (리스크분석 테이블의 경우)
+          if (row.table_name === 'risk_analyses') {
+            console.error(`[DB 뷰어] ${schema}.risk_analyses 행 수 조회 실패:`, error.message);
+          }
           return {
             schema,
             table: row.table_name,
@@ -69,6 +78,7 @@ export async function GET(request: NextRequest) {
     await pool.end();
   }
 }
+
 
 
 

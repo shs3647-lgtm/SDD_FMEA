@@ -773,7 +773,12 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
         
         // 심각도는 failureLink에서 가져오거나 failureEffects에서 최대값
         let severity = 0;
-        if (link.cache?.feSeverity) {
+        // ★ link.feSeverity (직접) 또는 link.cache?.feSeverity (캐시) 또는 link.severity
+        if (typeof link.feSeverity === 'number' && link.feSeverity > 0) {
+          severity = link.feSeverity;
+        } else if (typeof link.severity === 'number' && link.severity > 0) {
+          severity = link.severity;
+        } else if (link.cache?.feSeverity) {
           severity = link.cache.feSeverity;
         } else {
           // failureEffects에서 해당 feId의 심각도 찾기
@@ -811,7 +816,19 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
         
         // 첫 5개 링크에 대해 디버깅 출력
         if (linkIdx < 5) {
-          console.log(`[마이그레이션] 링크 ${linkIdx}: uniqueKey=${uniqueKey}, S=${severity}, O=${occurrence}, D=${detection}`);
+          console.log(`[마이그레이션] 링크 ${linkIdx}:`, {
+            uniqueKey,
+            fmId: link.fmId,
+            fcId: link.fcId,
+            severity,
+            occurrence,
+            detection,
+            linkFeSeverity: link.feSeverity,
+            linkSeverity: link.severity,
+            cacheFeSeverity: link.cache?.feSeverity,
+            oKeyExists: oKey in riskData,
+            dKeyExists: dKey in riskData,
+          });
         }
       });
     }

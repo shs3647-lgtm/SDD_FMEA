@@ -618,17 +618,18 @@ function FMEAWorksheetPageContent() {
 
             {/* 구조분석 제목 바는 StructureTab 내부 헤더로 이동됨 (표준화 완료) */}
 
-            {/* ✅ All 탭: 브라우저 하단 고정 스크롤 래퍼 */}
+            {/* ✅ All 탭: 브라우저 하단 고정 스크롤 래퍼 (가로+세로 스크롤) */}
             {state.tab === 'all' ? (
               <div 
                 id="all-tab-scroll-wrapper"
                 className="worksheet-scroll-container"
                 style={{ 
                   flex: 1,
-                  overflowX: 'auto',
-                  overflowY: 'auto',
+                  overflowX: 'scroll',
+                  overflowY: 'scroll',
                   background: '#fff',
                   position: 'relative',
+                  maxHeight: 'calc(100vh - 180px)',
                 }}
               >
                 {/* 전체보기 탭: 통합 화면 (40열 구조) - 원자성 DB 기반 */}

@@ -152,3 +152,4 @@ test('TC7: DB 뷰어 새로고침 버튼 동작', async ({ page }) => {
   console.log('마지막 갱신 시간 표시:', hasLastRefresh);
 });
 
+

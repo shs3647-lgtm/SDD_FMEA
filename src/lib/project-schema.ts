@@ -62,11 +62,33 @@ export async function ensureProjectSchemaReady(params: {
     await client.query(`CREATE SCHEMA IF NOT EXISTS ${quoteIdent(schema)}`);
 
     for (const table of PROJECT_TABLES) {
-      // Copy table structure from public if not exists
-      // INCLUDING ALL copies defaults, constraints, indexes, etc.
-      await client.query(
-        `CREATE TABLE IF NOT EXISTS ${quoteIdent(schema)}.${quoteIdent(table)} (LIKE public.${quoteIdent(table)} INCLUDING ALL)`
-      );
+      // Check if table exists in public schema
+      const publicTableExists = await client.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' AND table_name = $1
+        )
+      `, [table]);
+      
+      if (publicTableExists.rows[0].exists) {
+        // Copy table structure from public if exists
+        await client.query(
+          `CREATE TABLE IF NOT EXISTS ${quoteIdent(schema)}.${quoteIdent(table)} (LIKE public.${quoteIdent(table)} INCLUDING ALL)`
+        );
+      } else {
+        // If table doesn't exist in public, check if it exists in project schema
+        const projectTableExists = await client.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = $1 AND table_name = $2
+          )
+        `, [schema, table]);
+        
+        if (!projectTableExists.rows[0].exists) {
+          // Table doesn't exist in either schema - log warning
+          console.warn(`[project-schema] 테이블 ${table}이 public 스키마에 없습니다. Prisma 마이그레이션을 실행하세요.`);
+        }
+      }
     }
   } finally {
     await client.end().catch(() => {});

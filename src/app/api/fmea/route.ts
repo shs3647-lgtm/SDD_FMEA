@@ -89,6 +89,7 @@ export async function POST(request: NextRequest) {
       failureModesCount: db.failureModes?.length || 0,
       failureCausesCount: db.failureCauses?.length || 0,
       failureLinksCount: db.failureLinks?.length || 0,
+      riskAnalysesCount: db.riskAnalyses?.length || 0,  // ★ 추가
       hasLegacyData: !!legacyData,
       legacyL1Name: legacyData?.l1?.name,
       legacyL2Count: legacyData?.l2?.length || 0,
@@ -563,8 +564,16 @@ export async function POST(request: NextRequest) {
       }
 
       // 12. RiskAnalyses 배치 저장
-      console.log('[API] RiskAnalyses 저장 시작:', db.riskAnalyses.length, '개');
-      if (db.riskAnalyses.length > 0) {
+      console.log('[API] RiskAnalyses 저장 시작:', db.riskAnalyses?.length || 0, '개');
+      if (db.riskAnalyses?.length > 0) {
+        console.log('[API] RiskAnalyses 샘플:', db.riskAnalyses.slice(0, 3).map(r => ({
+          id: r.id?.substring(0, 8),
+          linkId: r.linkId?.substring(0, 8),
+          S: r.severity,
+          O: r.occurrence,
+          D: r.detection,
+          AP: r.ap,
+        })));
         await Promise.all(
           db.riskAnalyses.map(risk =>
             tx.riskAnalysis.upsert({

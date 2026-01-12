@@ -492,9 +492,9 @@ body {
   display: flex;
   flex-direction: column;
   
-  /* 가로 스크롤만 표시, 세로는 자동 */
+  /* ★ 가로/세로 스크롤 모두 표시 */
   overflow-x: scroll !important;
-  overflow-y: auto !important;
+  overflow-y: scroll !important;
   
   /* 스크롤바 항상 표시 */
   scrollbar-gutter: stable;
@@ -505,6 +505,9 @@ body {
   
   /* 배경 */
   background: #fff;
+  
+  /* ★ 최대 높이 설정 (뷰포트 높이 - 헤더/탭 영역) */
+  max-height: calc(100vh - 180px);
 }
 
 /* 내부 콘텐츠: 최소 너비로 스크롤 유발 */
@@ -561,6 +564,46 @@ body {
 
 #all-tab-scroll-wrapper::-webkit-scrollbar-button:single-button:hover {
   background-color: #c8c8c8;
+}
+
+/* ★ 세로 스크롤바 스타일 추가 */
+#all-tab-scroll-wrapper::-webkit-scrollbar:vertical {
+  width: 14px !important;
+  display: block !important;
+  background: linear-gradient(to right, #d8d8d8, #e8e8e8);
+}
+
+#all-tab-scroll-wrapper::-webkit-scrollbar-track:vertical {
+  background: linear-gradient(to right, #e8e8e8, #d8d8d8) !important;
+  border-left: 1px solid #ccc;
+}
+
+#all-tab-scroll-wrapper::-webkit-scrollbar-thumb:vertical {
+  background: linear-gradient(to right, #1a237e, #3f51b5) !important;
+  border-radius: 7px;
+  border: 2px solid #e8e8e8;
+  min-height: 50px;
+}
+
+#all-tab-scroll-wrapper::-webkit-scrollbar-thumb:vertical:hover {
+  background: linear-gradient(to right, #0d1757, #303f9f) !important;
+}
+
+/* 세로 스크롤바 버튼 (상/하 화살표) */
+#all-tab-scroll-wrapper::-webkit-scrollbar-button:single-button:vertical:decrement {
+  width: 14px;
+  height: 14px;
+  background: #d8d8d8 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23333' d='M1 6l4-4 4 4H1z'/%3E%3C/svg%3E") center center no-repeat;
+  border: 1px solid #bbb;
+  border-radius: 3px;
+}
+
+#all-tab-scroll-wrapper::-webkit-scrollbar-button:single-button:vertical:increment {
+  width: 14px;
+  height: 14px;
+  background: #d8d8d8 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23333' d='M1 4l4 4 4-4H1z'/%3E%3C/svg%3E") center center no-repeat;
+  border: 1px solid #bbb;
+  border-radius: 3px;
 }
 
 /* 기존 클래스 (호환성 유지) */

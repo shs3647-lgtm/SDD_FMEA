@@ -64,6 +64,7 @@ export default function DbViewerPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [pendingTable, setPendingTable] = useState<string | null>(null);  // 스키마 변경 후 선택할 테이블
 
   // 스키마 목록 로드
   const loadSchemas = useCallback(async () => {
@@ -157,8 +158,35 @@ export default function DbViewerPage() {
 
   // 주요 테이블 바로가기 클릭
   const handleQuickSelect = useCallback((tableName: string) => {
-    setSelectedTable(tableName);
-  }, []);
+    const tableInfo = IMPORTANT_TABLES.find(t => t.name === tableName);
+    if (!tableInfo) {
+      setSelectedTable(tableName);
+      return;
+    }
+    
+    // 프로젝트별 테이블인 경우, pfmea_ 스키마를 찾아서 선택
+    if (tableInfo.scope === 'project') {
+      const projectSchema = schemas.find(s => s.startsWith('pfmea_'));
+      if (projectSchema) {
+        if (selectedSchema !== projectSchema) {
+          setSelectedSchema(projectSchema);
+          setPendingTable(tableName);  // 스키마 변경 후 테이블 선택
+        } else {
+          setSelectedTable(tableName);
+        }
+      } else {
+        setError('프로젝트 스키마(pfmea_...)를 찾을 수 없습니다.');
+      }
+    } else {
+      // 공용 테이블인 경우
+      if (selectedSchema !== 'public') {
+        setSelectedSchema('public');
+        setPendingTable(tableName);  // 스키마 변경 후 테이블 선택
+      } else {
+        setSelectedTable(tableName);
+      }
+    }
+  }, [schemas, selectedSchema]);
 
   useEffect(() => {
     loadSchemas();
@@ -169,6 +197,17 @@ export default function DbViewerPage() {
       loadTables(selectedSchema);
     }
   }, [selectedSchema, loadTables]);
+
+  // 스키마 변경 후 테이블 로드 완료 시 pending 테이블 선택
+  useEffect(() => {
+    if (pendingTable && tables.length > 0) {
+      const tableExists = tables.some(t => t.table === pendingTable);
+      if (tableExists) {
+        setSelectedTable(pendingTable);
+        setPendingTable(null);
+      }
+    }
+  }, [pendingTable, tables]);
 
   useEffect(() => {
     if (selectedSchema && selectedTable) {
@@ -221,7 +260,14 @@ export default function DbViewerPage() {
 
         {/* 주요 테이블 바로가기 */}
         <div className="bg-white rounded-lg shadow p-4 mb-6">
-          <h2 className="text-lg font-semibold mb-3">⚡ 주요 테이블 바로가기</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold">⚡ 주요 테이블 바로가기</h2>
+            {selectedSchema.startsWith('pfmea_') && (
+              <span className="text-xs text-blue-600 font-medium">
+                📂 현재 선택: {selectedSchema.replace('pfmea_', '')}
+              </span>
+            )}
+          </div>
           <div className="flex flex-wrap gap-2">
             {IMPORTANT_TABLES.map(t => {
               const rows = getTableRows(t.name);
@@ -230,6 +276,9 @@ export default function DbViewerPage() {
                                   (t.scope === 'project' && selectedSchema.startsWith('pfmea_'));
               const hasData = rows > 0;
               
+              // 프로젝트별 테이블의 경우, 현재 선택된 스키마가 프로젝트 스키마일 때만 활성화
+              const isActive = isScopeMatch;
+              
               return (
                 <button
                   key={t.name}
@@ -237,14 +286,16 @@ export default function DbViewerPage() {
                   className={`px-3 py-1.5 rounded text-xs font-medium transition-all border ${
                     isSelected 
                       ? 'bg-blue-600 text-white border-blue-700 shadow-inner scale-95' 
-                      : !isScopeMatch
+                      : !isActive
                         ? 'bg-gray-50 text-gray-300 border-gray-200 cursor-not-allowed'
                         : hasData 
                           ? 'bg-green-100 text-green-800 hover:bg-green-200 border-green-300' 
                           : 'bg-white text-gray-500 hover:bg-gray-100 border-gray-300'
                   }`}
-                  title={!isScopeMatch ? `이 테이블은 ${t.scope === 'public' ? '공용(public)' : '프로젝트(pfmea_...)'} 스키마에 있습니다.` : t.desc}
-                  disabled={!isScopeMatch && !isSelected}
+                  title={!isActive 
+                    ? `이 테이블은 ${t.scope === 'public' ? '공용(public)' : '프로젝트(pfmea_...)'} 스키마에 있습니다. ${t.scope === 'project' ? '프로젝트 스키마를 선택하세요.' : 'public 스키마를 선택하세요.'}` 
+                    : `${t.desc}${t.scope === 'project' ? ` (${selectedSchema})` : ''}`}
+                  disabled={!isActive && !isSelected}
                 >
                   {t.label} ({rows})
                 </button>
@@ -253,6 +304,11 @@ export default function DbViewerPage() {
           </div>
           <div className="mt-2 text-xs text-gray-500">
             🟢 녹색: 데이터 있음 | ⚪ 회색: 데이터 없음 | 🔵 파란색: 선택됨
+            {selectedSchema.startsWith('pfmea_') && (
+              <span className="ml-2 text-blue-600">
+                ※ 프로젝트별 테이블은 현재 선택된 프로젝트 스키마의 데이터만 표시됩니다
+              </span>
+            )}
           </div>
         </div>
 
