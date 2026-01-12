@@ -281,13 +281,14 @@ export default function FailureL1Tab({ state, setState, setStateSynced, setDirty
 
   // 고장영향 데이터 (localStorage에서)
   const failureEffects: FailureEffect[] = useMemo(() => {
-    return (state.l1.failureScopes || []).map((s: any) => ({
+    // ✅ 2026-01-12: 옵셔널 체이닝 사용 (state.l1이 없을 수 있음)
+    return ((state.l1 as any)?.failureScopes || []).map((s: any) => ({
       id: s.id,
       reqId: s.reqId || '',
       effect: s.effect || '',
       severity: s.severity
     }));
-  }, [state.l1.failureScopes]);
+  }, [(state.l1 as any)?.failureScopes]);
 
   // 평탄화된 행 데이터 (기능분석 요구사항 기준)
   const flatRows = useMemo(() => {

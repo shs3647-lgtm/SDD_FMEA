@@ -336,13 +336,21 @@ export default function DataSelectModal({
     const trimmedValue = newValue.trim();
     
     // 중복이면 무시
-    if (items.some(i => i.value === trimmedValue)) return;
+    if (items.some(i => i.value === trimmedValue)) {
+      console.warn('[수동입력] 중복 항목:', trimmedValue);
+      return;
+    }
     
-    const newItem: DataItem = { id: `new_${Date.now()}`, value: trimmedValue, category: '추가' };
+    // ✅ 2026-01-12: newCategory 사용 (WorkElementSelectModal 스타일)
+    const newItem: DataItem = { 
+      id: `new_${Date.now()}`, 
+      value: trimmedValue, 
+      category: newCategory || '추가' 
+    };
     setItems(prev => [newItem, ...prev]); // 맨 위에 추가
     setSelectedIds(prev => new Set([...prev, newItem.id]));
     
-    // localStorage에 저장
+    // localStorage에 저장 (WorkElementSelectModal 스타일)
     try {
       const savedData = localStorage.getItem('pfmea_master_data');
       const masterData = savedData ? JSON.parse(savedData) : [];
@@ -350,12 +358,14 @@ export default function DataSelectModal({
         id: newItem.id, 
         itemCode, 
         value: trimmedValue, 
-        category: '추가',
+        category: newCategory || '추가',
+        processNo: processNo || undefined,
         createdAt: new Date().toISOString()
       });
       localStorage.setItem('pfmea_master_data', JSON.stringify(masterData));
+      console.log('[수동입력] 저장 완료:', trimmedValue, '카테고리:', newCategory || '추가');
     } catch (e) {
-      console.error('데이터 저장 오류:', e);
+      console.error('[수동입력] 저장 오류:', e);
     }
     
     setNewValue('');
