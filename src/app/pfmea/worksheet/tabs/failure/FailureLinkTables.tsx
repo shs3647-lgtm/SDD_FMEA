@@ -153,8 +153,8 @@ export default function FailureLinkTables({
         <div style={panelStyleWithFlex('0 0 38%', COLORS.structure.dark)}>
           <div style={panelHeaderStyle(COLORS.structure.dark)}>
             FE(고장영향)
-              <span className="ml-2" style={{ color: '#000', fontWeight: 700 }}>연결:{linkStats.feLinkedCount}</span>
-              <span className="ml-1" style={{ color: '#000', fontWeight: 700 }}>누락:{Math.max(0, feData.length - linkStats.feLinkedCount)}</span>
+              <span className="ml-2" style={{ color: '#fff', fontWeight: 700 }}>연결:{linkStats.feLinkedCount}</span>
+              <span className="ml-1" style={{ color: '#fff', fontWeight: 700 }}>누락:{Math.max(0, feData.length - linkStats.feLinkedCount)}</span>
           </div>
           <div className="flex-1 overflow-y-auto">
             <table className="w-full border-collapse" style={{ fontSize: '10px' }}>
@@ -199,8 +199,8 @@ export default function FailureLinkTables({
         <div style={panelStyleWithFlex('0 0 24%', COLORS.failure.dark)}>
           <div style={panelHeaderStyle(COLORS.failure.dark)}>
             FM(고장형태)
-              <span className="ml-2" style={{ color: '#000', fontWeight: 700 }}>연결:{linkStats.fmLinkedCount}</span>
-              <span className="ml-1" style={{ color: '#000', fontWeight: 700 }}>누락:{Math.max(0, fmData.length - linkStats.fmLinkedCount)}</span>
+              <span className="ml-2" style={{ color: '#fff', fontWeight: 700 }}>연결:{linkStats.fmLinkedCount}</span>
+              <span className="ml-1" style={{ color: '#fff', fontWeight: 700 }}>누락:{Math.max(0, fmData.length - linkStats.fmLinkedCount)}</span>
           </div>
           <div style={scrollAreaStyle}>
             <table style={{ ...tableFullStyle(FONT_SIZES.cell), fontSize: '10px' }}>
@@ -265,8 +265,8 @@ export default function FailureLinkTables({
           <div className="flex justify-between items-center" style={panelHeaderStyle(COLORS.function.dark)}>
             <span className="flex-1 text-center">
               FC(고장원인)
-              <span className="ml-2" style={{ color: '#000', fontWeight: 700 }}>연결:{linkStats.fcLinkedCount}</span>
-              <span className="ml-1" style={{ color: '#000', fontWeight: 700 }}>누락:{Math.max(0, fcData.length - linkStats.fcLinkedCount)}</span>
+              <span className="ml-2" style={{ color: '#fff', fontWeight: 700 }}>연결:{linkStats.fcLinkedCount}</span>
+              <span className="ml-1" style={{ color: '#fff', fontWeight: 700 }}>누락:{Math.max(0, fcData.length - linkStats.fcLinkedCount)}</span>
             </span>
             <select
               value={fcLinkScope}
