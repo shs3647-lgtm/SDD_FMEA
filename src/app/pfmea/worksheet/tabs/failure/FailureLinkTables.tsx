@@ -160,38 +160,60 @@ export default function FailureLinkTables({
             <table className="w-full border-collapse" style={{ fontSize: '10px' }}>
               <thead>
                 <tr>
-                  <th style={thStyle('#e3f2fd', '20%')}>No</th>
+                  <th style={thStyle('#e3f2fd', '12%')}>No</th>
+                  <th style={thStyle('#e3f2fd', '12%')}>구분</th>
                   <th style={thStyle('#e3f2fd')}>고장영향(FE)</th>
-                  <th style={thStyle('#e3f2fd', '15%')}>S</th>
+                  <th style={thStyle('#e3f2fd', '12%')}>S</th>
                 </tr>
               </thead>
               <tbody>
-                {feData.map((fe, idx) => {
-                  const isLinkedInSaved = linkStats.feLinkedIds.has(fe.id) || linkStats.feLinkedTexts.has(fe.text);
-                  const isLinkedToCurrentFM = linkedFEIds.has(fe.id);  // 현재 FM에 연결됨
-                  // ★ 현재 FM에 연결된 FE: 하늘색 강조 (줄무늬와 명확 구분)
-                  const noBg = isLinkedToCurrentFM ? '#1976d2' : (isLinkedInSaved ? COLORS.function.dark : '#f57c00');
-                  const cellBg = isLinkedToCurrentFM ? '#bbdefb' : (isLinkedInSaved ? '#c8e6c9' : (idx % 2 === 1 ? '#bbdefb' : '#e3f2fd'));
-                  const severityColor = fe.severity && fe.severity >= 8 ? '#f57c00' : fe.severity && fe.severity >= 5 ? '#f57f17' : COLORS.structure.text;
-                  return (
-                    <tr
-                      key={fe.id}
-                      onClick={() => handleClick(fe.id, onToggleFE)}
-                      onDoubleClick={() => handleDoubleClick(fe.id, onUnlinkFE)}
-                      className={currentFMId ? 'cursor-pointer' : ''}
-                      title="클릭: 연결 / 더블클릭: 연결 해제"
-                      style={isLinkedToCurrentFM ? { boxShadow: 'inset 0 0 0 3px #1976d2' } : undefined}
-                    >
-                      <td style={tdCenterStyle(noBg, BORDER_BLUE, '#fff')}>{fe.feNo}</td>
-                      <td style={tdStyle(cellBg, BORDER_BLUE, { color: COLORS.structure.text })}>
-                        {isLinkedInSaved && <span className="mr-1 text-green-700 font-bold">●</span>}
-                        {fe.text}
-                        {isLinkedToCurrentFM && <span className="ml-1 text-blue-700 font-bold">▶</span>}
-                      </td>
-                      <td style={tdCenterStyle(cellBg, BORDER_BLUE, severityColor)}>{fe.severity || '-'}</td>
-                    </tr>
-                  );
-                })}
+                {(() => {
+                  // ★ scope별 그룹 인덱스 계산 (YP/SP/USER별 줄무늬)
+                  const scopeColorMap: Record<string, { light: string; dark: string }> = {
+                    'YP': { light: '#e3f2fd', dark: '#bbdefb' },   // 파란색 (Your Plant)
+                    'SP': { light: '#f3e5f5', dark: '#e1bee7' },   // 보라색 (Ship to Plant)
+                    'USER': { light: '#e8f5e9', dark: '#c8e6c9' }, // 녹색 (User)
+                  };
+                  let scopeIdx = 0;
+                  let prevScope = '';
+                  
+                  return feData.map((fe, idx) => {
+                    // scope 변경 시 인덱스 리셋
+                    if (fe.scope !== prevScope) {
+                      scopeIdx = 0;
+                      prevScope = fe.scope;
+                    }
+                    const scopeColors = scopeColorMap[fe.scope] || scopeColorMap['YP'];
+                    const stripeBg = scopeIdx % 2 === 0 ? scopeColors.dark : scopeColors.light;
+                    scopeIdx++;
+                    
+                    const isLinkedInSaved = linkStats.feLinkedIds.has(fe.id) || linkStats.feLinkedTexts.has(fe.text);
+                    const isLinkedToCurrentFM = linkedFEIds.has(fe.id);
+                    // ★ 현재 FM에 연결된 FE: 하늘색 강조 (줄무늬와 명확 구분)
+                    const noBg = isLinkedToCurrentFM ? '#1976d2' : (isLinkedInSaved ? COLORS.function.dark : '#f57c00');
+                    const cellBg = isLinkedToCurrentFM ? '#bbdefb' : (isLinkedInSaved ? '#c8e6c9' : stripeBg);
+                    const severityColor = fe.severity && fe.severity >= 8 ? '#f57c00' : fe.severity && fe.severity >= 5 ? '#f57f17' : COLORS.structure.text;
+                    return (
+                      <tr
+                        key={fe.id}
+                        onClick={() => handleClick(fe.id, onToggleFE)}
+                        onDoubleClick={() => handleDoubleClick(fe.id, onUnlinkFE)}
+                        className={currentFMId ? 'cursor-pointer' : ''}
+                        title="클릭: 연결 / 더블클릭: 연결 해제"
+                        style={isLinkedToCurrentFM ? { boxShadow: 'inset 0 0 0 3px #1976d2' } : undefined}
+                      >
+                        <td style={tdCenterStyle(noBg, BORDER_BLUE, '#fff')}>{fe.feNo}</td>
+                        <td style={tdCenterStyle(cellBg, BORDER_BLUE, COLORS.structure.text, { fontSize: '9px' })}>{fe.scope}</td>
+                        <td style={tdStyle(cellBg, BORDER_BLUE, { color: COLORS.structure.text })}>
+                          {isLinkedInSaved && <span className="mr-1 text-green-700 font-bold">●</span>}
+                          {fe.text}
+                          {isLinkedToCurrentFM && <span className="ml-1 text-blue-700 font-bold">▶</span>}
+                        </td>
+                        <td style={tdCenterStyle(cellBg, BORDER_BLUE, severityColor)}>{fe.severity || '-'}</td>
+                      </tr>
+                    );
+                  });
+                })()}
               </tbody>
             </table>
           </div>
@@ -298,46 +320,75 @@ export default function FailureLinkTables({
                 </tr>
               </thead>
               <tbody>
-                {filteredFcData.map((fc, idx) => {
-                  const isLinkedInSaved = linkStats.fcLinkedIds.has(fc.id) || linkStats.fcLinkedTexts.has(fc.text);
-                  const isLinkedToCurrentFM = linkedFCIds.has(fc.id);  // 현재 FM에 연결됨
-                  // ★ 현재 FM에 연결된 FC: 하늘색 강조 (줄무늬와 명확 구분)
-                  const noBg = isLinkedToCurrentFM ? '#1976d2' : (isLinkedInSaved ? COLORS.function.dark : '#f57c00');
-                  const cellBg = isLinkedToCurrentFM ? '#bbdefb' : (isLinkedInSaved ? '#c8e6c9' : (idx % 2 === 1 ? '#c8e6c9' : '#e8f5e9'));
-                  return (
-                    <tr key={fc.id} style={isLinkedToCurrentFM ? { boxShadow: 'inset 0 0 0 3px #1976d2' } : undefined}>
-                      {/* NO열 클릭 → 연결 해제 */}
-                      <td 
-                        style={{...tdCenterStyle(noBg, BORDER_GREEN, '#fff'), cursor: 'pointer', fontSize: '10px', fontWeight: 'normal'}}
-                        onClick={() => onUnlinkFC(fc.id)}
-                        title="클릭: 연결 해제"
-                      >
-                        {fc.fcNo}
-                      </td>
-                      <td style={tdCenterStyle(cellBg, BORDER_GREEN, COLORS.function.text, { fontSize: '10px', whiteSpace: 'nowrap', fontWeight: 'normal' })}>{fc.processName}</td>
-                      <td style={tdStyle(cellBg, BORDER_GREEN, { 
-                        fontSize: '10px', 
-                        color: COLORS.function.text, 
-                        fontWeight: 'normal',
-                        maxWidth: '120px',
-                        wordBreak: 'keep-all',
-                        overflowWrap: 'break-word',
-                        lineHeight: '1.2'
-                      })}>{fc.workElem}</td>
-                      {/* 고장원인열 클릭 → 연결 추가 */}
-                      <td 
-                        style={{...tdStyle(cellBg, BORDER_GREEN, { color: COLORS.function.text, fontSize: '10px', fontWeight: 'normal' }), cursor: 'pointer'}}
-                        onClick={() => handleClick(fc.id, onToggleFC)}
-                        onDoubleClick={() => handleDoubleClick(fc.id, onUnlinkFC)}
-                        title="클릭: 연결 추가 / 더블클릭: 연결 해제"
-                      >
-                        {isLinkedInSaved && <span className="mr-1 text-green-700">●</span>}
-                        {fc.text}
-                        {isLinkedToCurrentFM && <span className="ml-1 text-blue-700 font-bold">▶</span>}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {(() => {
+                  // ★ 공정별 그룹 인덱스 계산 (공정명별 줄무늬)
+                  const processColorPalette = [
+                    { light: '#e8f5e9', dark: '#c8e6c9' },   // 녹색 1
+                    { light: '#e3f2fd', dark: '#bbdefb' },   // 파란색
+                    { light: '#fff3e0', dark: '#ffe0b2' },   // 주황색
+                    { light: '#f3e5f5', dark: '#e1bee7' },   // 보라색
+                    { light: '#e0f7fa', dark: '#b2ebf2' },   // 시안
+                    { light: '#fce4ec', dark: '#f8bbd9' },   // 핑크
+                  ];
+                  const processColorMap = new Map<string, { light: string; dark: string }>();
+                  let colorIdx = 0;
+                  let processRowIdx = 0;
+                  let prevProcess = '';
+                  
+                  return filteredFcData.map((fc, idx) => {
+                    // 공정 변경 시 색상 할당 및 인덱스 리셋
+                    if (fc.processName !== prevProcess) {
+                      if (!processColorMap.has(fc.processName)) {
+                        processColorMap.set(fc.processName, processColorPalette[colorIdx % processColorPalette.length]);
+                        colorIdx++;
+                      }
+                      processRowIdx = 0;
+                      prevProcess = fc.processName;
+                    }
+                    const colors = processColorMap.get(fc.processName) || processColorPalette[0];
+                    const stripeBg = processRowIdx % 2 === 0 ? colors.dark : colors.light;
+                    processRowIdx++;
+                    
+                    const isLinkedInSaved = linkStats.fcLinkedIds.has(fc.id) || linkStats.fcLinkedTexts.has(fc.text);
+                    const isLinkedToCurrentFM = linkedFCIds.has(fc.id);
+                    // ★ 현재 FM에 연결된 FC: 하늘색 강조 (줄무늬와 명확 구분)
+                    const noBg = isLinkedToCurrentFM ? '#1976d2' : (isLinkedInSaved ? COLORS.function.dark : '#f57c00');
+                    const cellBg = isLinkedToCurrentFM ? '#bbdefb' : (isLinkedInSaved ? '#c8e6c9' : stripeBg);
+                    return (
+                      <tr key={fc.id} style={isLinkedToCurrentFM ? { boxShadow: 'inset 0 0 0 3px #1976d2' } : undefined}>
+                        {/* NO열 클릭 → 연결 해제 */}
+                        <td 
+                          style={{...tdCenterStyle(noBg, BORDER_GREEN, '#fff'), cursor: 'pointer', fontSize: '10px', fontWeight: 'normal'}}
+                          onClick={() => onUnlinkFC(fc.id)}
+                          title="클릭: 연결 해제"
+                        >
+                          {fc.fcNo}
+                        </td>
+                        <td style={tdCenterStyle(cellBg, BORDER_GREEN, COLORS.function.text, { fontSize: '10px', whiteSpace: 'nowrap', fontWeight: 'normal' })}>{fc.processName}</td>
+                        <td style={tdStyle(cellBg, BORDER_GREEN, { 
+                          fontSize: '10px', 
+                          color: COLORS.function.text, 
+                          fontWeight: 'normal',
+                          maxWidth: '120px',
+                          wordBreak: 'keep-all',
+                          overflowWrap: 'break-word',
+                          lineHeight: '1.2'
+                        })}>{fc.workElem}</td>
+                        {/* 고장원인열 클릭 → 연결 추가 */}
+                        <td 
+                          style={{...tdStyle(cellBg, BORDER_GREEN, { color: COLORS.function.text, fontSize: '10px', fontWeight: 'normal' }), cursor: 'pointer'}}
+                          onClick={() => handleClick(fc.id, onToggleFC)}
+                          onDoubleClick={() => handleDoubleClick(fc.id, onUnlinkFC)}
+                          title="클릭: 연결 추가 / 더블클릭: 연결 해제"
+                        >
+                          {isLinkedInSaved && <span className="mr-1 text-green-700">●</span>}
+                          {fc.text}
+                          {isLinkedToCurrentFM && <span className="ml-1 text-blue-700 font-bold">▶</span>}
+                        </td>
+                      </tr>
+                    );
+                  });
+                })()}
               </tbody>
             </table>
           </div>
