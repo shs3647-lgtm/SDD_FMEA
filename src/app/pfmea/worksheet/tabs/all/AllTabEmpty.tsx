@@ -45,6 +45,11 @@ interface AllTabEmptyProps {
   state?: WorksheetState;  // 워크시트 상태
   setState?: React.Dispatch<React.SetStateAction<WorksheetState>>;  // 상태 업데이트 함수
   setDirty?: React.Dispatch<React.SetStateAction<boolean>>;  // ✅ DB 저장 트리거용
+  // ★★★ 2026-01-12: 트리뷰 패널 전환 핸들러 ★★★
+  onOpen5AP?: () => void;
+  onOpen6AP?: () => void;
+  onOpenRPN?: () => void;
+  activePanelId?: string; // 현재 활성 패널 ID
 }
 
 export default function AllTabEmpty({ 
@@ -55,6 +60,11 @@ export default function AllTabEmpty({
   state,
   setState,
   setDirty,
+  // ★★★ 2026-01-12: 트리뷰 패널 전환 핸들러 ★★★
+  onOpen5AP,
+  onOpen6AP,
+  onOpenRPN,
+  activePanelId,
 }: AllTabEmptyProps) {
   // 모달 관리 훅 (★ 2026-01-12: setDirty 추가하여 DB 저장 트리거)
   const {
@@ -407,6 +417,7 @@ export default function AllTabEmpty({
                 {span.step === '리스크분석' ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                     <span>{STEP_LABELS[span.step]}</span>
+                    {/* H/M/L 통계 배지 */}
                     <span style={{ 
                       display: 'inline-flex', 
                       alignItems: 'center', 

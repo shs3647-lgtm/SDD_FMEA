@@ -127,6 +127,14 @@ function FMEAWorksheetPageContent() {
   // 우측 패널 활성화 상태
   const [activePanelId, setActivePanelId] = useState<string>('tree');
   
+  // ★★★ 2026-01-12: ALL 탭 진입 시 패널 자동 리셋 (전체화면 복귀) ★★★
+  React.useEffect(() => {
+    if (state.tab === 'all') {
+      console.log('🟢 ALL 탭 진입 감지! activePanelId 리셋');
+      setActivePanelId('');
+    }
+  }, [state.tab]);
+  
   // ★★★ RPN 컬럼 표시 여부 (rpn 패널 활성화 시 true) ★★★
   const showRPN = activePanelId === 'rpn' || activePanelId === 'rpn-chart';
   
@@ -548,9 +556,9 @@ function FMEAWorksheetPageContent() {
           onDownloadTemplate={handleDownloadTemplate}
           onOpenSpecialChar={() => setIsSpecialCharModalOpen(true)}
           onOpenSOD={() => setIsSODModalOpen(true)}
-          onOpen5AP={() => setActivePanelId(prev => prev === '5ap' ? 'tree' : '5ap')}
-          onOpen6AP={() => setActivePanelId(prev => prev === '6ap' ? 'tree' : '6ap')}
-          onOpenRPN={() => setActivePanelId(prev => prev === 'rpn' ? 'tree' : 'rpn')}
+          onOpen5AP={() => setActivePanelId(prev => prev === '5ap' ? (state.tab === 'all' ? '' : 'tree') : '5ap')}
+          onOpen6AP={() => setActivePanelId(prev => prev === '6ap' ? (state.tab === 'all' ? '' : 'tree') : '6ap')}
+          onOpenRPN={() => setActivePanelId(prev => prev === 'rpn' ? (state.tab === 'all' ? '' : 'tree') : 'rpn')}
           state={state}
         />
 
@@ -605,8 +613,12 @@ function FMEAWorksheetPageContent() {
             setDirty={setDirty}
             saveToLocalStorage={saveToLocalStorage}
             saveAtomicDB={saveAtomicDB} 
-            onOpen5AP={() => setActivePanelId(prev => prev === '5ap' ? 'tree' : '5ap')}
-            onOpen6AP={() => setActivePanelId(prev => prev === '6ap' ? 'tree' : '6ap')}
+            onOpen5AP={() => setActivePanelId(prev => prev === '5ap' ? (state.tab === 'all' ? '' : 'tree') : '5ap')}
+            onOpen6AP={() => setActivePanelId(prev => prev === '6ap' ? (state.tab === 'all' ? '' : 'tree') : '6ap')}
+            onAllClick={() => {
+              console.log('🔴 onAllClick 호출됨! activePanelId를 빈값으로 설정');
+              setActivePanelId('');
+            }}
           />
         </div>
 
@@ -654,6 +666,11 @@ function FMEAWorksheetPageContent() {
                   fmeaId={selectedFmeaId || undefined}
                   useAtomicDB={true}
                   showRPN={showRPN}
+                  // ★★★ 2026-01-12: 트리뷰 패널 전환 핸들러 ★★★
+                  onOpen5AP={() => setActivePanelId(prev => prev === '5ap' ? '' : '5ap')}
+                  onOpen6AP={() => setActivePanelId(prev => prev === '6ap' ? '' : '6ap')}
+                  onOpenRPN={() => setActivePanelId(prev => prev === 'rpn' ? '' : 'rpn')}
+                  activePanelId={activePanelId}
                 />
               </div>
             ) : (
@@ -730,7 +747,10 @@ function FMEAWorksheetPageContent() {
           {/* ★★★ 고장연결 화면에는 트리뷰 영역이 필요 없음 ★★★ */}
           {/* ★★★ UI/UX 수정 절대 금지 - 2026-01-12 ★★★ */}
           {/* ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★ */}
-          {state.tab !== 'failure-link' && (
+          {/* ★★★ ALL 탭: 기본은 전체화면(트리뷰 없음), 5AP/6AP/RPN 클릭 시에만 우측 패널 표시 ★★★ */}
+          {/* ★★★ ALL 탭 클릭 시 → activePanelId가 null이 되어 전체화면으로 복귀 ★★★ */}
+          {(state.tab !== 'failure-link' && state.tab !== 'all') || 
+           (state.tab === 'all' && ['5ap', '6ap', 'rpn', 'rpn-chart'].includes(activePanelId)) ? (
             <>
               <div className="w-[2px] bg-[#1a237e] shrink-0" />
 
@@ -758,7 +778,7 @@ function FMEAWorksheetPageContent() {
                 </Suspense>
               </div>
             </>
-          )}
+          ) : null}
         </div>
 
         {/* 모달 */}

@@ -23,6 +23,11 @@ interface AllTabRendererProps {
   visibleSteps?: number[];
   fmeaId?: string;
   showRPN?: boolean; // RPN 표시 여부 (기본: false)
+  // ★★★ 2026-01-12: 트리뷰 패널 전환 핸들러 추가 ★★★
+  onOpen5AP?: () => void;
+  onOpen6AP?: () => void;
+  onOpenRPN?: () => void;
+  activePanelId?: string; // 현재 활성 패널 ID
   // 레거시 props (호환성 유지용)
   rows?: any[];
   l1Spans?: number[];
@@ -41,6 +46,11 @@ export default function AllTabRenderer({
   visibleSteps: propsVisibleSteps,
   fmeaId,
   showRPN = false,
+  // ★★★ 2026-01-12: 트리뷰 패널 전환 핸들러 ★★★
+  onOpen5AP,
+  onOpen6AP,
+  onOpenRPN,
+  activePanelId,
 }: AllTabRendererProps) {
   
   console.log('🔵 AllTabRenderer: 새로운 35컬럼 화면 렌더링', {
@@ -344,6 +354,11 @@ export default function AllTabRenderer({
       state={state}
       setState={setState}
       setDirty={setDirty}
+      // ★★★ 2026-01-12: 트리뷰 패널 전환 핸들러 ★★★
+      onOpen5AP={onOpen5AP}
+      onOpen6AP={onOpen6AP}
+      onOpenRPN={onOpenRPN}
+      activePanelId={activePanelId}
     />
   );
 }

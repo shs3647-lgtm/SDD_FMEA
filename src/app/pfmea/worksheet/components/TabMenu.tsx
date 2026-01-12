@@ -23,9 +23,10 @@ interface TabMenuProps {
   saveAtomicDB?: () => void;
   onOpen5AP?: () => void;
   onOpen6AP?: () => void;
+  onAllClick?: () => void; // ★★★ 2026-01-12: ALL 탭 클릭 시 트리뷰 복귀 ★★★
 }
 
-export default function TabMenu({ state, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB }: TabMenuProps) {
+export default function TabMenu({ state, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB, onAllClick }: TabMenuProps) {
   const router = useRouter();
   const structureConfirmed = (state as any).structureConfirmed || false;
   const failureLinks = (state as any).failureLinks || [];
@@ -81,6 +82,11 @@ export default function TabMenu({ state, setState, setStateSynced, setDirty, sav
                     try {
                       localStorage.setItem(`pfmea_tab_${fmeaId}`, tab.id);
                     } catch (e) { /* ignore */ }
+                  }
+                  // ★★★ 2026-01-12: ALL 탭 클릭 시 트리뷰(전체화면)로 복귀 ★★★
+                  if (tab.id === 'all') {
+                    console.log('🔵 ALL 탭 클릭! onAllClick 호출');
+                    onAllClick?.();
                   }
                 }}
                 className={`
