@@ -154,8 +154,8 @@ export default function FailureLinkTables({
           <div style={panelHeaderStyle(COLORS.structure.dark)}>
             FE(고장영향:
               <span style={{ color: '#ffeb3b', fontWeight: 700 }}>{feData.length}</span>
-              <span className="ml-1" style={{ color: '#ff9800', fontWeight: 700 }}>C:{linkStats.feLinkedCount}</span>
-              <span className="ml-1" style={{ color: '#ff9800', fontWeight: 700 }}>M:{Math.max(0, feData.length - linkStats.feLinkedCount)}</span>
+              <span className="ml-1" style={{ color: '#000', fontWeight: 700 }}>C:{linkStats.feLinkedCount}</span>
+              <span className="ml-1" style={{ color: '#000', fontWeight: 700 }}>M:{Math.max(0, feData.length - linkStats.feLinkedCount)}</span>
             )
           </div>
           <div className="flex-1 overflow-y-auto">
@@ -202,8 +202,8 @@ export default function FailureLinkTables({
           <div style={panelHeaderStyle(COLORS.failure.dark)}>
             FM(고장형태:
               <span style={{ color: '#ffeb3b', fontWeight: 700 }}>{fmData.length}</span>
-              <span className="ml-1" style={{ color: '#ff9800', fontWeight: 700 }}>C:{linkStats.fmLinkedCount}</span>
-              <span className="ml-1" style={{ color: '#ff9800', fontWeight: 700 }}>M:{Math.max(0, fmData.length - linkStats.fmLinkedCount)}</span>
+              <span className="ml-1" style={{ color: '#000', fontWeight: 700 }}>C:{linkStats.fmLinkedCount}</span>
+              <span className="ml-1" style={{ color: '#000', fontWeight: 700 }}>M:{Math.max(0, fmData.length - linkStats.fmLinkedCount)}</span>
             )
           </div>
           <div style={scrollAreaStyle}>
@@ -270,8 +270,8 @@ export default function FailureLinkTables({
             <span className="flex-1 text-center">
               FC(고장원인:
               <span style={{ color: '#ffeb3b', fontWeight: 700 }}>{fcData.length}</span>
-              <span className="ml-1" style={{ color: '#ff9800', fontWeight: 700 }}>C:{linkStats.fcLinkedCount}</span>
-              <span className="ml-1" style={{ color: '#ff9800', fontWeight: 700 }}>M:{Math.max(0, fcData.length - linkStats.fcLinkedCount)}</span>
+              <span className="ml-1" style={{ color: '#000', fontWeight: 700 }}>C:{linkStats.fcLinkedCount}</span>
+              <span className="ml-1" style={{ color: '#000', fontWeight: 700 }}>M:{Math.max(0, fcData.length - linkStats.fcLinkedCount)}</span>
               )
             </span>
             <select
