@@ -29,11 +29,19 @@ import { WorksheetState, COLORS, FlatRow, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } fr
 import { S, F, X, L1, L2, L3, cell, cellCenter, border, btnConfirm, btnEdit, badgeConfirmed, badgeOk, badgeMissing } from '@/styles/worksheet';
 import { handleEnterBlur } from '../utils/keyboard';
 import { getZebraColors } from '@/styles/level-colors';
+import ProcessSelectModal from '../ProcessSelectModal';
+import WorkElementSelectModal from '../WorkElementSelectModal';
 
+/**
+ * ★★★ 2026-01-12 리팩토링 ★★★
+ * 모달 패턴 통일: 기능분석/고장분석과 동일하게 탭 자체에서 모달 상태 관리
+ * - setIsProcessModalOpen, setIsWorkElementModalOpen → 내부 상태로 변경
+ * - Props drilling 제거
+ */
 interface StructureTabProps {
   state: WorksheetState;
   setState: React.Dispatch<React.SetStateAction<WorksheetState>>;
-  setStateSynced?: (updater: React.SetStateAction<WorksheetState>) => void;  // ✅ stateRef 동기 업데이트 버전
+  setStateSynced?: (updater: React.SetStateAction<WorksheetState>) => void;
   rows: FlatRow[];
   l1Spans: number[];
   l2Spans: number[];
@@ -41,11 +49,13 @@ interface StructureTabProps {
   handleInputBlur: () => void;
   handleInputKeyDown: (e: React.KeyboardEvent) => void;
   handleSelect: (type: 'L1' | 'L2' | 'L3', id: string | null) => void;
-  setIsProcessModalOpen: (open: boolean) => void;
-  setIsWorkElementModalOpen: (open: boolean) => void;
-  setTargetL2Id: (id: string | null) => void;
-  saveToLocalStorage?: () => void; // 영구 저장 함수
-  saveAtomicDB?: (force?: boolean) => Promise<void>;  // ✅ DB 저장 함수 (force=true: 강제 저장)
+  saveToLocalStorage?: () => void;
+  saveAtomicDB?: (force?: boolean) => Promise<void>;
+  // ★ 모달 상태: 외부에서 전달받을 필요 없음 (내부 관리)
+  // 단, page.tsx 호환성을 위해 optional로 남겨둠
+  setIsProcessModalOpen?: (open: boolean) => void;
+  setIsWorkElementModalOpen?: (open: boolean) => void;
+  setTargetL2Id?: (id: string | null) => void;
 }
 
 // 스타일 함수
@@ -489,7 +499,12 @@ export function StructureRow({
 }
 
 export default function StructureTab(props: StructureTabProps) {
-  const { rows, setIsProcessModalOpen, setIsWorkElementModalOpen, state, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB, handleInputBlur, handleInputKeyDown } = props;
+  const { rows, state, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB, handleInputBlur, handleInputKeyDown, handleSelect } = props;
+  
+  // ★★★ 모달 상태: 탭 자체에서 관리 (기능분석/고장분석 패턴 통일) ★★★
+  const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
+  const [isWorkElementModalOpen, setIsWorkElementModalOpen] = useState(false);
+  const [targetL2Id, setTargetL2Id] = useState<string | null>(null);
   
   // ✅ 확정 상태 (고장분석 패턴 적용)
   const isConfirmed = (state as any).structureConfirmed || false;
@@ -762,12 +777,86 @@ export default function StructureTab(props: StructureTabProps) {
             const zebraBg = idx % 2 === 1 ? '#bbdefb' : '#e3f2fd';
             return (
               <tr key={row.l3Id} className="h-6" style={{ background: zebraBg }}>
-                <StructureRow {...props} row={row} idx={idx} zebraBg={zebraBg} isConfirmed={isConfirmed} />
+                <StructureRow 
+                  {...props} 
+                  row={row} 
+                  idx={idx} 
+                  zebraBg={zebraBg} 
+                  isConfirmed={isConfirmed}
+                  setIsProcessModalOpen={setIsProcessModalOpen}
+                  setIsWorkElementModalOpen={setIsWorkElementModalOpen}
+                  setTargetL2Id={setTargetL2Id}
+                />
               </tr>
             );
           })
         )}
       </tbody>
+      
+      {/* ★★★ 모달: 탭 자체에서 렌더링 (기능분석/고장분석 패턴 통일) ★★★ */}
+      <ProcessSelectModal
+        isOpen={isProcessModalOpen}
+        onClose={() => setIsProcessModalOpen(false)}
+        onSave={(selectedProcesses) => {
+          // 선택된 공정으로 l2 업데이트
+          setState(prev => {
+            const existingProcNames = prev.l2.map(p => p.name);
+            const newProcs = selectedProcesses.filter(sp => !existingProcNames.includes(sp.name));
+            
+            if (newProcs.length === 0) {
+              // 삭제된 공정 처리
+              const selectedNames = new Set(selectedProcesses.map(sp => sp.name));
+              const remainingL2 = prev.l2.filter(p => selectedNames.has(p.name));
+              return { ...prev, l2: remainingL2, structureConfirmed: false };
+            }
+            
+            // 새 공정 추가
+            const newL2 = [...prev.l2];
+            newProcs.forEach(np => {
+              newL2.push({
+                id: np.id,
+                no: np.no,
+                name: np.name,
+                l3: [{ id: `we_${Date.now()}_${Math.random()}`, name: '', m4: '' }],
+                functions: [],
+                failureModes: [],
+                failureCauses: [],
+              });
+            });
+            return { ...prev, l2: newL2, structureConfirmed: false };
+          });
+          setDirty(true);
+          saveToLocalStorage?.();
+        }}
+        existingProcessNames={state.l2.map(p => p.name)}
+        existingProcessesInfo={state.l2.map(p => ({ name: p.name, l3Count: p.l3?.length || 0 }))}
+        productLineName={state.l1?.name || '완제품 제조라인'}
+      />
+      
+      <WorkElementSelectModal
+        isOpen={isWorkElementModalOpen}
+        onClose={() => { setIsWorkElementModalOpen(false); setTargetL2Id(null); }}
+        onSave={(selectedElements) => {
+          if (!targetL2Id) return;
+          setState(prev => {
+            const newL2 = prev.l2.map(proc => {
+              if (proc.id !== targetL2Id) return proc;
+              const newL3 = selectedElements.map(elem => ({
+                id: elem.id,
+                name: elem.name,
+                m4: elem.m4,
+              }));
+              return { ...proc, l3: newL3 };
+            });
+            return { ...prev, l2: newL2, structureConfirmed: false };
+          });
+          setDirty(true);
+          saveToLocalStorage?.();
+        }}
+        processNo={state.l2.find(p => p.id === targetL2Id)?.no || ''}
+        processName={state.l2.find(p => p.id === targetL2Id)?.name || ''}
+        existingElements={state.l2.find(p => p.id === targetL2Id)?.l3?.filter(w => w.name && !w.name.includes('추가')).map(w => w.name) || []}
+      />
     </>
   );
 }

@@ -10,8 +10,9 @@
 
 import React, { useState, useCallback, useMemo, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import ProcessSelectModal from './ProcessSelectModal';
-import WorkElementSelectModal from './WorkElementSelectModal';
+// ★★★ 2026-01-12: StructureTab 내부에서 모달 렌더링 (패턴 통일)
+// import ProcessSelectModal from './ProcessSelectModal';
+// import WorkElementSelectModal from './WorkElementSelectModal';
 import PFMEATopNav from '@/components/layout/PFMEATopNav';
 
 // 모듈화된 상수, hooks, 탭 컴포넌트
@@ -781,46 +782,11 @@ function FMEAWorksheetPageContent() {
           ) : null}
         </div>
 
-        {/* 모달 */}
-        <ProcessSelectModal
-          isOpen={isProcessModalOpen}
-          onClose={() => setIsProcessModalOpen(false)}
-          onSave={handleProcessSave}
-          onDelete={(ids) => {
-            // 삭제할 공정 ID에 해당하는 공정을 state에서 제거
-            setState(prev => {
-              const processNamesToDelete = ids.map(id => {
-                const match = prev.l2.find(p => p.id === id);
-                return match?.name;
-              }).filter(Boolean);
-              
-              const remainingL2 = prev.l2.filter(p => !processNamesToDelete.includes(p.name));
-              
-              // 모두 삭제되면 기본 항목 추가
-              if (remainingL2.length === 0) {
-                return {
-                  ...prev,
-                  l2: [{ id: uid(), no: '10', name: '(클릭하여 공정 선택)', order: 10, l3: [{ id: uid(), m4: '', name: '(공정 선택 필요)', order: 10, functions: [], processChars: [] }], functions: [], productChars: [], failureMode: '' }]
-                };
-              }
-              return { ...prev, l2: remainingL2 };
-            });
-            setDirty(true);
-          }}
-          existingProcessNames={state.l2.filter(p => !p.name.includes('클릭')).map(p => p.name)}
-          productLineName={state.l1.name || '완제품 제조라인'}
-        />
-
-        <WorkElementSelectModal
-          isOpen={isWorkElementModalOpen}
-          onClose={() => { setIsWorkElementModalOpen(false); setTargetL2Id(null); }}
-          onSave={handleWorkElementSelect}
-          onDelete={handleWorkElementDelete}
-          processNo={state.l2.find(p => p.id === targetL2Id)?.no || ''}
-          processName={state.l2.find(p => p.id === targetL2Id)?.name || ''}
-          existingElements={state.l2.find(p => p.id === targetL2Id)?.l3.filter(w => !w.name.includes('추가')).map(w => w.name) || []}
-          onContinuousAdd={handleWorkElementContinuousAdd}
-        />
+        {/* 
+          ★★★ 2026-01-12: 모달 패턴 통일 ★★★
+          ProcessSelectModal, WorkElementSelectModal → StructureTab 내부에서 렌더링
+          (기능분석/고장분석과 동일한 패턴)
+        */}
 
         {/* 특별특성 마스터 모달 */}
         <SpecialCharMasterModal
