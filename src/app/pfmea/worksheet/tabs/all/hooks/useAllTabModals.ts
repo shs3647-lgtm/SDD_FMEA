@@ -345,7 +345,7 @@ export function useAllTabModals(
   };
 
   /** ★ LLD 선택 완료 핸들러 */
-  const handleLldSelect = (lldNo: string) => {
+  const handleLldSelect = async (lldNo: string, fmeaId?: string) => {
     if (!setState || lldModal.rowIndex < 0) return;
     
     // ★ fmId-fcId 기반 키 또는 rowIndex 기반 키
@@ -353,8 +353,9 @@ export function useAllTabModals(
       ? `lesson-${lldModal.fmId}-${lldModal.fcId}` 
       : `lesson-${lldModal.rowIndex}`;
     
-    console.log('✅ LLD 선택:', { lldNo, key });
+    console.log('✅ LLD 선택:', { lldNo, key, fmeaId });
     
+    // ★ FMEA 워크시트에 LLD_No 저장
     setState((prev: WorksheetState) => ({
       ...prev,
       riskData: {
@@ -366,6 +367,28 @@ export function useAllTabModals(
     if (setDirty) {
       setDirty(true);
       console.log('🔥 DB 저장 트리거 (setDirty=true)');
+    }
+    
+    // ★★★ 2026-01-12: LLD DB에 fmeaId와 appliedDate 업데이트 ★★★
+    if (fmeaId && lldNo) {
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const response = await fetch('/api/lessons-learned/apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lldNo,
+            fmeaId,
+            appliedDate: today
+          })
+        });
+        const result = await response.json();
+        if (result.success) {
+          console.log('✅ LLD 적용결과 업데이트 완료:', { lldNo, fmeaId, appliedDate: today });
+        }
+      } catch (error) {
+        console.error('LLD 적용결과 업데이트 오류:', error);
+      }
     }
     
     closeLldModal();

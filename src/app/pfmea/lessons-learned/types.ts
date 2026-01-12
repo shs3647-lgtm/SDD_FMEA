@@ -15,9 +15,10 @@ export interface LessonsLearnedRow {
   cause: string;          // 발생원인
   category: '예방관리' | '검출관리';  // 구분
   improvement: string;    // 개선대책
-  result: string;         // 적용결과
+  completedDate: string;  // ★ 완료일자 (LLD 완료된 날짜, 수동 입력)
+  fmeaId: string;         // ★ 적용결과 (FMEA ID, 자동 입력)
   status: 'G' | 'Y' | 'R'; // 상태 (완료/진행중/미완료)
-  date: string;           // 완료일자
+  appliedDate: string;    // ★ 적용일자 (FMEA에 입력된 날짜, 자동)
 }
 
 // 드롭다운 옵션
@@ -42,9 +43,10 @@ export const COLUMNS = [
   { key: 'cause', name: '발생원인', width: 200, align: 'left' as const },
   { key: 'category', name: '구분', width: 80, align: 'center' as const },
   { key: 'improvement', name: '개선대책', width: 200, align: 'left' as const },
-  { key: 'result', name: '적용결과', width: 100, align: 'center' as const },
+  { key: 'completedDate', name: '완료일자', width: 100, align: 'center' as const },  // ★ LLD 완료일 (수동)
+  { key: 'fmeaId', name: '적용결과', width: 100, align: 'center' as const },  // ★ FMEA ID (자동)
   { key: 'status', name: '상태', width: 60, align: 'center' as const },
-  { key: 'date', name: '완료일자', width: 100, align: 'center' as const },
+  { key: 'appliedDate', name: '적용일자', width: 100, align: 'center' as const },  // ★ FMEA 입력일 (자동)
 ] as const;
 
 // 통계 타입

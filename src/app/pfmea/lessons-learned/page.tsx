@@ -13,7 +13,7 @@
 
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
@@ -41,9 +41,9 @@ import {
 } from './types';
 import { LESSONS_SAMPLE_DATA, createEmptyRow } from './mock-data';
 
-// 엑셀 헤더 정의
-const EXCEL_HEADERS = ['LLD_No', '차종', '대상', '고장형태', '발생장소', '발생원인', '구분', '개선대책', '적용결과', '상태', '완료일자'];
-const EXCEL_COL_WIDTHS = [12, 10, 8, 30, 15, 30, 12, 30, 15, 8, 12];
+// 엑셀 헤더 정의 (★ 2026-01-12: 완료일자/적용결과/적용일자 변경)
+const EXCEL_HEADERS = ['LLD_No', '차종', '대상', '고장형태', '발생장소', '발생원인', '구분', '개선대책', '완료일자', '적용결과', '상태', '적용일자'];
+const EXCEL_COL_WIDTHS = [12, 10, 8, 30, 15, 30, 12, 30, 12, 15, 8, 12];
 
 // 상단 네비게이션 메뉴 (FMEA 관련 화면 빠른 이동)
 const TOP_NAV_ITEMS = [
@@ -64,6 +64,49 @@ export default function LessonsLearnedPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterTarget, setFilterTarget] = useState<string>('all');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // ★ 페이지 로드 시 DB에서 데이터 로드, 없으면 샘플 데이터 자동 저장
+  useEffect(() => {
+    const loadFromDB = async () => {
+      try {
+        const res = await fetch('/api/lessons-learned');
+        const result = await res.json();
+        
+        if (result.success && result.items && result.items.length > 0) {
+          // DB에 데이터가 있으면 로드
+          setData(result.items.map((item: LessonsLearnedRow & { id: string }) => ({
+            ...item,
+            target: item.target as '설계' | '부품' | '제조',
+            category: item.category as '예방관리' | '검출관리',
+            status: item.status as 'G' | 'Y' | 'R',
+          })));
+          console.log(`✅ DB에서 ${result.items.length}건 로드 완료`);
+        } else {
+          // DB가 비어있으면 샘플 데이터 저장
+          console.log('🔥 DB가 비어있음 → 샘플 데이터 저장 중...');
+          const saveRes = await fetch('/api/lessons-learned', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: LESSONS_SAMPLE_DATA })
+          });
+          const saveResult = await saveRes.json();
+          if (saveResult.success) {
+            setData(LESSONS_SAMPLE_DATA);
+            console.log(`✅ 샘플 데이터 ${LESSONS_SAMPLE_DATA.length}건 저장 완료`);
+          }
+        }
+      } catch (error) {
+        console.error('DB 로드 오류:', error);
+        // 오류 시 샘플 데이터로 시작
+        setData(LESSONS_SAMPLE_DATA);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadFromDB();
+  }, []);
 
   // 통계 계산
   const stats = useMemo<LessonsStats>(() => {
@@ -164,9 +207,10 @@ export default function LessonsLearnedPage() {
       row.cause,
       row.category,
       row.improvement,
-      row.result,
+      row.completedDate,  // ★ 완료일자 (LLD 완료된 날짜, 수동)
+      row.fmeaId,         // ★ 적용결과 (FMEA ID, 자동)
       row.status,
-      row.date,
+      row.appliedDate,    // ★ 적용일자 (FMEA에 입력된 날짜, 자동)
     ]);
 
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -220,9 +264,10 @@ export default function LessonsLearnedPage() {
             cause: String(row[5] || ''),
             category: (['예방관리', '검출관리'].includes(String(row[6])) ? String(row[6]) : '예방관리') as '예방관리' | '검출관리',
             improvement: String(row[7] || ''),
-            result: String(row[8] || ''),
-            status: (['G', 'Y', 'R'].includes(String(row[9])) ? String(row[9]) : 'R') as 'G' | 'Y' | 'R',
-            date: String(row[10] || ''),
+            completedDate: String(row[8] || ''),  // ★ 완료일자
+            fmeaId: String(row[9] || ''),         // ★ 적용결과 (FMEA ID)
+            status: (['G', 'Y', 'R'].includes(String(row[10])) ? String(row[10]) : 'R') as 'G' | 'Y' | 'R',
+            appliedDate: String(row[11] || ''),   // ★ 적용일자
           }));
 
         if (importedData.length === 0) {
@@ -554,13 +599,28 @@ export default function LessonsLearnedPage() {
                         className="h-[22px] text-xs border-0 bg-transparent p-0"
                       />
                     </td>
-                    {/* 적용결과 */}
+                    {/* ★ 완료일자 (LLD 완료된 날짜, 수동 입력) */}
                     <td className={`text-center ${index % 2 === 0 ? 'bg-white' : 'bg-[#e0f2fb]'}`} style={{ padding: '1px', border: '1px solid #999', height: 25 }}>
                       <Input 
-                        value={row.result} 
-                        onChange={(e) => handleCellChange(row.id, 'result', e.target.value)}
+                        type="date"
+                        value={row.completedDate || ''} 
+                        onChange={(e) => handleCellChange(row.id, 'completedDate', e.target.value)}
                         className="h-[22px] text-xs text-center border-0 bg-transparent p-0"
+                        title="LLD 완료된 날짜 (수동 입력)"
                       />
+                    </td>
+                    {/* ★ 적용결과 (FMEA ID, 자동 입력) */}
+                    <td className={`text-center ${index % 2 === 0 ? 'bg-white' : 'bg-[#e0f2fb]'}`} style={{ padding: '1px', border: '1px solid #999', height: 25 }}>
+                      <span 
+                        className="text-xs font-mono"
+                        style={{ 
+                          color: row.fmeaId ? '#00587a' : '#999',
+                          fontWeight: row.fmeaId ? 600 : 400,
+                        }}
+                        title={row.fmeaId ? `FMEA에서 자동 입력됨: ${row.fmeaId}` : 'FMEA에서 습득교훈 선택 시 자동 입력됩니다'}
+                      >
+                        {row.fmeaId || '-'}
+                      </span>
                     </td>
                     {/* 상태 */}
                     <td className={`text-center ${index % 2 === 0 ? 'bg-white' : 'bg-[#e0f2fb]'}`} style={{ padding: '1px', border: '1px solid #999', height: 25 }}>
@@ -577,14 +637,15 @@ export default function LessonsLearnedPage() {
                         </SelectContent>
                       </Select>
                     </td>
-                    {/* 완료일자 */}
+                    {/* ★ 적용일자 (FMEA에 입력된 날짜, 자동) */}
                     <td className={`text-center ${index % 2 === 0 ? 'bg-white' : 'bg-[#e0f2fb]'}`} style={{ padding: '1px', border: '1px solid #999', height: 25 }}>
-                      <Input 
-                        type="date"
-                        value={row.date} 
-                        onChange={(e) => handleCellChange(row.id, 'date', e.target.value)}
-                        className="h-[22px] text-xs text-center border-0 bg-transparent p-0"
-                      />
+                      <span 
+                        className="text-xs"
+                        style={{ color: row.appliedDate ? '#333' : '#999' }}
+                        title={row.appliedDate ? `FMEA 적용일: ${row.appliedDate}` : 'FMEA에서 습득교훈 선택 시 자동 기록됩니다'}
+                      >
+                        {row.appliedDate || '-'}
+                      </span>
                     </td>
                     {/* 작업 */}
                     <td className={`text-center ${index % 2 === 0 ? 'bg-white' : 'bg-[#e0f2fb]'}`} style={{ padding: '1px', border: '1px solid #999', height: 25 }}>

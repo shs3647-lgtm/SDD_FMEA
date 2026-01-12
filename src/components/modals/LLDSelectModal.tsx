@@ -27,8 +27,9 @@ interface LLDItem {
 interface LLDSelectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (lldNo: string) => void;
+  onSelect: (lldNo: string, fmeaId?: string) => void;  // ★ fmeaId 전달
   currentValue?: string;
+  fmeaId?: string;  // ★ 현재 FMEA ID (적용결과에 자동 입력)
 }
 
 const STATUS_COLORS = {
@@ -37,7 +38,7 @@ const STATUS_COLORS = {
   R: { bg: '#FF6B6B', text: '#FFFFFF', label: '미완료' },
 };
 
-export default function LLDSelectModal({ isOpen, onClose, onSelect, currentValue }: LLDSelectModalProps) {
+export default function LLDSelectModal({ isOpen, onClose, onSelect, currentValue, fmeaId }: LLDSelectModalProps) {
   const [items, setItems] = useState<LLDItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -81,7 +82,7 @@ export default function LLDSelectModal({ isOpen, onClose, onSelect, currentValue
   // 선택 완료
   const handleConfirm = () => {
     if (selectedLldNo) {
-      onSelect(selectedLldNo);
+      onSelect(selectedLldNo, fmeaId);  // ★ fmeaId 전달
       onClose();
     }
   };

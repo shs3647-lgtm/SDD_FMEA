@@ -987,6 +987,7 @@ export default function AllTabEmpty({
         onClose={closeLldModal}
         onSelect={handleLldSelect}
         currentValue={lldModal.currentValue}
+        fmeaId={state?.fmeaId || 'pfm26-001'}  // ★ 현재 FMEA ID 전달
       />
       
       {/* AP 결과 모달 (5AP/6AP) */}

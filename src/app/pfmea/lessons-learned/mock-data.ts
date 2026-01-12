@@ -2,6 +2,11 @@
  * @file mock-data.ts
  * @description 습득교훈 샘플 데이터
  * @reference PRD-023-lessons-learned-screen.md
+ * 
+ * ★ 2026-01-12: 필드 변경
+ * - result → fmeaId (FMEA ID 자동 입력)
+ * - date → completedDate (LLD 완료일, 수동 입력)
+ * - appliedDate 추가 (FMEA 적용일, 자동)
  */
 
 import { LessonsLearnedRow } from './types';
@@ -25,9 +30,10 @@ export const LESSONS_SAMPLE_DATA: LessonsLearnedRow[] = [
     cause: 'Mode 상의 Soft Bug',
     category: '예방관리',
     improvement: '각Mode 별로 Mute 제어함',
-    result: 'FMEA',
+    completedDate: '2025-10-01',
+    fmeaId: 'pfm26-001',
     status: 'G',
-    date: '2025-11-12',
+    appliedDate: '2025-11-12',
   },
   {
     id: 'll-002',
@@ -39,9 +45,10 @@ export const LESSONS_SAMPLE_DATA: LessonsLearnedRow[] = [
     cause: 'IF를 체크하지않고 SD만 체크됨',
     category: '검출관리',
     improvement: 'IF도 체크하도록 Soft 수정',
-    result: 'CP',
+    completedDate: '2025-04-15',
+    fmeaId: '',
     status: 'R',
-    date: '2025-05-03',
+    appliedDate: '',
   },
   {
     id: 'll-003',
@@ -53,9 +60,10 @@ export const LESSONS_SAMPLE_DATA: LessonsLearnedRow[] = [
     cause: 'SM 체크하지 않음',
     category: '예방관리',
     improvement: 'SM 체크하도록 Soft 수정',
-    result: 'PM',
+    completedDate: '2025-03-20',
+    fmeaId: '',
     status: 'Y',
-    date: '2025-04-03',
+    appliedDate: '',
   },
   {
     id: 'll-004',
@@ -67,9 +75,10 @@ export const LESSONS_SAMPLE_DATA: LessonsLearnedRow[] = [
     cause: '연결 유지 타이머 설정 오류',
     category: '예방관리',
     improvement: 'BT 연결 타이머 2초→5초 변경',
-    result: 'FMEA',
+    completedDate: '2025-05-10',
+    fmeaId: 'pfm26-002',
     status: 'G',
-    date: '2025-06-15',
+    appliedDate: '2025-06-15',
   },
   {
     id: 'll-005',
@@ -81,9 +90,10 @@ export const LESSONS_SAMPLE_DATA: LessonsLearnedRow[] = [
     cause: '핀 규격 미달 (0.3mm→0.25mm)',
     category: '검출관리',
     improvement: '입고검사 핀 규격 추가',
-    result: 'CP',
+    completedDate: '2025-06-01',
+    fmeaId: 'pfm26-001',
     status: 'G',
-    date: '2025-07-20',
+    appliedDate: '2025-07-20',
   },
   {
     id: 'll-006',
@@ -95,9 +105,10 @@ export const LESSONS_SAMPLE_DATA: LessonsLearnedRow[] = [
     cause: '리플로우 온도 프로파일 불량',
     category: '예방관리',
     improvement: '온도 프로파일 최적화 (245°C→250°C)',
-    result: 'PM',
+    completedDate: '',
+    fmeaId: '',
     status: 'Y',
-    date: '',
+    appliedDate: '',
   },
   {
     id: 'll-007',
@@ -109,9 +120,10 @@ export const LESSONS_SAMPLE_DATA: LessonsLearnedRow[] = [
     cause: 'USB 드라이버 호환성 문제',
     category: '예방관리',
     improvement: 'USB 드라이버 버전 업데이트',
-    result: 'FMEA',
+    completedDate: '2025-07-15',
+    fmeaId: 'pfm26-003',
     status: 'G',
-    date: '2025-08-10',
+    appliedDate: '2025-08-10',
   },
   {
     id: 'll-008',
@@ -123,9 +135,10 @@ export const LESSONS_SAMPLE_DATA: LessonsLearnedRow[] = [
     cause: '공급사 생산공정 변경',
     category: '검출관리',
     improvement: '입고검사 불량화소 검출 추가',
-    result: 'CP',
+    completedDate: '',
+    fmeaId: '',
     status: 'Y',
-    date: '',
+    appliedDate: '',
   },
   {
     id: 'll-009',
@@ -137,9 +150,10 @@ export const LESSONS_SAMPLE_DATA: LessonsLearnedRow[] = [
     cause: 'SMT 후 냉각속도 과다',
     category: '예방관리',
     improvement: '냉각 속도 조절 (5°C/sec→3°C/sec)',
-    result: 'PM',
+    completedDate: '',
+    fmeaId: '',
     status: 'R',
-    date: '',
+    appliedDate: '',
   },
   {
     id: 'll-010',
@@ -151,9 +165,10 @@ export const LESSONS_SAMPLE_DATA: LessonsLearnedRow[] = [
     cause: '통신 프로토콜 불일치',
     category: '예방관리',
     improvement: 'CAN 프로토콜 버전 동기화',
-    result: 'FMEA',
+    completedDate: '2025-08-20',
+    fmeaId: 'pfm26-001',
     status: 'G',
-    date: '2025-09-05',
+    appliedDate: '2025-09-05',
   },
 ];
 
@@ -170,9 +185,9 @@ export const createEmptyRow = (seqNum?: number): LessonsLearnedRow => {
     cause: '',
     category: '예방관리',
     improvement: '',
-    result: '',
+    completedDate: '',
+    fmeaId: '',
     status: 'R',
-    date: '',
+    appliedDate: '',
   };
 };
-

@@ -66,9 +66,10 @@ export async function POST(request: NextRequest) {
         cause: string;
         category: string;
         improvement: string;
-        result?: string;
+        completedDate?: string;  // ★ 완료일자 (LLD 완료된 날짜, 수동)
+        fmeaId?: string;         // ★ 적용결과 (FMEA ID, 자동)
         status: string;
-        date?: string;
+        appliedDate?: string;    // ★ 적용일자 (FMEA에 입력된 날짜, 자동)
       }) =>
         prisma.lessonsLearned.upsert({
           where: { lldNo: item.lldNo },
@@ -80,9 +81,10 @@ export async function POST(request: NextRequest) {
             cause: item.cause,
             category: item.category,
             improvement: item.improvement,
-            result: item.result || '',
+            completedDate: item.completedDate || '',
+            fmeaId: item.fmeaId || '',
             status: item.status,
-            date: item.date || '',
+            appliedDate: item.appliedDate || '',
           },
           create: {
             lldNo: item.lldNo,
@@ -93,9 +95,10 @@ export async function POST(request: NextRequest) {
             cause: item.cause,
             category: item.category,
             improvement: item.improvement,
-            result: item.result || '',
+            completedDate: item.completedDate || '',
+            fmeaId: item.fmeaId || '',
             status: item.status,
-            date: item.date || '',
+            appliedDate: item.appliedDate || '',
           },
         })
       )
