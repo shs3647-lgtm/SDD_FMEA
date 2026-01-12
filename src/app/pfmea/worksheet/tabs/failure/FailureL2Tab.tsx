@@ -665,18 +665,24 @@ export default function FailureL2Tab({ state, setState, setStateSynced, setDirty
             // ✅ 시각우선: rowSpan(병합) 셀은 "그룹 인덱스" 기준으로 번갈아 보이게 처리
             const procIdxMap = new Map<string, number>();
             const funcIdxMap = new Map<string, number>();
+            const charIdxMap = new Map<string, number>();  // ★ 제품특성 인덱스 맵 추가
             let procIdx = 0;
             let funcIdx = 0;
+            let charIdx = 0;  // ★ 제품특성 인덱스 카운터
             for (const r of buildFlatRows as any[]) {
               if (r.showProc && !procIdxMap.has(r.procId)) procIdxMap.set(r.procId, procIdx++);
               const fKey = `${r.procId}:${r.funcId || ''}`;
               if (r.showFunc && r.funcId && !funcIdxMap.has(fKey)) funcIdxMap.set(fKey, funcIdx++);
+              // ★ 제품특성 인덱스 추가 (showChar일 때만)
+              const cKey = `${r.procId}:${r.charId || ''}`;
+              if (r.showChar && r.charId && !charIdxMap.has(cKey)) charIdxMap.set(cKey, charIdx++);
             }
 
             return buildFlatRows.map((row, idx) => {
             const zebra = getZebraColors(idx); // 표준화된 색상
             const procStripeIdx = procIdxMap.get(row.procId) ?? 0;
             const funcStripeIdx = funcIdxMap.get(`${row.procId}:${row.funcId || ''}`) ?? 0;
+            const charStripeIdx = charIdxMap.get(`${row.procId}:${row.charId || ''}`) ?? 0;  // ★ 제품특성 줄무늬 인덱스
             
             return (
               <tr key={`row-${idx}`}>
@@ -692,15 +698,15 @@ export default function FailureL2Tab({ state, setState, setStateSynced, setDirty
                     {row.funcName || '(기능분석에서 입력)'}
                   </td>
                 )}
-                {/* 제품특성 - rowSpan (보라색) ★ 고장영향과 구분 */}
+                {/* 제품특성 - rowSpan (보라색 줄무늬) ★ 고장영향과 구분 */}
                 {row.showChar && (
-                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-2 text-center text-xs align-middle" style={{ background: zebra.requirement }}>
+                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-2 text-center text-xs align-middle" style={{ background: getZebra('requirement', charStripeIdx) }}>
                     {row.charName || ''}
                   </td>
                 )}
-                {/* 특별특성 - rowSpan (보라색) ★ 고장영향과 구분 */}
+                {/* 특별특성 - rowSpan (보라색 줄무늬) ★ 고장영향과 구분 */}
                 {row.showChar && (
-                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] p-1 text-center text-xs align-middle" style={{ background: zebra.requirement }}>
+                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] p-1 text-center text-xs align-middle" style={{ background: getZebra('requirement', charStripeIdx) }}>
                     {row.specialChar ? (
                       <span className={`px-1.5 py-0.5 rounded text-white text-[10px] font-bold ${
                         row.specialChar === 'CC' ? 'bg-red-600' : 
