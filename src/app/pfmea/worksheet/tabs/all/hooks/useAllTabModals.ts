@@ -223,19 +223,22 @@ export function useAllTabModals(setState?: React.Dispatch<React.SetStateAction<W
         }
       }
       
-      // ★★★ 2026-01-12: 검출도 입력 시 동일 검출관리에 동일 검출도 자동 적용 ★★★
-      if (sodModal.category === 'D' && sodModal.targetType === 'risk' && uniqueKey) {
+      // ★★★ 2026-01-12: 검출도 입력 시 동일 고장형태(FM) 내 동일 검출관리에 동일 검출도 자동 적용 ★★★
+      if (sodModal.category === 'D' && sodModal.targetType === 'risk' && uniqueKey && sodModal.fmId) {
         const detectionKey = `detection-${uniqueKey}`;
         const currentDetectionValue = prevState.riskData?.[detectionKey] || '';
         
         if (currentDetectionValue) {
-          console.log(`🔗 [검출도 자동연결] 현재 검출관리: "${currentDetectionValue}"`);
+          console.log(`🔗 [검출도 자동연결] 동일 고장형태(FM) 내 현재 검출관리: "${currentDetectionValue}"`);
           
-          // failureLinks에서 동일 검출관리를 가진 다른 행 찾기
+          // ★★★ 동일한 고장형태(FM) 내에서만 검출관리를 가진 다른 행 찾기 ★★★
           const failureLinks = (prevState as any).failureLinks || [];
           let autoLinkedCount = 0;
           
           failureLinks.forEach((link: any) => {
+            // 동일한 고장형태(FM) 내에서만 검색
+            if (link.fmId !== sodModal.fmId) return;
+            
             const linkUniqueKey = `${link.fmId}-${link.fcId}`;
             if (linkUniqueKey === uniqueKey) return; // 현재 행은 스킵
             
@@ -247,12 +250,12 @@ export function useAllTabModals(setState?: React.Dispatch<React.SetStateAction<W
               const linkDetectionOKey = `risk-${linkUniqueKey}-D`;
               updatedRiskData[linkDetectionOKey] = rating;
               autoLinkedCount++;
-              console.log(`  → 자동적용: ${linkDetectionOKey} = ${rating}`);
+              console.log(`  → 자동적용 (동일 FM): ${linkDetectionOKey} = ${rating}`);
             }
           });
           
           if (autoLinkedCount > 0) {
-            console.log(`✅ [검출도 자동연결] 총 ${autoLinkedCount}개 행에 동일 검출도(${rating}) 적용`);
+            console.log(`✅ [검출도 자동연결] 동일 고장형태(FM) 내 ${autoLinkedCount}개 행에 동일 검출도(${rating}) 적용`);
           }
         }
       }
