@@ -611,25 +611,23 @@ function FMEAWorksheetPageContent() {
         </div>
 
         {/* ========== 메인 레이아웃 (메뉴 아래, 상속 배너 고려) ========== */}
-        <div className={`fixed ${inheritInfo ? 'top-[128px]' : 'top-[100px]'} left-[50px] right-0 bottom-0 flex flex-row overflow-hidden`}>
+        {/* ✅ All 탭: overflow-auto로 브라우저 스크롤 허용 */}
+        <div className={`fixed ${inheritInfo ? 'top-[128px]' : 'top-[100px]'} left-[50px] right-0 bottom-0 flex flex-row ${state.tab === 'all' ? 'overflow-auto' : 'overflow-hidden'}`}>
           
           {/* ===== 좌측: 워크시트 영역 ===== */}
-          <div id="fmea-worksheet-container" className="flex-1 flex flex-col min-w-0 bg-white overflow-hidden">
+          <div id="fmea-worksheet-container" className={`flex-1 flex flex-col min-w-0 bg-white ${state.tab === 'all' ? 'overflow-visible' : 'overflow-hidden'}`}>
 
             {/* 구조분석 제목 바는 StructureTab 내부 헤더로 이동됨 (표준화 완료) */}
 
-            {/* ✅ All 탭: 브라우저 하단 고정 스크롤 래퍼 (가로+세로 스크롤) */}
+            {/* ✅ All 탭: 브라우저 스크롤만 사용 (내부 스크롤 제거) */}
             {state.tab === 'all' ? (
               <div 
                 id="all-tab-scroll-wrapper"
-                className="worksheet-scroll-container"
                 style={{ 
-                  flex: 1,
-                  overflowX: 'scroll',
-                  overflowY: 'scroll',
+                  overflow: 'visible',
                   background: '#fff',
-                  position: 'relative',
-                  maxHeight: 'calc(100vh - 180px)',
+                  width: '100%',
+                  height: 'auto',
                 }}
               >
                 {/* 전체보기 탭: 통합 화면 (40열 구조) - 원자성 DB 기반 */}

@@ -74,6 +74,8 @@ export function useWorksheetState(): UseWorksheetStateReturn {
   const selectedFmeaId = searchParams.get('id')?.toUpperCase() || null;
   const baseId = searchParams.get('baseId')?.toUpperCase() || null;  // ✅ 상속 원본 FMEA ID
   const mode = searchParams.get('mode');  // ✅ 상속 모드 ('inherit')
+  // ✅ 2026-01-12: URL에서 탭 파라미터 읽기 (새로고침 시 탭 유지)
+  const urlTab = searchParams.get('tab') || null;
   
   // ✅ 초기 상태는 항상 동일 (Hydration 오류 방지)
   const [state, setState] = useState<WorksheetState>(createInitialState);
@@ -90,16 +92,27 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     const fmeaId = urlParams.get('id')?.toUpperCase();
     if (!fmeaId) return;
     
-    // 별도 키에서 tab과 riskData 읽기
+    // ✅ 2026-01-12: URL에서 탭 파라미터 우선 사용 (새로고침 시 탭 유지 - 근본 해결)
+    const urlTabParam = urlParams.get('tab');
+    
+    // URL 탭 > localStorage 탭 순으로 우선순위
     let savedTab = '';
     let savedRiskData: { [key: string]: number | string } = {};
     
-    try {
-      const tabStr = localStorage.getItem(`pfmea_tab_${fmeaId}`);
-      if (tabStr) {
-        savedTab = tabStr;
-      }
-    } catch (e) { /* ignore */ }
+    // 1. URL 탭 우선 (가장 신뢰성 높음)
+    if (urlTabParam) {
+      savedTab = urlTabParam;
+      console.log('[탭 복원] URL에서 탭 읽음:', urlTabParam);
+    } else {
+      // 2. localStorage 탭 (백업)
+      try {
+        const tabStr = localStorage.getItem(`pfmea_tab_${fmeaId}`);
+        if (tabStr) {
+          savedTab = tabStr;
+          console.log('[탭 복원] localStorage에서 탭 읽음:', tabStr);
+        }
+      } catch (e) { /* ignore */ }
+    }
     
     try {
       // ★★★ 2026-01-11: 잘못된 riskData 완전 삭제 (일회성 정리 v3) ★★★
@@ -827,7 +840,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.riskData]);
 
-  // ✅ tab 변경 시 별도 키로 즉시 저장 (확실한 저장)
+  // ✅ tab 변경 시 URL 업데이트 + localStorage 저장 (새로고침 시 탭 유지)
   const tabRef = useRef<string>('structure');
   useEffect(() => {
     const targetId = selectedFmeaId || currentFmea?.id;
@@ -837,9 +850,16 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       tabRef.current = state.tab;
       console.log('[자동저장] tab 변경 감지:', state.tab);
       
-      // ✅ 별도 키로 직접 저장 (확실한 저장)
+      // ✅ 2026-01-12: URL 파라미터 업데이트 (새로고침 시 탭 유지) - 근본 해결
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', state.tab);
+        window.history.replaceState({}, '', url.toString());
+        console.log('[URL 업데이트] tab:', state.tab);
+      }
+      
+      // ✅ 별도 키로 직접 저장 (백업용)
       localStorage.setItem(`pfmea_tab_${targetId}`, state.tab);
-      console.log('[저장완료] tab 저장:', `pfmea_tab_${targetId}`, state.tab);
       
       // 기존 워크시트 데이터에도 업데이트
       saveToLocalStorage();
@@ -1036,7 +1056,14 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       // - DB 응답이 있으면(local legacy/atomic 포함) localStorage 스캔/복구를 절대 수행하지 않음
       // - localStorage는 DB가 완전히 불가(오프라인/연결실패)일 때만 비상 복구용으로 사용
       let localStorageLegacy: any = null;
-      let legacyTab = 'structure';
+      
+      // ✅ 2026-01-12: URL 탭 우선 → localStorage 탭 → 기본값 'structure'
+      const urlTabParam = typeof window !== 'undefined' 
+        ? new URLSearchParams(window.location.search).get('tab') 
+        : null;
+      let legacyTab = urlTabParam || localStorage.getItem(`pfmea_tab_${selectedFmeaId}`) || 'structure';
+      console.log('[로드] 탭 복원:', { urlTab: urlTabParam, legacyTab });
+      
       let legacyRiskData: { [key: string]: number | string } = {};
 
       const hasDbResponse = Boolean(loadedDB) || Boolean(loadedAtomicDB);
@@ -1054,7 +1081,10 @@ export function useWorksheetState(): UseWorksheetStateReturn {
             const parsed = JSON.parse(saved);
             if (parsed.l1 || parsed.l2) {
               localStorageLegacy = parsed;
-              legacyTab = parsed.tab || 'structure';
+              // ✅ URL 탭이 없을 때만 localStorage에서 복원
+              if (!urlTabParam) {
+                legacyTab = parsed.tab || legacyTab;
+              }
               legacyRiskData = parsed.riskData || {};
               console.warn('[로드] ⚠️ DB 없음 → localStorage 레거시로 비상 복구:', key);
               break;
@@ -1065,7 +1095,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
                 ...legacy,
                 structureConfirmed: parsed.l1Structure?.confirmed ?? false,
               };
-              legacyTab = 'structure';
+              // ✅ URL 탭 유지 (덮어쓰지 않음)
               console.warn('[로드] ⚠️ DB 없음 → localStorage 원자성 백업으로 비상 복구:', key);
               break;
             }
@@ -1421,18 +1451,25 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       });
       
       // ✅ 레거시 원본 데이터에서 직접 추출 (근본적인 해결책)
-      const legacyKeys = [`pfmea_worksheet_${selectedFmeaId}`, `fmea-worksheet-${selectedFmeaId}`];
-      let legacyTab = 'structure';
-      let legacyRiskData: { [key: string]: number | string } = {};
+      const legacyKeys2 = [`pfmea_worksheet_${selectedFmeaId}`, `fmea-worksheet-${selectedFmeaId}`];
+      // ✅ 2026-01-12: URL 탭 우선 → localStorage 탭 → 기본값
+      const urlTabParam2 = typeof window !== 'undefined' 
+        ? new URLSearchParams(window.location.search).get('tab') 
+        : null;
+      let legacyTab2 = urlTabParam2 || localStorage.getItem(`pfmea_tab_${selectedFmeaId}`) || 'structure';
+      let legacyRiskData2: { [key: string]: number | string } = {};
       let legacyOriginalData: any = null;
       
-      for (const key of legacyKeys) {
+      for (const key of legacyKeys2) {
         const saved = localStorage.getItem(key);
         if (saved) {
           try {
             const parsed = JSON.parse(saved);
-            legacyTab = parsed.tab || 'structure';
-            legacyRiskData = parsed.riskData || {};
+            // ✅ URL 탭이 없을 때만 localStorage에서 복원
+            if (!urlTabParam2) {
+              legacyTab2 = parsed.tab || legacyTab2;
+            }
+            legacyRiskData2 = parsed.riskData || {};
             legacyOriginalData = parsed; // 원본 데이터 보관
             break;
           } catch (e) { /* ignore */ }
@@ -1622,17 +1659,21 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       }
       
       // ✅ 기존 state의 tab/riskData가 있으면 유지 (초기화 함수에서 이미 설정됨)
+      // ✅ 2026-01-12: URL 탭 우선 (근본 해결)
+      const finalUrlTab = typeof window !== 'undefined' 
+        ? new URLSearchParams(window.location.search).get('tab') 
+        : null;
+      
       setState(prev => {
         const hasExistingRiskData = Object.keys(prev.riskData || {}).length > 0;
-        const hasExistingTab = prev.tab && prev.tab !== 'structure';
+        // ✅ URL 탭이 있으면 무조건 사용
+        const finalTab = finalUrlTab || prev.tab || legacyTab || 'structure';
         
-        console.log('[setState] 기존 값 확인:', {
-          existingTab: prev.tab,
-          existingRiskDataCount: Object.keys(prev.riskData || {}).length,
+        console.log('[setState] 탭 결정:', {
+          urlTab: finalUrlTab,
+          prevTab: prev.tab,
           legacyTab,
-          legacyRiskDataCount: Object.keys(legacyRiskData).length,
-          useExistingTab: hasExistingTab,
-          useExistingRiskData: hasExistingRiskData,
+          finalTab,
         });
         
         const src: any = finalLegacy as any;
@@ -1660,7 +1701,8 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           failureLinks: finalLegacy.failureLinks || [],
           // ✅ 기존 값이 있으면 유지, 없으면 레거시에서 복원
           riskData: hasExistingRiskData ? prev.riskData : legacyRiskData,
-          tab: hasExistingTab ? prev.tab : (legacyTab !== 'structure' ? legacyTab : prev.tab),
+          // ✅ 2026-01-12: URL 탭 우선 (근본 해결)
+          tab: finalTab,
           structureConfirmed: normalized.structureConfirmed,
           l1Confirmed: normalized.l1Confirmed,
           l2Confirmed: normalized.l2Confirmed,

@@ -51,7 +51,25 @@ export default function AllTabRenderer({
   });
 
   // visibleSteps를 단계명으로 변환
-  const visibleStepsNumbers = propsVisibleSteps || state.visibleSteps || [2, 3, 4, 5, 6];
+  // ✅ 2026-01-12: visibleSteps가 객체일 수도 있으므로 배열로 정규화
+  let visibleStepsNumbers: number[] = [2, 3, 4, 5, 6]; // 기본값
+  
+  if (propsVisibleSteps) {
+    // props가 배열이면 그대로 사용
+    visibleStepsNumbers = Array.isArray(propsVisibleSteps) ? propsVisibleSteps : [2, 3, 4, 5, 6];
+  } else if (state.visibleSteps) {
+    // state.visibleSteps가 배열이면 그대로, 객체면 배열로 변환
+    if (Array.isArray(state.visibleSteps)) {
+      visibleStepsNumbers = state.visibleSteps;
+    } else if (typeof state.visibleSteps === 'object') {
+      // { step2: true, step3: true, ... } 형태를 [2, 3, ...] 배열로 변환
+      visibleStepsNumbers = [2, 3, 4, 5, 6].filter(step => {
+        const key = `step${step}` as keyof typeof state.visibleSteps;
+        return (state.visibleSteps as any)?.[key] !== false;
+      });
+    }
+  }
+  
   const stepNameMap: Record<number, string> = {
     2: '구조분석',
     3: '기능분석',
