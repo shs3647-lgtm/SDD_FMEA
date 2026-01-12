@@ -188,3 +188,5 @@ requirement: {
 
 **코드프리즈 태그**: `codefreeze-20260112-color-system`
 
+
+

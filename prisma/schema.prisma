@@ -768,3 +768,140 @@ model LessonsLearned {
   @@index([fmeaId])
   @@map("lessons_learned")
 }
+
+// ============================================================================
+// ============ Control Plan (관리계획서) ============
+// ============================================================================
+
+// CP 헤더 (하나의 FMEA에 여러 CP 가능 - 1:N 관계)
+model ControlPlan {
+  id            String   @id @default(uuid())
+  cpNo          String   @unique  // CP26-M001 형식
+  
+  // PFMEA 연결 (1:N - 하나의 FMEA에 여러 CP 가능)
+  fmeaId        String   // FK: FMEA 프로젝트 ID
+  fmeaNo        String?  // pfm26-M001 (표시용)
+  fmeaRev       Int      @default(1)  // 연결된 PFMEA Rev
+  
+  // 기본 정보 (FMEA에서 가져오거나 CP 고유)
+  projectName   String?  // 프로젝트명 (FMEA 연동)
+  partName      String?  // 품명
+  partNo        String?  // 품번
+  revNo         String   @default("A")  // Rev No
+  revDate       String?  // Rev 일자
+  customer      String?  // 고객
+  processFrom   String?  // 공정 범위 From
+  processTo     String?  // 공정 범위 To
+  preparedBy    String?  // 작성자
+  approvedBy    String?  // 승인자
+  
+  // 상태
+  status        String   @default("draft")  // draft | approved | obsolete
+  
+  // 동기화 메타
+  syncStatus    String   @default("new")    // new | synced | modified
+  lastSyncAt    DateTime?
+  changeCount   Int      @default(0)        // 변경 알림 카운트
+  
+  // 타임스탬프
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // 관계
+  items         ControlPlanItem[]
+  
+  @@index([fmeaId])
+  @@index([cpNo])
+  @@index([status])
+  @@map("control_plans")
+}
+
+// CP 행 데이터 (24개 컬럼)
+model ControlPlanItem {
+  id              String   @id @default(uuid())
+  cpId            String   // FK: control_plans.id
+  
+  // ===== PFMEA 행 연결 (추적성) =====
+  pfmeaRowUid     String?  // PFMEA_ROW_UID
+  pfmeaProcessId  String?  // PFMEA L2 공정 ID
+  pfmeaWorkElemId String?  // PFMEA L3 작업요소 ID
+  
+  // ===== 공정현황 (PFMEA 연동, Read-only) =====
+  processNo       String   // 공정번호
+  processName     String   // 공정명
+  processLevel    String?  // 공정레벨 (Main/Sub)
+  processDesc     String?  // 공정설명
+  workElement     String?  // 작업요소
+  
+  // ===== 공정현황 (CP 전용, Editable) =====
+  equipment       String?  // 설비/금형/Jig/Tools
+  detectorNo      Boolean  @default(false)  // 검출장치_NO
+  detectorEp      Boolean  @default(false)  // 검출장치_EP
+  detectorAuto    Boolean  @default(false)  // 검출장치_자동검사
+  
+  // ===== 관리항목 (PFMEA 연동) =====
+  productChar     String?  // 제품특성
+  processChar     String?  // 공정특성
+  specialChar     String?  // 특별특성 (CC/SC/IC)
+  
+  // ===== 관리항목 (CP 전용) =====
+  specTolerance   String?  // 스펙/공차
+  
+  // ===== 관리방법 (CP 전용, Editable) =====
+  evalMethod      String?  // 평가/측정방법
+  sampleSize      String?  // 샘플링 크기
+  sampleFreq      String?  // 샘플링 주기
+  controlMethod   String?  // 관리방법
+  owner1          String?  // 책임1
+  owner2          String?  // 책임2
+  reactionPlan    String?  // 대응계획
+  
+  // ===== 리스크 참조 (PFMEA Read-only) =====
+  refSeverity     Int?     // 심각도 참조
+  refOccurrence   Int?     // 발생도 참조
+  refDetection    Int?     // 검출도 참조
+  refAp           String?  // AP 참조 (H/M/L)
+  
+  // ===== 상태 =====
+  linkStatus      String   @default("linked")  // linked | changed | unlinked
+  changeFlag      Boolean  @default(false)     // 변경 알림 Flag
+  
+  // 정렬
+  sortOrder       Int      @default(0)
+  
+  // 타임스탬프
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // 관계
+  controlPlan     ControlPlan @relation(fields: [cpId], references: [id], onDelete: Cascade)
+  
+  @@index([cpId])
+  @@index([pfmeaRowUid])
+  @@index([pfmeaProcessId])
+  @@map("control_plan_items")
+}
+
+// 동기화 로그
+model SyncLog {
+  id          String   @id @default(uuid())
+  
+  sourceType  String   // 'pfmea' | 'cp'
+  sourceId    String   // 원본 ID
+  targetType  String   // 'pfmea' | 'cp'
+  targetId    String   // 대상 ID
+  
+  action      String   // 'create' | 'update' | 'delete' | 'lock' | 'obsolete'
+  status      String   @default("pending")  // pending | synced | failed
+  errorMsg    String?  // 실패 시 오류 메시지
+  
+  fieldChanges String? // 변경된 필드 목록 JSON
+  
+  syncedAt    DateTime?
+  createdAt   DateTime @default(now())
+  
+  @@index([sourceType, sourceId])
+  @@index([targetType, targetId])
+  @@index([status])
+  @@map("sync_logs")
+}

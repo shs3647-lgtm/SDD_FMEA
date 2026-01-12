@@ -140,3 +140,5 @@ onOpen5AP={() => setActivePanelId(prev =>
 
 **코드프리즈 태그**: `codefreeze-20260112-all-fullscreen`
 
+
+

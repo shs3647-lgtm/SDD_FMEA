@@ -283,6 +283,74 @@ export default function AllTabEmpty({
     return { hCount, mCount, lCount, total: hCount + mCount + lCount, hItems };
   }, [state?.riskData, globalMaxSeverity, processedFMGroups]);
   
+  // ★★★ 2026-01-12: 4단계 고장분석 FE/FM/FC 통계 (고장연결 일치 검증) ★★★
+  const failureStats = useMemo(() => {
+    // 고장연결 데이터에서 고유 FE/FM/FC 개수
+    const linkedFeIds = new Set<string>();
+    const linkedFmIds = new Set<string>();
+    const linkedFcIds = new Set<string>();
+    
+    failureLinks.forEach((link: FailureLinkRow) => {
+      if (link.feId) linkedFeIds.add(link.feId);
+      if (link.fmId) linkedFmIds.add(link.fmId);
+      if (link.fcId) linkedFcIds.add(link.fcId);
+    });
+    
+    const linkedCounts = {
+      fe: linkedFeIds.size,
+      fm: linkedFmIds.size,
+      fc: linkedFcIds.size,
+    };
+    
+    // state에서 고장분석 데이터 개수 (l1: FE, l2: FM, l3: FC)
+    let stateFe = 0;
+    let stateFm = 0;
+    let stateFc = 0;
+    
+    // FE: state.l1.failureScopes에서 계산
+    if (state?.l1?.failureScopes) {
+      stateFe = state.l1.failureScopes.filter((fs: any) => fs.effect || fs.id).length;
+    }
+    
+    // FM: state.l2에서 failureModes 계산
+    if (state?.l2) {
+      state.l2.forEach((proc: any) => {
+        if (proc.failureModes) {
+          stateFm += proc.failureModes.filter((fm: any) => fm.name || fm.id).length;
+        }
+      });
+    }
+    
+    // FC: state.l3에서 failureCauses 계산
+    if (state?.l3) {
+      state.l3.forEach((we: any) => {
+        if (we.failureCauses) {
+          stateFc += we.failureCauses.filter((fc: any) => fc.name || fc.id).length;
+        }
+      });
+    }
+    
+    const stateCounts = { fe: stateFe, fm: stateFm, fc: stateFc };
+    
+    // 불일치 체크
+    const mismatch = {
+      fe: linkedCounts.fe !== stateCounts.fe && linkedCounts.fe > 0 && stateCounts.fe > 0,
+      fm: linkedCounts.fm !== stateCounts.fm && linkedCounts.fm > 0 && stateCounts.fm > 0,
+      fc: linkedCounts.fc !== stateCounts.fc && linkedCounts.fc > 0 && stateCounts.fc > 0,
+    };
+    
+    const hasMismatch = mismatch.fe || mismatch.fm || mismatch.fc;
+    
+    console.log('📊 [failureStats] 고장분석 통계:', {
+      linked: linkedCounts,
+      state: stateCounts,
+      mismatch,
+      hasMismatch,
+    });
+    
+    return { linked: linkedCounts, state: stateCounts, mismatch, hasMismatch };
+  }, [failureLinks, state?.l1, state?.l2, state?.l3]);
+  
   // ★★★ 2026-01-12: 개선방향 패널 상태 ★★★
   const [showImprovePanel, setShowImprovePanel] = useState(false);
   const [improvedItems, setImprovedItems] = useState<Set<string>>(new Set());
@@ -438,6 +506,49 @@ export default function AllTabEmpty({
                       <span style={{ background: '#ef5350', color: '#fff', padding: '2px 6px', borderRadius: '4px' }}>H:{apStats.hCount}</span>
                       <span style={{ background: '#ffc107', color: '#000', padding: '2px 6px', borderRadius: '4px' }}>M:{apStats.mCount}</span>
                       <span style={{ background: '#4caf50', color: '#fff', padding: '2px 6px', borderRadius: '4px' }}>L:{apStats.lCount}</span>
+                    </span>
+                  </div>
+                ) : span.step === '고장분석' ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <span>{STEP_LABELS[span.step]}</span>
+                    {/* FE/FM/FC 통계 배지 */}
+                    <span style={{ 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: '6px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                    }}>
+                      <span style={{ 
+                        background: failureStats.mismatch.fe ? '#f44336' : 'rgba(255,255,255,0.3)', 
+                        color: '#fff', 
+                        padding: '2px 6px', 
+                        borderRadius: '4px',
+                        border: failureStats.mismatch.fe ? '2px solid #ffeb3b' : 'none',
+                      }} title={failureStats.mismatch.fe ? `⚠️ 불일치: 고장연결=${failureStats.linked.fe}, 고장분석=${failureStats.state.fe}` : ''}>
+                        FE:{failureStats.linked.fe}
+                      </span>
+                      <span style={{ 
+                        background: failureStats.mismatch.fm ? '#f44336' : 'rgba(255,255,255,0.3)', 
+                        color: '#fff', 
+                        padding: '2px 6px', 
+                        borderRadius: '4px',
+                        border: failureStats.mismatch.fm ? '2px solid #ffeb3b' : 'none',
+                      }} title={failureStats.mismatch.fm ? `⚠️ 불일치: 고장연결=${failureStats.linked.fm}, 고장분석=${failureStats.state.fm}` : ''}>
+                        FM:{failureStats.linked.fm}
+                      </span>
+                      <span style={{ 
+                        background: failureStats.mismatch.fc ? '#f44336' : 'rgba(255,255,255,0.3)', 
+                        color: '#fff', 
+                        padding: '2px 6px', 
+                        borderRadius: '4px',
+                        border: failureStats.mismatch.fc ? '2px solid #ffeb3b' : 'none',
+                      }} title={failureStats.mismatch.fc ? `⚠️ 불일치: 고장연결=${failureStats.linked.fc}, 고장분석=${failureStats.state.fc}` : ''}>
+                        FC:{failureStats.linked.fc}
+                      </span>
+                      {failureStats.hasMismatch && (
+                        <span style={{ color: '#ffeb3b', fontWeight: 700, fontSize: '14px' }} title="고장연결과 고장분석 데이터 불일치">⚠️</span>
+                      )}
                     </span>
                   </div>
                 ) : (

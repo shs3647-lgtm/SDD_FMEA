@@ -1,21 +1,18 @@
 'use client';
 
-import CommonTopNav, { TopNavMenuItem, TopNavStatItem } from './CommonTopNav';
+import CommonTopNav, { TopNavMenuItem } from './CommonTopNav';
 
 interface CPTopNavProps {
   selectedCpId?: string;
-  rowCount?: number;
-  epCount?: number;
-  autoCount?: number;
 }
 
 /**
  * Control Plan 상단 바로가기 메뉴바
  * - CommonTopNav 기반 반응형 구현
  * 
- * @version 3.0.0 - CommonTopNav 기반으로 리팩토링
+ * @version 3.1.0 - 통계 표시 제거
  */
-export default function CPTopNav({ selectedCpId, rowCount = 0, epCount = 0, autoCount = 0 }: CPTopNavProps) {
+export default function CPTopNav({ selectedCpId }: CPTopNavProps) {
   const menuItems: TopNavMenuItem[] = [
     { label: 'CP 등록', shortLabel: '등록', path: '/control-plan/register', icon: '📝' },
     { label: 'CP 리스트', shortLabel: '리스트', path: '/control-plan/list', icon: '📋' },
@@ -25,18 +22,10 @@ export default function CPTopNav({ selectedCpId, rowCount = 0, epCount = 0, auto
     { label: '접속 로그', shortLabel: '로그', path: '/control-plan/log', icon: '📊' },
   ];
 
-  const statItems: TopNavStatItem[] = [
-    { label: 'Row', value: rowCount, color: 'blue' },
-    { label: 'EP', value: epCount, color: 'orange' },
-    { label: 'Auto', value: autoCount, color: 'green' },
-  ];
-
   return (
     <CommonTopNav
       title="Control Plan"
       menuItems={menuItems}
-      statItems={statItems}
-      statLabel="CP:"
       selectedId={selectedCpId}
       gradientFrom="#00695c"
       gradientTo="#00897b"

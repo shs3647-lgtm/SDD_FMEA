@@ -56,6 +56,11 @@ const IMPORTANT_TABLES = [
   
   // ===== 공용: 습득교훈 (Lessons Learned) =====
   { name: 'lessons_learned', label: '📚 습득교훈(LLD)', desc: '공용: FMEA 습득교훈 데이터', scope: 'public' },
+  
+  // ===== 공용: Control Plan =====
+  { name: 'control_plans', label: '📋 CP 헤더', desc: '공용: Control Plan 목록', scope: 'public' },
+  { name: 'control_plan_items', label: '📝 CP 항목', desc: '공용: Control Plan 행 데이터', scope: 'public' },
+  { name: 'sync_logs', label: '🔄 동기화 로그', desc: '공용: FMEA-CP 동기화 이력', scope: 'public' },
 ];
 
 export default function DbViewerPage() {
