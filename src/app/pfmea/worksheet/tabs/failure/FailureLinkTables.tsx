@@ -114,38 +114,36 @@ export default function FailureLinkTables({
       <div className="flex justify-between items-center py-2 px-3" style={headerStyle('#fff3e0', `1px solid #ccc`, FONT_SIZES.pageHeader)}>
         <span className="font-semibold">P-FMEA 고장 분석(4단계) - 고장연결</span>
         
-        {/* 공정 필터 버튼 (2ST, 3ST, ... ALL) */}
-        <div className="flex items-center gap-1">
-          {processNames.map((proc, idx) => {
-            const isActive = selectedProcess === proc;
-            const stNo = idx + 2; // 2ST부터 시작
-            return (
-              <button
-                key={proc}
-                onClick={() => onProcessChange(proc)}
-                className={`px-2 py-0.5 text-[10px] rounded border font-semibold transition-all ${
-                  isActive
-                    ? 'bg-orange-500 text-white border-orange-400'
-                    : 'bg-white text-orange-600 border-orange-300 hover:bg-orange-50'
-                }`}
-                title={`${proc} 공정 보기`}
-              >
-                {stNo}ST
-              </button>
-            );
-          })}
+        {/* 공정 필터: 해당공정 드롭다운 + 모든공정 버튼 */}
+        <div className="flex items-center gap-2">
+          {/* 해당공정 드롭다운 */}
+          <select
+            value={selectedProcess !== 'all' ? selectedProcess : ''}
+            onChange={(e) => onProcessChange(e.target.value || processNames[0])}
+            className={`px-2 py-0.5 text-[11px] rounded border font-semibold transition-all ${
+              selectedProcess !== 'all'
+                ? 'bg-orange-500 text-white border-orange-400'
+                : 'bg-white text-orange-600 border-orange-300'
+            }`}
+            title="해당 공정의 고장형태만 표시"
+          >
+            <option value="" disabled>해당공정</option>
+            {processNames.map((proc) => (
+              <option key={proc} value={proc}>{proc}</option>
+            ))}
+          </select>
           
-          {/* ALL 버튼 */}
+          {/* 모든공정 버튼 */}
           <button
             onClick={() => onProcessChange('all')}
-            className={`px-2 py-0.5 text-[10px] rounded border font-semibold transition-all ${
+            className={`px-3 py-0.5 text-[11px] rounded border font-semibold transition-all ${
               selectedProcess === 'all'
                 ? 'bg-purple-600 text-white border-purple-500'
                 : 'bg-white text-purple-600 border-purple-300 hover:bg-purple-50'
             }`}
-            title="모든 공정 보기"
+            title="모든 공정의 고장형태 표시"
           >
-            ALL
+            모든공정
           </button>
         </div>
       </div>
