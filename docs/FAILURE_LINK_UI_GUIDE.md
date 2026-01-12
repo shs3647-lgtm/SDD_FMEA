@@ -121,11 +121,48 @@ fmProcess: fm?.processName || group.fmProcess, // ★ 최신 공정명 우선
 
 ---
 
+## 🔄 FM 텍스트 실시간 동기화
+
+### ALL화면
+**파일**: `tabs/all/processFailureLinks.ts`  
+**검색어**: `latestFMTextMap`
+
+```typescript
+// state.l2에서 최신 FM 텍스트 맵 생성
+const latestFMTextMap = new Map<string, { text: string; processName: string }>();
+l2Data?.forEach(proc => {
+  proc.failureModes?.forEach(fm => {
+    latestFMTextMap.set(fm.id, { text: fm.name, processName: proc.name });
+  });
+});
+```
+
+**호출 위치**: `AllTabEmpty.tsx`
+```typescript
+const processedFMGroups = React.useMemo(
+  () => processFailureLinks(failureLinks, state?.l2), 
+  [failureLinks, state?.l2]
+);
+```
+
+### 고장사슬 결과화면
+**파일**: `tabs/failure/FailureLinkResult.tsx`  
+**검색어**: `fm?.text`
+
+```typescript
+// fmData에서 최신 FM 텍스트 가져오기
+fmText: fm?.text || group.fmText,
+fmProcess: fm?.processName || group.fmProcess,
+```
+
+---
+
 ## ⚠️ 주의사항
 
 1. **줄무늬 패턴**: `scopeIdx % 2` 또는 `processRowIdx % 2`로 계산됨. 그룹 변경 시 인덱스 리셋.
 2. **연결 상태 표시**: `linkedFEIds`/`linkedFCIds`는 `linkedFEs.keys()`/`linkedFCs.keys()`에서 생성됨.
 3. **FM 선택 시 boxShadow**: `inset 0 0 0 3px #1976d2` 적용됨.
+4. **FM 데이터 구조**: `state.l2[].failureModes[].name` (text가 아님!)
 
 ---
 
