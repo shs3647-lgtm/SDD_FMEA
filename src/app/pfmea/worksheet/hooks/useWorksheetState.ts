@@ -550,10 +550,15 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     }
   }, [selectedFmeaId, currentFmea?.id]);  // ✅ state 제거, stateRef 사용
 
+  // ★★★ 2026-01-12: DB 저장도 함께 트리거 (setDirty 호출 시 자동 저장) ★★★
   const triggerAutoSave = useCallback(() => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => saveToLocalStorage(), 500);
-  }, [saveToLocalStorage]);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveToLocalStorage();
+      saveAtomicDB();  // ★ DB 저장 추가
+      console.log('🔥 [triggerAutoSave] localStorage + DB 저장 완료');
+    }, 500);
+  }, [saveToLocalStorage, saveAtomicDB]);
 
   useEffect(() => {
     if (dirty) triggerAutoSave();

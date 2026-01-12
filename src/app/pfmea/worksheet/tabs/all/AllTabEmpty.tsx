@@ -56,7 +56,7 @@ export default function AllTabEmpty({
   setState,
   setDirty,
 }: AllTabEmptyProps) {
-  // 모달 관리 훅
+  // 모달 관리 훅 (★ 2026-01-12: setDirty 추가하여 DB 저장 트리거)
   const {
     sodModal,
     controlModal,
@@ -65,7 +65,7 @@ export default function AllTabEmpty({
     closeSodModal,
     handleSODClick,
     handleSODSelect,
-  } = useAllTabModals(setState);
+  } = useAllTabModals(setState, setDirty);
   
   // AP 모달 상태 (5AP/6AP 결과)
   const [apModal, setApModal] = useState<{
@@ -99,6 +99,206 @@ export default function AllTabEmpty({
   const groupSpans = calculateGroupSpans(columns);
   const totalWidth = columns.reduce((sum, col) => sum + col.width, 0);
   
+  // ★ 디버그: stepSpans 확인
+  console.log('📋 [stepSpans]', stepSpans.map(s => s.step));
+  
+  // ★★★ 2026-01-12: 심각도를 모든 소스에서 찾기 (근본적 해결) ★★★
+  const globalMaxSeverity = useMemo(() => {
+    let maxS = 0;
+    const riskData = state?.riskData || {};
+    
+    // 1. failureScopes에서 심각도 찾기
+    (state?.l1?.failureScopes || []).forEach((fs: any) => {
+      if (fs.severity && fs.severity > maxS) maxS = fs.severity;
+    });
+    
+    // 2. riskData의 S-fe-* 키에서 심각도 찾기
+    Object.keys(riskData).forEach(key => {
+      if (key.startsWith('S-fe-') || key.startsWith('severity-')) {
+        const val = Number(riskData[key]) || 0;
+        if (val > maxS) maxS = val;
+      }
+    });
+    
+    // 3. processedFMGroups에서 심각도 찾기
+    processedFMGroups.forEach(fmGroup => {
+      if (fmGroup.maxSeverity > maxS) maxS = fmGroup.maxSeverity;
+    });
+    
+    // 4. failureLinks에서 직접 심각도 찾기
+    failureLinks.forEach((link: any) => {
+      const linkSev = link.severity || link.feSeverity || 0;
+      if (linkSev > maxS) maxS = linkSev;
+    });
+    
+    console.log('🎯 [globalMaxSeverity] 최종 심각도:', maxS);
+    return maxS;
+  }, [state?.l1?.failureScopes, state?.riskData, processedFMGroups, failureLinks]);
+  
+  // ★★★ 2026-01-12: 5AP H/M/L 통계 계산 - APTable5와 동일한 로직으로 통일 ★★★
+  const apStats = useMemo(() => {
+    let hCount = 0, mCount = 0, lCount = 0;
+    const hItems: Array<{
+      id: string;
+      processName: string;
+      failureMode: string;
+      failureCause: string;
+      severity: number;
+      occurrence: number;
+      detection: number;
+      ap: 'H' | 'M' | 'L';
+      fmId: string;
+      fcId: string;
+      globalRowIdx: number;
+    }> = [];
+    
+    const riskData = state?.riskData || {};
+    
+    // ★★★ APTable5와 동일: 모든 risk-*-O/D 키에서 uniqueKey 추출 ★★★
+    const allUniqueKeys = new Set<string>();
+    Object.keys(riskData).forEach(key => {
+      // 패턴 1: risk-{숫자}-O/D (레거시)
+      const numericMatch = key.match(/^risk-(\d+)-(O|D)$/);
+      if (numericMatch) {
+        allUniqueKeys.add(numericMatch[1]);
+        return;
+      }
+      // 패턴 2: risk-{fmId}-{fcId}-O/D (새 형식)
+      const compositeMatch = key.match(/^risk-(.+)-(O|D)$/);
+      if (compositeMatch) {
+        allUniqueKeys.add(compositeMatch[1]);
+      }
+    });
+    
+    // ★★★ APTable5와 동일: globalMaxSeverity 사용 ★★★
+    const maxSeverity = globalMaxSeverity;
+    
+    let idx = 0;
+    allUniqueKeys.forEach(uniqueKey => {
+      const o = Number(riskData[`risk-${uniqueKey}-O`]) || 0;
+      const d = Number(riskData[`risk-${uniqueKey}-D`]) || 0;
+      const s = maxSeverity;
+      
+      if (s > 0 && o > 0 && d > 0) {
+        const ap = calculateAP(s, o, d) as 'H' | 'M' | 'L' | '';
+        
+        // processedFMGroups에서 fmId, fcId 정보 찾기 (개선방향 표시용)
+        let processName = '';
+        let failureMode = '';
+        let failureCause = '';
+        let fmId = '';
+        let fcId = '';
+        
+        // uniqueKey가 숫자인 경우 (레거시)
+        const numericIdx = parseInt(uniqueKey);
+        if (!isNaN(numericIdx)) {
+          // processedFMGroups에서 해당 인덱스의 데이터 찾기
+          let currentIdx = 0;
+          for (const fmGroup of processedFMGroups) {
+            for (const row of fmGroup.rows) {
+              if (currentIdx === numericIdx) {
+                processName = fmGroup.fmProcessName;
+                failureMode = fmGroup.fmText;
+                failureCause = row.fcText;
+                fmId = fmGroup.fmId;
+                fcId = row.fcId;
+                break;
+              }
+              currentIdx++;
+            }
+            if (fmId) break;
+          }
+        } else {
+          // uniqueKey가 fmId-fcId 형식인 경우
+          const parts = uniqueKey.split('-');
+          if (parts.length >= 2) {
+            fmId = parts[0];
+            fcId = parts.slice(1).join('-');
+            
+            // processedFMGroups에서 해당 fmId, fcId의 데이터 찾기
+            for (const fmGroup of processedFMGroups) {
+              if (fmGroup.fmId === fmId) {
+                processName = fmGroup.fmProcessName;
+                failureMode = fmGroup.fmText;
+                const row = fmGroup.rows.find(r => r.fcId === fcId);
+                if (row) {
+                  failureCause = row.fcText;
+                }
+                break;
+              }
+            }
+          }
+        }
+        
+        if (ap === 'H') {
+          hCount++;
+          hItems.push({
+            id: uniqueKey,
+            processName,
+            failureMode,
+            failureCause,
+            severity: s,
+            occurrence: o,
+            detection: d,
+            ap: 'H',
+            fmId,
+            fcId,
+            globalRowIdx: idx,
+          });
+        } else if (ap === 'M') {
+          mCount++;
+        } else if (ap === 'L') {
+          lCount++;
+        }
+      }
+      idx++;
+    });
+    
+    console.log('📊 [apStats] APTable5 동일 로직 적용:', {
+      uniqueKeysCount: allUniqueKeys.size,
+      maxSeverity,
+      result: { hCount, mCount, lCount, total: hCount + mCount + lCount },
+    });
+    
+    return { hCount, mCount, lCount, total: hCount + mCount + lCount, hItems };
+  }, [state?.riskData, globalMaxSeverity, processedFMGroups]);
+  
+  // ★★★ 2026-01-12: 개선방향 패널 상태 ★★★
+  const [showImprovePanel, setShowImprovePanel] = useState(false);
+  const [improvedItems, setImprovedItems] = useState<Set<string>>(new Set());
+  
+  // ★ L로 낮추기 위한 목표 점수 계산
+  const getTargetScore = (current: number): number => {
+    if (current >= 7) return 3;
+    if (current >= 5) return 2;
+    if (current >= 3) return 1;
+    return 1;
+  };
+  
+  // ★ 개선 적용 (레거시 + 신규 키 지원)
+  const handleImprove = (fmId: string, fcId: string, type: 'O' | 'D', current: number, globalRowIdx: number) => {
+    const uniqueKey = fmId && fcId ? `${fmId}-${fcId}` : `legacy-${globalRowIdx}`;
+    const itemKey = `${uniqueKey}-${type}`;
+    setImprovedItems(prev => new Set([...prev, itemKey]));
+    
+    if (setState) {
+      const target = getTargetScore(current);
+      // ★ fmId와 fcId가 있으면 신규 키, 없으면 레거시 키 사용
+      const riskKey = fmId && fcId 
+        ? `risk-${fmId}-${fcId}-${type}` 
+        : `risk-${globalRowIdx}-${type}`;
+      setState(prev => ({
+        ...prev,
+        riskData: {
+          ...(prev.riskData || {}),
+          [riskKey]: target,
+        }
+      }));
+      if (setDirty) setDirty(true);
+      console.log(`[개선적용] ${riskKey}: ${current} → ${target}`);
+    }
+  };
+  
   return (
     <div 
       className="relative bg-white"
@@ -107,6 +307,66 @@ export default function AllTabEmpty({
         minWidth: '100%',
       }}
     >
+      {/* ★★★ 2026-01-12: H→L 개선방향 패널 ★★★ */}
+      {showImprovePanel && apStats.hItems.length > 0 && (
+        <div className="sticky top-[44px] z-30 bg-orange-50 border-b-2 border-orange-300 p-3 max-h-[250px] overflow-auto">
+          <div className="text-[12px] font-bold text-orange-700 mb-2 flex justify-between items-center">
+            <span>🔧 H→L 개선 제안 ({apStats.hItems.length}건)</span>
+            <button 
+              onClick={() => setShowImprovePanel(false)}
+              className="text-gray-500 hover:text-gray-700 text-lg"
+            >×</button>
+          </div>
+          <div className="grid gap-2">
+            {apStats.hItems.map((item, idx) => {
+              const oImproved = improvedItems.has(`${item.fmId}-${item.fcId}-O`);
+              const dImproved = improvedItems.has(`${item.fmId}-${item.fcId}-D`);
+              const targetO = getTargetScore(item.occurrence);
+              const targetD = getTargetScore(item.detection);
+              
+              return (
+                <div key={item.id} className="bg-white rounded p-2 border border-orange-200 text-[11px]">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-semibold text-gray-700">
+                      #{idx + 1} {item.processName} - {item.failureMode}
+                    </span>
+                    <span className="text-gray-500">
+                      S:{item.severity} O:{item.occurrence} D:{item.detection}
+                    </span>
+                  </div>
+                  <div className="text-gray-600 mb-2 text-[10px]">
+                    원인: {item.failureCause}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleImprove(item.fmId, item.fcId, 'O', item.occurrence, item.globalRowIdx)}
+                      disabled={oImproved}
+                      className={`flex-1 py-1 px-2 rounded text-[10px] font-semibold transition-all ${
+                        oImproved 
+                          ? 'bg-green-100 text-green-700 cursor-default' 
+                          : 'bg-orange-400 text-white hover:bg-orange-500 cursor-pointer'
+                      }`}
+                    >
+                      {oImproved ? '✓ 예방개선 완료' : `예방관리 O:${item.occurrence}→${targetO}`}
+                    </button>
+                    <button
+                      onClick={() => handleImprove(item.fmId, item.fcId, 'D', item.detection, item.globalRowIdx)}
+                      disabled={dImproved}
+                      className={`flex-1 py-1 px-2 rounded text-[10px] font-semibold transition-all ${
+                        dImproved 
+                          ? 'bg-green-100 text-green-700 cursor-default' 
+                          : 'bg-orange-400 text-white hover:bg-orange-500 cursor-pointer'
+                      }`}
+                    >
+                      {dImproved ? '✓ 검출개선 완료' : `검출관리 D:${item.detection}→${targetD}`}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <table
         style={{
           width: `${totalWidth}px`,
@@ -144,9 +404,24 @@ export default function AllTabEmpty({
                   whiteSpace: 'nowrap',
                 }}
               >
-                <div className="flex items-center justify-center gap-3">
+                {span.step === '리스크분석' ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <span>{STEP_LABELS[span.step]}</span>
+                    <span style={{ 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: '6px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                    }}>
+                      <span style={{ background: '#ef5350', color: '#fff', padding: '2px 6px', borderRadius: '4px' }}>H:{apStats.hCount}</span>
+                      <span style={{ background: '#ffc107', color: '#000', padding: '2px 6px', borderRadius: '4px' }}>M:{apStats.mCount}</span>
+                      <span style={{ background: '#4caf50', color: '#fff', padding: '2px 6px', borderRadius: '4px' }}>L:{apStats.lCount}</span>
+                    </span>
+                  </div>
+                ) : (
                   <span>{STEP_LABELS[span.step] || span.step}</span>
-                </div>
+                )}
               </th>
             ))}
           </tr>

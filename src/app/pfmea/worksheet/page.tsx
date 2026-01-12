@@ -51,10 +51,9 @@ import {
 // 분리된 UI 컴포넌트 import
 import TopMenuBar from './components/TopMenuBar';
 import TabMenu from './components/TabMenu';
-import APTableInline from './components/APTableInline';
 import AllTabRenderer from './tabs/all/AllTabRenderer';
 import FailureLinkResult from './components/FailureLinkResult';
-import AllTabRightPanel from './components/AllTabRightPanel';
+// ★★★ 2026-01-12: AllTabRightPanel, APTableInline 제거 - 플러그인 통일 ★★★
 import { 
   getStepNumber, 
   StructureTabFull, 
@@ -128,12 +127,13 @@ function FMEAWorksheetPageContent() {
   // 우측 패널 활성화 상태
   const [activePanelId, setActivePanelId] = useState<string>('tree');
   
+  // ★★★ RPN 컬럼 표시 여부 (rpn 패널 활성화 시 true) ★★★
+  const showRPN = activePanelId === 'rpn' || activePanelId === 'rpn-chart';
+  
   // 트리 접기/펼치기 상태
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   
-  // 전체보기 탭의 AP 테이블 표시 상태
-  const [showAPInAll, setShowAPInAll] = useState(false);
-  const [apStageInAll, setApStageInAll] = useState<5 | 6>(5);
+  // ★★★ 2026-01-12: showAPInAll, apStageInAll 제거 - 플러그인 통일 ★★★
   
   const toggleCollapse = useCallback((procId: string) => {
     setCollapsedIds(prev => {
@@ -550,7 +550,7 @@ function FMEAWorksheetPageContent() {
           onOpenSOD={() => setIsSODModalOpen(true)}
           onOpen5AP={() => setActivePanelId(prev => prev === '5ap' ? 'tree' : '5ap')}
           onOpen6AP={() => setActivePanelId(prev => prev === '6ap' ? 'tree' : '6ap')}
-          onOpenRPN={() => setActivePanelId(prev => prev === 'rpn-chart' ? 'tree' : 'rpn-chart')}
+          onOpenRPN={() => setActivePanelId(prev => prev === 'rpn' ? 'tree' : 'rpn')}
           state={state}
         />
 
@@ -619,15 +619,23 @@ function FMEAWorksheetPageContent() {
 
             {/* 구조분석 제목 바는 StructureTab 내부 헤더로 이동됨 (표준화 완료) */}
 
-            {/* ✅ All 탭: 브라우저 스크롤만 사용 (내부 스크롤 제거) */}
+            {/* ✅ All 탭: 좌우 스크롤 지원 (2026-01-12 수정) */}
             {state.tab === 'all' ? (
               <div 
                 id="all-tab-scroll-wrapper"
+                className="worksheet-scroll-container"
                 style={{ 
-                  overflow: 'visible',
+                  flex: 1,
+                  overflowX: 'scroll',
+                  overflowY: 'auto',
                   background: '#fff',
-                  width: '100%',
-                  height: 'auto',
+                  position: 'relative',
+                }}
+                onWheel={(e) => {
+                  // 마우스 휠로 좌우 스크롤 (Shift 없이도 가능)
+                  if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                    e.currentTarget.scrollLeft += e.deltaY;
+                  }
                 }}
               >
                 {/* 전체보기 탭: 통합 화면 (40열 구조) - 원자성 DB 기반 */}
@@ -645,6 +653,7 @@ function FMEAWorksheetPageContent() {
                   visibleSteps={state.visibleSteps || [2, 3, 4, 5, 6]}
                   fmeaId={selectedFmeaId || undefined}
                   useAtomicDB={true}
+                  showRPN={showRPN}
                 />
               </div>
             ) : (
@@ -716,55 +725,39 @@ function FMEAWorksheetPageContent() {
           {/* 워크시트 영역 닫힘 */}
 
           {/* ===== 워크시트-트리뷰 구분선 (2px 네이비) ===== */}
-          {(state.tab !== 'all' && state.tab !== 'failure-link') || activePanelId === '5ap' || activePanelId === '6ap' || activePanelId === 'rpn-chart' ? (
-            <div className="w-[2px] bg-[#1a237e] shrink-0" />
-          ) : null}
+          {/* ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★ */}
+          {/* ★★★ [중요] 고장연결(failure-link) 화면 - 코드 프리즈 ★★★ */}
+          {/* ★★★ 고장연결 화면에는 트리뷰 영역이 필요 없음 ★★★ */}
+          {/* ★★★ UI/UX 수정 절대 금지 - 2026-01-12 ★★★ */}
+          {/* ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★ */}
+          {state.tab !== 'failure-link' && (
+            <>
+              <div className="w-[2px] bg-[#1a237e] shrink-0" />
 
-          {/* ===== 우측: 트리뷰 패널 영역 (350px 통일) ===== */}
-          {((state.tab !== 'all' && state.tab !== 'failure-link') || activePanelId === '5ap' || activePanelId === '6ap' || activePanelId === 'rpn-chart') && (
-          <div className="w-[350px] shrink-0 flex flex-col bg-[#f0f4f8] overflow-hidden h-full">
-            {/* 패널 콘텐츠 (레이지 로딩) - 메뉴는 상단 바로가기 영역에 있음 */}
-            <Suspense fallback={
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                alignItems: 'center', 
-                height: '100%',
-                fontSize: '14px',
-                color: '#666'
-              }}>
-                ⏳ 로딩 중...
+              {/* ===== 우측: 플러그인 패널 영역 (350px 통일) ===== */}
+              <div className="w-[350px] shrink-0 flex flex-col bg-[#f0f4f8] overflow-hidden h-full">
+                {/* 플러그인 패널 콘텐츠 (레이지 로딩) */}
+                <Suspense fallback={
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    alignItems: 'center', 
+                    height: '100%',
+                    fontSize: '14px',
+                    color: '#666'
+                  }}>
+                    ⏳ 로딩 중...
+                  </div>
+                }>
+                  {(() => {
+                    const panel = getPanelById(activePanelId);
+                    if (!panel) return null;
+                    const PanelComponent = panel.component;
+                    return <PanelComponent state={state} setState={setState} />;
+                  })()}
+                </Suspense>
               </div>
-            }>
-              {(() => {
-                const panel = getPanelById(activePanelId);
-                if (!panel) return null;
-                const PanelComponent = panel.component;
-                return <PanelComponent state={state} setState={setState} />;
-              })()}
-            </Suspense>
-
-            {/* 고장연결 결과 트리 */}
-            {state.tab === 'failure-link' && (
-              <FailureLinkResult 
-                state={state} 
-                setState={setState} 
-                setDirty={setDirty} 
-                saveToLocalStorage={saveToLocalStorage} 
-              />
-            )}
-
-            {/* 전체보기 탭: 전체 구조 표시 + AP 테이블 전환 */}
-            {(state.tab === 'all') && (
-              <AllTabRightPanel
-                state={state}
-                showAPInAll={showAPInAll}
-                setShowAPInAll={setShowAPInAll}
-                apStageInAll={apStageInAll}
-                setApStageInAll={setApStageInAll}
-              />
-            )}
-          </div>
+            </>
           )}
         </div>
 

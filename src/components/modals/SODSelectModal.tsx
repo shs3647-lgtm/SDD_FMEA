@@ -32,7 +32,7 @@ interface SODSelectModalProps {
 
 /** 공통 스타일 */
 const tw = {
-  overlay: 'fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center',
+  overlay: 'fixed inset-0 bg-black/50 z-[99999] flex items-center justify-center',
   modal: 'bg-white rounded-xl w-[800px] max-w-[95%] max-h-[80vh] flex flex-col shadow-2xl',
   header: 'text-white py-4 px-5 rounded-t-xl flex justify-between items-center',
   closeBtn: 'bg-white/20 border-none text-white w-7 h-7 rounded cursor-pointer text-base hover:bg-white/30',

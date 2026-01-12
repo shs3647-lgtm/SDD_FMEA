@@ -49,7 +49,10 @@ const initialControlModal: ControlModalState = {
 /**
  * AllTab 모달 관리 훅
  */
-export function useAllTabModals(setState?: React.Dispatch<React.SetStateAction<WorksheetState>>) {
+export function useAllTabModals(
+  setState?: React.Dispatch<React.SetStateAction<WorksheetState>>,
+  setDirty?: React.Dispatch<React.SetStateAction<boolean>>  // ★★★ 2026-01-12: DB 저장 트리거 추가
+) {
   const [sodModal, setSodModal] = useState<SODModalState>(initialSodModal);
   const [controlModal, setControlModal] = useState<ControlModalState>(initialControlModal);
 
@@ -158,6 +161,12 @@ export function useAllTabModals(setState?: React.Dispatch<React.SetStateAction<W
         };
       });
       
+      // ★★★ 2026-01-12: DB 저장 트리거 ★★★
+      if (setDirty) {
+        setDirty(true);
+        console.log('🔥 DB 저장 트리거 (setDirty=true) - 심각도');
+      }
+      
       setSodModal(prev => ({ ...prev, isOpen: false }));
       const targetInfo = sodModal.feText ? `"${sodModal.feText}"` : '전체 FE';
       console.log(`✅ [failure] ${categoryName} ${rating}점 저장 완료 (${targetInfo})`);
@@ -166,10 +175,21 @@ export function useAllTabModals(setState?: React.Dispatch<React.SetStateAction<W
     
     // ★ 리스크분석/최적화 - riskData에 저장
     setState((prevState: WorksheetState) => {
-      console.log('📦 이전 상태:', prevState.riskData);
+      console.log('📦 [handleSODSelect] 이전 riskData 키 개수:', Object.keys(prevState.riskData || {}).length);
       
       let riskKey: string;
       let uniqueKey = '';
+      
+      // ★★★ 2026-01-12: 키 생성 로직 디버깅 ★★★
+      console.log('🔑 [키 생성] 입력값:', {
+        category: sodModal.category,
+        targetType: sodModal.targetType,
+        fmId: sodModal.fmId,
+        fcId: sodModal.fcId,
+        rowIndex: sodModal.rowIndex,
+        feText: sodModal.feText,
+      });
+      
       if (sodModal.category === 'S' && sodModal.feText) {
         // 심각도 (개별 FE 텍스트 기준)
         riskKey = `S-fe-${sodModal.feText}`;
@@ -180,7 +200,10 @@ export function useAllTabModals(setState?: React.Dispatch<React.SetStateAction<W
       } else {
         // 폴백: rowIndex 기반
         riskKey = `${sodModal.targetType}-${sodModal.rowIndex}-${sodModal.category}`;
+        console.log('⚠️ [키 생성] fmId/fcId 없음 → 레거시 키 사용:', riskKey);
       }
+      
+      console.log('🔑 [키 생성] 최종 키:', riskKey, '값:', rating);
       
       let updatedRiskData = {
         ...(prevState.riskData || {}),
@@ -270,6 +293,12 @@ export function useAllTabModals(setState?: React.Dispatch<React.SetStateAction<W
       console.log('✅ 새 상태 반환:', newState.riskData);
       return newState;
     });
+    
+    // ★★★ 2026-01-12: DB 저장 트리거 ★★★
+    if (setDirty) {
+      setDirty(true);
+      console.log('🔥 DB 저장 트리거 (setDirty=true)');
+    }
     
     setSodModal(prev => ({ ...prev, isOpen: false }));
     console.log(`✅ ${categoryName} ${rating}점 저장 완료`);

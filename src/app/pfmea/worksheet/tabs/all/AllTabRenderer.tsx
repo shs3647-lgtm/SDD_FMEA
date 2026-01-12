@@ -272,10 +272,30 @@ export default function AllTabRenderer({
     const dbFeData = feToTextMap.get(feId);
     const dbFcText = fcToTextMap.get(link.fcId || '') || '';
     
+    // ★★★ 2026-01-12: fmText fallback 강화 - 최대한 텍스트 추출 ★★★
+    let finalFmText = link.fmText || link.cache?.fmText || dbFmText || '';
+    
+    // ★ fallback: fmText가 비어있으면 fmId에서 추출 시도
+    if (!finalFmText && fmId) {
+      // state.l2에서 해당 fmId의 mode 검색
+      (state.l2 || []).forEach((proc: any) => {
+        (proc.failureModes || []).forEach((fm: any) => {
+          if (fm.id === fmId) {
+            finalFmText = fm.mode || fm.name || fm.failure || fmId;
+          }
+        });
+      });
+    }
+    
+    // ★ 최후의 fallback: fmId 자체를 표시
+    if (!finalFmText) {
+      finalFmText = fmId || '(고장형태 없음)';
+    }
+    
     return {
       fmId,
-      // ★ fmText: 1순위 link, 2순위 cache, 3순위 DB 조회
-      fmText: link.fmText || link.cache?.fmText || dbFmText,
+      // ★ fmText: 1순위 link, 2순위 cache, 3순위 DB 조회, 4순위 state.l2 검색, 5순위 fmId
+      fmText: finalFmText,
       // ★ L1 역전개 데이터 (완제품명)
       l1ProductName,     // ★ 완제품 공정명
       fmProcessNo,       // ★ 공정번호

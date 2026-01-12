@@ -86,33 +86,60 @@ export default function RPNChart({ state }: RPNChartProps) {
         }
       });
     } else {
-      // 5단계: risk-{idx}-O/D + S-fe-* 패턴
+      // 5단계: risk-*-O/D + 심각도 패턴
+      // ★★★ 근본 원인 수정: 모든 risk-*-O/D 패턴을 찾도록 개선 ★★★
       let maxSeverity = 0;
+      
+      // 1. riskData에서 S-fe-* 패턴 찾기
       Object.keys(riskData).forEach(key => {
-        if (key.startsWith('S-fe-')) {
+        if (key.startsWith('S-fe-') || key.startsWith('S-fm-') || key.startsWith('S-')) {
           const val = Number(riskData[key]) || 0;
           if (val > maxSeverity) maxSeverity = val;
         }
       });
       
-      const allIndices = new Set<number>();
-      Object.keys(riskData).forEach(key => {
-        const match = key.match(/^risk-(\d+)-(O|D)$/);
-        if (match) allIndices.add(parseInt(match[1]));
+      // 2. l1.failureScopes에서 심각도 찾기
+      (state.l1?.failureScopes || []).forEach((fs: any) => {
+        const val = Number(fs.severity) || 0;
+        if (val > maxSeverity) maxSeverity = val;
       });
       
-      allIndices.forEach(idx => {
-        const o = Number(riskData[`risk-${idx}-O`]) || 0;
-        const d = Number(riskData[`risk-${idx}-D`]) || 0;
+      // 3. failureLinks에서 심각도 찾기
+      failureLinks.forEach((link: any) => {
+        const val = Number(link.feSeverity || link.severity) || 0;
+        if (val > maxSeverity) maxSeverity = val;
+      });
+      
+      // ★★★ 모든 uniqueKey 추출 (숫자 + fmId-fcId 형식 모두) ★★★
+      const allUniqueKeys = new Set<string>();
+      Object.keys(riskData).forEach(key => {
+        // 패턴 1: risk-{숫자}-O/D (레거시)
+        const numericMatch = key.match(/^risk-(\d+)-(O|D)$/);
+        if (numericMatch) {
+          allUniqueKeys.add(numericMatch[1]);
+          return;
+        }
+        // 패턴 2: risk-{fmId}-{fcId}-O/D (새 형식)
+        const compositeMatch = key.match(/^risk-(.+)-(O|D)$/);
+        if (compositeMatch) {
+          allUniqueKeys.add(compositeMatch[1]);
+        }
+      });
+      
+      let idx = 0;
+      allUniqueKeys.forEach(uniqueKey => {
+        const o = Number(riskData[`risk-${uniqueKey}-O`]) || 0;
+        const d = Number(riskData[`risk-${uniqueKey}-D`]) || 0;
         const s = maxSeverity;
         
         if (s > 0 && o > 0 && d > 0) {
           const rpn = s * o * d;
           const ap = calculateAP(s, o, d);
-          const link = failureLinks[idx];
+          // failureLinks에서 fmText 찾기
+          const link = failureLinks.find((l: any) => `${l.fmId}-${l.fcId}` === uniqueKey) || failureLinks[idx];
           const fmText = link?.fmText || `FM #${idx + 1}`;
           
-          items.push({ idx, fmText, s, o, d, rpn, ap });
+          items.push({ idx: idx++, fmText, s, o, d, rpn, ap });
         }
       });
     }

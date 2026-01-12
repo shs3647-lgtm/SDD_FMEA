@@ -10,7 +10,6 @@
 import React, { useMemo, useState } from 'react';
 import { WorksheetState } from '../../constants';
 import { RIGHT_PANEL_WIDTH } from '@/styles/layout';
-import SODSelectModal from '@/components/modals/SODSelectModal';
 
 // AP 테이블 데이터 (S, O 범위에 따른 D별 AP 결과)
 const AP_TABLE_DATA: { s: string; sMin: number; sMax: number; o: string; oMin: number; oMax: number; d: ('H' | 'M' | 'L')[] }[] = [
@@ -57,10 +56,7 @@ interface APTable5Props {
 }
 
 interface RiskItem {
-  idx: number;           // 내부 인덱스 (표시용)
-  uniqueKey: string;     // ★ 2026-01-11: 실제 키 (fmId-fcId 또는 숫자)
-  fmId?: string;         // ★ 2026-01-11: 고장형태 ID
-  fmText?: string;       // ★ 2026-01-11: 고장형태 텍스트
+  idx: number;
   s: number;
   o: number;
   d: number;
@@ -91,70 +87,61 @@ export default function APTable5({ state, setState }: APTable5Props) {
     const items: RiskItem[] = [];
     const riskData = state.riskData || {};
     
-    // ★★★ 2026-01-11: 새로운 키 구조 (fmId-fcId) 지원 ★★★
-    // 1. 모든 고유 키 추출 (risk-${fmId}-${fcId}-O 또는 risk-${fmId}-${fcId}-D)
-    const uniqueKeys = new Set<string>();
+    // ★★★ 근본 원인 수정: 모든 risk-*-O/D 패턴을 찾도록 개선 ★★★
+    // 저장 시: risk-{fmId}-{fcId}-O 또는 risk-{숫자}-O 형식
+    // 따라서 모든 uniqueKey를 추출해야 함
+    const allUniqueKeys = new Set<string>();
     Object.keys(riskData).forEach(key => {
-      // 새로운 형식: risk-FM001-FC002-O
-      const newMatch = key.match(/^risk-([^-]+-[^-]+)-(O|D)$/);
-      if (newMatch) {
-        uniqueKeys.add(newMatch[1]); // fmId-fcId
+      // 패턴 1: risk-{숫자}-O/D (레거시)
+      const numericMatch = key.match(/^risk-(\d+)-(O|D)$/);
+      if (numericMatch) {
+        allUniqueKeys.add(numericMatch[1]);
+        return;
       }
-      // 이전 형식 (하위 호환): risk-123-O
-      const oldMatch = key.match(/^risk-(\d+)-(O|D)$/);
-      if (oldMatch) {
-        uniqueKeys.add(oldMatch[1]); // 숫자 인덱스
+      // 패턴 2: risk-{fmId}-{fcId}-O/D (새 형식)
+      const compositeMatch = key.match(/^risk-(.+)-(O|D)$/);
+      if (compositeMatch) {
+        allUniqueKeys.add(compositeMatch[1]);
       }
     });
     
-    // 2. 심각도: 고장분석 단계의 심각도 사용
+    console.log('[APTable5] 추출된 uniqueKey 수:', allUniqueKeys.size);
+    console.log('[APTable5] uniqueKeys 샘플:', Array.from(allUniqueKeys).slice(0, 5));
+    
+    // ★★★ 심각도 계산 개선: riskData + l1.failureScopes + failureLinks 모두 확인 ★★★
     let maxSeverity = 0;
-    const failureScopes = state.l1?.failureScopes || [];
-    const failureLinks = state.failureLinks || [];
     
-    // failureScopes에서 최대 심각도
-    failureScopes.forEach((scope: any) => {
-      if (scope.severity && scope.severity > maxSeverity) {
-        maxSeverity = scope.severity;
+    // 1. riskData에서 S-fe-* 패턴 찾기
+    Object.keys(riskData).forEach(key => {
+      if (key.startsWith('S-fe-') || key.startsWith('S-fm-') || key.startsWith('S-')) {
+        const val = Number(riskData[key]) || 0;
+        if (val > maxSeverity) maxSeverity = val;
       }
     });
     
-    // failureLinks에서 최대 심각도
-    failureLinks.forEach((link: any) => {
-      if (link.severity && link.severity > maxSeverity) {
-        maxSeverity = link.severity;
-      }
+    // 2. l1.failureScopes에서 심각도 찾기
+    (state.l1?.failureScopes || []).forEach((fs: any) => {
+      const val = Number(fs.severity) || 0;
+      if (val > maxSeverity) maxSeverity = val;
     });
     
-    // 3. 고장형태 매핑 생성 (failureLinks에서)
-    const fmMap = new Map<string, string>(); // fmId -> fmText
-    failureLinks.forEach((link: any) => {
-      if (link.fmId && link.fmText) {
-        fmMap.set(link.fmId, link.fmText);
-      }
+    // 3. failureLinks에서 심각도 찾기
+    ((state as any).failureLinks || []).forEach((link: any) => {
+      const val = Number(link.feSeverity || link.severity) || 0;
+      if (val > maxSeverity) maxSeverity = val;
     });
     
-    // 4. 각 고유 키에 대해 리스크 항목 생성
-    let itemIdx = 0;
-    uniqueKeys.forEach(uniqueKey => {
-      const oKey = `risk-${uniqueKey}-O`;
-      const dKey = `risk-${uniqueKey}-D`;
-      const o = Number(riskData[oKey]) || 0;
-      const d = Number(riskData[dKey]) || 0;
+    console.log('[APTable5] 심각도 계산:', { maxSeverity, uniqueKeysCount: allUniqueKeys.size });
+    
+    let idx = 0;
+    allUniqueKeys.forEach(uniqueKey => {
+      const o = Number(riskData[`risk-${uniqueKey}-O`]) || 0;
+      const d = Number(riskData[`risk-${uniqueKey}-D`]) || 0;
       const s = maxSeverity;
       
+      console.log(`[APTable5] uniqueKey=${uniqueKey}: S=${s}, O=${o}, D=${d}`);
+      
       if (s > 0 && o > 0 && d > 0) {
-        // ★★★ 고장형태 정보 추출 (uniqueKey가 "fmId-fcId" 형식인 경우) ★★★
-        let fmId: string | undefined;
-        let fmText: string | undefined;
-        
-        // uniqueKey가 "fmId-fcId" 형식인지 확인 (하이픈 포함)
-        if (uniqueKey.includes('-') && !/^\d+$/.test(uniqueKey)) {
-          // "fmId-fcId" 형식: 첫 번째 부분이 fmId
-          fmId = uniqueKey.split('-')[0];
-          fmText = fmMap.get(fmId);
-        }
-        
         // AP 계산
         let ap: 'H' | 'M' | 'L' = 'L';
         AP_TABLE_DATA.forEach(row => {
@@ -168,10 +155,7 @@ export default function APTable5({ state, setState }: APTable5Props) {
         });
         
         items.push({
-          idx: itemIdx++, // 내부 인덱스 (표시용)
-          uniqueKey,      // ★ 실제 키 저장
-          fmId,           // ★ 고장형태 ID
-          fmText,         // ★ 고장형태 텍스트
+          idx: idx++,
           s,
           o,
           d,
@@ -182,8 +166,9 @@ export default function APTable5({ state, setState }: APTable5Props) {
       }
     });
     
+    console.log('[APTable5] 리스크 항목:', items.length, '개');
     return items;
-  }, [state.riskData, state.l1?.failureScopes, state.failureLinks]);
+  }, [state.riskData, state.l1?.failureScopes, (state as any).failureLinks]);
   
   // 셀별 갯수 계산
   const cellCounts = useMemo(() => {
@@ -228,50 +213,26 @@ export default function APTable5({ state, setState }: APTable5Props) {
     return { hCount: h, mCount: m, lCount: l };
   }, [riskItems]);
   
-  // ★★★ 2026-01-11: 개선 점수 수동 입력 (SOD 모달 사용) ★★★
+  // 개선 적용
   const handleImprove = (idx: number, type: 'O' | 'D') => {
-    const item = riskItems.find(i => i.idx === idx);
-    if (!item) return;
-    
-    const current = type === 'O' ? item.o : item.d;
-    
-    // SOD 모달 열기
-    setSodModal({
-      isOpen: true,
-      category: type,
-      currentValue: current,
-      itemIdx: idx,
-      uniqueKey: item.uniqueKey,
-    });
-  };
-  
-  // SOD 선택 핸들러
-  const handleSODSelect = (rating: number, item?: any) => {
-    if (!sodModal.itemIdx || !sodModal.uniqueKey || !setState) return;
-    
-    const riskItem = riskItems.find(i => i.idx === sodModal.itemIdx);
-    if (!riskItem) return;
-    
-    const type = sodModal.category;
-    const typeName = type === 'O' ? '발생도(예방관리개선)' : '검출도(검출관리개선)';
-    
-    // 점수 변경
-    setState(prev => ({
-      ...prev,
-      riskData: {
-        ...(prev.riskData || {}),
-        [`risk-${sodModal.uniqueKey}-${type}`]: rating,
-      }
-    }));
-    
-    // 개선 완료 표시
-    const key = `${sodModal.uniqueKey}-${type}`;
+    const key = `${idx}-${type}`;
     setImprovedItems(prev => new Set([...prev, key]));
     
-    console.log(`[5AP] ${typeName} 개선: ${sodModal.uniqueKey} = ${riskItem[type === 'O' ? 'o' : 'd']} → ${rating}`);
-    
-    // 모달 닫기
-    setSodModal({ isOpen: false, category: 'O' });
+    // 실제 점수 변경 (setState가 있는 경우)
+    if (setState) {
+      const item = riskItems.find(i => i.idx === idx);
+      if (item) {
+        const current = type === 'O' ? item.o : item.d;
+        const target = getTargetScore(current, type);
+        setState(prev => ({
+          ...prev,
+          riskData: {
+            ...(prev.riskData || {}),
+            [`risk-${idx}-${type}`]: target,
+          }
+        }));
+      }
+    }
   };
   
   const getSeverityRowSpan = (s: string) => AP_TABLE_DATA.filter(r => r.s === s).length;
@@ -304,8 +265,8 @@ export default function APTable5({ state, setState }: APTable5Props) {
             🔧 H→L 개선 제안 ({selectedItems.length}건)
           </div>
           {selectedItems.map(item => {
-            const oImproved = improvedItems.has(`${item.uniqueKey}-O`);
-            const dImproved = improvedItems.has(`${item.uniqueKey}-D`);
+            const oImproved = improvedItems.has(`${item.idx}-O`);
+            const dImproved = improvedItems.has(`${item.idx}-D`);
             const targetO = getTargetScore(item.o, 'O');
             const targetD = getTargetScore(item.d, 'D');
             
@@ -315,14 +276,8 @@ export default function APTable5({ state, setState }: APTable5Props) {
                   <span className="font-semibold">항목 #{item.idx + 1}</span>
                   <span className="text-gray-500">S:{item.s} O:{item.o} D:{item.d}</span>
                 </div>
-                {/* ★★★ 2026-01-11: 고장형태 표시 ★★★ */}
-                {item.fmText && (
-                  <div className="text-[9px] text-gray-600 mb-1 font-medium">
-                    고장형태: {item.fmText}
-                  </div>
-                )}
                 <div className="flex gap-2">
-                  {/* 예방관리 개선 (수동 입력) */}
+                  {/* 예방관리 개선 */}
                   <button
                     onClick={() => handleImprove(item.idx, 'O')}
                     disabled={oImproved}
@@ -331,11 +286,10 @@ export default function APTable5({ state, setState }: APTable5Props) {
                         ? 'bg-green-100 text-green-700' 
                         : 'bg-orange-400 text-white hover:bg-orange-500'
                     }`}
-                    title={oImproved ? '이미 개선 완료' : '클릭하여 발생도(예방관리개선) 점수 수동 입력'}
                   >
-                    {oImproved ? '✓ 예방개선 완료' : `예방관리 O:${item.o}→입력`}
+                    {oImproved ? '✓ 예방개선 완료' : `예방관리 O:${item.o}→${targetO}`}
                   </button>
-                  {/* 검출관리 개선 (수동 입력) */}
+                  {/* 검출관리 개선 */}
                   <button
                     onClick={() => handleImprove(item.idx, 'D')}
                     disabled={dImproved}
@@ -344,9 +298,8 @@ export default function APTable5({ state, setState }: APTable5Props) {
                         ? 'bg-green-100 text-green-700' 
                         : 'bg-orange-400 text-white hover:bg-orange-500'
                     }`}
-                    title={dImproved ? '이미 개선 완료' : '클릭하여 검출도(검출관리개선) 점수 수동 입력'}
                   >
-                    {dImproved ? '✓ 검출개선 완료' : `검출관리 D:${item.d}→입력`}
+                    {dImproved ? '✓ 검출개선 완료' : `검출관리 D:${item.d}→${targetD}`}
                   </button>
                 </div>
               </div>
@@ -434,16 +387,6 @@ export default function APTable5({ state, setState }: APTable5Props) {
           L
         </span>
       </div>
-      
-      {/* ★★★ 2026-01-11: SOD 선택 모달 (예방관리개선/검출관리개선 수동 입력) ★★★ */}
-      <SODSelectModal
-        isOpen={sodModal.isOpen}
-        onClose={() => setSodModal({ isOpen: false, category: 'O' })}
-        onSelect={handleSODSelect}
-        category={sodModal.category}
-        fmeaType="P-FMEA"
-        currentValue={sodModal.currentValue}
-      />
     </div>
   );
 }
