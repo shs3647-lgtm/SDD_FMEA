@@ -53,6 +53,9 @@ const IMPORTANT_TABLES = [
   
   // ===== 프로젝트별: 백업 (pfmea_...) =====
   { name: 'fmea_legacy_data', label: '📦 전체JSON 백업', desc: '프로젝트: 무결성 보장용 전체 JSON', scope: 'project' },
+  
+  // ===== 공용: 습득교훈 (Lessons Learned) =====
+  { name: 'lessons_learned', label: '📚 습득교훈(LLD)', desc: '공용: FMEA 습득교훈 데이터', scope: 'public' },
 ];
 
 export default function DbViewerPage() {

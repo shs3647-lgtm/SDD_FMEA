@@ -50,6 +50,7 @@ interface RiskOptCellRendererProps {
   setControlModal?: React.Dispatch<React.SetStateAction<ControlModalState>>;
   handleSODClick: (category: 'S' | 'O' | 'D', targetType: 'risk' | 'opt', rowIndex: number, currentValue?: number, scope?: string, feId?: string, feText?: string, fmId?: string, fcId?: string) => void;
   setApModal: React.Dispatch<React.SetStateAction<{ isOpen: boolean; stage: 5 | 6; data: any[] }>>;
+  openLldModal?: (rowIndex: number, currentValue?: string, fmId?: string, fcId?: string) => void;  // ★ LLD 모달
 }
 
 /** 컬럼명과 필드 매핑 */
@@ -289,6 +290,7 @@ export function RiskOptCellRenderer({
   setControlModal,
   handleSODClick,
   setApModal,
+  openLldModal,  // ★ LLD 모달
 }: RiskOptCellRendererProps): React.ReactElement | null {
   // ★★★★★ 디버깅: 컬럼 정보 확인 ★★★★★
   if (col.name === '발생도' && rowInFM === 0 && globalRowIdx < 3) {
@@ -565,8 +567,42 @@ export function RiskOptCellRenderer({
     );
   }
 
-  // ★ 텍스트 입력 셀 (습득교훈, 개선결과근거, 책임자성명, 비고)
-  if (FIELD_MAP[col.name] && !col.name.includes('일자')) {
+  // ★★★ 습득교훈 셀: LLD 모달 연동 + 클릭 시 LLD 화면 이동 ★★★
+  if (col.name === '습득교훈') {
+    const uniqueKey = (fmId && fcId) ? `${fmId}-${fcId}` : String(globalRowIdx);
+    const key = `lesson-${uniqueKey}`;
+    const value = (state?.riskData?.[key] as string) || '';
+    const isLldNo = value.startsWith('LLD'); // LLD26-001 형식인지 확인
+    
+    return (
+      <td 
+        key={colIdx} 
+        rowSpan={fcRowSpan} 
+        onClick={() => {
+          // LLD_No가 있으면 LLD 화면으로 이동
+          if (isLldNo) {
+            window.open('/pfmea/lessons-learned', '_blank');
+          } else if (openLldModal) {
+            // LLD 모달 열기
+            openLldModal(globalRowIdx, value, fmId, fcId);
+          }
+        }}
+        style={{ 
+          ...style, 
+          cursor: 'pointer',
+          color: isLldNo ? '#00587a' : '#666',
+          fontWeight: isLldNo ? 600 : 400,
+          textDecoration: isLldNo ? 'underline' : 'none',
+        }}
+        title={isLldNo ? `${value} 클릭하여 습득교훈 상세 보기` : '클릭하여 습득교훈 선택'}
+      >
+        {value || ''}
+      </td>
+    );
+  }
+
+  // ★ 텍스트 입력 셀 (개선결과근거, 책임자성명, 비고)
+  if (FIELD_MAP[col.name] && !col.name.includes('일자') && col.name !== '습득교훈') {
     const field = FIELD_MAP[col.name];
     // ★★★ 2026-01-11: 최적화 단계는 fmId-fcId 기반 키 사용 ★★★
     const uniqueKey = (col.step === '최적화' && fmId && fcId) ? `${fmId}-${fcId}` : String(globalRowIdx);

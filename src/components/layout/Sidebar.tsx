@@ -97,6 +97,7 @@ const pfmeaSubItems = [
   { label: 'New FMEA', href: '/pfmea/worksheet' },
   { label: 'FMEA4판', href: '/pfmea/fmea4' },
   { label: '개정관리', href: '/pfmea/revision' },
+  { label: '📚 습득교훈', href: '/pfmea/lessons-learned' },
 ];
 
 // 메뉴 아이템 정의

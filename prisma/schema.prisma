@@ -739,3 +739,30 @@ model BizInfoProject {
   @@index([productName])
   @@map("bizinfo_projects")
 }
+
+// ============================================================================
+// ============ 습득교훈 (Lessons Learned) ============
+// ============================================================================
+
+model LessonsLearned {
+  id          String   @id @default(uuid())
+  lldNo       String   @unique // LLD26-001 형식 시리얼 번호
+  vehicle     String   // 차종
+  target      String   // 대상: '설계' | '부품' | '제조'
+  failureMode String   // 고장형태
+  location    String?  // 발생장소
+  cause       String   // 발생원인
+  category    String   // 구분: '예방관리' | '검출관리'
+  improvement String   // 개선대책
+  result      String?  // 적용결과: 'FMEA' | 'CP' | 'PM' 등
+  status      String   @default("R") // 상태: 'G' (완료) | 'Y' (진행중) | 'R' (미완료)
+  date        String?  // 완료일자 (YYYY-MM-DD)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([lldNo])
+  @@index([vehicle])
+  @@index([target])
+  @@index([status])
+  @@map("lessons_learned")
+}

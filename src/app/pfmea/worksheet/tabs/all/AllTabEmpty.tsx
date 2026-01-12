@@ -15,6 +15,7 @@ import { border } from '@/styles/worksheet';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 import SODSelectModal from '@/components/modals/SODSelectModal';
 import APResultModal from '@/components/modals/APResultModal';
+import LLDSelectModal from '@/components/modals/LLDSelectModal';
 import { useAllTabModals } from './hooks/useAllTabModals';
 import { calculateAP } from './apCalculator';
 import { RiskOptCellRenderer } from './RiskOptCellRenderer';
@@ -75,6 +76,10 @@ export default function AllTabEmpty({
     closeSodModal,
     handleSODClick,
     handleSODSelect,
+    lldModal,
+    openLldModal,
+    closeLldModal,
+    handleLldSelect,
   } = useAllTabModals(setState, setDirty);
   
   // AP 모달 상태 (5AP/6AP 결과)
@@ -585,6 +590,7 @@ export default function AllTabEmpty({
                             setControlModal={setControlModal}
                             handleSODClick={handleSODClick}
                             setApModal={setApModal}
+                            openLldModal={openLldModal}
                           />
                         );
                       }
@@ -973,6 +979,14 @@ export default function AllTabEmpty({
         fmeaType="P-FMEA"
         currentValue={sodModal.currentValue}
         scope={sodModal.scope}
+      />
+
+      {/* ★ LLD 선택 모달 (습득교훈) */}
+      <LLDSelectModal
+        isOpen={lldModal.isOpen}
+        onClose={closeLldModal}
+        onSelect={handleLldSelect}
+        currentValue={lldModal.currentValue}
       />
       
       {/* AP 결과 모달 (5AP/6AP) */}

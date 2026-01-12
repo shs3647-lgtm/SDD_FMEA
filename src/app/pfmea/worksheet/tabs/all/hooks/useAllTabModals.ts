@@ -46,6 +46,21 @@ const initialControlModal: ControlModalState = {
   rowIndex: -1
 };
 
+/** LLD 모달 상태 타입 */
+export interface LLDModalState {
+  isOpen: boolean;
+  rowIndex: number;
+  fmId?: string;
+  fcId?: string;
+  currentValue?: string;
+}
+
+/** 초기 LLD 모달 상태 */
+const initialLldModal: LLDModalState = {
+  isOpen: false,
+  rowIndex: -1
+};
+
 /**
  * AllTab 모달 관리 훅
  */
@@ -55,6 +70,7 @@ export function useAllTabModals(
 ) {
   const [sodModal, setSodModal] = useState<SODModalState>(initialSodModal);
   const [controlModal, setControlModal] = useState<ControlModalState>(initialControlModal);
+  const [lldModal, setLldModal] = useState<LLDModalState>(initialLldModal);
 
   /** SOD 셀 클릭 핸들러 */
   const handleSODClick = (
@@ -304,7 +320,7 @@ export function useAllTabModals(
     console.log(`✅ ${categoryName} ${rating}점 저장 완료`);
   };
 
-  /** 습득교훈 텍스트 입력 핸들러 */
+  /** 습득교훈 텍스트 입력 핸들러 (레거시) */
   const handleLessonInput = (rowIndex: number, value: string) => {
     if (setState) {
       setState((prev: WorksheetState) => ({
@@ -315,6 +331,44 @@ export function useAllTabModals(
         }
       }));
     }
+  };
+
+  /** ★ LLD 모달 열기 (습득교훈 셀 클릭 시) */
+  const openLldModal = (rowIndex: number, currentValue?: string, fmId?: string, fcId?: string) => {
+    console.log('🔥 LLD 모달 열기:', { rowIndex, currentValue, fmId, fcId });
+    setLldModal({ isOpen: true, rowIndex, currentValue, fmId, fcId });
+  };
+
+  /** ★ LLD 모달 닫기 */
+  const closeLldModal = () => {
+    setLldModal(prev => ({ ...prev, isOpen: false }));
+  };
+
+  /** ★ LLD 선택 완료 핸들러 */
+  const handleLldSelect = (lldNo: string) => {
+    if (!setState || lldModal.rowIndex < 0) return;
+    
+    // ★ fmId-fcId 기반 키 또는 rowIndex 기반 키
+    const key = (lldModal.fmId && lldModal.fcId) 
+      ? `lesson-${lldModal.fmId}-${lldModal.fcId}` 
+      : `lesson-${lldModal.rowIndex}`;
+    
+    console.log('✅ LLD 선택:', { lldNo, key });
+    
+    setState((prev: WorksheetState) => ({
+      ...prev,
+      riskData: {
+        ...(prev.riskData || {}),
+        [key]: lldNo
+      }
+    }));
+    
+    if (setDirty) {
+      setDirty(true);
+      console.log('🔥 DB 저장 트리거 (setDirty=true)');
+    }
+    
+    closeLldModal();
   };
 
   /** 컨트롤 모달 열기 */
@@ -337,12 +391,17 @@ export function useAllTabModals(
     setSodModal,
     controlModal,
     setControlModal,
+    lldModal,
+    setLldModal,
     handleSODClick,
     handleSODSelect,
     handleLessonInput,
     openControlModal,
     closeControlModal,
-    closeSodModal
+    closeSodModal,
+    openLldModal,
+    closeLldModal,
+    handleLldSelect
   };
 }
 
