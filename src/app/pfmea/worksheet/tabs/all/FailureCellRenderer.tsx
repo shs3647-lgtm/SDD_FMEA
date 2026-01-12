@@ -114,12 +114,24 @@ export function FailureCellRenderer({
   };
 
   // ★ 고장영향(FE) - FE별 병합, 클릭하여 점수 부여
+  // ★ 2026-01-12: 심각도 표시를 Y:N / S:N / U:N 으로 변경 (YP/SP/USER 구분)
   if (col.name === '고장영향(FE)') {
     // ★ rowSpan=0이면 병합된 범위 → 렌더링 안함
     if (row.feRowSpan === 0) return null;
     // 누적 범위 체크: 이전 행의 feRowSpan 범위 안에 있으면 렌더링하지 않음
     if (rowInFM === 0 || !isInMergedRange('fe')) {
-      const severityDisplay = row.feSeverity > 0 ? ` (S${row.feSeverity})` : '';
+      // ★ 카테고리별 심각도 표시: Y(Your Plant), S(Ship to Plant), U(User)
+      const getCategoryPrefix = (category: string): string => {
+        if (!category) return 'S';  // 기본값
+        const cat = category.toLowerCase();
+        if (cat.includes('your') || cat === 'yp') return 'Y';
+        if (cat.includes('ship') || cat === 'sp') return 'S';
+        if (cat.includes('user') || cat === 'u') return 'U';
+        return 'S';  // 기본값
+      };
+      const prefix = getCategoryPrefix(row.feCategory);
+      const severityDisplay = row.feSeverity > 0 ? ` (${prefix}:${row.feSeverity})` : '';
+      
       return (
         <td 
           key={colIdx} 
@@ -138,7 +150,7 @@ export function FailureCellRenderer({
               handleSODClick('S', 'failure', globalRowIdx, row.feSeverity, row.feCategory, row.feId, row.feText);
             }
           }}
-          title={`클릭하여 "${row.feText}" 심각도 설정`}
+          title={`클릭하여 "${row.feText}" 심각도 설정 (${row.feCategory || '미분류'})`}
         >
           <span style={{ fontWeight: row.feSeverity > 0 ? 600 : 400 }}>
             {row.feText}

@@ -61,6 +61,21 @@ const initialLldModal: LLDModalState = {
   rowIndex: -1
 };
 
+/** 사용자 선택 모달 상태 타입 */
+export interface UserModalState {
+  isOpen: boolean;
+  rowIndex: number;
+  fmId?: string;
+  fcId?: string;
+  currentValue?: string;
+}
+
+/** 초기 사용자 모달 상태 */
+const initialUserModal: UserModalState = {
+  isOpen: false,
+  rowIndex: -1
+};
+
 /**
  * AllTab 모달 관리 훅
  */
@@ -71,6 +86,7 @@ export function useAllTabModals(
   const [sodModal, setSodModal] = useState<SODModalState>(initialSodModal);
   const [controlModal, setControlModal] = useState<ControlModalState>(initialControlModal);
   const [lldModal, setLldModal] = useState<LLDModalState>(initialLldModal);
+  const [userModal, setUserModal] = useState<UserModalState>(initialUserModal);
 
   /** SOD 셀 클릭 핸들러 */
   const handleSODClick = (
@@ -409,6 +425,40 @@ export function useAllTabModals(
     setSodModal(prev => ({ ...prev, isOpen: false }));
   };
 
+  /** 사용자 모달 열기 */
+  const openUserModal = (rowIndex: number, currentValue?: string, fmId?: string, fcId?: string) => {
+    console.log('👤 사용자 모달 열기:', { rowIndex, currentValue, fmId, fcId });
+    setUserModal({ isOpen: true, rowIndex, currentValue, fmId, fcId });
+  };
+
+  /** 사용자 모달 닫기 */
+  const closeUserModal = () => {
+    setUserModal(prev => ({ ...prev, isOpen: false }));
+  };
+
+  /** 사용자 선택 처리 */
+  const handleUserSelect = (user: { id: string; name: string; department?: string; position?: string }) => {
+    if (!setState || userModal.rowIndex < 0) return;
+
+    // fmId-fcId 기반 키 생성
+    const key = (userModal.fmId && userModal.fcId)
+      ? `person-opt-${userModal.fmId}-${userModal.fcId}`
+      : `person-opt-${userModal.rowIndex}`;
+
+    console.log('👤 사용자 선택:', { key, user });
+
+    setState((prev: WorksheetState) => ({
+      ...prev,
+      riskData: {
+        ...(prev.riskData || {}),
+        [key]: user.name  // 사용자 이름만 저장
+      }
+    }));
+
+    if (setDirty) setDirty(true);
+    closeUserModal();
+  };
+
   return {
     sodModal,
     setSodModal,
@@ -416,6 +466,8 @@ export function useAllTabModals(
     setControlModal,
     lldModal,
     setLldModal,
+    userModal,
+    setUserModal,
     handleSODClick,
     handleSODSelect,
     handleLessonInput,
@@ -424,7 +476,10 @@ export function useAllTabModals(
     closeSodModal,
     openLldModal,
     closeLldModal,
-    handleLldSelect
+    handleLldSelect,
+    openUserModal,
+    closeUserModal,
+    handleUserSelect
   };
 }
 

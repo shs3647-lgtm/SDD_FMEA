@@ -51,6 +51,7 @@ interface RiskOptCellRendererProps {
   handleSODClick: (category: 'S' | 'O' | 'D', targetType: 'risk' | 'opt', rowIndex: number, currentValue?: number, scope?: string, feId?: string, feText?: string, fmId?: string, fcId?: string) => void;
   setApModal: React.Dispatch<React.SetStateAction<{ isOpen: boolean; stage: 5 | 6; data: any[] }>>;
   openLldModal?: (rowIndex: number, currentValue?: string, fmId?: string, fcId?: string) => void;  // ★ LLD 모달
+  openUserModal?: (rowIndex: number, currentValue?: string, fmId?: string, fcId?: string) => void;  // ★ 사용자 선택 모달
 }
 
 /** 컬럼명과 필드 매핑 */
@@ -290,7 +291,8 @@ export function RiskOptCellRenderer({
   setControlModal,
   handleSODClick,
   setApModal,
-  openLldModal,  // ★ LLD 모달
+  openLldModal,   // ★ LLD 모달
+  openUserModal,  // ★ 사용자 선택 모달
 }: RiskOptCellRendererProps): React.ReactElement | null {
   // ★★★★★ 디버깅: 컬럼 정보 확인 ★★★★★
   if (col.name === '발생도' && rowInFM === 0 && globalRowIdx < 3) {
@@ -393,6 +395,7 @@ export function RiskOptCellRenderer({
 
   // ★ 심각도(재평가) / 발생도(재평가) / 검출도(재평가) 셀 (최적화 단계)
   // ★ 클릭 → SOD 모달 팝업
+  // ★★★ 2026-01-12: 목표완료일자 입력 행만 발생도/검출도 표시 ★★★
   const reEvalMap: Record<string, 'S' | 'O' | 'D'> = {
     '심각도': 'S',
     '발생도': 'O',
@@ -408,6 +411,22 @@ export function RiskOptCellRenderer({
     const key = `opt-${uniqueKey}-${category}`;
     const rawValue = state?.riskData?.[key];
     const categoryName = col.name;
+    
+    // ★★★ 목표완료일자 체크 - 발생도/검출도는 목표완료일자가 있어야만 표시 ★★★
+    const targetDateKey = `targetDate-opt-${uniqueKey}`;
+    const hasTargetDate = !!state?.riskData?.[targetDateKey];
+    
+    // 발생도/검출도는 목표완료일자가 입력된 행만 표시 (심각도는 항상 표시)
+    if ((category === 'O' || category === 'D') && !hasTargetDate) {
+      return (
+        <td 
+          key={colIdx} 
+          rowSpan={fcRowSpan} 
+          style={{ ...style, cursor: 'default' }}
+          title="목표완료일자를 먼저 입력하세요"
+        />
+      );
+    }
     
     // ★★★★★ 숫자만 허용, 문자열/객체/null/undefined 모두 무시 ★★★★★
     let currentValue: number = 0;
@@ -601,68 +620,151 @@ export function RiskOptCellRenderer({
     );
   }
 
-  // ★ 텍스트 입력 셀 (개선결과근거, 책임자성명, 비고)
-  if (FIELD_MAP[col.name] && !col.name.includes('일자') && col.name !== '습득교훈') {
-    const field = FIELD_MAP[col.name];
-    // ★★★ 2026-01-11: 최적화 단계는 fmId-fcId 기반 키 사용 ★★★
+  // ★★★ 책임자성명 셀 - 사용자 선택 모달 연동 ★★★
+  // ★ 2026-01-12: 목표완료일자 없으면 빈 셀
+  if (col.name === '책임자성명') {
     const uniqueKey = (col.step === '최적화' && fmId && fcId) ? `${fmId}-${fcId}` : String(globalRowIdx);
+    const targetDateKey = `targetDate-opt-${uniqueKey}`;
+    const hasTargetDate = !!state?.riskData?.[targetDateKey];
+    
+    if (!hasTargetDate) {
+      return <td key={colIdx} rowSpan={fcRowSpan} style={{ ...style, cursor: 'default' }} />;
+    }
+    
+    const field = FIELD_MAP[col.name];
     const key = `${field}-${col.step === '최적화' ? 'opt-' : ''}${uniqueKey}`;
     const value = (state?.riskData?.[key] as string) || '';
     return (
-      <td key={colIdx} rowSpan={fcRowSpan} onDoubleClick={() => {
-        if (!setState) return;
-        const newValue = prompt(`${col.name}을(를) 입력하세요:`, value);
-        if (newValue !== null) {
-          setState((prev: WorksheetState) => ({ ...prev, riskData: { ...(prev.riskData || {}), [key]: newValue } }));
-          if (setDirty) setDirty(true);
-        }
-      }} style={style}>
+      <td 
+        key={colIdx} 
+        rowSpan={fcRowSpan} 
+        onClick={() => openUserModal?.(globalRowIdx, value, fmId, fcId)}
+        style={{ ...style, cursor: 'pointer' }}
+        title={value ? value : '클릭하여 책임자 선택'}
+      >
         {value}
       </td>
     );
   }
 
-  // ★ 날짜 입력 셀 (목표완료일자, 완료일자)
+  // ★★★ 개선결과근거/비고 - 인라인 텍스트 입력 (자동저장) ★★★
+  // ★ 2026-01-12: 비고는 목표완료일자 없으면 빈 셀, placeholder 제거
+  if (FIELD_MAP[col.name] && !col.name.includes('일자') && col.name !== '습득교훈' && col.name !== '책임자성명') {
+    const field = FIELD_MAP[col.name];
+    const uniqueKey = (col.step === '최적화' && fmId && fcId) ? `${fmId}-${fcId}` : String(globalRowIdx);
+    
+    // 비고 컬럼은 목표완료일자 체크
+    if (col.name === '비고') {
+      const targetDateKey = `targetDate-opt-${uniqueKey}`;
+      const hasTargetDate = !!state?.riskData?.[targetDateKey];
+      if (!hasTargetDate) {
+        return <td key={colIdx} rowSpan={fcRowSpan} style={{ ...style, cursor: 'default' }} />;
+      }
+    }
+    
+    const key = `${field}-${col.step === '최적화' ? 'opt-' : ''}${uniqueKey}`;
+    const value = (state?.riskData?.[key] as string) || '';
+    return (
+      <td key={colIdx} rowSpan={fcRowSpan} style={{ ...style, padding: 0 }}>
+        <input
+          type="text"
+          defaultValue={value}
+          placeholder=""
+          onBlur={(e) => {
+            if (!setState) return;
+            const newValue = e.target.value;
+            if (newValue !== value) {
+              setState((prev: WorksheetState) => ({ ...prev, riskData: { ...(prev.riskData || {}), [key]: newValue } }));
+              if (setDirty) setDirty(true);
+            }
+          }}
+          className="w-full h-full bg-transparent text-[10px] px-1 py-0 border-0 outline-none focus:ring-1 focus:ring-blue-400"
+          style={{ minHeight: `${HEIGHTS.body - 2}px` }}
+        />
+      </td>
+    );
+  }
+
+  // ★★★ 날짜 입력 셀 (목표완료일자, 완료일자) - 달력 선택 ★★★
+  // ★ 2026-01-12: 완료일자는 목표완료일자 없으면 빈 셀
   if (col.name === '목표완료일자' || col.name === '완료일자') {
     const field = FIELD_MAP[col.name];
-    // ★★★ 2026-01-11: 최적화 단계는 fmId-fcId 기반 키 사용 ★★★
     const uniqueKey = (col.step === '최적화' && fmId && fcId) ? `${fmId}-${fcId}` : String(globalRowIdx);
+    
+    // 완료일자는 목표완료일자 체크
+    if (col.name === '완료일자') {
+      const targetDateKey = `targetDate-opt-${uniqueKey}`;
+      const hasTargetDate = !!state?.riskData?.[targetDateKey];
+      if (!hasTargetDate) {
+        return <td key={colIdx} rowSpan={fcRowSpan} style={{ ...style, cursor: 'default' }} />;
+      }
+    }
+    
     const key = `${field}-${col.step === '최적화' ? 'opt-' : ''}${uniqueKey}`;
     const value = (state?.riskData?.[key] as string) || '';
     return (
-      <td key={colIdx} rowSpan={fcRowSpan} onDoubleClick={() => {
-        if (!setState) return;
-        const newValue = prompt(`${col.name}을(를) 입력하세요 (YYYY-MM-DD):`, value);
-        if (newValue !== null) {
-          if (newValue && !/^\d{4}-\d{2}-\d{2}$/.test(newValue)) { alert('날짜 형식이 올바르지 않습니다.'); return; }
-          setState((prev: WorksheetState) => ({ ...prev, riskData: { ...(prev.riskData || {}), [key]: newValue } }));
-          if (setDirty) setDirty(true);
-        }
-      }} style={style}>
-        {value}
+      <td key={colIdx} rowSpan={fcRowSpan} style={{ ...style, padding: 0 }}>
+        <input
+          type="date"
+          value={value}
+          onChange={(e) => {
+            if (!setState) return;
+            const newValue = e.target.value;
+            setState((prev: WorksheetState) => ({ ...prev, riskData: { ...(prev.riskData || {}), [key]: newValue } }));
+            if (setDirty) setDirty(true);
+          }}
+          className="w-full h-full bg-transparent text-[9px] px-0.5 py-0 border-0 outline-none focus:ring-1 focus:ring-blue-400"
+          style={{ minHeight: `${HEIGHTS.body - 2}px`, color: value ? '#333' : 'transparent' }}
+        />
       </td>
     );
   }
 
-  // ★ 상태 셀
+  // ★★★ 상태 셀 - 드롭다운 선택 ★★★
+  // ★ 2026-01-12: 목표완료일자 없으면 빈 셀, placeholder 제거
   if (col.name === '상태') {
-    // ★★★ 2026-01-11: 최적화 단계는 fmId-fcId 기반 키 사용 ★★★
     const uniqueKey = (col.step === '최적화' && fmId && fcId) ? `${fmId}-${fcId}` : String(globalRowIdx);
+    
+    // 목표완료일자 체크
+    const targetDateKey = `targetDate-opt-${uniqueKey}`;
+    const hasTargetDate = !!state?.riskData?.[targetDateKey];
+    if (!hasTargetDate) {
+      return <td key={colIdx} rowSpan={fcRowSpan} style={{ ...style, cursor: 'default' }} />;
+    }
+    
     const key = `status-${col.step === '최적화' ? 'opt-' : ''}${uniqueKey}`;
     const value = (state?.riskData?.[key] as string) || '';
+    
+    // 상태별 색상
+    const statusColors: Record<string, string> = {
+      '대기': '#9e9e9e',
+      '진행중': '#2196f3',
+      '완료': '#4caf50',
+      '보류': '#ff9800'
+    };
+    
     return (
-      <td key={colIdx} rowSpan={fcRowSpan} onDoubleClick={() => {
-        if (!setState) return;
-        const selected = prompt(`상태를 선택하세요:\n${STATUS_OPTIONS.map((opt, idx) => `${idx + 1}. ${opt}`).join('\n')}\n\n번호 입력:`, value ? String(STATUS_OPTIONS.indexOf(value) + 1) : '');
-        if (selected !== null) {
-          const idx = parseInt(selected) - 1;
-          if (idx >= 0 && idx < STATUS_OPTIONS.length) {
-            setState((prev: WorksheetState) => ({ ...prev, riskData: { ...(prev.riskData || {}), [key]: STATUS_OPTIONS[idx] } }));
+      <td key={colIdx} rowSpan={fcRowSpan} style={{ ...style, padding: 0 }}>
+        <select
+          value={value}
+          onChange={(e) => {
+            if (!setState) return;
+            const newValue = e.target.value;
+            setState((prev: WorksheetState) => ({ ...prev, riskData: { ...(prev.riskData || {}), [key]: newValue } }));
             if (setDirty) setDirty(true);
-          }
-        }
-      }} style={style}>
-        {value}
+          }}
+          className="w-full h-full bg-transparent text-[9px] px-0 py-0 border-0 outline-none cursor-pointer"
+          style={{ 
+            minHeight: `${HEIGHTS.body - 2}px`,
+            color: statusColors[value] || 'transparent',
+            fontWeight: value ? 600 : 400
+          }}
+        >
+          <option value=""></option>
+          {STATUS_OPTIONS.map(opt => (
+            <option key={opt} value={opt} style={{ color: statusColors[opt] }}>{opt}</option>
+          ))}
+        </select>
       </td>
     );
   }
@@ -688,9 +790,25 @@ export function RiskOptCellRenderer({
   }
 
   // ★ 특별특성(재평가) 셀 - 최적화 단계
+  // ★★★ 2026-01-12: 목표완료일자 입력 행만 표시 ★★★
   if (col.name === '특별특성' && col.step === '최적화') {
-    // ★★★ 2026-01-11: fmId-fcId 기반 키 사용 ★★★
     const uniqueKey = fmId && fcId ? `${fmId}-${fcId}` : String(globalRowIdx);
+    
+    // ★★★ 목표완료일자 체크 - 특별특성은 목표완료일자가 있어야만 표시 ★★★
+    const targetDateKey = `targetDate-opt-${uniqueKey}`;
+    const hasTargetDate = !!state?.riskData?.[targetDateKey];
+    
+    if (!hasTargetDate) {
+      return (
+        <td 
+          key={colIdx} 
+          rowSpan={fcRowSpan} 
+          style={{ ...style, cursor: 'default' }}
+          title="목표완료일자를 먼저 입력하세요"
+        />
+      );
+    }
+    
     const key = `specialChar-opt-${uniqueKey}`;
     const value = state?.riskData?.[key] || '';
     return (
@@ -698,7 +816,7 @@ export function RiskOptCellRenderer({
         if (setControlModal) {
           setControlModal({ isOpen: true, type: 'specialChar', rowIndex: globalRowIdx, fmId, fcId });
         }
-      }} style={style}>
+      }} style={{ ...style, cursor: 'pointer' }}>
         {value}
       </td>
     );

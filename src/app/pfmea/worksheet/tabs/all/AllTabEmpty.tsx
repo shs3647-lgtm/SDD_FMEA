@@ -16,6 +16,7 @@ import DataSelectModal from '@/components/modals/DataSelectModal';
 import SODSelectModal from '@/components/modals/SODSelectModal';
 import APResultModal from '@/components/modals/APResultModal';
 import LLDSelectModal from '@/components/modals/LLDSelectModal';
+import { UserSelectModal } from '@/components/modals/UserSelectModal';
 import { useAllTabModals } from './hooks/useAllTabModals';
 import { calculateAP } from './apCalculator';
 import { RiskOptCellRenderer } from './RiskOptCellRenderer';
@@ -80,6 +81,10 @@ export default function AllTabEmpty({
     openLldModal,
     closeLldModal,
     handleLldSelect,
+    openUserModal,
+    closeUserModal,
+    handleUserSelect,
+    userModal,
   } = useAllTabModals(setState, setDirty);
   
   // AP 모달 상태 (5AP/6AP 결과)
@@ -591,6 +596,7 @@ export default function AllTabEmpty({
                             handleSODClick={handleSODClick}
                             setApModal={setApModal}
                             openLldModal={openLldModal}
+                            openUserModal={openUserModal}
                           />
                         );
                       }
@@ -988,6 +994,14 @@ export default function AllTabEmpty({
         onSelect={handleLldSelect}
         currentValue={lldModal.currentValue}
         fmeaId={state?.fmeaId || 'pfm26-001'}  // ★ 현재 FMEA ID 전달
+      />
+      
+      {/* ★ 사용자 선택 모달 (책임자성명) */}
+      <UserSelectModal
+        isOpen={userModal.isOpen}
+        onClose={closeUserModal}
+        onSelect={handleUserSelect}
+        currentValue={userModal.currentValue}
       />
       
       {/* AP 결과 모달 (5AP/6AP) */}
