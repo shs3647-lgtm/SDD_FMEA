@@ -18,7 +18,7 @@ export const COLORS = {
   function: {
     division: { header: '#1565c0', headerLight: '#42a5f5', cell: '#e3f2fd', cellAlt: '#bbdefb' },
     productFunc: { header: '#1976d2', headerLight: '#64b5f6', cell: '#e1f5fe', cellAlt: '#b3e5fc' },
-    requirement: { header: '#0277bd', headerLight: '#4fc3f7', cell: '#e0f7fa', cellAlt: '#b2ebf2' },
+    requirement: { header: '#7b1fa2', headerLight: '#ba68c8', cell: '#f3e5f5', cellAlt: '#e1bee7' },
     processFunc: { header: '#2e7d32', headerLight: '#66bb6a', cell: '#e8f5e9', cellAlt: '#c8e6c9' },
     productChar: { header: '#388e3c', headerLight: '#81c784', cell: '#f1f8e9', cellAlt: '#dcedc8' },
     workFunc: { header: '#ef6c00', headerLight: '#ffa726', cell: '#fff3e0', cellAlt: '#ffe0b2' },

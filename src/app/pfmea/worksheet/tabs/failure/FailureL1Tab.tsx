@@ -742,7 +742,7 @@ export default function FailureL1Tab({ state, setState, setStateSynced, setDirty
                 // ✅ 블록 기준 줄무늬
                 const productZebra = getZebra('structure', productIdxMap.get(row.key) ?? 0);
                 const funcZebra = getZebra('function', funcIdxMap.get(row.key) ?? 0);
-                const reqZebra = getZebra('failure', reqIdxMap.get(row.key) ?? idx);
+                const reqZebra = getZebra('requirement', reqIdxMap.get(row.key) ?? idx); // ★ 보라색 (고장영향과 구분)
                 return (
                 <tr key={row.key}>
                   {/* ✅ 완제품 공정명 - productIdx 기준 줄무늬 */}

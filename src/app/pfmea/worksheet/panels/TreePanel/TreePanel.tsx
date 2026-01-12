@@ -124,7 +124,7 @@ export default function TreePanel({ state, onAddAIItem }: TreePanelProps) {
                   <div key={f.id} className="ml-3 mb-1">
                     <TreeLeaf icon="⚙️" label={f.name} bgColor={typeColor.light} textColor={typeColor.text} indent={0} />
                     {meaningfulReqs.map((r: any) => (
-                      <TreeLeaf key={r.id} icon="•" label={r.name} bgColor="#fff3e0" textColor="#e65100" indent={4} />
+                      <TreeLeaf key={r.id} icon="•" label={r.name} bgColor="#f3e5f5" textColor="#7b1fa2" indent={4} />
                     ))}
                   </div>
                 );
@@ -232,8 +232,8 @@ export default function TreePanel({ state, onAddAIItem }: TreePanelProps) {
                               key={c.id} 
                               icon="📏" 
                               label={c.name} 
-                              bgColor={cIdx % 2 === 0 ? '#fff3e0' : '#ffe0b2'}
-                              textColor="#e65100"
+                              bgColor={cIdx % 2 === 0 ? '#f3e5f5' : '#e1bee7'}
+                              textColor="#7b1fa2"
                               indent={3}
                               badge={c.specialChar && <TreeBadge label={c.specialChar} bgColor="#f57c00" textColor="#fff" />}
                             />
@@ -285,8 +285,8 @@ export default function TreePanel({ state, onAddAIItem }: TreePanelProps) {
                     const effects = (state.l1.failureScopes || []).filter((s: any) => s.reqId === req.id);
                     return (
                       <div key={req.id} className="ml-3 mb-1">
-                        {/* 요구사항: 주황색 */}
-                        <TreeLeaf icon="📋" label={req.name} bgColor="#fff3e0" textColor="#e65100" indent={0} />
+                        {/* 요구사항: 연보라색 ★ */}
+                        <TreeLeaf icon="📋" label={req.name} bgColor="#f3e5f5" textColor="#7b1fa2" indent={0} />
                         {effects.length === 0 ? (
                           <TreeEmpty message="(고장영향 미입력)" small />
                         ) : effects.map((eff: any) => (
@@ -294,10 +294,10 @@ export default function TreePanel({ state, onAddAIItem }: TreePanelProps) {
                             key={eff.id} 
                             icon="⚡" 
                             label={eff.effect || '(미입력)'} 
-                            bgColor="#ffe0b2"
-                            textColor="#e65100"
+                            bgColor="#e1bee7"
+                            textColor="#7b1fa2"
                             indent={3}
-                            badge={eff.severity && <TreeBadge label={`S:${eff.severity}`} bgColor={eff.severity >= 8 ? '#f97316' : '#fbbf24'} textColor="#fff" />}
+                            badge={eff.severity && <TreeBadge label={`S:${eff.severity}`} bgColor={eff.severity >= 8 ? '#f97316' : '#fbbf24'} textColor="#000" />}
                           />
                         ))}
                       </div>
@@ -341,14 +341,14 @@ export default function TreePanel({ state, onAddAIItem }: TreePanelProps) {
                   <div key={f.id} className="ml-3 mb-1">
                     {/* 기능: 녹색 */}
                     <TreeLeaf icon="📋" label={f.name} bgColor={TREE_FUNCTION.itemBg} textColor={TREE_FUNCTION.itemText} indent={0} />
-                    {meaningfulChars.length > 0 ? meaningfulChars.map((pc: any) => (
+                    {meaningfulChars.length > 0 ? meaningfulChars.map((pc: any, pcIdx: number) => (
                       <div key={pc.id} className="ml-3 mb-0.5">
-                        {/* 제품특성: 주황색 */}
+                        {/* 제품특성: 연보라 줄무늬 (진한/연한 번갈아) */}
                         <TreeLeaf 
                           icon="🏷️" 
                           label={pc.name} 
-                          bgColor={pc.specialChar ? '#fed7aa' : '#fff3e0'}
-                          textColor="#e65100"
+                          bgColor={pc.specialChar ? '#ce93d8' : (pcIdx % 2 === 0 ? '#e1bee7' : '#f3e5f5')}
+                          textColor="#7b1fa2"
                           indent={0}
                           badge={pc.specialChar && <TreeBadge label={pc.specialChar} bgColor="#f97316" textColor="#fff" />}
                         />

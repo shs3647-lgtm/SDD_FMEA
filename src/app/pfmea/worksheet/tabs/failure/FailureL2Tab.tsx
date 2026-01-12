@@ -692,15 +692,15 @@ export default function FailureL2Tab({ state, setState, setStateSynced, setDirty
                     {row.funcName || '(기능분석에서 입력)'}
                   </td>
                 )}
-                {/* 제품특성 - rowSpan (주황색) */}
+                {/* 제품특성 - rowSpan (보라색) ★ 고장영향과 구분 */}
                 {row.showChar && (
-                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-2 text-center text-xs align-middle" style={{ background: zebra.failure }}>
+                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-2 text-center text-xs align-middle" style={{ background: zebra.requirement }}>
                     {row.charName || ''}
                   </td>
                 )}
-                {/* 특별특성 - rowSpan (주황색) */}
+                {/* 특별특성 - rowSpan (보라색) ★ 고장영향과 구분 */}
                 {row.showChar && (
-                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] p-1 text-center text-xs align-middle" style={{ background: zebra.failure }}>
+                  <td rowSpan={row.charRowSpan} className="border border-[#ccc] p-1 text-center text-xs align-middle" style={{ background: zebra.requirement }}>
                     {row.specialChar ? (
                       <span className={`px-1.5 py-0.5 rounded text-white text-[10px] font-bold ${
                         row.specialChar === 'CC' ? 'bg-red-600' : 

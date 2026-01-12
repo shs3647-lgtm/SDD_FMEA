@@ -228,6 +228,7 @@ export const ZEBRA_COLORS = {
   structure: { light: '#e3f2fd', dark: '#bbdefb' },  // 파란색 줄무늬 (구조 관련)
   function: { light: '#e8f5e9', dark: '#c8e6c9' },   // 녹색 줄무늬 (기능 관련)
   failure: { light: '#fff3e0', dark: '#ffe0b2' },    // 주황색 줄무늬 (고장/특성 관련)
+  requirement: { light: '#f3e5f5', dark: '#e1bee7' }, // ★ 보라색 줄무늬 (요구사항 전용)
 } as const;
 
 export type ZebraType = keyof typeof ZEBRA_COLORS;
@@ -237,6 +238,7 @@ export const getZebraColors = (idx: number) => ({
   structure: idx % 2 === 0 ? ZEBRA_COLORS.structure.dark : ZEBRA_COLORS.structure.light,
   function: idx % 2 === 0 ? ZEBRA_COLORS.function.dark : ZEBRA_COLORS.function.light,
   failure: idx % 2 === 0 ? ZEBRA_COLORS.failure.dark : ZEBRA_COLORS.failure.light,
+  requirement: idx % 2 === 0 ? ZEBRA_COLORS.requirement.dark : ZEBRA_COLORS.requirement.light, // ★ 보라색
 });
 
 // 특정 타입의 줄무늬 색상만 반환
@@ -249,6 +251,7 @@ export const getZebraTw = (type: ZebraType, idx: number) => {
     structure: { even: 'bg-blue-200', odd: 'bg-blue-50' },
     function: { even: 'bg-green-200', odd: 'bg-green-50' },
     failure: { even: 'bg-orange-200', odd: 'bg-orange-50' },
+    requirement: { even: 'bg-purple-200', odd: 'bg-purple-50' }, // ★ 보라색 (요구사항)
   };
   return idx % 2 === 0 ? map[type].even : map[type].odd;
 };
