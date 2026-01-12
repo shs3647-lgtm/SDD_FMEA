@@ -89,9 +89,8 @@ interface FMData {
 
 /** FM 최신 데이터 타입 (state.l2에서 가져옴) */
 interface FMLatestData {
-  id: string;
-  name: string;
-  failureModes?: Array<{ id: string; text: string }>;
+  name: string;  // 공정명
+  failureModes?: Array<{ id: string; name: string }>;  // ★ text → name
 }
 
 /**
@@ -108,10 +107,12 @@ export function processFailureLinks(links: FailureLinkRow[], l2Data?: FMLatestDa
   const latestFMTextMap = new Map<string, { text: string; processName: string }>();
   if (l2Data) {
     l2Data.forEach((proc: FMLatestData) => {
-      proc.failureModes?.forEach((fm: { id: string; text: string }) => {
-        latestFMTextMap.set(fm.id, { text: fm.text, processName: proc.name });
+      proc.failureModes?.forEach((fm: { id: string; name: string }) => {
+        // ★ fm.name이 실제 고장형태 텍스트
+        latestFMTextMap.set(fm.id, { text: fm.name, processName: proc.name });
       });
     });
+    console.log('[processFailureLinks] 최신 FM 맵 생성:', latestFMTextMap.size, '개');
   }
   
   const fmMap = new Map<string, FMData>();
