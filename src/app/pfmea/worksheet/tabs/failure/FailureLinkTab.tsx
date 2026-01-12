@@ -740,18 +740,27 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
 
   // ========== FM 선택 ==========
   const selectFM = useCallback((id: string) => {
+    console.log('[selectFM 호출]', { id, currentFMId, fmDataLength: fmData.length });
+    
     if (currentFMId === id) {
       // 선택 해제
+      console.log('[selectFM] 동일 FM 클릭 → 선택 해제');
       setCurrentFMId(null);
       setLinkedFEs(new Map());
       setLinkedFCs(new Map());
       setViewMode('diagram');
     } else {
       // 새로 선택
+      console.log('[selectFM] 새 FM 선택:', id);
       setCurrentFMId(id);
       setViewMode('diagram');
       const fm = fmData.find(f => f.id === id);
-      if (fm) setSelectedProcess(fm.processName);
+      if (fm) {
+        console.log('[selectFM] FM 찾음:', fm.fmNo, fm.text);
+        setSelectedProcess(fm.processName);
+      } else {
+        console.warn('[selectFM] FM을 찾지 못함:', id, '| fmData IDs:', fmData.map(f => f.id));
+      }
     }
     setTimeout(drawLines, 50);
   }, [currentFMId, fmData, drawLines]);
