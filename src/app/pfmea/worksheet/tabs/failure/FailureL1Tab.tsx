@@ -659,7 +659,7 @@ export default function FailureL1Tab({ state, setState, setStateSynced, setDirty
                 <span className="whitespace-nowrap shrink-0">고장분석(4단계)</span>
                 <div className="flex gap-0.5 flex-nowrap shrink-0">
                   {isConfirmed ? (
-                    <span className={`${badgeConfirmed} whitespace-nowrap text-[9px] px-1`}>✓ 확정({(state.l1?.failureScopes || []).filter((s: any) => s.effect).length})</span>
+                    <span className={`${badgeConfirmed} whitespace-nowrap text-[9px] px-1`}>✓ 확정됨({(state.l1?.failureScopes || []).filter((s: any) => s.effect).length})</span>
                   ) : (
                     <button type="button" onClick={handleConfirm} className={`${btnConfirm} whitespace-nowrap text-[9px] px-1`}>확정</button>
                   )}
