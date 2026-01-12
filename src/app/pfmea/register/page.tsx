@@ -838,25 +838,23 @@ function PFMEARegisterPageContent() {
               <td className={`${inputCell} w-[10%]`}>
                 <span className="px-2 text-xs font-semibold text-blue-600">{fmeaId?.toUpperCase()}</span>
               </td>
-              <td className={`${headerCell} w-[8%] whitespace-nowrap`}>상위 FMEA</td>
+              <td className={`${headerCell} w-[8%] whitespace-nowrap`}>상위 프로젝트</td>
               <td 
                 className={`${inputCell} w-[20%] cursor-pointer hover:bg-gray-100 relative`}
-                onClick={() => openFmeaSelectModal('ALL')}
-                title="상위 FMEA 선택 (클릭하여 FMEA 리스트 보기)"
+                onClick={() => setBizInfoModalOpen(true)}
+                title="상위 프로젝트 선택 (클릭하여 APQP 리스트 보기)"
               >
-                {selectedBaseFmea ? (
+                {fmeaInfo.fmeaProjectName ? (
                   <div className="flex items-center gap-1 px-2">
-                      <span className="px-1 py-0 rounded text-[9px] font-bold text-white bg-purple-500">
-                      {selectedBaseFmea?.toUpperCase().match(/PFM\d{2}-([MFP])/)?.[1] || 'M'}
-                    </span>
-                    <span className="text-xs font-semibold text-purple-600">{selectedBaseFmea?.toUpperCase()}</span>
+                    <span className="px-1 py-0 rounded text-[9px] font-bold text-white bg-teal-500">APQP</span>
+                    <span className="text-xs font-semibold text-teal-600">{fmeaInfo.fmeaProjectName}</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        openFmeaSelectModal('ALL');
+                        setBizInfoModalOpen(true);
                       }}
                       className="ml-1 text-blue-500 hover:text-blue-700 text-[10px]"
-                      title="FMEA 리스트 보기"
+                      title="APQP 리스트 보기"
                     >
                       🔍
                     </button>
@@ -913,8 +911,8 @@ function PFMEARegisterPageContent() {
                 />
               </td>
               <td className={`${headerCell} whitespace-nowrap`}>공정 책임</td>
-              <td className={`${inputCell}`} colSpan={3}>
-                <div className="flex items-center gap-2">
+              <td className={`${inputCell}`}>
+                <div className="flex items-center gap-1">
                   <div className="relative">
                     {showMissingFields && !fmeaInfo.designResponsibility && (
                       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-orange-400 text-[10px] pointer-events-none">
@@ -932,7 +930,7 @@ function PFMEARegisterPageContent() {
                         updateField('designResponsibility', e.target.value);
                         setShowMissingFields(false);
                       }}
-                      className={`w-24 h-7 px-2 text-xs border border-gray-300 rounded bg-transparent focus:outline-none placeholder:text-gray-400 ${showMissingFields && !fmeaInfo.designResponsibility ? 'text-transparent' : ''}`}
+                      className={`w-20 h-7 px-2 text-xs border border-gray-300 rounded bg-transparent focus:outline-none placeholder:text-gray-400 ${showMissingFields && !fmeaInfo.designResponsibility ? 'text-transparent' : ''}`}
                       placeholder="부서" 
                     />
                   </div>
@@ -953,12 +951,42 @@ function PFMEARegisterPageContent() {
                         updateField('fmeaResponsibleName', e.target.value);
                         setShowMissingFields(false);
                       }}
-                      className={`flex-1 h-7 px-2 text-xs border border-gray-300 rounded bg-transparent focus:outline-none placeholder:text-gray-400 ${showMissingFields && !fmeaInfo.fmeaResponsibleName ? 'text-transparent' : ''}`}
+                      className={`w-24 h-7 px-2 text-xs border border-gray-300 rounded bg-transparent focus:outline-none placeholder:text-gray-400 ${showMissingFields && !fmeaInfo.fmeaResponsibleName ? 'text-transparent' : ''}`}
                       placeholder="책임자 성명" 
                     />
                   </div>
                   <button onClick={() => { setUserModalTarget('responsible'); setUserModalOpen(true); }} className="text-blue-500 hover:text-blue-700 px-1">🔍</button>
                 </div>
+              </td>
+              <td className={`${headerCell} whitespace-nowrap`}>상위 FMEA</td>
+              <td 
+                className={`${inputCell} cursor-pointer hover:bg-gray-100 relative`}
+                onClick={() => openFmeaSelectModal('ALL')}
+                title="상위 FMEA 선택 (클릭하여 FMEA 리스트 보기)"
+                colSpan={1}
+              >
+                {selectedBaseFmea ? (
+                  <div className="flex items-center gap-1 px-2">
+                    <span className="px-1 py-0 rounded text-[9px] font-bold text-white bg-purple-500">
+                      {selectedBaseFmea?.toUpperCase().match(/PFM\d{2}-([MFP])/)?.[1] || 'M'}
+                    </span>
+                    <span className="text-xs font-semibold text-purple-600">{selectedBaseFmea?.toUpperCase()}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openFmeaSelectModal('ALL');
+                      }}
+                      className="ml-1 text-blue-500 hover:text-blue-700 text-[10px]"
+                      title="FMEA 리스트 보기"
+                    >
+                      🔍
+                    </button>
+                  </div>
+                ) : (
+                  <span className={`px-2 text-xs ${showMissingFields ? 'text-orange-400' : 'text-gray-400'}`}>
+                    {showMissingFields ? '미입력 (클릭하여 선택)' : '- (클릭하여 선택)'}
+                  </span>
+                )}
               </td>
             </tr>
             

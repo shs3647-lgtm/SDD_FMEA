@@ -15,7 +15,7 @@ import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'reac
 import { useSearchParams, useRouter } from 'next/navigation';
 import CPTopNav from '@/components/layout/CPTopNav';
 import CPTopMenuBar from './components/CPTopMenuBar';
-import CPTabMenu from './components/CPTabMenu';
+import CPTabMenu, { CPInputMode } from './components/CPTabMenu';
 import { 
   CP_COLUMNS, CP_GROUPS, HEIGHTS, CELL_STYLE, COLORS,
   calculateGroupSpans, calculateTotalWidth,
@@ -109,6 +109,7 @@ function CPWorksheetContent() {
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [activeTab, setActiveTab] = useState('all');
+  const [inputMode, setInputMode] = useState<CPInputMode>('manual');
   
   // 그룹 스팬 계산
   const groupSpans = useMemo(() => calculateGroupSpans(CP_COLUMNS), []);
@@ -341,6 +342,14 @@ function CPWorksheetContent() {
     type: 'process' | 'work' | 'char';
   }>({ visible: false, x: 0, y: 0, rowIdx: -1, type: 'process' });
   
+  // 자동 모드용 입력 모달 상태
+  const [autoModal, setAutoModal] = useState<{
+    visible: boolean;
+    rowIdx: number;
+    type: 'process' | 'work' | 'char';
+    position: 'above' | 'below';
+  }>({ visible: false, rowIdx: -1, type: 'process', position: 'below' });
+  
   // 행 추가 (맨 아래)
   const handleAddRow = useCallback(() => {
     const lastItem = state.items[state.items.length - 1];
@@ -435,6 +444,27 @@ function CPWorksheetContent() {
   const closeContextMenu = useCallback(() => {
     setContextMenu(prev => ({ ...prev, visible: false }));
   }, []);
+  
+  // 자동 모드: 셀 클릭 시 모달 열기
+  const handleAutoModeClick = useCallback((rowIdx: number, type: 'process' | 'work' | 'char') => {
+    setAutoModal({
+      visible: true,
+      rowIdx,
+      type,
+      position: 'below', // 기본값: 아래에 추가
+    });
+  }, []);
+  
+  // 자동 모드: 모달에서 행 추가
+  const handleAutoModalInsert = useCallback(() => {
+    const { rowIdx, type, position } = autoModal;
+    if (position === 'above') {
+      handleInsertRowAbove(rowIdx, type);
+    } else {
+      handleInsertRowBelow(rowIdx, type);
+    }
+    setAutoModal(prev => ({ ...prev, visible: false }));
+  }, [autoModal, handleInsertRowAbove, handleInsertRowBelow]);
   
   // 저장
   const handleSave = async () => {
@@ -609,8 +639,7 @@ function CPWorksheetContent() {
       );
     }
     
-    // 공정설명 - 컨텍스트 메뉴 지원
-    // 공정설명 - rowSpan 병합 + 컨텍스트 메뉴 (부모: 공정번호, 공정명)
+    // 공정설명 - rowSpan 병합 + 수동(컨텍스트메뉴)/자동(클릭모달)
     if (col.key === 'processDesc') {
       const spanInfo = descRowSpan[rowIdx];
       if (!spanInfo?.isFirst) {
@@ -619,22 +648,32 @@ function CPWorksheetContent() {
       return (
         <td 
           key={col.id} 
-          style={{ ...cellStyle, cursor: 'context-menu', verticalAlign: 'middle' }}
+          style={{ 
+            ...cellStyle, 
+            cursor: inputMode === 'manual' ? 'context-menu' : 'pointer', 
+            verticalAlign: 'middle',
+            background: inputMode === 'auto' ? '#e3f2fd' : bgColor, // 자동모드 시 강조
+          }}
           rowSpan={spanInfo.span}
-          onContextMenu={(e) => handleContextMenu(e, rowIdx, 'process')}
+          onContextMenu={inputMode === 'manual' ? (e) => handleContextMenu(e, rowIdx, 'process') : undefined}
+          onClick={inputMode === 'auto' ? () => handleAutoModeClick(rowIdx, 'process') : undefined}
         >
-          <input
-            type="text"
-            value={value || ''}
-            onChange={(e) => handleCellChange(item.id, col.key, e.target.value)}
-            className="w-full bg-transparent outline-none"
-            style={{ fontSize: CELL_STYLE.fontSize, textAlign: 'left' }}
-          />
+          <div className="flex items-center gap-1">
+            {inputMode === 'auto' && <span className="text-blue-500 text-[8px]">➕</span>}
+            <input
+              type="text"
+              value={value || ''}
+              onChange={(e) => handleCellChange(item.id, col.key, e.target.value)}
+              className="w-full bg-transparent outline-none"
+              style={{ fontSize: CELL_STYLE.fontSize, textAlign: 'left' }}
+              onClick={(e) => inputMode === 'auto' && e.stopPropagation()}
+            />
+          </div>
         </td>
       );
     }
     
-    // 설비/금형/JIG - rowSpan 병합 + 컨텍스트 메뉴 (부모: 공정번호, 공정명, 레벨, 공정설명)
+    // 설비/금형/JIG - rowSpan 병합 + 수동(컨텍스트메뉴)/자동(클릭모달)
     if (col.key === 'workElement') {
       const spanInfo = workRowSpan[rowIdx];
       if (!spanInfo?.isFirst) {
@@ -643,36 +682,55 @@ function CPWorksheetContent() {
       return (
         <td 
           key={col.id} 
-          style={{ ...cellStyle, cursor: 'context-menu', verticalAlign: 'middle' }}
+          style={{ 
+            ...cellStyle, 
+            cursor: inputMode === 'manual' ? 'context-menu' : 'pointer', 
+            verticalAlign: 'middle',
+            background: inputMode === 'auto' ? '#e8f5e9' : bgColor, // 자동모드 시 강조
+          }}
           rowSpan={spanInfo.span}
-          onContextMenu={(e) => handleContextMenu(e, rowIdx, 'work')}
+          onContextMenu={inputMode === 'manual' ? (e) => handleContextMenu(e, rowIdx, 'work') : undefined}
+          onClick={inputMode === 'auto' ? () => handleAutoModeClick(rowIdx, 'work') : undefined}
         >
-          <input
-            type="text"
-            value={value || ''}
-            onChange={(e) => handleCellChange(item.id, col.key, e.target.value)}
-            className="w-full bg-transparent outline-none"
-            style={{ fontSize: CELL_STYLE.fontSize, textAlign: 'center' }}
-          />
+          <div className="flex items-center gap-1 justify-center">
+            {inputMode === 'auto' && <span className="text-green-500 text-[8px]">➕</span>}
+            <input
+              type="text"
+              value={value || ''}
+              onChange={(e) => handleCellChange(item.id, col.key, e.target.value)}
+              className="w-full bg-transparent outline-none text-center"
+              style={{ fontSize: CELL_STYLE.fontSize }}
+              onClick={(e) => inputMode === 'auto' && e.stopPropagation()}
+            />
+          </div>
         </td>
       );
     }
     
-    // 제품특성 - 컨텍스트 메뉴 (부모: 공정번호, 공정명, 레벨, 공정설명, 설비/금형/JIG)
+    // 제품특성 - 수동(컨텍스트메뉴)/자동(클릭모달)
     if (col.key === 'productChar') {
       return (
         <td 
           key={col.id} 
-          style={{ ...cellStyle, cursor: 'context-menu' }}
-          onContextMenu={(e) => handleContextMenu(e, rowIdx, 'char')}
+          style={{ 
+            ...cellStyle, 
+            cursor: inputMode === 'manual' ? 'context-menu' : 'pointer',
+            background: inputMode === 'auto' ? '#fff3e0' : bgColor, // 자동모드 시 강조
+          }}
+          onContextMenu={inputMode === 'manual' ? (e) => handleContextMenu(e, rowIdx, 'char') : undefined}
+          onClick={inputMode === 'auto' ? () => handleAutoModeClick(rowIdx, 'char') : undefined}
         >
-          <input
-            type="text"
-            value={value || ''}
-            onChange={(e) => handleCellChange(item.id, col.key, e.target.value)}
-            className="w-full bg-transparent outline-none"
-            style={{ fontSize: CELL_STYLE.fontSize, textAlign: 'center' }}
-          />
+          <div className="flex items-center gap-1 justify-center">
+            {inputMode === 'auto' && <span className="text-orange-500 text-[8px]">➕</span>}
+            <input
+              type="text"
+              value={value || ''}
+              onChange={(e) => handleCellChange(item.id, col.key, e.target.value)}
+              className="w-full bg-transparent outline-none text-center"
+              style={{ fontSize: CELL_STYLE.fontSize }}
+              onClick={(e) => inputMode === 'auto' && e.stopPropagation()}
+            />
+          </div>
         </td>
       );
     }
@@ -732,6 +790,8 @@ function CPWorksheetContent() {
       <CPTabMenu
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        inputMode={inputMode}
+        onInputModeChange={setInputMode}
         cpNo={state.cpNo}
         fmeaId={state.fmeaId}
         itemCount={state.items.length}
@@ -883,6 +943,82 @@ function CPWorksheetContent() {
             >
               🗑️ 행 삭제
             </button>
+          </div>
+        </>
+      )}
+      
+      {/* 자동 모드 입력 모달 */}
+      {autoModal.visible && (
+        <>
+          {/* 배경 */}
+          <div 
+            className="fixed inset-0 bg-black/50 z-[300]"
+            onClick={() => setAutoModal(prev => ({ ...prev, visible: false }))}
+          />
+          {/* 모달 */}
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[301] bg-white rounded-lg shadow-2xl p-4 min-w-[320px]">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-2xl">🤖</span>
+              <h3 className="text-lg font-bold text-gray-800">자동 행 추가</h3>
+            </div>
+            
+            {/* 기준 정보 */}
+            <div className="bg-gray-50 rounded p-3 mb-4 text-xs">
+              <div className="font-bold text-gray-600 mb-2">
+                {autoModal.type === 'process' ? '📋 공정설명 기준' : 
+                 autoModal.type === 'work' ? '🔧 설비/금형/JIG 기준' : 
+                 '📊 제품특성 기준'}
+              </div>
+              <div className="text-gray-500">
+                복사될 부모 필드: 
+                {autoModal.type === 'process' && ' 공정번호, 공정명'}
+                {autoModal.type === 'work' && ' 공정번호, 공정명, 레벨, 공정설명'}
+                {autoModal.type === 'char' && ' 공정번호, 공정명, 레벨, 공정설명, 설비/금형/JIG'}
+              </div>
+            </div>
+            
+            {/* 위치 선택 */}
+            <div className="mb-4">
+              <label className="text-sm font-bold text-gray-700 block mb-2">추가 위치</label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setAutoModal(prev => ({ ...prev, position: 'above' }))}
+                  className={`flex-1 py-2 px-3 rounded text-sm font-bold transition-all ${
+                    autoModal.position === 'above' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  ⬆️ 위로
+                </button>
+                <button
+                  onClick={() => setAutoModal(prev => ({ ...prev, position: 'below' }))}
+                  className={`flex-1 py-2 px-3 rounded text-sm font-bold transition-all ${
+                    autoModal.position === 'below' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  ⬇️ 아래로
+                </button>
+              </div>
+            </div>
+            
+            {/* 버튼 */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setAutoModal(prev => ({ ...prev, visible: false }))}
+                className="flex-1 py-2 px-4 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 text-sm font-bold"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleAutoModalInsert}
+                className="flex-1 py-2 px-4 rounded bg-purple-600 text-white hover:bg-purple-700 text-sm font-bold"
+              >
+                ✅ 행 추가
+              </button>
+            </div>
           </div>
         </>
       )}
