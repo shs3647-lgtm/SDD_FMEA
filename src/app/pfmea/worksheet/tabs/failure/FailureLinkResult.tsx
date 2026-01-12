@@ -43,10 +43,11 @@ export default function FailureLinkResult({ savedLinks, fmData }: FailureLinkRes
     
     fmGroupsMap.forEach((group, fmId) => {
       const fm = fmData.find(f => f.id === fmId);
+      // ★ FM 텍스트/공정명은 fmData에서 최신 값 가져오기 (savedLinks의 오래된 값 사용 방지)
       result.push({
         fmId: group.fmId,
-        fmText: group.fmText,
-        fmProcess: group.fmProcess,
+        fmText: fm?.text || group.fmText,           // ★ 최신 텍스트 우선
+        fmProcess: fm?.processName || group.fmProcess, // ★ 최신 공정명 우선
         fmNo: fm?.fmNo || group.fmNo || '',
         fes: group.fes.map(fe => ({
           id: fe.id,
