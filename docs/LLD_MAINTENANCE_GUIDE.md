@@ -171,6 +171,39 @@ git checkout codefreeze-20260112-lld-risk-integration~1 -- .
 
 | 태그 | 내용 |
 |------|------|
+| `codefreeze-20260112-lld-fmea-integration` | **LLD 스키마 변경 및 FMEA 연동 완성** |
 | `codefreeze-20260112-lld-risk-integration` | 습득교훈(LLD) 화면 및 리스크분석 연동 |
 | `codefreeze-20260112-color-system` | 색상 시스템 변경 (요구사항/제품특성 보라색) |
+
+---
+
+## 📊 LLD 필드 구조 (2026-01-12)
+
+| 필드 | 한글명 | 설명 | 입력 방식 |
+|------|--------|------|-----------|
+| `lldNo` | LLD_No | LLD 시리얼 번호 (LLD26-001) | 자동 생성 |
+| `vehicle` | 차종 | 차량 모델명 | 수동 |
+| `target` | 대상 | 설계/부품/제조 | 수동 |
+| `failureMode` | 고장형태 | 문제 설명 | 수동 |
+| `location` | 발생장소 | FIELD/고객공장/양산라인 | 수동 |
+| `cause` | 발생원인 | 원인 설명 | 수동 |
+| `category` | 구분 | 예방관리/검출관리 | 수동 |
+| `improvement` | 개선대책 | 개선 내용 | 수동 |
+| `completedDate` | **완료일자** | LLD 완료된 날짜 | ✏️ 수동 |
+| `fmeaId` | **적용결과** | FMEA ID (pfm26-001) | 🤖 자동 |
+| `status` | 상태 | G(완료)/Y(진행중)/R(미완료) | 수동 |
+| `appliedDate` | **적용일자** | FMEA에 입력된 날짜 | 🤖 자동 |
+
+---
+
+## 🔗 FMEA → LLD 자동 연동 흐름
+
+1. FMEA 리스크분석 → 습득교훈 셀 클릭
+2. LLD 선택 모달 열림
+3. LLD_No 선택 → 확인 클릭
+4. **자동 처리**:
+   - FMEA 셀에 LLD_No 입력
+   - LLD DB의 `fmeaId` 필드에 현재 FMEA ID 저장
+   - LLD DB의 `appliedDate` 필드에 오늘 날짜 저장
+   - `/api/lessons-learned/apply` API 호출
 
