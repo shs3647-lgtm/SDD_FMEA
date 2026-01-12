@@ -1303,11 +1303,39 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
   }, [savedLinks, state.l1]);
 
   // ========== 필수 분석 확정 여부 체크 ==========
-  const allAnalysisConfirmed = isL1Confirmed && isL2Confirmed && isL3Confirmed;
+  // ✅ 디버깅: 확정 상태 로그
+  console.log('[고장연결] 확정 상태 확인:', {
+    failureL1Confirmed: state.failureL1Confirmed,
+    failureL2Confirmed: state.failureL2Confirmed,
+    failureL3Confirmed: state.failureL3Confirmed,
+    isL1Confirmed,
+    isL2Confirmed,
+    isL3Confirmed,
+  });
+  
+  // ✅ Fallback: 실제 데이터 존재 여부 확인 (확정 플래그가 false여도 데이터가 있으면 통과)
+  const hasFailureEffects = (state.l1?.failureScopes || []).length > 0;
+  const hasFailureModes = state.l2.some((p: any) => (p.failureModes || []).length > 0);
+  const hasFailureCauses = state.l2.some((p: any) => (p.l3 || []).some((we: any) => 
+    (we.functions || []).some((f: any) => (f.processChars || []).some((pc: any) => 
+      (pc.failureCauses || []).length > 0
+    ))
+  ));
+  
+  console.log('[고장연결] 실제 데이터 존재 여부:', {
+    hasFailureEffects,
+    hasFailureModes,
+    hasFailureCauses,
+  });
+  
+  // ✅ 확정 플래그 또는 실제 데이터 존재 여부로 판단
+  const allAnalysisConfirmed = (isL1Confirmed || hasFailureEffects) && 
+                                (isL2Confirmed || hasFailureModes) && 
+                                (isL3Confirmed || hasFailureCauses);
   const missingAnalysis: string[] = [];
-  if (!isL1Confirmed) missingAnalysis.push('1L 고장영향');
-  if (!isL2Confirmed) missingAnalysis.push('2L 고장형태');
-  if (!isL3Confirmed) missingAnalysis.push('3L 고장원인');
+  if (!isL1Confirmed && !hasFailureEffects) missingAnalysis.push('1L 고장영향');
+  if (!isL2Confirmed && !hasFailureModes) missingAnalysis.push('2L 고장형태');
+  if (!isL3Confirmed && !hasFailureCauses) missingAnalysis.push('3L 고장원인');
 
   // ========== 렌더링 ==========
   
