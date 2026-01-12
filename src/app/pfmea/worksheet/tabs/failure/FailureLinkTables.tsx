@@ -218,12 +218,13 @@ export default function FailureLinkTables({
                   const isLinked = counts.feCount > 0 && counts.fcCount > 0;
                   const isMissing = (counts.feCount === 0 || counts.fcCount === 0) && linkStats.fmLinkedIds.has(fm.id);
                   const noBg = isLinked ? COLORS.function.dark : (isMissing ? '#f44336' : '#f57c00');
-                  const cellBg = isSelected ? '#fff8e1' : (idx % 2 === 1 ? '#ffe0b2' : '#fff3e0');
+                  // ★ 선택된 FM: 하늘색 배경으로 주황색 줄무늬와 명확하게 구분
+                  const cellBg = isSelected ? '#bbdefb' : (idx % 2 === 1 ? '#ffe0b2' : '#fff3e0');
                   
                   // 체크표시: 현재 선택된 FM만 파란색 체크표시, 확정된 FM은 녹색 텍스트만
                   let checkMark: React.ReactNode = '';
                   if (isSelected && !isLinked) {
-                    checkMark = <span className="text-blue-600 font-bold mr-1">✓</span>; // 현재 선택됨 - 파란색 체크
+                    checkMark = <span className="text-blue-600 font-bold mr-1">▶</span>; // 현재 선택됨 - 파란색 화살표
                   }
                   
                   let statusIcon = '';
@@ -238,13 +239,20 @@ export default function FailureLinkTables({
                   // 텍스트 색상: 확정된 FM은 녹색, 그 외는 기본 색상
                   const textColor = isLinked ? '#2e7d32' : (isMissing ? '#d32f2f' : COLORS.failure.text);
                   
+                  // ★ 선택된 FM: 두꺼운 테두리로 강조
+                  const rowStyle: React.CSSProperties = isSelected ? {
+                    outline: '3px solid #1976d2',
+                    outlineOffset: '-1px',
+                    boxShadow: '0 0 8px rgba(25, 118, 210, 0.5)',
+                  } : {};
+                  
                   return (
-                    <tr key={fm.id} onClick={() => onSelectFM(fm.id)} className="cursor-pointer">
-                      <td style={tdCenterStyle(noBg, BORDER_ORANGE, '#fff')}>{fm.fmNo}</td>
+                    <tr key={fm.id} onClick={() => onSelectFM(fm.id)} className="cursor-pointer" style={rowStyle}>
+                      <td style={tdCenterStyle(isSelected ? '#1976d2' : noBg, BORDER_ORANGE, '#fff')}>{fm.fmNo}</td>
                       <td style={tdCenterStyle(cellBg, BORDER_ORANGE, COLORS.failure.text, { fontSize: FONT_SIZES.small, whiteSpace: 'nowrap', padding: '4px 6px' })}>{fm.processName}</td>
                       <td style={tdStyle(cellBg, BORDER_ORANGE, { 
                         color: textColor, 
-                        fontWeight: isMissing ? FONT_WEIGHTS.bold : FONT_WEIGHTS.normal, 
+                        fontWeight: isSelected ? FONT_WEIGHTS.bold : (isMissing ? FONT_WEIGHTS.bold : FONT_WEIGHTS.normal), 
                         padding: '4px 6px' 
                       })}>
                         {isLinked && <span className="mr-1 text-green-700 font-bold">●</span>}
