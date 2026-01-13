@@ -16,9 +16,10 @@ interface RenderCellProps {
   processRowSpan: SpanInfo[];
   descRowSpan: SpanInfo[];
   workRowSpan: SpanInfo[];
+  charRowSpan: SpanInfo[];
   inputMode: CPInputMode;
   onCellChange: (itemId: string, key: string, value: any) => void;
-  onContextMenu: (e: React.MouseEvent, rowIdx: number, type: ContextMenuType) => void;
+  onContextMenu: (e: React.MouseEvent, rowIdx: number, type: ContextMenuType, colKey?: string) => void;
   onAutoModeClick: (rowIdx: number, type: ContextMenuType) => void;
   onEnterKey?: (rowIdx: number, type: ContextMenuType) => void;
 }
@@ -31,6 +32,7 @@ export function renderCell({
   processRowSpan,
   descRowSpan,
   workRowSpan,
+  charRowSpan,
   inputMode,
   onCellChange,
   onContextMenu,
@@ -38,6 +40,7 @@ export function renderCell({
   onEnterKey,
 }: RenderCellProps): React.ReactNode {
   const value = (item as any)[col.key];
+  // 줄무늬 패턴 복구
   const bgColor = rowIdx % 2 === 0 ? col.cellColor : col.cellAltColor;
   
   const cellStyle: React.CSSProperties = {
@@ -55,34 +58,60 @@ export function renderCell({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (inputMode === 'manual' && e.key === 'Enter' && onEnterKey) {
       e.preventDefault();
-      // 컬럼 타입에 따라 ContextMenuType 결정 (컨텍스트 메뉴와 동일한 로직)
-      let type: ContextMenuType = 'char';
+      // 컬럼 타입에 따라 ContextMenuType 결정
+      let type: ContextMenuType = 'general';
       if (col.key === 'processNo' || col.key === 'processName' || col.key === 'processDesc') {
         type = 'process';
       } else if (col.key === 'workElement') {
         type = 'work';
       } else if (col.key === 'productChar' || col.key === 'processChar') {
         type = 'char';
+      } else {
+        // 나머지 열은 'general' 타입으로 행 추가
+        type = 'general';
       }
       onEnterKey(rowIdx, type);
     }
   };
 
-  // 공정번호, 공정명 - rowSpan 병합
+  // NO 열 - 순차 번호 (1부터 시작)
+  if (col.key === 'rowNo') {
+    return (
+      <td 
+        key={col.id} 
+        style={{ 
+          ...cellStyle, 
+          verticalAlign: 'middle',
+          cursor: 'default',
+        }}
+      >
+        <span className="font-semibold text-gray-800 text-[9px]">{rowIdx + 1}</span>
+      </td>
+    );
+  }
+  
+  // 공정번호, 공정명 - rowSpan 병합 + 컨텍스트 메뉴 (아래로 행 추가)
   if (col.key === 'processNo' || col.key === 'processName') {
     const spanInfo = processRowSpan[rowIdx];
     if (!spanInfo?.isFirst) {
       return null; // 병합된 행은 렌더링 안함
     }
+    // 고유값(언더스코어로 시작하는 값)인 경우 빈 값처럼 표시
+    const displayValue = (value && typeof value === 'string' && value.startsWith('_')) ? '' : (value || '');
     return (
       <td 
         key={col.id} 
-        style={{ ...cellStyle, verticalAlign: 'middle' }}
+        style={{ 
+          ...cellStyle, 
+          verticalAlign: 'middle',
+          cursor: inputMode === 'manual' ? 'context-menu' : 'default',
+        }}
         rowSpan={spanInfo.span}
+        onContextMenu={inputMode === 'manual' ? (e) => onContextMenu(e, rowIdx, 'process', col.key) : undefined}
       >
         <input
           type="text"
-          value={value || ''}
+          value={displayValue}
           onChange={(e) => onCellChange(item.id, col.key, e.target.value)}
           onKeyDown={handleKeyDown}
           className="w-full bg-transparent outline-none text-center text-[9px]"
@@ -217,7 +246,7 @@ export function renderCell({
           background: inputMode === 'auto' ? '#e3f2fd' : bgColor, // 자동모드 시 강조
         }}
         rowSpan={spanInfo.span}
-        onContextMenu={inputMode === 'manual' ? (e) => onContextMenu(e, rowIdx, 'process') : undefined}
+        onContextMenu={inputMode === 'manual' ? (e) => onContextMenu(e, rowIdx, 'process', col.key) : undefined}
         onClick={inputMode === 'auto' ? () => onAutoModeClick(rowIdx, 'process') : undefined}
       >
         <div className="flex items-center gap-1">
@@ -251,7 +280,7 @@ export function renderCell({
           background: inputMode === 'auto' ? '#e8f5e9' : bgColor, // 자동모드 시 강조
         }}
         rowSpan={spanInfo.span}
-        onContextMenu={inputMode === 'manual' ? (e) => onContextMenu(e, rowIdx, 'work') : undefined}
+        onContextMenu={inputMode === 'manual' ? (e) => onContextMenu(e, rowIdx, 'work', col.key) : undefined}
         onClick={inputMode === 'auto' ? () => onAutoModeClick(rowIdx, 'work') : undefined}
       >
         <div className="flex items-center gap-1 justify-center">
@@ -269,17 +298,23 @@ export function renderCell({
     );
   }
   
-  // 제품특성 - 수동(컨텍스트메뉴)/자동(클릭모달)
+  // 제품특성 - rowSpan 병합 + 수동(컨텍스트메뉴)/자동(클릭모달)
   if (col.key === 'productChar') {
+    const spanInfo = charRowSpan[rowIdx];
+    if (!spanInfo?.isFirst) {
+      return null; // 병합된 행은 렌더링 안함
+    }
     return (
       <td 
         key={col.id} 
         style={{ 
           ...cellStyle, 
+          verticalAlign: 'middle',
           cursor: inputMode === 'manual' ? 'context-menu' : 'pointer',
           background: inputMode === 'auto' ? '#fff3e0' : bgColor, // 자동모드 시 강조
         }}
-        onContextMenu={inputMode === 'manual' ? (e) => onContextMenu(e, rowIdx, 'char') : undefined}
+        rowSpan={spanInfo.span}
+        onContextMenu={inputMode === 'manual' ? (e) => onContextMenu(e, rowIdx, 'char', col.key) : undefined}
         onClick={inputMode === 'auto' ? () => onAutoModeClick(rowIdx, 'char') : undefined}
       >
         <div className="flex items-center gap-1 justify-center">
@@ -297,9 +332,16 @@ export function renderCell({
     );
   }
   
-  // 기본 텍스트 입력 (중앙정렬)
+  // 기본 텍스트 입력 (중앙정렬) - 나머지 열에도 컨텍스트 메뉴 추가
   return (
-    <td key={col.id} style={cellStyle}>
+    <td 
+      key={col.id} 
+      style={{ 
+        ...cellStyle, 
+        cursor: inputMode === 'manual' ? 'context-menu' : 'default',
+      }}
+      onContextMenu={inputMode === 'manual' ? (e) => onContextMenu(e, rowIdx, 'general', col.key) : undefined}
+    >
       <input
         type="text"
         value={value || ''}

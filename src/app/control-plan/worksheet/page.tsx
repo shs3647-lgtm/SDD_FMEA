@@ -14,7 +14,7 @@ import CPTabMenu, { CPInputMode } from './components/CPTabMenu';
 import { CPContextMenu } from './components/CPContextMenu';
 import { AutoInputModal } from './components/AutoInputModal';
 import { renderCell } from './renderers';
-import { useProcessRowSpan, useDescRowSpan, useWorkRowSpan, useContextMenu, useWorksheetHandlers } from './hooks';
+import { useProcessRowSpan, useDescRowSpan, useWorkRowSpan, useCharRowSpan, useContextMenu, useWorksheetHandlers } from './hooks';
 import { createSampleItems } from './utils';
 import { CPState, SaveStatus, AutoModalState, ContextMenuType } from './types';
 import { 
@@ -59,10 +59,11 @@ function CPWorksheetContent() {
   const groupSpans = useMemo(() => calculateGroupSpans(CP_COLUMNS), []);
   const totalWidth = useMemo(() => calculateTotalWidth(), []);
   
-  // rowSpan 계산 훅
+  // rowSpan 계산 훅 (각 병합은 독립적으로 계산됨)
   const processRowSpan = useProcessRowSpan(state.items);
   const descRowSpan = useDescRowSpan(state.items);
   const workRowSpan = useWorkRowSpan(state.items);
+  const charRowSpan = useCharRowSpan(state.items);
   
   // 컨텍스트 메뉴 훅
   const { contextMenu, openContextMenu, closeContextMenu } = useContextMenu();
@@ -294,6 +295,21 @@ function CPWorksheetContent() {
             <thead style={{ background: '#ffffff' }}>
               {/* 1행: 그룹 헤더 */}
               <tr>
+                {/* 단계 열 헤더 */}
+                <th
+                  colSpan={1}
+                  className="font-bold text-[11px] text-center sticky top-0 z-30 border border-white"
+                  style={{ 
+                    background: '#90caf9', // 연한 파란색
+                    color: '#000000', // 검은색 글씨
+                    height: HEIGHTS.header1,
+                    padding: 0,
+                    margin: 0,
+                  }}
+                >
+                  단계
+                </th>
+                {/* 나머지 그룹 헤더 */}
                 {groupSpans.map((g, idx) => (
                   <th
                     key={idx}
@@ -332,17 +348,60 @@ function CPWorksheetContent() {
                 ))}
               </tr>
               
-              {/* 3행: 열번호 (A, B, C...) */}
+              {/* 3행: 열번호 (단계, A, B, C...) */}
               <tr>
-                {CP_COLUMNS.map((col, idx) => (
-                  <th
-                    key={`col-${col.id}`}
-                    className="bg-gray-200 text-gray-600 font-semibold text-[9px] text-center border border-gray-300"
-                    style={{ height: HEIGHTS.header3 }}
-                  >
-                    {String.fromCharCode(65 + idx)}
-                  </th>
-                ))}
+                {CP_COLUMNS.map((col, idx) => {
+                  // 단계 열은 숫자로 표시, 나머지는 알파벳 (단계 열 때문에 idx로 조정)
+                  const colLetter = idx === 0 ? '' : String.fromCharCode(64 + idx); // A=65이므로 64+idx로 조정
+                  // D열(processDesc), E열(workElement), I열(productChar)에 + 접두사 추가
+                  const hasContextMenu = col.key === 'processDesc' || col.key === 'workElement' || col.key === 'productChar';
+                  // 드롭다운이 있는 열: C열(processLevel), K열(specialChar), O열(sampleFreq), Q열(owner1), R열(owner2)
+                  const hasDropdown = col.type === 'select' && (col.key === 'processLevel' || col.key === 'specialChar' || col.key === 'sampleFreq' || col.key === 'owner1' || col.key === 'owner2');
+                  
+                  // 그룹 배경색 결정: 단계(연한파란색), AB(녹색), CD(녹색), FGHI(녹색)
+                  let groupBgColor = 'bg-gray-200'; // 기본 배경색
+                  if (idx === 0) {
+                    // 단계 열 (연한 파란색)
+                    groupBgColor = 'bg-blue-300';
+                  } else if (idx === 1 || idx === 2) {
+                    // AB 그룹 (A열, B열) - 녹색
+                    groupBgColor = 'bg-green-200';
+                  } else if (idx === 3 || idx === 4) {
+                    // CD 그룹 (C열, D열) - 녹색
+                    groupBgColor = 'bg-green-200';
+                  } else if (idx >= 6 && idx <= 9) {
+                    // FGHI 그룹 (F열, G열, H열, I열) - 녹색
+                    groupBgColor = 'bg-green-200';
+                  }
+                  
+                  return (
+                    <th
+                      key={`col-${col.id}`}
+                      className={`${groupBgColor} text-gray-600 font-semibold text-[9px] text-center border border-gray-300`}
+                      style={{ 
+                        height: HEIGHTS.header3,
+                        borderBottom: '2px solid #000000', // 3행 하단 2px 검은색 구분선
+                        color: idx === 0 ? '#ffffff' : undefined, // 단계 열은 흰색 텍스트
+                      }}
+                    >
+                      {idx === 0 ? (
+                        'NO'
+                      ) : hasContextMenu ? (
+                        <span>
+                          <span className="text-red-600 font-bold text-[12px]">+</span>
+                          <span>{colLetter}</span>
+                        </span>
+                      ) : hasDropdown ? (
+                        <span>
+                          <span>{colLetter}</span>
+                          <span className="text-gray-500 text-[8px] ml-0.5">▼</span>
+                        </span>
+                      ) : (
+                        colLetter
+                      )}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             
@@ -357,6 +416,7 @@ function CPWorksheetContent() {
                     processRowSpan,
                     descRowSpan,
                     workRowSpan,
+                    charRowSpan,
                     inputMode,
                     onCellChange: handleCellChange,
                     onContextMenu: openContextMenu,
@@ -386,6 +446,7 @@ function CPWorksheetContent() {
         onInsertAbove={handleInsertRowAbove}
         onInsertBelow={handleInsertRowBelow}
         onDelete={handleDeleteRow}
+        onCancel={closeContextMenu}
       />
       
       {/* 자동 입력 모달 */}

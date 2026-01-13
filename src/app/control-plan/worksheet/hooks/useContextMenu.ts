@@ -21,7 +21,8 @@ export function useContextMenu() {
   const openContextMenu = useCallback((
     e: React.MouseEvent, 
     rowIdx: number, 
-    type: ContextMenuType
+    type: ContextMenuType,
+    colKey?: string
   ) => {
     e.preventDefault();
     setContextMenu({
@@ -30,6 +31,7 @@ export function useContextMenu() {
       y: e.clientY,
       rowIdx,
       type,
+      colKey,
     });
   }, []);
   

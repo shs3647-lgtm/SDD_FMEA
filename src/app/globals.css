@@ -512,6 +512,21 @@ body {
   background: #a1a1a1;
 }
 
+/* CP 워크시트 드롭다운 화살표 숨김 (C, K, O, Q, R열) */
+#cp-worksheet-scroll-container select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: none;
+  background-repeat: no-repeat;
+  background-position: right center;
+  padding-right: 4px;
+}
+
+#cp-worksheet-scroll-container select::-ms-expand {
+  display: none; /* IE/Edge */
+}
+
 /* ===== All 탭 스크롤바: 브라우저 하단 고정 ===== */
 /* 
  * 핵심 원리:

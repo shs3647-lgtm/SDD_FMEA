@@ -50,7 +50,7 @@ export interface SpanInfo {
 }
 
 // ============ 컨텍스트 메뉴 상태 ============
-export type ContextMenuType = 'process' | 'work' | 'char';
+export type ContextMenuType = 'process' | 'work' | 'char' | 'general';
 
 export interface ContextMenuState {
   visible: boolean;
@@ -58,6 +58,7 @@ export interface ContextMenuState {
   y: number;
   rowIdx: number;
   type: ContextMenuType;
+  colKey?: string; // 컬럼 키 (A, B열 구분용)
 }
 
 // ============ 자동 입력 모달 상태 ============

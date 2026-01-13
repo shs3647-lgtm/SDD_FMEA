@@ -77,14 +77,17 @@ export interface CPColumnDef {
   type?: 'text' | 'boolean' | 'select' | 'number';  // 입력 타입
 }
 
-// CP 19컬럼 정의 (반응형: minWidth 기준, 브라우저 자동 확장)
+// CP 20컬럼 정의 (NO 열 추가, 반응형: minWidth 기준, 브라우저 자동 확장)
 // ※ width 값은 최소폭(minWidth)으로 적용됨, 화면 크기에 따라 자동 확장
 export const CP_COLUMNS: CPColumnDef[] = [
+  // ■ 0. 단계 열 (연한 파란색)
+  { id: 0, group: '단계', name: '컬럼', key: 'rowNo', width: 40,
+    headerColor: '#90caf9', cellColor: '#e3f2fd', cellAltColor: '#bbdefb', align: 'center', editable: false },
   // ■ 1. 공정현황 (5컬럼)
   { id: 1, group: '공정현황', name: '공정번호', key: 'processNo', width: 45,
-    headerColor: COLORS.process.headerLight, cellColor: COLORS.process.cell, cellAltColor: COLORS.process.cellAlt, align: 'center', pfmeaSync: true },
+    headerColor: COLORS.control.headerLight, cellColor: COLORS.control.cell, cellAltColor: COLORS.control.cellAlt, align: 'center', pfmeaSync: true },
   { id: 2, group: '공정현황', name: '공정명', key: 'processName', width: 65,
-    headerColor: COLORS.process.headerLight, cellColor: COLORS.process.cell, cellAltColor: COLORS.process.cellAlt, align: 'center', pfmeaSync: true },
+    headerColor: COLORS.control.headerLight, cellColor: COLORS.control.cell, cellAltColor: COLORS.control.cellAlt, align: 'center', pfmeaSync: true },
   { id: 3, group: '공정현황', name: '레벨', key: 'processLevel', width: 45,
     headerColor: COLORS.process.headerLight, cellColor: COLORS.process.cell, cellAltColor: COLORS.process.cellAlt, align: 'center', type: 'select' },
   { id: 4, group: '공정현황', name: '공정설명', key: 'processDesc', width: 150,
@@ -102,7 +105,7 @@ export const CP_COLUMNS: CPColumnDef[] = [
   { id: 8, group: '관리항목', name: 'NO', key: 'charNo', width: 25,
     headerColor: '#fff9c4', cellColor: '#fffde7', cellAltColor: '#fff9c4', align: 'center', type: 'number' },
   { id: 9, group: '관리항목', name: '제품특성', key: 'productChar', width: 80,
-    headerColor: '#ffeb3b', cellColor: '#fffde7', cellAltColor: '#fff9c4', align: 'center', pfmeaSync: true },
+    headerColor: COLORS.control.headerLight, cellColor: COLORS.control.cell, cellAltColor: COLORS.control.cellAlt, align: 'center', pfmeaSync: true },
   { id: 10, group: '관리항목', name: '공정특성', key: 'processChar', width: 80,
     headerColor: '#ffeb3b', cellColor: '#fffde7', cellAltColor: '#fff9c4', align: 'center', pfmeaSync: true },
   { id: 11, group: '관리항목', name: '특별특성', key: 'specialChar', width: 35,
@@ -146,6 +149,11 @@ export function calculateGroupSpans(columns: CPColumnDef[]): Array<{ group: stri
   let currentColor = '';
   
   columns.forEach((col, idx) => {
+    // 단계 열은 그룹 스팬 계산에서 제외
+    if (col.group === '단계') {
+      return;
+    }
+    
     if (col.group !== currentGroup) {
       if (currentGroup) {
         spans.push({ group: currentGroup, span: currentSpan, color: currentColor });
@@ -157,7 +165,9 @@ export function calculateGroupSpans(columns: CPColumnDef[]): Array<{ group: stri
       currentSpan++;
     }
     
-    if (idx === columns.length - 1) {
+    // 마지막 열 처리 (단계 열 제외한 마지막 열)
+    const remainingCols = columns.slice(idx + 1).filter(c => c.group !== '단계');
+    if (remainingCols.length === 0) {
       spans.push({ group: currentGroup, span: currentSpan, color: currentColor });
     }
   });

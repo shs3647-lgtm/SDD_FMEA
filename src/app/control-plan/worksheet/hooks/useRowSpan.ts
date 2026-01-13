@@ -138,5 +138,53 @@ export function useWorkRowSpan(items: CPItem[]): SpanInfo[] {
   }, [items]);
 }
 
+/**
+ * 공정+레벨+공정설명+설비+제품특성 기준 rowSpan 계산
+ * I열(제품특성) 병합을 위한 독립적인 rowSpan 계산
+ * 각 병합은 독립적으로 수행되며, 상위 병합 결과는 항상 유지됨
+ */
+export function useCharRowSpan(items: CPItem[]): SpanInfo[] {
+  return useMemo(() => {
+    const result: SpanInfo[] = [];
+    let i = 0;
+    
+    while (i < items.length) {
+      const currentItem = items[i];
+      // 공정번호+공정명+레벨+공정설명+설비+제품특성 조합으로 그룹핑
+      const charKey = `${currentItem.processNo}-${currentItem.processName}-${currentItem.processLevel}-${currentItem.processDesc}-${currentItem.workElement}-${currentItem.productChar}`;
+      
+      // 레벨, 공정설명, 설비, 제품특성이 모두 빈 값이면 병합하지 않음 (각 행이 독립적으로 표시)
+      const isEmpty = !currentItem.processLevel && !currentItem.processDesc && !currentItem.workElement && !currentItem.productChar;
+      
+      // 같은 그룹의 연속 행 수 계산
+      let span = 1;
+      if (!isEmpty) {
+        // 빈 값이 아닌 경우에만 병합 계산
+        while (i + span < items.length) {
+          const nextItem = items[i + span];
+          const nextKey = `${nextItem.processNo}-${nextItem.processName}-${nextItem.processLevel}-${nextItem.processDesc}-${nextItem.workElement}-${nextItem.productChar}`;
+          const nextIsEmpty = !nextItem.processLevel && !nextItem.processDesc && !nextItem.workElement && !nextItem.productChar;
+          if (nextKey === charKey && !nextIsEmpty) {
+            span++;
+          } else {
+            break;
+          }
+        }
+      }
+      
+      // 첫 번째 행은 isFirst=true, span 설정
+      result[i] = { isFirst: true, span };
+      // 나머지 행은 isFirst=false
+      for (let j = 1; j < span; j++) {
+        result[i + j] = { isFirst: false, span: 0 };
+      }
+      
+      i += span;
+    }
+    
+    return result;
+  }, [items]);
+}
+
 
 
