@@ -487,6 +487,31 @@ body {
   display: none;  /* Chrome, Safari and Opera */
 }
 
+/* CP 워크시트 스크롤바 스타일 */
+#cp-worksheet-scroll-container {
+  scrollbar-width: thin;
+  scrollbar-color: #c1c1c1 #f1f1f1;
+}
+
+#cp-worksheet-scroll-container::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+#cp-worksheet-scroll-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 6px;
+}
+
+#cp-worksheet-scroll-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 6px;
+}
+
+#cp-worksheet-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
 /* ===== All 탭 스크롤바: 브라우저 하단 고정 ===== */
 /* 
  * 핵심 원리:

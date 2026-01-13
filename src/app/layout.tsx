@@ -48,11 +48,14 @@ export default function RootLayout({
               -webkit-text-size-adjust: 100% !important;
               -ms-text-size-adjust: 100% !important;
               transform: scale(1) !important;
+              background-color: #000000 !important;
             }
             body {
               zoom: 1 !important;
               transform: scale(1) !important;
               transform-origin: 0 0;
+              padding-right: 5px !important;
+              background-color: #f5f7fa !important;
             }
             * {
               zoom: 1 !important;

@@ -20,6 +20,7 @@ interface RenderCellProps {
   onCellChange: (itemId: string, key: string, value: any) => void;
   onContextMenu: (e: React.MouseEvent, rowIdx: number, type: ContextMenuType) => void;
   onAutoModeClick: (rowIdx: number, type: ContextMenuType) => void;
+  onEnterKey?: (rowIdx: number, type: ContextMenuType) => void;
 }
 
 export function renderCell({
@@ -34,6 +35,7 @@ export function renderCell({
   onCellChange,
   onContextMenu,
   onAutoModeClick,
+  onEnterKey,
 }: RenderCellProps): React.ReactNode {
   const value = (item as any)[col.key];
   const bgColor = rowIdx % 2 === 0 ? col.cellColor : col.cellAltColor;
@@ -49,6 +51,23 @@ export function renderCell({
     verticalAlign: 'middle',
   };
   
+  // 엔터 키 핸들러 (수동 모드일 때만) - 컨텍스트 메뉴의 "아래로 행추가"와 동일하게 동작
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (inputMode === 'manual' && e.key === 'Enter' && onEnterKey) {
+      e.preventDefault();
+      // 컬럼 타입에 따라 ContextMenuType 결정 (컨텍스트 메뉴와 동일한 로직)
+      let type: ContextMenuType = 'char';
+      if (col.key === 'processNo' || col.key === 'processName' || col.key === 'processDesc') {
+        type = 'process';
+      } else if (col.key === 'workElement') {
+        type = 'work';
+      } else if (col.key === 'productChar' || col.key === 'processChar') {
+        type = 'char';
+      }
+      onEnterKey(rowIdx, type);
+    }
+  };
+
   // 공정번호, 공정명 - rowSpan 병합
   if (col.key === 'processNo' || col.key === 'processName') {
     const spanInfo = processRowSpan[rowIdx];
@@ -65,6 +84,7 @@ export function renderCell({
           type="text"
           value={value || ''}
           onChange={(e) => onCellChange(item.id, col.key, e.target.value)}
+          onKeyDown={handleKeyDown}
           className="w-full bg-transparent outline-none text-center text-[9px]"
         />
       </td>
@@ -206,6 +226,7 @@ export function renderCell({
             type="text"
             value={value || ''}
             onChange={(e) => onCellChange(item.id, col.key, e.target.value)}
+            onKeyDown={handleKeyDown}
             className="w-full bg-transparent outline-none text-[9px] text-left"
             onClick={(e) => inputMode === 'auto' && e.stopPropagation()}
           />
@@ -239,6 +260,7 @@ export function renderCell({
             type="text"
             value={value || ''}
             onChange={(e) => onCellChange(item.id, col.key, e.target.value)}
+            onKeyDown={handleKeyDown}
             className="w-full bg-transparent outline-none text-center text-[9px]"
             onClick={(e) => inputMode === 'auto' && e.stopPropagation()}
           />
@@ -266,6 +288,7 @@ export function renderCell({
             type="text"
             value={value || ''}
             onChange={(e) => onCellChange(item.id, col.key, e.target.value)}
+            onKeyDown={handleKeyDown}
             className="w-full bg-transparent outline-none text-center text-[9px]"
             onClick={(e) => inputMode === 'auto' && e.stopPropagation()}
           />
@@ -281,6 +304,7 @@ export function renderCell({
         type="text"
         value={value || ''}
         onChange={(e) => onCellChange(item.id, col.key, e.target.value)}
+        onKeyDown={handleKeyDown}
         className="w-full bg-transparent outline-none text-center text-[9px]"
       />
     </td>

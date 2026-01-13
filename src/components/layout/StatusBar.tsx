@@ -62,8 +62,13 @@ export function StatusBar({
 
   // 스크롤 컨테이너 가져오기
   const getScrollContainer = useCallback(() => {
-    // all-tab-scroll-wrapper 먼저 확인 (All 탭용)
-    let container = document.getElementById('all-tab-scroll-wrapper');
+    // CP 워크시트 스크롤 컨테이너 확인
+    let container = document.getElementById('cp-worksheet-scroll-container');
+    if (container && container.scrollWidth > container.clientWidth) {
+      return container;
+    }
+    // all-tab-scroll-wrapper 확인 (All 탭용)
+    container = document.getElementById('all-tab-scroll-wrapper');
     if (container && container.scrollWidth > container.clientWidth) {
       return container;
     }
@@ -160,19 +165,22 @@ export function StatusBar({
     }, 500);
 
     // 모든 잠재적 스크롤 컨테이너에 리스너 추가
-    const container1 = document.getElementById('all-tab-scroll-wrapper');
-    const container2 = document.getElementById(scrollContainerId);
+    const cpContainer = document.getElementById('cp-worksheet-scroll-container');
+    const allTabContainer = document.getElementById('all-tab-scroll-wrapper');
+    const defaultContainer = document.getElementById(scrollContainerId);
     
-    container1?.addEventListener('scroll', handleScroll);
-    container2?.addEventListener('scroll', handleScroll);
+    cpContainer?.addEventListener('scroll', handleScroll);
+    allTabContainer?.addEventListener('scroll', handleScroll);
+    defaultContainer?.addEventListener('scroll', handleScroll);
     
     // 초기 위치 설정
     updateScrollPosition();
 
     return () => {
       clearInterval(interval);
-      container1?.removeEventListener('scroll', handleScroll);
-      container2?.removeEventListener('scroll', handleScroll);
+      cpContainer?.removeEventListener('scroll', handleScroll);
+      allTabContainer?.removeEventListener('scroll', handleScroll);
+      defaultContainer?.removeEventListener('scroll', handleScroll);
     };
   }, [scrollContainerId, updateScrollPosition]);
 

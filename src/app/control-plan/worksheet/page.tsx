@@ -213,6 +213,13 @@ function CPWorksheetContent() {
   const handleAutoModeClick = useCallback((rowIdx: number, type: ContextMenuType) => {
     setAutoModal({ visible: true, rowIdx, type, position: 'below' });
   }, []);
+
+  // 수동 모드: 엔터 키로 행 추가
+  const handleEnterKey = useCallback((rowIdx: number, type: ContextMenuType) => {
+    if (inputMode === 'manual') {
+      handleInsertRowBelow(rowIdx, type);
+    }
+  }, [inputMode, handleInsertRowBelow]);
   
   // 자동 모드: 모달에서 행 추가
   const handleAutoModalInsert = useCallback(() => {
@@ -270,21 +277,34 @@ function CPWorksheetContent() {
       />
       
       {/* ========== 메인 레이아웃 (메뉴 아래) ========== */}
-      <div className="fixed top-[100px] left-[53px] right-0 bottom-0 flex flex-row overflow-auto">
+      <div className="fixed top-[100px] left-[53px] right-0 bottom-0 flex flex-row overflow-hidden">
         
         {/* ===== 좌측: 워크시트 영역 ===== */}
         <div className="flex-1 flex flex-col min-w-0 bg-white overflow-hidden">
-          <div className="overflow-auto bg-white border-t border-gray-300 flex-1">
+          <div 
+            id="cp-worksheet-scroll-container" 
+            className="overflow-x-auto overflow-y-scroll bg-white border-t border-gray-300 flex-1"
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#c1c1c1 #f1f1f1',
+              maxHeight: '100%',
+            }}
+          >
             <table className={`border-collapse w-full table-auto min-w-[${totalWidth}px]`}>
-            <thead>
+            <thead style={{ background: '#ffffff' }}>
               {/* 1행: 그룹 헤더 */}
               <tr>
                 {groupSpans.map((g, idx) => (
                   <th
                     key={idx}
                     colSpan={g.span}
-                    className="text-white font-bold text-[11px] text-center sticky top-0 z-20 border border-white"
-                    style={{ background: g.color, height: HEIGHTS.header1 }}
+                    className="text-white font-bold text-[11px] text-center sticky top-0 z-30 border border-white"
+                    style={{ 
+                      background: g.color, 
+                      height: HEIGHTS.header1,
+                      padding: 0,
+                      margin: 0,
+                    }}
                   >
                     {g.group}
                   </th>
@@ -296,8 +316,15 @@ function CPWorksheetContent() {
                 {CP_COLUMNS.map(col => (
                   <th
                     key={col.id}
-                    className="font-semibold text-[10px] text-center border border-gray-300 whitespace-nowrap"
-                    style={{ minWidth: col.width, background: col.headerColor, height: HEIGHTS.header2, position: 'sticky', top: HEIGHTS.header1, zIndex: 19 }}
+                    className="font-semibold text-[10px] text-center border border-gray-300 whitespace-nowrap sticky z-29"
+                    style={{ 
+                      minWidth: col.width, 
+                      background: col.headerColor, 
+                      height: HEIGHTS.header2,
+                      top: `${HEIGHTS.header1}px`,
+                      padding: 0,
+                      margin: 0,
+                    }}
                   >
                     {col.name}
                     {col.pfmeaSync && <span className="ml-0.5 text-blue-600">*</span>}
@@ -311,7 +338,7 @@ function CPWorksheetContent() {
                   <th
                     key={`col-${col.id}`}
                     className="bg-gray-200 text-gray-600 font-semibold text-[9px] text-center border border-gray-300"
-                    style={{ height: HEIGHTS.header3, position: 'sticky', top: HEIGHTS.header1 + HEIGHTS.header2, zIndex: 18 }}
+                    style={{ height: HEIGHTS.header3 }}
                   >
                     {String.fromCharCode(65 + idx)}
                   </th>
@@ -334,6 +361,7 @@ function CPWorksheetContent() {
                     onCellChange: handleCellChange,
                     onContextMenu: openContextMenu,
                     onAutoModeClick: handleAutoModeClick,
+                    onEnterKey: handleEnterKey,
                   }))}
                 </tr>
               ))}

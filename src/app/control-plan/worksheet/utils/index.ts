@@ -18,9 +18,9 @@ export function createEmptyItem(
     cpId,
     processNo,
     processName,
-    processLevel: 'Main',
-    processDesc: '',
-    workElement: '',
+    processLevel: '',  // C열: 기본값 빈 값 (기본값으로 초기화)
+    processDesc: '',   // D열: 빈 값
+    workElement: '',   // E열: 빈 값
     detectorNo: false,
     detectorEp: false,
     detectorAuto: false,
@@ -43,7 +43,7 @@ export function createEmptyItem(
  * 샘플 데이터 생성
  */
 export function createSampleItems(cpId: string): CPItem[] {
-  return [
+  const items: CPItem[] = [
     { 
       ...createEmptyItem(cpId, '10', '프레스'), 
       processDesc: '원료투입', 
@@ -113,6 +113,16 @@ export function createSampleItems(cpId: string): CPItem[] {
       sortOrder: 3 
     },
   ];
+  
+  // 세로 스크롤 테스트용 빈 행 30개 추가
+  for (let i = 0; i < 30; i++) {
+    items.push({
+      ...createEmptyItem(cpId, '', ''),
+      sortOrder: items.length,
+    });
+  }
+  
+  return items;
 }
 
 
