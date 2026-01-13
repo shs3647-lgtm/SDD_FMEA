@@ -106,7 +106,6 @@ function APQPRegisterPageContent() {
   const [cftSaveStatus, setCftSaveStatus] = useState<'idle' | 'saved'>('idle');
   const [loading, setLoading] = useState(false);
 
-
   // ★ DB API에서 APQP 데이터 로드 (FMEA와 동일한 구조)
   useEffect(() => {
     const loadData = async () => {
@@ -196,19 +195,7 @@ function APQPRegisterPageContent() {
               phone: m.phone || '',
               remark: m.remark || m.remarks || '',
             }));
-            while (mappedMembers.length < 10) {
-              mappedMembers.push({
-                id: (mappedMembers.length + 1).toString(),
-                role: '',
-                name: '',
-                department: '',
-                position: '',
-                task: '',
-                email: '',
-                phone: '',
-                remark: '',
-              });
-            }
+            // ★ 10행 보장 로직 제거
             setCftMembers(mappedMembers);
             console.log('[APQP 등록] ✅ CFT 멤버 로드:', mappedMembers.length, '행');
           } else {
@@ -269,39 +256,32 @@ function APQPRegisterPageContent() {
                 remark: m.remark || m.remarks || '',
               }));
               
-              // ★ 단일 역할 중복 제거 (Champion, Leader, PM, Moderator는 각각 첫 번째만 유지)
+              // ★ 단일 역할 중복 제거 (Champion, Leader, PM, Moderator는 각각 첫 번째만 유지, 나머지는 행 자체 삭제)
               const SINGLE_ROLES = ['Champion', 'Leader', 'PM', 'Moderator'];
               for (const role of SINGLE_ROLES) {
                 const membersWithRole = mappedMembers.filter(m => m.role === role);
                 if (membersWithRole.length > 1) {
                   let firstFound = false;
-                  mappedMembers.forEach((m) => {
+                  // 중복된 행을 필터링하여 제거 (첫 번째만 유지)
+                  const filteredMembers = mappedMembers.filter((m) => {
                     if (m.role === role) {
                       if (!firstFound) {
                         firstFound = true;
+                        return true; // 첫 번째는 유지
                       } else {
-                        m.role = '';
-                        console.warn(`[APQP 등록] ⚠️ 중복 ${role} 제거: ${m.name || '(이름 없음)'}`);
+                        console.warn(`[APQP 등록] ⚠️ 중복 ${role} 행 삭제: ${m.name || '(이름 없음)'}`);
+                        return false; // 나머지는 행 자체 삭제
                       }
                     }
+                    return true; // 다른 역할은 유지
                   });
-                  console.warn(`[APQP 등록] ⚠️ ${role} 중복 발견: ${membersWithRole.length}명 → 첫 번째만 유지`);
+                  mappedMembers.length = 0;
+                  mappedMembers.push(...filteredMembers);
+                  console.warn(`[APQP 등록] ⚠️ ${role} 중복 발견: ${membersWithRole.length}명 → 첫 번째만 유지, 나머지 행 삭제`);
                 }
               }
               
-              while (mappedMembers.length < 10) {
-                mappedMembers.push({
-                  id: (mappedMembers.length + 1).toString(),
-                  role: '',
-                  name: '',
-                  department: '',
-                  position: '',
-                  task: '',
-                  email: '',
-                  phone: '',
-                  remark: '',
-                });
-              }
+              // ★ 10행 보장 로직 제거
               setCftMembers(mappedMembers);
               console.log('[APQP 등록] ✅ CFT 멤버 로드:', mappedMembers.length, '행');
             } else {
@@ -460,19 +440,7 @@ function APQPRegisterPageContent() {
           }
         }
         
-        while (mappedMembers.length < 10) {
-          mappedMembers.push({
-            id: (mappedMembers.length + 1).toString(),
-            role: '',
-            name: '',
-            department: '',
-            position: '',
-            task: '',
-            email: '',
-            phone: '',
-            remark: '',
-          });
-        }
+        // ★ 10행 보장 로직 제거
         setCftMembers(mappedMembers);
         console.log(`[APQP 등록] ✅ CFT 멤버 로드: ${mappedMembers.length}행`);
       } else {
@@ -846,7 +814,7 @@ function APQPRegisterPageContent() {
             title="CFT 등록"
             members={cftMembers}
             onMembersChange={(newMembers) => {
-              // ★ 단일 역할 중복 자동 제거 (Champion, Leader, PM, Moderator는 각각 첫 번째만 유지)
+              // ★ 단일 역할 중복 자동 제거 (Champion, Leader, PM, Moderator는 각각 첫 번째만 유지, 나머지는 행 자체 삭제)
               const SINGLE_ROLES = ['Champion', 'Leader', 'PM', 'Moderator'];
               let hasDuplicates = false;
               
@@ -855,17 +823,18 @@ function APQPRegisterPageContent() {
                 if (membersWithRole.length > 1) {
                   hasDuplicates = true;
                   let firstFound = false;
-                  const cleanedMembers = newMembers.map((m) => {
+                  // 중복된 행을 필터링하여 제거 (첫 번째만 유지)
+                  const cleanedMembers = newMembers.filter((m) => {
                     if (m.role === role) {
                       if (!firstFound) {
                         firstFound = true;
-                        return m;
+                        return true; // 첫 번째는 유지
                       } else {
-                        console.warn(`[APQP 등록] ⚠️ 중복 ${role} 자동 제거: ${m.name || '(이름 없음)'}`);
-                        return { ...m, role: '' }; // 중복 역할 제거
+                        console.warn(`[APQP 등록] ⚠️ 중복 ${role} 행 삭제: ${m.name || '(이름 없음)'}`);
+                        return false; // 나머지는 행 자체 삭제
                       }
                     }
-                    return m;
+                    return true; // 다른 역할은 유지
                   });
                   setCftMembers(cleanedMembers);
                   return;

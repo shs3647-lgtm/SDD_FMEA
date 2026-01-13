@@ -42,10 +42,29 @@ const CFT_ROLES = ['Champion', 'Leader', 'PM', 'Moderator', 'CFT 팀원'];
 const SINGLE_ROLE_LIST = ['Champion', 'Leader', 'PM', 'Moderator']; // 각각 1명만 허용
 
 // 초기 멤버 생성
+// ★ 수정: 단일 역할(Champion, Leader, PM, Moderator)은 각각 1개만 생성, 나머지는 빈 역할로 생성
 export const createInitialCFTMembers = (): CFTMember[] => {
-  return CFT_ROLES.map((role, idx) => ({
-    id: (idx + 1).toString(),
-    role,
+  const members: CFTMember[] = [];
+  
+  // 단일 역할은 각각 1개만 생성
+  SINGLE_ROLE_LIST.forEach((role, idx) => {
+    members.push({
+      id: (idx + 1).toString(),
+      role,
+      name: '',
+      department: '',
+      position: '',
+      task: '',
+      email: '',
+      phone: '',
+      remark: '',
+    });
+  });
+  
+  // CFT 팀원은 1개만 생성 (추가 필요시 사용자가 행 추가)
+  members.push({
+    id: (members.length + 1).toString(),
+    role: 'CFT 팀원',
     name: '',
     department: '',
     position: '',
@@ -53,7 +72,10 @@ export const createInitialCFTMembers = (): CFTMember[] => {
     email: '',
     phone: '',
     remark: '',
-  }));
+  });
+  
+  // ★ 10행 보장 로직 제거: 필요한 만큼만 생성 (5개: Champion, Leader, PM, Moderator, CFT 팀원)
+  return members;
 };
 
 export const CFTRegistrationTable: React.FC<CFTRegistrationTableProps> = ({
@@ -70,7 +92,7 @@ export const CFTRegistrationTable: React.FC<CFTRegistrationTableProps> = ({
   const handleAddRow = () => {
     const newMember: CFTMember = {
       id: Date.now().toString(),
-      role: 'CFT 팀원',
+      role: '', // ★ 빈 역할로 시작 (사용자가 선택)
       name: '',
       department: '',
       position: '',
@@ -187,6 +209,7 @@ export const CFTRegistrationTable: React.FC<CFTRegistrationTableProps> = ({
                     onChange={(e) => updateField(index, 'role', e.target.value)}
                     className="w-full h-6 text-xs border-0 bg-transparent focus:outline-none text-center font-semibold text-gray-800"
                   >
+                    <option value="">- 선택 -</option>
                     {CFT_ROLES.map((role) => (
                       <option key={role} value={role}>
                         {role}

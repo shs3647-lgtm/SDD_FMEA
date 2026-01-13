@@ -135,7 +135,8 @@ function PFMEARegisterPageContent() {
   const [selectedBaseFmea, setSelectedBaseFmea] = useState<string | null>(null);
   
   // ★ 상위 APQP 선택 상태 (APQP가 최상위)
-  const [selectedParentApqp, setSelectedParentApqp] = useState<{apqpNo: string; subject: string} | null>(null);
+  // ★ 상위 APQP 선택 상태 (APQP가 최상위) - 문자열로 관리 (CP와 동일)
+  const [selectedParentApqp, setSelectedParentApqp] = useState<string | null>(null);
   const [apqpModalOpen, setApqpModalOpen] = useState(false);
   const [apqpList, setApqpList] = useState<Array<{apqpNo: string; subject: string; customerName?: string}>>([]);
   
@@ -364,19 +365,7 @@ function PFMEARegisterPageContent() {
               phone: m.phone || '',
               remark: m.remark || m.remarks || '',
             }));
-            while (mappedMembers.length < 10) {
-              mappedMembers.push({
-                id: (mappedMembers.length + 1).toString(),
-                role: '',
-                name: '',
-                department: '',
-                position: '',
-                task: '',
-                email: '',
-                phone: '',
-                remark: '',
-              });
-            }
+            // ★ 10행 보장 로직 제거
             setCftMembers(mappedMembers);
             console.log('[PFMEA 등록] ✅ CFT 멤버 로드:', mappedMembers.length, '행');
           } else {
@@ -388,10 +377,7 @@ function PFMEARegisterPageContent() {
             setSelectedBaseFmea(lastProject.parentFmeaId.toLowerCase());
           }
           if (lastProject.parentApqpNo) {
-            setSelectedParentApqp({
-              apqpNo: lastProject.parentApqpNo,
-              subject: '',
-            });
+            setSelectedParentApqp(lastProject.parentApqpNo); // ★ 문자열로 저장
           }
           // URL을 수정 모드로 업데이트
           router.replace(`/pfmea/register?id=${lastProject.id.toLowerCase()}`);
@@ -483,40 +469,32 @@ function PFMEARegisterPageContent() {
                   remark: m.remark || m.remarks || '', // remark 또는 remarks
                 }));
                 
-            // ★ 단일 역할 중복 제거 (Champion, Leader, PM, Moderator는 각각 첫 번째만 유지, 나머지는 빈 역할로 변경)
+            // ★ 단일 역할 중복 제거 (Champion, Leader, PM, Moderator는 각각 첫 번째만 유지, 나머지는 행 자체 삭제)
             const SINGLE_ROLES = ['Champion', 'Leader', 'PM', 'Moderator'];
             for (const role of SINGLE_ROLES) {
               const membersWithRole = mappedMembers.filter(m => m.role === role);
               if (membersWithRole.length > 1) {
                 let firstFound = false;
-                mappedMembers.forEach((m) => {
+                // 중복된 행을 필터링하여 제거 (첫 번째만 유지)
+                const filteredMembers = mappedMembers.filter((m) => {
                   if (m.role === role) {
                     if (!firstFound) {
                       firstFound = true;
+                      return true; // 첫 번째는 유지
                     } else {
-                      m.role = ''; // 중복 역할 제거
-                      console.warn(`[PFMEA 등록] ⚠️ 중복 ${role} 제거: ${m.name || '(이름 없음)'}`);
+                      console.warn(`[PFMEA 등록] ⚠️ 중복 ${role} 행 삭제: ${m.name || '(이름 없음)'}`);
+                      return false; // 나머지는 행 자체 삭제
                     }
                   }
+                  return true; // 다른 역할은 유지
                 });
-                console.warn(`[PFMEA 등록] ⚠️ ${role} 중복 발견: ${membersWithRole.length}명 → 첫 번째만 유지, 나머지 역할 제거`);
+                mappedMembers.length = 0;
+                mappedMembers.push(...filteredMembers);
+                console.warn(`[PFMEA 등록] ⚠️ ${role} 중복 발견: ${membersWithRole.length}명 → 첫 번째만 유지, 나머지 행 삭제`);
               }
             }
                 
-                // ★ 최소 10개 행 유지 (빈 행 추가)
-                while (mappedMembers.length < 10) {
-                  mappedMembers.push({
-                    id: (mappedMembers.length + 1).toString(),
-                    role: '',
-                    name: '',
-                    department: '',
-                    position: '',
-                    task: '',
-                    email: '',
-                    phone: '',
-                    remark: '',
-                  });
-                }
+                // ★ 10행 보장 로직 제거
                 setCftMembers(mappedMembers);
                 console.log(`[PFMEA 등록] ✅ CFT 멤버 설정 완료: ${mappedMembers.length}행 (실제 멤버 ${project.cftMembers.length}명)`);
               } else {
@@ -533,10 +511,7 @@ function PFMEARegisterPageContent() {
               
               // ★ 상위 APQP 로드
               if (project.parentApqpNo) {
-                setSelectedParentApqp({
-                  apqpNo: project.parentApqpNo,
-                  subject: '', // APQP 정보는 필요시 별도 조회
-                });
+                setSelectedParentApqp(project.parentApqpNo); // ★ 문자열로 저장
                 console.log('[PFMEA 등록] 상위 APQP 로드:', project.parentApqpNo);
               }
               
@@ -743,19 +718,7 @@ function PFMEARegisterPageContent() {
           }
         }
         
-        while (mappedMembers.length < 10) {
-          mappedMembers.push({
-            id: (mappedMembers.length + 1).toString(),
-            role: '',
-            name: '',
-            department: '',
-            position: '',
-            task: '',
-            email: '',
-            phone: '',
-            remark: '',
-          });
-        }
+        // ★ 10행 보장 로직 제거
         setCftMembers(mappedMembers);
         console.log(`[PFMEA 등록] ✅ CFT 멤버 로드: ${mappedMembers.length}행`);
       } else {
@@ -769,10 +732,7 @@ function PFMEARegisterPageContent() {
       
       // 상위 APQP 로드
       if (project.parentApqpNo) {
-        setSelectedParentApqp({
-          apqpNo: project.parentApqpNo,
-          subject: '',
-        });
+        setSelectedParentApqp(project.parentApqpNo); // ★ 문자열로 저장
       }
       
       // URL 업데이트
@@ -1031,15 +991,43 @@ function PFMEARegisterPageContent() {
         }
       }
       
-      // ✅ parentFmeaId 결정: 선택된 상위 FMEA 또는 Master는 본인 ID
+      // ✅ parentFmeaId 결정: Master는 본인이 상위 FMEA, Family/Part는 선택된 상위 FMEA
       // ✅ FMEA ID는 항상 소문자로 정규화 (DB 일관성 보장)
-      const actualFmeaType = fmeaInfo.fmeaType || 'P';
-      const parentId = selectedBaseFmea ? selectedBaseFmea : (actualFmeaType === 'M' ? finalFmeaId : null);
-      const parentType = selectedBaseFmea 
-        ? (selectedBaseFmea.match(/pfm\d{2}-([mfp])/i)?.[1]?.toLowerCase() || 'm')
-        : (actualFmeaType === 'M' ? 'M' : null);
+      let actualFmeaType: FMEAType;
+      if (fmeaInfo.fmeaType) {
+        actualFmeaType = fmeaInfo.fmeaType as FMEAType;
+      } else if (finalFmeaId.includes('-M')) {
+        actualFmeaType = 'M';
+      } else if (finalFmeaId.includes('-F')) {
+        actualFmeaType = 'F';
+      } else {
+        actualFmeaType = 'P';
+      }
       
-      console.log('[PFMEA 등록] 상위 FMEA 저장:', { parentFmeaId: parentId, parentFmeaType: parentType });
+      let parentId: string | null = null;
+      let parentType: string | null = null;
+      
+      if (actualFmeaType === 'M') {
+        // ★ Master FMEA는 본인이 상위 FMEA (자기 자신이 parent)
+        parentId = finalFmeaId.toLowerCase();
+        parentType = 'M';
+      } else if (selectedBaseFmea) {
+        // Family/Part는 선택된 상위 FMEA를 parent로 가짐
+        parentId = selectedBaseFmea.toLowerCase();
+        // parentFmeaType 추출
+        const match = selectedBaseFmea.match(/pfm\d{2}-([mfp])/i);
+        if (match) {
+          parentType = match[1].toUpperCase(); // M, F, P
+        }
+      }
+      
+      console.log('[PFMEA 등록] 상위 FMEA 저장:', { 
+        fmeaType: actualFmeaType,
+        parentFmeaId: parentId, 
+        parentFmeaType: parentType,
+        isMaster: actualFmeaType === 'M',
+        masterSelfParent: actualFmeaType === 'M' ? '본인이 상위 FMEA' : '선택된 상위 FMEA'
+      });
       
       // 1. DB에 프로젝트 생성/수정 (CFT 멤버 + 상위 APQP + 상위 FMEA 포함)
       const response = await fetch('/api/fmea/projects', {
@@ -1051,7 +1039,7 @@ function PFMEARegisterPageContent() {
           project: projectData,
           fmeaInfo: fmeaInfoToSave,  // ✅ 모든 필드 포함
           cftMembers: membersToSave,  // ✅ CFT 멤버도 DB에 저장 (현재 상태 명시적으로 전달)
-          parentApqpNo: selectedParentApqp?.apqpNo || null,  // ★ 상위 APQP 저장
+          parentApqpNo: selectedParentApqp || null,  // ★ 상위 APQP 저장 (이미 문자열)
           parentFmeaId: parentId,  // ✅ 상위 FMEA ID 저장 (이미 대문자로 변환됨)
           parentFmeaType: parentType,  // ✅ 상위 FMEA 유형 저장
         }),
@@ -1305,7 +1293,7 @@ function PFMEARegisterPageContent() {
                 {selectedParentApqp ? (
                   <div className="flex items-center gap-1 px-2">
                     <span className="px-1 py-0 rounded text-[9px] font-bold text-white bg-green-500">APQP</span>
-                    <span className="text-xs font-semibold text-green-600">{selectedParentApqp.apqpNo}</span>
+                    <span className="text-xs font-semibold text-green-600">{selectedParentApqp}</span>
                     <button onClick={(e) => { e.stopPropagation(); setSelectedParentApqp(null); }} className="text-red-500 hover:text-red-700 text-[10px]">✕</button>
                   </div>
                 ) : <span className="px-2 text-xs text-gray-400">- (클릭하여 선택)</span>}
@@ -1665,7 +1653,7 @@ function PFMEARegisterPageContent() {
           title="CFT 리스트"
           members={cftMembers}
           onMembersChange={(newMembers) => {
-            // ★ 단일 역할 중복 자동 제거 (Champion, Leader, PM, Moderator는 각각 첫 번째만 유지)
+            // ★ 단일 역할 중복 자동 제거 (Champion, Leader, PM, Moderator는 각각 첫 번째만 유지, 나머지는 행 자체 삭제)
             const SINGLE_ROLES = ['Champion', 'Leader', 'PM', 'Moderator'];
             let hasDuplicates = false;
             
@@ -1674,17 +1662,18 @@ function PFMEARegisterPageContent() {
               if (membersWithRole.length > 1) {
                 hasDuplicates = true;
                 let firstFound = false;
-                const cleanedMembers = newMembers.map((m) => {
+                // 중복된 행을 필터링하여 제거 (첫 번째만 유지)
+                const cleanedMembers = newMembers.filter((m) => {
                   if (m.role === role) {
                     if (!firstFound) {
                       firstFound = true;
-                      return m;
+                      return true; // 첫 번째는 유지
                     } else {
-                      console.warn(`[PFMEA 등록] ⚠️ 중복 ${role} 자동 제거: ${m.name || '(이름 없음)'}`);
-                      return { ...m, role: '' }; // 중복 역할 제거
+                      console.warn(`[PFMEA 등록] ⚠️ 중복 ${role} 행 삭제: ${m.name || '(이름 없음)'}`);
+                      return false; // 나머지는 행 자체 삭제
                     }
                   }
-                  return m;
+                  return true; // 다른 역할은 유지
                 });
                 setCftMembers(cleanedMembers);
                 return;
@@ -1746,7 +1735,7 @@ function PFMEARegisterPageContent() {
                 apqpList.map((apqp, idx) => (
                   <div
                     key={apqp.apqpNo}
-                    onClick={() => { setSelectedParentApqp(apqp); setApqpModalOpen(false); }}
+                    onClick={() => { setSelectedParentApqp(apqp.apqpNo); setApqpModalOpen(false); }}
                     className={`px-4 py-3 border-b cursor-pointer hover:bg-green-50 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
                   >
                     <div className="flex items-center justify-between">

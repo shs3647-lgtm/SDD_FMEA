@@ -90,7 +90,7 @@ export function useRegisterHandlers({
     // ★ MASTER CP는 상위 CP가 자신이 되도록 설정
     if (newType === 'M') {
       setSelectedBaseCp(newCpId);
-    } else if (cpInfo.cpType === 'M' && newType !== 'M') {
+    } else if (cpInfo.cpType === 'M' && (newType === 'F' || newType === 'P')) {
       // MASTER에서 다른 타입으로 변경 시 상위 CP 초기화
       setSelectedBaseCp(null);
     }
@@ -233,9 +233,11 @@ export function useRegisterHandlers({
     try {
       // 1. DB에 저장
       // ★ parentApqpNo 정규화 (문자열로 변환, 빈 값은 null)
+      console.log('🔍 [CP 저장] selectedParentApqp 원본 값:', selectedParentApqp, '타입:', typeof selectedParentApqp);
       const normalizedParentApqpNo = selectedParentApqp && selectedParentApqp.trim() !== '' 
         ? selectedParentApqp.trim() 
         : null;
+      console.log('🔍 [CP 저장] normalizedParentApqpNo:', normalizedParentApqpNo);
       
       // ★ 이름이 있는 멤버만 저장 (이름 없는 멤버는 제외)
       const membersToSave = cftMembers.filter((m: any) => m.name && m.name.trim() !== '');
@@ -278,6 +280,7 @@ export function useRegisterHandlers({
       }
 
       console.log('✅ CP DB 저장 완료:', result.cpNo);
+      console.log('💾 저장된 parentApqpNo:', normalizedParentApqpNo);
 
       // 2. localStorage에도 백업 (오프라인 지원)
       const data = {
@@ -301,12 +304,53 @@ export function useRegisterHandlers({
       // ★ 마지막 작업 CP ID 저장 (다음 방문 시 자동 로드용)
       localStorage.setItem('cp-last-edited', finalCpId);
       
+      // ★ 저장 후 DB에서 다시 로드하여 parentApqpNo 확인 (동기화 보장)
+      try {
+        const reloadResponse = await fetch(`/api/control-plan?cpNo=${finalCpId.toLowerCase()}`);
+        const reloadResult = await reloadResponse.json();
+        if (reloadResult.success && reloadResult.data) {
+          const reloadedCp = reloadResult.data;
+          console.log('🔄 저장 후 재로드 - parentApqpNo:', reloadedCp.parentApqpNo);
+          // parentApqpNo가 저장되었는지 확인
+          if (reloadedCp.parentApqpNo !== normalizedParentApqpNo) {
+            console.warn('⚠️ parentApqpNo 불일치:', {
+              저장한값: normalizedParentApqpNo,
+              DB값: reloadedCp.parentApqpNo,
+            });
+          }
+        }
+      } catch (reloadError) {
+        console.warn('⚠️ 저장 후 재로드 실패 (무시):', reloadError);
+      }
+      
       setSaveStatus('saved');
       setShowMissingFields(true);
       
       // ★ 저장 후 URL을 수정 모드로 업데이트 (새로고침 시 데이터 유지)
       if (!isEditMode) {
         router.replace(`/control-plan/register?id=${finalCpId}`);
+      }
+      
+      // ★ 저장 후 DB에서 다시 로드하여 parentApqpNo 확인 (동기화 보장)
+      // 주의: 이 로직은 검증용이며, 실제 상태 업데이트는 useEffect에서 처리됨
+      try {
+        const reloadResponse = await fetch(`/api/control-plan?cpNo=${finalCpId.toLowerCase()}`);
+        const reloadResult = await reloadResponse.json();
+        if (reloadResult.success && reloadResult.data) {
+          const reloadedCp = reloadResult.data;
+          console.log('🔄 저장 후 재로드 - parentApqpNo:', reloadedCp.parentApqpNo);
+          // parentApqpNo가 저장되었는지 확인
+          if (reloadedCp.parentApqpNo !== normalizedParentApqpNo) {
+            console.error('❌ parentApqpNo 저장 불일치:', {
+              저장한값: normalizedParentApqpNo,
+              DB값: reloadedCp.parentApqpNo,
+            });
+          } else {
+            console.log('✅ parentApqpNo 저장 확인:', normalizedParentApqpNo);
+          }
+        }
+      } catch (reloadError) {
+        console.warn('⚠️ 저장 후 재로드 실패 (무시):', reloadError);
       }
       
       setTimeout(() => setSaveStatus('idle'), 2000);
@@ -340,7 +384,7 @@ export function useRegisterHandlers({
         setSaveStatus('idle');
       }
     }
-  }, [cpInfo, cpId, cftMembers, selectedParentApqp, selectedParentFmea, selectedBaseCp, setSaveStatus, setShowMissingFields, isEditMode, router]);
+  }, [cpInfo, cpId, cftMembers, selectedParentApqp, selectedParentFmea, selectedBaseCp, setSaveStatus, setShowMissingFields, isEditMode, router]); // ★ selectedParentApqp는 이미 문자열로 전달됨 (selectedParentApqp?.apqpNo || null)
   
   return {
     handleCpTypeChange,
