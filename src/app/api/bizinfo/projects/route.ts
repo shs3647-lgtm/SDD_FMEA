@@ -271,6 +271,7 @@ export async function PUT(request: NextRequest) {
 }
 
 // ============ DELETE: 프로젝트 기초정보 삭제 ============
+// id=all 이면 전체 삭제, 아니면 개별 삭제
 export async function DELETE(request: NextRequest) {
   const prisma = getPrisma();
   if (!prisma) {
@@ -282,6 +283,26 @@ export async function DELETE(request: NextRequest) {
 
   const searchParams = request.nextUrl.searchParams;
   const projectId = searchParams.get('id');
+  const deleteAll = searchParams.get('deleteAll');
+
+  // ★ 전체 삭제 (초기화)
+  if (deleteAll === 'true' || projectId === 'all') {
+    try {
+      const result = await prisma.bizInfoProject.deleteMany({});
+      console.log(`🗑️ 모든 프로젝트 기초정보 삭제 완료: ${result.count}개`);
+      return NextResponse.json({
+        success: true,
+        message: `${result.count}개의 프로젝트 기초정보가 삭제되었습니다.`,
+        deletedCount: result.count
+      });
+    } catch (error: any) {
+      console.error('[BizInfoProjects API] DELETE ALL 오류:', error);
+      return NextResponse.json(
+        { success: false, error: error.message || 'Failed to delete all projects' },
+        { status: 500 }
+      );
+    }
+  }
 
   if (!projectId) {
     return NextResponse.json(
@@ -322,8 +343,36 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
+// ============ DELETE ALL: 모든 프로젝트 기초정보 삭제 (초기화용) ============
+// 주의: 이 API는 모든 데이터를 삭제합니다. 신중하게 사용하세요.
+export async function DELETE_ALL(request: NextRequest) {
+  const prisma = getPrisma();
+  if (!prisma) {
+    return NextResponse.json(
+      { success: false, error: 'Database not configured' },
+      { status: 500 }
+    );
+  }
 
+  try {
+    // 모든 프로젝트 기초정보 삭제
+    const result = await prisma.bizInfoProject.deleteMany({});
+    
+    console.log(`✅ 모든 프로젝트 기초정보 삭제 완료: ${result.count}개`);
 
+    return NextResponse.json({
+      success: true,
+      message: `${result.count}개의 프로젝트 기초정보가 삭제되었습니다.`,
+      deletedCount: result.count
+    });
+  } catch (error: any) {
+    console.error('[BizInfoProjects API] DELETE ALL 오류:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to delete all projects' },
+      { status: 500 }
+    );
+  }
+}
 
 
 

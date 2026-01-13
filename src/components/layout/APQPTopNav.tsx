@@ -37,8 +37,8 @@ export default function APQPTopNav({ selectedProjectId, rowCount = 0, stageCount
       statItems={statItems}
       statLabel="APQP:"
       selectedId={selectedProjectId || undefined}
-      gradientFrom="#bf360c"
-      gradientTo="#e64a19"
+      gradientFrom="#1565c0"
+      gradientTo="#1976d2"
     />
   );
 }

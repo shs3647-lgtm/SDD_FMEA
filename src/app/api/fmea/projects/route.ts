@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      fmeaId: fmeaId.toUpperCase(),
+      fmeaId: fmeaId.toLowerCase(),
       message: 'FMEA 프로젝트가 저장되었습니다.',
     });
   } catch (error: any) {
@@ -91,7 +91,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      fmeaId: fmeaId.toUpperCase(),
+      fmeaId: fmeaId.toLowerCase(),
       message: 'FMEA 프로젝트가 삭제되었습니다.',
     });
   } catch (error: any) {

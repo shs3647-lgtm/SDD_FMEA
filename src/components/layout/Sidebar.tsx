@@ -185,6 +185,8 @@ const bottomMenuItems = [
       { label: '사용자정보', href: '/master/user' },
       { label: 'PFMEA 임포트', href: '/pfmea/import' },
       { label: 'DFMEA 임포트', href: '/dfmea/import' },
+      { label: 'CP 기초정보', href: '/control-plan/import' },
+      { label: '🗄️ DB뷰어', href: '/admin/db-viewer' },
     ],
   },
 ];

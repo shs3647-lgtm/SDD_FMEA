@@ -259,7 +259,7 @@ export default function CPCFTPage() {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-xs min-w-[1000px]">
               <thead>
-                <tr className="bg-[#0d9488] text-white" style={{ height: '28px' }}>
+                <tr className="bg-[#0d9488] text-white h-7">
                   <th className="border border-white px-2 py-1 text-center align-middle w-10">
                     <input
                       type="checkbox"
@@ -283,8 +283,7 @@ export default function CPCFTPage() {
                 {members.map((member, index) => (
                   <tr 
                     key={member.id} 
-                    className={`hover:bg-teal-50 ${index % 2 === 0 ? 'bg-white' : 'bg-teal-50/50'} ${selectedRows.has(member.id) ? 'bg-teal-100' : ''}`}
-                    style={{ height: '28px' }}
+                    className={`hover:bg-teal-50 h-7 ${index % 2 === 0 ? 'bg-white' : 'bg-teal-50/50'} ${selectedRows.has(member.id) ? 'bg-teal-100' : ''}`}
                   >
                     <td className="border border-gray-400 px-2 py-1 text-center align-middle">
                       <input

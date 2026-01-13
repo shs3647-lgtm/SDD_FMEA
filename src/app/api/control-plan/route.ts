@@ -1,128 +1,287 @@
 /**
  * @file route.ts
- * @description Control Plan CRUD API
- * - POST: CP 생성
- * - GET: CP 목록 조회
+ * @description Control Plan 저장/조회/목록 API (CP ID별 단계별 저장)
+ * @version 2.0.0
+ * @created 2026-01-13
+ * @updated 2026-01-13 - CP 프로젝트 등록 + CFT 멤버 저장 추가
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getPrisma } from '@/lib/prisma';
 
-// CP 번호 생성 (CP26-M001 형식)
-function generateCpNo(type: string = 'M'): string {
-  const year = new Date().getFullYear().toString().slice(-2);
-  const seq = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-  return `cp${year}-${type}${seq}`;
-}
+export const runtime = 'nodejs';
 
-// GET: CP 목록 조회
-export async function GET(request: NextRequest) {
-  try {
-    const prisma = getPrisma();
-    if (!prisma) {
-      return NextResponse.json({ success: false, error: 'DB 연결 실패' }, { status: 500 });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const fmeaId = searchParams.get('fmeaId');
-    
-    const whereClause = fmeaId ? { fmeaId } : {};
-    
-    const controlPlans = await prisma.controlPlan.findMany({
-      where: whereClause,
-      include: {
-        items: {
-          orderBy: { sortOrder: 'asc' },
-          take: 5, // 목록에서는 5개만
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    return NextResponse.json({ 
-      success: true, 
-      data: controlPlans,
-      count: controlPlans.length,
-    });
-  } catch (error) {
-    console.error('CP 목록 조회 오류:', error);
-    return NextResponse.json({ success: false, error: 'CP 목록 조회 실패' }, { status: 500 });
-  }
-}
-
-// POST: CP 생성
+/**
+ * POST: CP 등록/수정 (CpRegistration + CpCftMember)
+ */
 export async function POST(request: NextRequest) {
+  const prisma = getPrisma();
+  if (!prisma) {
+    return NextResponse.json(
+      { success: false, error: 'Database not configured' },
+      { status: 500 }
+    );
+  }
+
   try {
-    const prisma = getPrisma();
-    if (!prisma) {
-      return NextResponse.json({ success: false, error: 'DB 연결 실패' }, { status: 500 });
-    }
-
     const body = await request.json();
-    const { 
-      fmeaId, 
-      fmeaNo,
-      projectName,
-      partName, 
-      partNo, 
-      customer,
-      preparedBy,
-      cpInfo,  // 기존 프론트엔드 호환
-    } = body;
+    const { cpNo, cpInfo, cftMembers, parentFmeaId, baseCpId } = body;
 
-    if (!fmeaId) {
-      return NextResponse.json({ success: false, error: '상위 FMEA ID가 필요합니다' }, { status: 400 });
+    if (!cpNo) {
+      return NextResponse.json(
+        { success: false, error: 'cpNo is required' },
+        { status: 400 }
+      );
     }
 
-    // CP 번호 생성 (fmeaNo 기반)
-    let cpNo = body.cpNo;
-    if (!cpNo) {
-      if (fmeaNo) {
-        // pfm26-M001 → cp26-M001
-        cpNo = fmeaNo.replace('pfm', 'cp');
-      } else {
-        cpNo = generateCpNo();
+    const cpNoLower = cpNo.toLowerCase(); // ★ 소문자 정규화
+
+    // 1. CP 등록 정보 저장 (CpRegistration)
+    const registrationData = {
+      cpNo: cpNoLower,
+      // 상위 연결 (3개)
+      parentApqpNo: body.parentApqpNo || null,             // ★ 상위 APQP (최상위)
+      fmeaId: parentFmeaId?.toLowerCase() || null,         // 상위 FMEA (소문자)
+      fmeaNo: parentFmeaId?.toLowerCase() || null,
+      parentCpId: body.baseCpId?.toLowerCase() || null,    // 상위 CP (소문자)
+      // 회사 정보
+      companyName: cpInfo?.companyName || '',
+      engineeringLocation: cpInfo?.engineeringLocation || '',
+      customerName: cpInfo?.customerName || '',
+      modelYear: cpInfo?.modelYear || '',
+      subject: cpInfo?.subject || '',
+      cpType: cpInfo?.cpType || 'P',
+      confidentialityLevel: cpInfo?.confidentialityLevel || '',
+      cpStartDate: cpInfo?.cpStartDate || null,
+      cpRevisionDate: cpInfo?.cpRevisionDate || null,
+      processResponsibility: cpInfo?.processResponsibility || '',
+      cpResponsibleName: cpInfo?.cpResponsibleName || '',
+      status: 'draft',
+    };
+
+    const savedRegistration = await prisma.cpRegistration.upsert({
+      where: { cpNo: cpNoLower },
+      create: registrationData,
+      update: registrationData,
+    });
+
+    console.log(`✅ CP 등록정보 저장 완료: ${savedRegistration.cpNo}`);
+
+    // 2. CFT 멤버 저장 (CpCftMember)
+    if (cftMembers && Array.isArray(cftMembers) && cftMembers.length > 0) {
+      // 기존 CFT 멤버 삭제
+      await prisma.cpCftMember.deleteMany({
+        where: { cpNo: cpNoLower },
+      });
+
+      // 새 CFT 멤버 저장
+      const validMembers = cftMembers.filter((m: any) => m.name && m.name.trim());
+      if (validMembers.length > 0) {
+        await prisma.cpCftMember.createMany({
+          data: validMembers.map((m: any, idx: number) => ({
+            cpNo: cpNoLower,
+            seq: idx + 1,
+            role: m.role || '',
+            factory: m.factory || '',
+            department: m.department || '',
+            name: m.name,
+            position: m.position || '',
+            phone: m.phone || '',
+            email: m.email || '',
+            remark: m.remark || '',
+          })),
+        });
+        console.log(`✅ CFT 멤버 ${validMembers.length}명 저장 완료`);
       }
     }
 
-    // 중복 체크 - 이미 있으면 번호 재생성
-    const existing = await prisma.controlPlan.findUnique({ where: { cpNo } });
-    if (existing) {
-      // 시퀀스 증가
-      const seq = parseInt(cpNo.slice(-3)) + 1;
-      cpNo = cpNo.slice(0, -3) + seq.toString().padStart(3, '0');
+    // 3. 기존 ControlPlan 테이블에도 저장 (하위 호환)
+    try {
+      await prisma.controlPlan.upsert({
+        where: { cpNo: cpNoLower },
+        create: {
+          cpNo: cpNoLower,
+          fmeaId: parentFmeaId?.toLowerCase() || '',
+          fmeaNo: parentFmeaId?.toLowerCase() || null,
+          projectName: cpInfo?.cpProjectName || cpInfo?.subject || '',
+          partName: cpInfo?.subject || '',
+          customer: cpInfo?.customerName || '',
+          preparedBy: cpInfo?.cpResponsibleName || '',
+          status: 'draft',
+          syncStatus: 'new',
+        },
+        update: {
+          fmeaId: parentFmeaId?.toLowerCase() || '',
+          fmeaNo: parentFmeaId?.toLowerCase() || null,
+          projectName: cpInfo?.cpProjectName || cpInfo?.subject || '',
+          partName: cpInfo?.subject || '',
+          customer: cpInfo?.customerName || '',
+          preparedBy: cpInfo?.cpResponsibleName || '',
+          syncStatus: 'modified',
+        },
+      });
+    } catch (e) {
+      console.warn('[CP API] ControlPlan 저장 스킵 (무시)');
     }
 
-    // CP 생성
-    const newCP = await prisma.controlPlan.create({
-      data: {
-        cpNo,
-        fmeaId,
-        fmeaNo: fmeaNo || null,
-        fmeaRev: 1,
-        projectName: projectName || cpInfo?.cpProjectName || null,
-        partName: partName || cpInfo?.subject || null,
-        partNo: partNo || null,
-        customer: customer || cpInfo?.customerName || null,
-        preparedBy: preparedBy || cpInfo?.cpResponsibleName || null,
-        status: 'draft',
-        syncStatus: 'new',
-      },
+    return NextResponse.json({
+      success: true,
+      message: `CP ${cpNoLower} 저장 완료`,
+      cpNo: cpNoLower,
+      id: savedRegistration.id,
+      data: savedRegistration,
     });
-
-    console.log('✅ CP 생성 완료:', newCP.cpNo);
-
-    return NextResponse.json({ 
-      success: true, 
-      data: newCP,
-      message: `CP ${newCP.cpNo} 생성 완료`,
-    });
-  } catch (error) {
-    console.error('CP 생성 오류:', error);
-    return NextResponse.json({ success: false, error: 'CP 생성 실패' }, { status: 500 });
+  } catch (error: any) {
+    console.error('[CP API] 저장 오류:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'CP 저장 실패' },
+      { status: 500 }
+    );
   }
 }
 
+/**
+ * GET: CP 목록 또는 개별 조회 (CpRegistration 기반)
+ */
+export async function GET(request: NextRequest) {
+  const prisma = getPrisma();
+  if (!prisma) {
+    return NextResponse.json(
+      { success: false, error: 'Database not configured' },
+      { status: 500 }
+    );
+  }
 
+  try {
+    const { searchParams } = new URL(request.url);
+    const cpNo = searchParams.get('cpNo')?.toLowerCase();
+    const id = searchParams.get('id');
 
+    // 개별 조회 (전체 데이터 포함)
+    if (cpNo || id) {
+      const cp = await prisma.cpRegistration.findFirst({
+        where: cpNo ? { cpNo } : { id: id! },
+        include: {
+          cftMembers: { orderBy: { seq: 'asc' } },
+          revisions: { orderBy: { createdAt: 'desc' } },
+          processes: {
+            orderBy: { sortOrder: 'asc' },
+            include: {
+              detectors: true,
+              controlItems: true,
+              controlMethods: true,
+              reactionPlans: true,
+            },
+          },
+        },
+      });
 
+      if (!cp) {
+        return NextResponse.json(
+          { success: false, error: 'CP not found' },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: cp,
+      });
+    }
+
+    // 목록 조회
+    const cps = await prisma.cpRegistration.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        cpNo: true,
+        fmeaId: true,
+        fmeaNo: true,
+        companyName: true,
+        customerName: true,
+        modelYear: true,
+        subject: true,
+        cpType: true,
+        confidentialityLevel: true,
+        cpStartDate: true,
+        cpRevisionDate: true,
+        processResponsibility: true,
+        cpResponsibleName: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            cftMembers: true,
+            processes: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      count: cps.length,
+      data: cps,
+    });
+  } catch (error: any) {
+    console.error('[CP API] 조회 오류:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'CP 조회 실패' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE: CP 삭제 (CpRegistration + 연관 데이터 전부 Cascade 삭제)
+ */
+export async function DELETE(request: NextRequest) {
+  const prisma = getPrisma();
+  if (!prisma) {
+    return NextResponse.json(
+      { success: false, error: 'Database not configured' },
+      { status: 500 }
+    );
+  }
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const cpNo = searchParams.get('cpNo')?.toLowerCase();
+    const id = searchParams.get('id');
+
+    if (!cpNo && !id) {
+      return NextResponse.json(
+        { success: false, error: 'cpNo or id is required' },
+        { status: 400 }
+      );
+    }
+
+    // CpRegistration 삭제 (Cascade로 연관 테이블 자동 삭제)
+    const deleted = await prisma.cpRegistration.delete({
+      where: cpNo ? { cpNo } : { id: id! },
+    });
+
+    // 기존 ControlPlan도 삭제 시도
+    try {
+      await prisma.controlPlan.delete({
+        where: { cpNo: deleted.cpNo },
+      });
+    } catch (e) {
+      // 없으면 무시
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `CP ${deleted.cpNo} 삭제 완료 (연관 데이터 포함)`,
+      deletedId: deleted.id,
+      deletedCpNo: deleted.cpNo,
+    });
+  } catch (error: any) {
+    console.error('[CP API] 삭제 오류:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'CP 삭제 실패' },
+      { status: 500 }
+    );
+  }
+}

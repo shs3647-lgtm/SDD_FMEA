@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     
     // ✅ FMEA ID는 항상 대문자로 정규화 (DB 일관성 보장)
     if (db.fmeaId) {
-      db.fmeaId = db.fmeaId.toUpperCase();
+      db.fmeaId = db.fmeaId.toLowerCase(); // ★ 소문자로 정규화
     }
     
     if (!db.fmeaId) {
@@ -753,6 +753,43 @@ export async function POST(request: NextRequest) {
           }
         }
       }
+      
+      // ★★★ 15. FmeaWorksheetData 저장 (워크시트 데이터 백업) ★★★
+      // FmeaLegacyData와 함께 워크시트 데이터를 별도로 저장
+      if (legacyData) {
+        try {
+          await tx.fmeaWorksheetData.upsert({
+            where: { fmeaId: db.fmeaId },
+            create: {
+              fmeaId: db.fmeaId,
+              l1Data: legacyData.l1 || null,
+              l2Data: legacyData.l2 || null,
+              riskData: legacyData.riskData || null,
+              failureLinks: legacyData.failureLinks || null,
+              tab: legacyData.tab || 'structure',
+              version: LEGACY_DATA_VERSION,
+            },
+            update: {
+              l1Data: legacyData.l1 || null,
+              l2Data: legacyData.l2 || null,
+              riskData: legacyData.riskData || null,
+              failureLinks: legacyData.failureLinks || null,
+              tab: legacyData.tab || 'structure',
+              version: LEGACY_DATA_VERSION,
+            },
+          });
+          console.log('[API] ✅ FmeaWorksheetData 저장 완료', {
+            l1Name: (legacyData.l1 as any)?.name,
+            l2Count: (legacyData.l2 as any[])?.length || 0,
+            failureLinksCount: (legacyData.failureLinks as any[])?.length || 0,
+          });
+        } catch (e: any) {
+          // 테이블이 없으면 스킵 (마이그레이션 전)
+          if (e?.code !== 'P2021') {
+            console.warn('[API] FmeaWorksheetData 저장 오류 (무시):', e.message);
+          }
+        }
+      }
     }, {
       timeout: TRANSACTION_TIMEOUT,
     });
@@ -832,8 +869,8 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams;
-    // ✅ FMEA ID는 항상 대문자로 정규화 (DB 일관성 보장)
-    const fmeaId = searchParams.get('fmeaId')?.toUpperCase();
+    // ★ FMEA ID는 소문자로 정규화 (DB 일관성 보장)
+    const fmeaId = searchParams.get('fmeaId')?.toLowerCase();
     const format = searchParams.get('format'); // 'atomic' | undefined
 
     if (!fmeaId) {

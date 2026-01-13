@@ -713,11 +713,13 @@ model Customer {
   code        String?  // 고객 코드 (예: HMC)
   factory     String?  // 공장 (예: 울산공장)
   description String?  // 설명
+  sortOrder   Int      @default(0) // 정렬 순서 (현대=1~, 기아=10~, GM=99)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@unique([code])
   @@index([name])
+  @@index([sortOrder])
   @@map("customers")
 }
 
@@ -904,4 +906,608 @@ model SyncLog {
   @@index([targetType, targetId])
   @@index([status])
   @@map("sync_logs")
+}
+
+// ============ SOD 기준 마스터 테이블 (PUBLIC) ============
+
+// PFMEA 심각도 기준
+model PfmeaSeverityCriteria {
+  id          String   @id @default(uuid())
+  rating      Int      @unique  // 1-10 점수
+  scope       String   // YP (Your Plant) | SP (Ship to Plant) | USER (최종사용자)
+  effect      String   // 고장영향 설명
+  description String   // 상세 기준 설명
+  example     String?  // 예시
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([rating])
+  @@index([scope])
+  @@map("pfmea_severity_criteria")
+}
+
+// PFMEA 발생도 기준
+model PfmeaOccurrenceCriteria {
+  id          String   @id @default(uuid())
+  rating      Int      @unique  // 1-10 점수
+  probability String   // 발생 확률 범위 (예: ">100/1000")
+  ppm         String?  // PPM 범위 (예: ">100,000")
+  description String   // 상세 기준 설명
+  prevention  String?  // 예방관리 예시
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([rating])
+  @@map("pfmea_occurrence_criteria")
+}
+
+// PFMEA 검출도 기준
+model PfmeaDetectionCriteria {
+  id          String   @id @default(uuid())
+  rating      Int      @unique  // 1-10 점수
+  maturity    String   // 검출 가능성 수준 (매우높음/높음/중간/낮음/매우낮음)
+  description String   // 상세 기준 설명
+  detection   String?  // 검출관리 예시
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([rating])
+  @@map("pfmea_detection_criteria")
+}
+
+// DFMEA 심각도 기준
+model DfmeaSeverityCriteria {
+  id          String   @id @default(uuid())
+  rating      Int      @unique  // 1-10 점수
+  scope       String   // YP (Your Plant) | SP (Ship to Plant) | USER (최종사용자)
+  effect      String   // 고장영향 설명
+  description String   // 상세 기준 설명
+  example     String?  // 예시
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([rating])
+  @@index([scope])
+  @@map("dfmea_severity_criteria")
+}
+
+// DFMEA 발생도 기준
+model DfmeaOccurrenceCriteria {
+  id          String   @id @default(uuid())
+  rating      Int      @unique  // 1-10 점수
+  probability String   // 발생 확률 범위
+  ppm         String?  // PPM 범위
+  description String   // 상세 기준 설명
+  prevention  String?  // 예방관리 예시
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([rating])
+  @@map("dfmea_occurrence_criteria")
+}
+
+// DFMEA 검출도 기준
+model DfmeaDetectionCriteria {
+  id          String   @id @default(uuid())
+  rating      Int      @unique  // 1-10 점수
+  maturity    String   // 검출 가능성 수준
+  description String   // 상세 기준 설명
+  detection   String?  // 검출관리 예시
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([rating])
+  @@map("dfmea_detection_criteria")
+}
+
+// ============ CP 기초정보 마스터 테이블 (PUBLIC) ============
+
+// CP 공정현황 마스터 - 공정번호, 공정명, 레벨, 공정설명, 설비/금형/지그
+model CpMasterProcess {
+  id          String   @id @default(uuid())
+  processNo   String   // 공정번호 (부모키)
+  processName String   // 공정명
+  level       String?  // 레벨 (Main/Sub)
+  processDesc String?  // 공정설명
+  equipment   String?  // 설비/금형/지그
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([processNo, processName])
+  @@index([processNo])
+  @@map("cp_master_processes")
+}
+
+// CP 검출장치 마스터 - 공정번호, 공정명, EP, 자동검사장치
+model CpMasterDetector {
+  id              String   @id @default(uuid())
+  processNo       String   // 공정번호 (부모키)
+  processName     String   // 공정명
+  ep              String?  // EP (Error Proofing)
+  autoDetector    String?  // 자동검사장치
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([processNo])
+  @@map("cp_master_detectors")
+}
+
+// CP 관리항목 마스터 - 공정번호, 공정명, 제품특성, 공정특성, 특별특성, 스펙/공차
+model CpMasterControlItem {
+  id              String   @id @default(uuid())
+  processNo       String   // 공정번호 (부모키)
+  processName     String   // 공정명
+  productChar     String?  // 제품특성
+  processChar     String?  // 공정특성
+  specialChar     String?  // 특별특성 (CC/SC/IC)
+  specTolerance   String?  // 스펙/공차
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([processNo])
+  @@map("cp_master_control_items")
+}
+
+// CP 관리방법 마스터 - 공정번호, 공정명, 평가방법, 샘플크기, 주기, 책임1, 책임2
+model CpMasterControlMethod {
+  id              String   @id @default(uuid())
+  processNo       String   // 공정번호 (부모키)
+  processName     String   // 공정명
+  evalMethod      String?  // 평가방법
+  sampleSize      String?  // 샘플크기
+  frequency       String?  // 주기
+  owner1          String?  // 책임1
+  owner2          String?  // 책임2
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([processNo])
+  @@map("cp_master_control_methods")
+}
+
+// CP 대응계획 마스터 - 공정번호, 공정명, 제품특성, 공정특성, 대응계획
+model CpMasterReactionPlan {
+  id              String   @id @default(uuid())
+  processNo       String   // 공정번호 (부모키)
+  processName     String   // 공정명
+  productChar     String?  // 제품특성
+  processChar     String?  // 공정특성
+  reactionPlan    String?  // 대응계획
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([processNo])
+  @@map("cp_master_reaction_plans")
+}
+
+// ============ CP 프로젝트별 데이터 (cpId로 연결) ============
+
+// CP 프로젝트 등록 정보 (기본정보 + 메타)
+model CpRegistration {
+  id                  String   @id @default(uuid())
+  cpNo                String   @unique  // CP26-P001 형식
+  
+  // 상위 연결 (3개)
+  parentApqpNo        String?  // ★ 상위 APQP (최상위)
+  fmeaId              String?  // 상위 FMEA ID
+  fmeaNo              String?  // 상위 FMEA 번호
+  parentCpId          String?  // 상위 CP ID
+  
+  // 회사 정보
+  companyName         String?  // 회사명
+  engineeringLocation String?  // 엔지니어링 위치
+  
+  // 고객 정보
+  customerName        String?  // 고객명
+  modelYear           String?  // 모델연식/플랫폼
+  
+  // CP 정보
+  subject             String?  // CP명 (품명)
+  cpType              String   @default("P")  // M(Master) | F(Family) | P(Part)
+  confidentialityLevel String?  // Prototype | Pre-Launch | Production | Safe Launch
+  
+  // 일정
+  cpStartDate         String?  // 시작일자
+  cpRevisionDate      String?  // 개정일자
+  
+  // 책임
+  processResponsibility String?  // 공정책임 (부서)
+  cpResponsibleName   String?  // CP 책임자
+  
+  // 상태
+  status              String   @default("draft")  // draft | confirmed | approved
+  confirmedAt         DateTime?
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  // Relations
+  cftMembers          CpCftMember[]
+  revisions           CpRevision[]
+  processes           CpProcess[]
+  
+  @@index([fmeaId])
+  @@index([parentCpId])
+  @@index([customerName])
+  @@map("cp_registrations")
+}
+
+// CP CFT 멤버
+model CpCftMember {
+  id          String   @id @default(uuid())
+  cpNo        String   // FK: cp_registrations.cpNo
+  
+  // 멤버 정보
+  seq         Int      @default(0)  // 순번
+  role        String?  // 역할 (설계/공정/품질/생산/구매)
+  factory     String?  // 공장
+  department  String?  // 부서
+  name        String   // 성명
+  position    String?  // 직급
+  phone       String?  // 전화번호
+  email       String?  // 이메일
+  remark      String?  // 비고
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  registration CpRegistration @relation(fields: [cpNo], references: [cpNo], onDelete: Cascade)
+  
+  @@index([cpNo])
+  @@map("cp_cft_members")
+}
+
+// CP 개정 이력
+model CpRevision {
+  id          String   @id @default(uuid())
+  cpNo        String   // FK: cp_registrations.cpNo
+  
+  revNo       String   // Rev.01, Rev.02, ...
+  revDate     String?  // 개정일자
+  revReason   String?  // 개정사유
+  revContent  String?  // 개정내용
+  revisedBy   String?  // 개정자
+  approvedBy  String?  // 승인자
+  approvedAt  DateTime?
+  
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  registration CpRegistration @relation(fields: [cpNo], references: [cpNo], onDelete: Cascade)
+  
+  @@index([cpNo])
+  @@map("cp_revisions")
+}
+
+// CP 공정현황 (단계 1)
+model CpProcess {
+  id              String   @id @default(uuid())
+  cpNo            String   // FK: cp_registrations.cpNo
+  
+  // 공정 정보
+  processNo       String   // 공정번호
+  processName     String   // 공정명
+  level           String?  // Main | Sub
+  processDesc     String?  // 공정설명
+  equipment       String?  // 설비/금형/지그
+  
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  registration    CpRegistration @relation(fields: [cpNo], references: [cpNo], onDelete: Cascade)
+  detectors       CpDetector[]
+  controlItems    CpControlItem[]
+  controlMethods  CpControlMethod[]
+  reactionPlans   CpReactionPlan[]
+  
+  @@unique([cpNo, processNo])
+  @@index([cpNo])
+  @@map("cp_processes")
+}
+
+// CP 검출장치 (단계 2)
+model CpDetector {
+  id              String   @id @default(uuid())
+  cpNo            String   // FK: cp_registrations.cpNo
+  processNo       String   // FK: cp_processes.processNo
+  
+  ep              String?  // EP
+  autoDetector    String?  // 자동검사장치
+  
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  process         CpProcess @relation(fields: [cpNo, processNo], references: [cpNo, processNo], onDelete: Cascade)
+  
+  @@index([cpNo, processNo])
+  @@map("cp_detectors")
+}
+
+// CP 관리항목 (단계 3)
+model CpControlItem {
+  id              String   @id @default(uuid())
+  cpNo            String   // FK: cp_registrations.cpNo
+  processNo       String   // FK: cp_processes.processNo
+  
+  productChar     String?  // 제품특성
+  processChar     String?  // 공정특성
+  specialChar     String?  // 특별특성 (CC/SC/IC)
+  spec            String?  // 스펙/공차
+  
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  process         CpProcess @relation(fields: [cpNo, processNo], references: [cpNo, processNo], onDelete: Cascade)
+  
+  @@index([cpNo, processNo])
+  @@map("cp_control_items")
+}
+
+// CP 관리방법 (단계 4)
+model CpControlMethod {
+  id              String   @id @default(uuid())
+  cpNo            String   // FK: cp_registrations.cpNo
+  processNo       String   // FK: cp_processes.processNo
+  
+  evalMethod      String?  // 평가방법
+  sampleSize      String?  // 샘플크기
+  frequency       String?  // 주기
+  owner1          String?  // 책임1
+  owner2          String?  // 책임2
+  
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  process         CpProcess @relation(fields: [cpNo, processNo], references: [cpNo, processNo], onDelete: Cascade)
+  
+  @@index([cpNo, processNo])
+  @@map("cp_control_methods")
+}
+
+// CP 대응계획 (단계 5)
+model CpReactionPlan {
+  id              String   @id @default(uuid())
+  cpNo            String   // FK: cp_registrations.cpNo
+  processNo       String   // FK: cp_processes.processNo
+  
+  productChar     String?  // 제품특성
+  processChar     String?  // 공정특성
+  reactionPlan    String?  // 대응계획
+  
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  process         CpProcess @relation(fields: [cpNo, processNo], references: [cpNo, processNo], onDelete: Cascade)
+  
+  @@index([cpNo, processNo])
+  @@map("cp_reaction_plans")
+}
+
+// ============ APQP 프로젝트별 데이터 (apqpNo로 연결) ============
+// CP와 동일한 구조로 설계
+
+// APQP 프로젝트 등록 정보 (기본정보 + 메타)
+model ApqpRegistration {
+  id                  String   @id @default(uuid())
+  apqpNo              String   @unique  // pj26-001 형식
+  
+  // 상위 연결 (3개)
+  parentApqpNo        String?  // ★ 상위 APQP (최상위)
+  parentFmeaId        String?  // 상위 FMEA ID
+  baseCpId            String?  // 기반 CP ID
+  
+  // 기본 정보 (1단계: 기획 및 준비)
+  companyName         String?  // 회사명
+  engineeringLocation String?  // 엔지니어링 위치
+  customerName        String?  // 고객명
+  modelYear           String?  // 모델연식/플랫폼
+  subject             String?  // APQP명 (프로젝트 주제)
+  apqpStartDate       String?  // 시작일자
+  apqpRevisionDate    String?  // 개정일자
+  processResponsibility String? // 공정책임 부서
+  confidentialityLevel String? // 기밀유지 수준
+  apqpResponsibleName String?  // APQP 책임자 성명
+  
+  // 추가 정보
+  productName         String?  // 제품명
+  partNo              String?  // 품번
+  targetDate          String?  // 목표일자
+  status              String?  @default("planning") // planning, development, validation, production, closed
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  cftMembers          ApqpCftMember[]
+  revisions           ApqpRevision[]
+  phases              ApqpPhase[]
+  schedules           ApqpSchedule[]
+
+  @@index([apqpNo])
+  @@index([customerName])
+  @@map("apqp_registrations")
+}
+
+// APQP CFT 멤버
+model ApqpCftMember {
+  id          String   @id @default(uuid())
+  apqpNo      String   // FK: apqp_registrations.apqpNo
+  
+  // 멤버 정보
+  seq         Int      @default(0)  // 순번
+  role        String?  // 역할 (팀장/설계/공정/품질/구매/생산기술)
+  factory     String?  // 공장
+  department  String?  // 부서
+  name        String?  // 성명
+  position    String?  // 직급
+  phone       String?  // 전화번호
+  email       String?  // 이메일
+  remark      String?  // 담당업무/비고
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  registration ApqpRegistration @relation(fields: [apqpNo], references: [apqpNo], onDelete: Cascade)
+
+  @@index([apqpNo])
+  @@map("apqp_cft_members")
+}
+
+// APQP 개정 이력
+model ApqpRevision {
+  id          String   @id @default(uuid())
+  apqpNo      String   // FK: apqp_registrations.apqpNo
+  
+  revNo       String   // Rev.01, Rev.02, ...
+  revDate     String?  // 개정일자
+  description String?  // 개정내용
+  author      String?  // 작성자
+  approver    String?  // 승인자
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  registration ApqpRegistration @relation(fields: [apqpNo], references: [apqpNo], onDelete: Cascade)
+
+  @@index([apqpNo])
+  @@map("apqp_revisions")
+}
+
+// APQP 단계 (Phase 1~5)
+model ApqpPhase {
+  id          String   @id @default(uuid())
+  apqpNo      String   // FK: apqp_registrations.apqpNo
+  
+  // Phase 정보
+  phaseNo     Int      // 1~5
+  phaseName   String   // Phase 1: 계획 및 정의, Phase 2: 제품설계 및 개발, ...
+  status      String?  @default("pending") // pending, in_progress, completed, delayed
+  startDate   String?  // 시작일
+  endDate     String?  // 종료일
+  progress    Int?     @default(0) // 진행률 (0~100)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  registration ApqpRegistration @relation(fields: [apqpNo], references: [apqpNo], onDelete: Cascade)
+  activities   ApqpActivity[]
+
+  @@unique([apqpNo, phaseNo])
+  @@index([apqpNo])
+  @@map("apqp_phases")
+}
+
+// APQP 활동 항목 (Activity)
+model ApqpActivity {
+  id              String   @id @default(uuid())
+  apqpNo          String   // FK: apqp_registrations.apqpNo
+  phaseNo         Int      // FK: apqp_phases.phaseNo
+  
+  // Activity 정보
+  activityNo      Int      // 활동 순번
+  activityName    String   // 활동명
+  description     String?  // 설명
+  responsible     String?  // 담당자
+  status          String?  @default("pending") // pending, in_progress, completed, delayed
+  planStartDate   String?  // 계획 시작일
+  planEndDate     String?  // 계획 종료일
+  actualStartDate String?  // 실제 시작일
+  actualEndDate   String?  // 실제 종료일
+  progress        Int?     @default(0) // 진행률 (0~100)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  phase           ApqpPhase @relation(fields: [apqpNo, phaseNo], references: [apqpNo, phaseNo], onDelete: Cascade)
+  deliverables    ApqpDeliverable[]
+
+  @@index([apqpNo, phaseNo])
+  @@map("apqp_activities")
+}
+
+// APQP 산출물 (Deliverable)
+model ApqpDeliverable {
+  id              String   @id @default(uuid())
+  apqpNo          String   // FK: apqp_registrations.apqpNo
+  activityId      String   // FK: apqp_activities.id
+  
+  // Deliverable 정보
+  deliverableName String   // 산출물명
+  description     String?  // 설명
+  status          String?  @default("pending") // pending, in_review, approved, rejected
+  dueDate         String?  // 마감일
+  completedDate   String?  // 완료일
+  filePath        String?  // 파일 경로 (첨부파일)
+  reviewer        String?  // 검토자
+  approver        String?  // 승인자
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  activity        ApqpActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([apqpNo])
+  @@index([activityId])
+  @@map("apqp_deliverables")
+}
+
+// APQP 일정/마일스톤
+model ApqpSchedule {
+  id              String   @id @default(uuid())
+  apqpNo          String   // FK: apqp_registrations.apqpNo
+  
+  // 마일스톤 정보
+  milestoneName   String   // 마일스톤명 (예: Kick-off, Design Freeze, PPAP, SOP)
+  description     String?  // 설명
+  planDate        String?  // 계획일
+  actualDate      String?  // 실제일
+  status          String?  @default("pending") // pending, completed, delayed
+  responsible     String?  // 담당자
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  registration    ApqpRegistration @relation(fields: [apqpNo], references: [apqpNo], onDelete: Cascade)
+
+  @@index([apqpNo])
+  @@map("apqp_schedules")
 }

@@ -8,7 +8,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { BizInfoProject } from '@/types/bizinfo';
-import { getAllProjects, createSampleProjects, saveProject, deleteProject } from '@/lib/bizinfo-db';
+import { getAllProjects, saveProject, deleteProject, clearAllBizInfoCache } from '@/lib/bizinfo-db';
 import { downloadStyledExcel } from '@/lib/excel-utils';
 import * as XLSX from 'xlsx';
 
@@ -29,15 +29,20 @@ export function BizInfoSelectModal({
   const [editingProject, setEditingProject] = useState<BizInfoProject | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 데이터 로드
+  // 데이터 로드 - DB 전용, localStorage 완전 제거, 샘플 생성 없음
   useEffect(() => {
     if (!isOpen) return;
 
-    // 샘플 데이터 생성 (없으면)
-    createSampleProjects();
+    const loadData = async () => {
+      // ★ 1단계: 모달 열릴 때마다 모든 localStorage 캐시 완전 삭제
+      clearAllBizInfoCache();
 
-    const loadedProjects = getAllProjects();
-    setProjects(loadedProjects);
+      // ★ 2단계: DB에서만 최신 데이터 로드 (샘플 생성 없음 - PUBLIC DB 데이터 사용)
+      const loadedProjects = await getAllProjects(true);
+      setProjects(Array.isArray(loadedProjects) ? loadedProjects : []);
+    };
+
+    loadData();
   }, [isOpen]);
 
   // 검색 필터링
@@ -62,10 +67,10 @@ export function BizInfoSelectModal({
     }
   }, [isOpen]);
 
-  // 데이터 새로고침
-  const refreshData = () => {
-    const loadedProjects = getAllProjects();
-    setProjects(loadedProjects);
+  // 데이터 새로고침 (async) - 강제 새로고침
+  const refreshData = async () => {
+    const loadedProjects = await getAllProjects(true);
+    setProjects(Array.isArray(loadedProjects) ? loadedProjects : []);
   };
 
   // 신규 추가
@@ -86,29 +91,29 @@ export function BizInfoSelectModal({
     setEditingProject(newProject);
   };
 
-  // 저장
-  const handleSave = () => {
+  // 저장 (async)
+  const handleSave = async () => {
     if (editingProject) {
       if (!editingProject.customerName || !editingProject.productName) {
         alert('고객명과 품명은 필수입니다.');
         return;
       }
-      saveProject(editingProject);
+      await saveProject(editingProject);
       const savedId = editingProject.id;
       setEditingProject(null);
       // 즉시 최신 데이터 로드
-      const latestProjects = getAllProjects();
-      setProjects(latestProjects);
+      const latestProjects = await getAllProjects();
+      setProjects(Array.isArray(latestProjects) ? latestProjects : []);
       setSelectedId(savedId); // 저장된 항목 선택 유지
     }
   };
 
-  // 삭제
-  const handleDelete = () => {
+  // 삭제 (async)
+  const handleDelete = async () => {
     if (selectedId) {
       if (confirm('선택한 항목을 삭제하시겠습니까?')) {
-        deleteProject(selectedId);
-        refreshData();
+        await deleteProject(selectedId);
+        await refreshData();
         setSelectedId(null);
       }
     } else {
@@ -179,7 +184,7 @@ export function BizInfoSelectModal({
         }
       }
 
-      refreshData();
+      await refreshData();
       alert(`✅ ${importedCount}건 Import 완료!`);
     } catch (err) {
       console.error('Import 오류:', err);

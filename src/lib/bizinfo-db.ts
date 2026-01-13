@@ -20,34 +20,58 @@ function generateUUID(): string {
   });
 }
 
-// ========== 프로젝트 기초정보 CRUD (DB 우선, localStorage 폴백) ==========
-export async function getAllProjects(): Promise<BizInfoProject[]> {
+// ========== 프로젝트 기초정보 CRUD (DB 전용, localStorage 완전 제거) ==========
+// localStorage 모든 캐시 완전 삭제 유틸리티
+export function clearAllBizInfoCache(): void {
+  if (typeof window !== 'undefined') {
+    // 모든 bizinfo 관련 localStorage 키 삭제
+    Object.values(BIZINFO_STORAGE_KEYS).forEach(key => {
+      localStorage.removeItem(key);
+    });
+    console.log('[bizinfo-db] ✅ 모든 기초정보 localStorage 캐시 완전 삭제 완료');
+  }
+}
+
+// 프로젝트 기초정보 localStorage 캐시만 삭제
+export function clearProjectsCache(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(BIZINFO_STORAGE_KEYS.projects);
+    console.log('[bizinfo-db] 프로젝트 기초정보 localStorage 캐시 클리어 완료');
+  }
+}
+
+// ★ DB 전용: localStorage 폴백 완전 제거
+export async function getAllProjects(forceRefresh = false): Promise<BizInfoProject[]> {
   if (typeof window === 'undefined') return [];
   
   try {
-    // DB에서 조회 시도
-    const response = await fetch('/api/bizinfo/projects');
+    // ★ DB에서만 조회 (캐시 버스팅 파라미터 추가)
+    const cacheBuster = forceRefresh ? `?t=${Date.now()}` : '';
+    const response = await fetch(`/api/bizinfo/projects${cacheBuster}`);
+    
     if (response.ok) {
       const data = await response.json();
-      if (data.success && data.projects) {
-        console.log('[bizinfo-db] DB에서 프로젝트 기초정보 로드:', data.projects.length, '개');
+      if (data.success && Array.isArray(data.projects)) {
+        console.log('[bizinfo-db] ✅ DB에서 프로젝트 기초정보 로드:', data.projects.length, '개');
+        // ★ localStorage에 저장하지 않음 (DB 전용)
         return data.projects;
       }
     }
+    
+    // DB 조회 실패 시 빈 배열 반환 (localStorage 폴백 제거)
+    console.warn('[bizinfo-db] ⚠️ DB 조회 실패, 빈 배열 반환');
+    return [];
   } catch (error) {
-    console.warn('[bizinfo-db] DB 조회 실패, localStorage 폴백:', error);
+    console.error('[bizinfo-db] ❌ DB 조회 오류:', error);
+    // 오류 발생 시에도 빈 배열 반환 (localStorage 폴백 제거)
+    return [];
   }
-  
-  // localStorage 폴백
-  const data = localStorage.getItem(BIZINFO_STORAGE_KEYS.projects);
-  return data ? JSON.parse(data) : [];
 }
 
+// ★ DB 전용: localStorage 폴백 완전 제거
 export async function createProject(project: Omit<BizInfoProject, 'id' | 'createdAt' | 'updatedAt'>): Promise<BizInfoProject> {
-  const now = new Date().toISOString();
-  
   try {
-    // DB에 저장 시도
+    // ★ DB에만 저장
     const response = await fetch('/api/bizinfo/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -57,54 +81,45 @@ export async function createProject(project: Omit<BizInfoProject, 'id' | 'create
     if (response.ok) {
       const data = await response.json();
       if (data.success && data.project) {
-        console.log('[bizinfo-db] DB에 프로젝트 기초정보 저장 완료:', data.project.customerName);
+        console.log('[bizinfo-db] ✅ DB에 프로젝트 기초정보 저장 완료:', data.project.customerName);
         return data.project;
       }
     }
+    
+    throw new Error('DB 저장 실패');
   } catch (error) {
-    console.warn('[bizinfo-db] DB 저장 실패, localStorage 폴백:', error);
+    console.error('[bizinfo-db] ❌ DB 저장 실패:', error);
+    throw error; // localStorage 폴백 제거, 오류 throw
   }
-  
-  // localStorage 폴백
-  const newProject: BizInfoProject = {
-    id: generateUUID(),
-    ...project,
-    createdAt: now,
-    updatedAt: now,
-  };
-  const projects = await getAllProjects();
-  projects.push(newProject);
-  localStorage.setItem(BIZINFO_STORAGE_KEYS.projects, JSON.stringify(projects));
-  return newProject;
 }
 
+// ★ DB 전용: localStorage 폴백 완전 제거
 export async function deleteProject(id: string): Promise<void> {
   try {
-    // DB에서 삭제 시도
+    // ★ DB에서만 삭제
     const response = await fetch(`/api/bizinfo/projects?id=${id}`, {
       method: 'DELETE',
     });
     
     if (response.ok) {
-      console.log('[bizinfo-db] DB에서 프로젝트 기초정보 삭제 완료:', id);
-      return;
+      const data = await response.json();
+      if (data.success) {
+        console.log('[bizinfo-db] ✅ DB에서 프로젝트 기초정보 삭제 완료:', id);
+        return;
+      }
     }
+    
+    throw new Error('DB 삭제 실패');
   } catch (error) {
-    console.warn('[bizinfo-db] DB 삭제 실패, localStorage 폴백:', error);
+    console.error('[bizinfo-db] ❌ DB 삭제 실패:', error);
+    throw error; // localStorage 폴백 제거, 오류 throw
   }
-  
-  // localStorage 폴백
-  const projects = await getAllProjects();
-  const filtered = projects.filter(p => p.id !== id);
-  localStorage.setItem(BIZINFO_STORAGE_KEYS.projects, JSON.stringify(filtered));
 }
 
-// 프로젝트 저장 (신규 또는 수정)
+// 프로젝트 저장 (신규 또는 수정) - ★ DB 전용: localStorage 폴백 완전 제거
 export async function saveProject(project: BizInfoProject): Promise<BizInfoProject> {
-  const now = new Date().toISOString();
-  
   try {
-    // DB에 저장 시도 (PUT)
+    // ★ DB에만 저장 (PUT)
     const response = await fetch('/api/bizinfo/projects', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -114,52 +129,93 @@ export async function saveProject(project: BizInfoProject): Promise<BizInfoProje
     if (response.ok) {
       const data = await response.json();
       if (data.success && data.project) {
-        console.log('[bizinfo-db] DB에 프로젝트 기초정보 저장 완료:', data.project.customerName);
+        console.log('[bizinfo-db] ✅ DB에 프로젝트 기초정보 저장 완료:', data.project.customerName);
         return data.project;
       }
     }
+    
+    throw new Error('DB 저장 실패');
   } catch (error) {
-    console.warn('[bizinfo-db] DB 저장 실패, localStorage 폴백:', error);
+    console.error('[bizinfo-db] ❌ DB 저장 실패:', error);
+    throw error; // localStorage 폴백 제거, 오류 throw
   }
-  
-  // localStorage 폴백
-  const projects = await getAllProjects();
-  const existingIndex = projects.findIndex(p => p.id === project.id);
-  
-  if (existingIndex >= 0) {
-    // 수정
-    projects[existingIndex] = { ...project, updatedAt: now };
-  } else {
-    // 신규
-    projects.push({ ...project, createdAt: now, updatedAt: now });
-  }
-  
-  localStorage.setItem(BIZINFO_STORAGE_KEYS.projects, JSON.stringify(projects));
-  return project;
 }
 
-// 샘플 프로젝트 기초정보 생성 (10개)
-export function createSampleProjects(): void {
-  if (getAllProjects().length > 0) {
-    console.log('ℹ️ 프로젝트 기초정보 이미 존재');
-    return;
-  }
+// 샘플 프로젝트 기초정보 생성 (11개) - async 버전
+// ★ 이전 데이터 완전 삭제 후 최신 데이터만 생성
+export async function createSampleProjects(): Promise<void> {
+  try {
+    // 1. 기존 프로젝트 조회
+    const existingProjects = await getAllProjects(true);
+    
+    // 2. 이전 데이터 삭제 대상: TESLA, GM대우, 르노삼성, 쌍용자동차
+    const oldCustomerNames = ['TESLA', '테슬라', 'GM대우', 'GM 대우', '르노삼성', '르노', '쌍용자동차', '쌍용'];
+    
+    if (Array.isArray(existingProjects) && existingProjects.length > 0) {
+      // 이전 데이터 삭제
+      const oldProjects = existingProjects.filter(p => 
+        oldCustomerNames.some(oldName => 
+          p.customerName?.toUpperCase().includes(oldName.toUpperCase())
+        )
+      );
+      
+      if (oldProjects.length > 0) {
+        console.log(`🗑️ 이전 데이터 ${oldProjects.length}개 삭제 중...`);
+        for (const oldProject of oldProjects) {
+          try {
+            await deleteProject(oldProject.id);
+            console.log(`✅ 삭제 완료: ${oldProject.customerName} - ${oldProject.productName}`);
+          } catch (error) {
+            console.warn(`⚠️ 삭제 실패: ${oldProject.id}`, error);
+          }
+        }
+      }
+      
+      // 최신 데이터가 이미 있으면 생성 스킵
+      const hasLatestData = existingProjects.some(p => 
+        ['현대자동차', '기아자동차', 'BMW', 'Volkswagen', 'Ford', 'Stellantis', 'GM코리아'].includes(p.customerName)
+      );
+      
+      if (hasLatestData && oldProjects.length === 0) {
+        console.log('ℹ️ 최신 프로젝트 기초정보 이미 존재');
+        return;
+      }
+    }
 
-  const sampleProjects: Omit<BizInfoProject, 'id' | 'createdAt' | 'updatedAt'>[] = [
+    // 3. 최신 샘플 데이터 생성
+    // ★ 최신 고객사 순서: 현대, 기아, BMW, VW, FORD, 스텔란티스, GM
+    const sampleProjects: Omit<BizInfoProject, 'id' | 'createdAt' | 'updatedAt'>[] = [
+    // 현대자동차 (1순위)
     { customerName: '현대자동차', customerCode: 'HMC', factory: '울산공장', modelYear: 'MY2025', program: 'NE1', productName: '도어패널', partNo: 'DP-001' },
     { customerName: '현대자동차', customerCode: 'HMC', factory: '아산공장', modelYear: 'MY2025', program: 'NE2', productName: '후드', partNo: 'HD-002' },
     { customerName: '현대자동차', customerCode: 'HMC', factory: '전주공장', modelYear: 'MY2024', program: 'NE3', productName: '트렁크리드', partNo: 'TL-003' },
+    // 기아자동차 (2순위)
     { customerName: '기아자동차', customerCode: 'KIA', factory: '광주공장', modelYear: 'MY2024', program: 'SP2i', productName: '범퍼', partNo: 'BP-004' },
     { customerName: '기아자동차', customerCode: 'KIA', factory: '화성공장', modelYear: 'MY2025', program: 'EV6', productName: '펜더', partNo: 'FD-005' },
     { customerName: '기아자동차', customerCode: 'KIA', factory: '소하리공장', modelYear: 'MY2025', program: 'EV9', productName: '사이드패널', partNo: 'SP-006' },
-    { customerName: 'GM대우', customerCode: 'GMD', factory: '부평공장', modelYear: 'MY2024', program: 'X1', productName: '사이드미러', partNo: 'SM-007' },
-    { customerName: '르노삼성', customerCode: 'RSM', factory: '부산공장', modelYear: 'MY2025', program: 'XM3', productName: '테일게이트', partNo: 'TG-008' },
-    { customerName: '쌍용자동차', customerCode: 'SYM', factory: '평택공장', modelYear: 'MY2024', program: 'J100', productName: '루프패널', partNo: 'RP-009' },
-    { customerName: 'TESLA', customerCode: 'TSL', factory: '상하이공장', modelYear: 'MY2025', program: 'Model3', productName: '배터리케이스', partNo: 'BC-010' },
+    // BMW (3순위)
+    { customerName: 'BMW', customerCode: 'BMW', factory: 'Munich', modelYear: 'MY2025', program: 'X5', productName: '프론트범퍼', partNo: 'FB-007' },
+    // Volkswagen (4순위)
+    { customerName: 'Volkswagen', customerCode: 'VW', factory: 'Wolfsburg', modelYear: 'MY2025', program: 'Golf', productName: '리어범퍼', partNo: 'RB-008' },
+    // Ford (5순위)
+    { customerName: 'Ford', customerCode: 'FORD', factory: 'Dearborn', modelYear: 'MY2025', program: 'F-150', productName: '후드패널', partNo: 'HP-009' },
+    // Stellantis (6순위)
+    { customerName: 'Stellantis', customerCode: 'STLA', factory: 'Amsterdam', modelYear: 'MY2025', program: 'Peugeot', productName: '사이드미러', partNo: 'SM-010' },
+    // GM (7순위 - 맨 아래)
+    { customerName: 'GM코리아', customerCode: 'GMK', factory: '부평공장', modelYear: 'MY2024', program: 'X1', productName: '루프패널', partNo: 'RP-011' },
   ];
 
-  sampleProjects.forEach(p => createProject(p));
-  console.log('✅ 프로젝트 기초정보 샘플 데이터 생성 완료 (10개)');
+    for (const p of sampleProjects) {
+      try {
+        await createProject(p);
+      } catch (error) {
+        console.warn(`⚠️ 샘플 프로젝트 생성 실패: ${p.customerName}`, error);
+      }
+    }
+    console.log('✅ 프로젝트 기초정보 샘플 데이터 생성 완료 (11개)');
+  } catch (error) {
+    console.error('❌ 샘플 프로젝트 생성 중 오류:', error);
+  }
 }
 
 // ========== 고객 CRUD (DB 우선, localStorage 폴백) ==========
@@ -294,9 +350,10 @@ export function deleteFactory(id: string): void {
 }
 
 // ========== 샘플 데이터 생성 ==========
-export function createSampleBizInfo(): void {
+export async function createSampleBizInfo(): Promise<void> {
   // 고객 샘플
-  if (getAllCustomers().length === 0) {
+  const existingCustomers = await getAllCustomers();
+  if (!Array.isArray(existingCustomers) || existingCustomers.length === 0) {
     const sampleCustomers = [
       { name: '현대자동차', code: 'HMC', factory: '울산공장' },
       { name: '기아자동차', code: 'KIA', factory: '광주공장' },
@@ -304,7 +361,9 @@ export function createSampleBizInfo(): void {
       { name: '르노삼성', code: 'RSM', factory: '부산공장' },
       { name: '쌍용자동차', code: 'SYM', factory: '평택공장' },
     ];
-    sampleCustomers.forEach(c => createCustomer(c));
+    for (const c of sampleCustomers) {
+      await createCustomer(c);
+    }
     console.log('✅ 고객 샘플 데이터 생성 완료');
   }
 

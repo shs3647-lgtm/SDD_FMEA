@@ -53,12 +53,14 @@ export function UserSelectModal({
     setUsers(loadedUsers);
   };
 
-  // 검색 필터링
+  // 검색 필터링 (성명/부서/공장/이메일/직급/담당업무)
   const filteredUsers = users.filter(user =>
     user.name.includes(searchTerm) ||
     user.department.includes(searchTerm) ||
     user.factory.includes(searchTerm) ||
-    user.email.includes(searchTerm)
+    user.email.includes(searchTerm) ||
+    (user.position && user.position.includes(searchTerm)) ||  // 직급 검색
+    (user.remark && user.remark.includes(searchTerm))         // ★ 담당업무 검색 추가
   );
 
   // 모달 닫기 시 초기화
@@ -339,7 +341,7 @@ export function UserSelectModal({
         <div className="px-3 py-2 border-b border-gray-200">
           <input
             type="text"
-            placeholder="🔍 검색 (성명/부서/공장/이메일)"
+            placeholder="🔍 검색 (성명/부서/공장/직급/담당업무)"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-400"

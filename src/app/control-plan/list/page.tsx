@@ -25,9 +25,14 @@ interface CPProject {
     cpProjectName?: string;
   };
   linkedFmeaId?: string;
+  parentApqpNo?: string;   // ★ 상위 APQP (최상위)
+  parentFmeaId?: string;   // 상위 FMEA
+  parentCpId?: string;     // 상위 CP
   createdAt: string;
   status?: string;
   revisionNo?: string;
+  cftCount?: number;
+  processCount?: number;
 }
 
 // =====================================================
@@ -36,16 +41,14 @@ interface CPProject {
 const COLUMN_HEADERS = [
   'No',
   'CP ID',
-  '프로젝트명',
   'CP명',
   '고객사',
-  '모델명',
-  '공정책임',
   '담당자',
   '시작일자',
   '개정일자',
-  '개정번호',
-  'FMEA 연동',
+  '상위 APQP',
+  '상위 FMEA',
+  '상위 CP',
 ];
 
 // CP ID 포맷 생성
@@ -86,9 +89,48 @@ export default function CPListPage() {
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
-  // 데이터 로드
-  const loadData = useCallback(() => {
+  // 데이터 로드 (DB 우선, localStorage 폴백)
+  const loadData = useCallback(async () => {
     try {
+      // 1. DB에서 먼저 로드 시도
+      const response = await fetch('/api/control-plan');
+      const result = await response.json();
+
+      if (result.success && result.data && result.data.length > 0) {
+        // DB 데이터를 프론트엔드 포맷으로 변환 (CpRegistration 구조)
+        const dbProjects: CPProject[] = result.data.map((cp: any) => ({
+          id: cp.cpNo,
+          cpInfo: {
+            subject: cp.subject || '',
+            cpProjectName: cp.subject || '',
+            cpStartDate: cp.cpStartDate || '',
+            cpRevisionDate: cp.cpRevisionDate || '',
+            customerName: cp.customerName || '',
+            modelYear: cp.modelYear || '',
+            processResponsibility: cp.processResponsibility || '',
+            cpResponsibleName: cp.cpResponsibleName || '',
+          },
+          linkedFmeaId: cp.fmeaNo || cp.fmeaId || null,
+          parentApqpNo: cp.parentApqpNo || null,       // ★ 상위 APQP
+          parentFmeaId: cp.parentFmeaId || cp.fmeaNo || cp.fmeaId || null, // 상위 FMEA
+          parentCpId: cp.baseCpId || cp.parentCpId || null, // 상위 CP
+          createdAt: cp.createdAt || new Date().toISOString(),
+          status: cp.status || 'draft',
+          revisionNo: 'Rev.00',
+          cftCount: cp._count?.cftMembers || 0,
+          processCount: cp._count?.processes || 0,
+        }));
+
+        console.log(`✅ DB에서 CP ${dbProjects.length}건 로드 완료`);
+        setProjects(dbProjects);
+        
+        // localStorage 동기화
+        localStorage.setItem('cp-projects', JSON.stringify(dbProjects));
+        return;
+      }
+
+      // 2. DB가 비어있으면 localStorage에서 로드
+      console.log('ℹ️ DB가 비어있음, localStorage에서 로드');
       const storedCp = localStorage.getItem('cp-projects');
       let cpProjects = storedCp ? JSON.parse(storedCp) : [];
       
@@ -103,8 +145,27 @@ export default function CPListPage() {
 
       setProjects(sorted);
     } catch (error) {
-      console.error('❌ CP 리스트 로드 실패:', error);
-      setProjects([]);
+      console.error('❌ DB 연결 실패, localStorage에서 로드:', error);
+      
+      // DB 실패 시 localStorage 폴백
+      try {
+        const storedCp = localStorage.getItem('cp-projects');
+        let cpProjects = storedCp ? JSON.parse(storedCp) : [];
+        
+        if (!Array.isArray(cpProjects) || cpProjects.length === 0) {
+          localStorage.setItem('cp-projects', JSON.stringify(DEFAULT_SAMPLE_DATA));
+          cpProjects = DEFAULT_SAMPLE_DATA;
+        }
+
+        const sorted = cpProjects.sort((a: CPProject, b: CPProject) => 
+          (b.createdAt || '').localeCompare(a.createdAt || '')
+        );
+
+        setProjects(sorted);
+      } catch (localError) {
+        console.error('❌ localStorage 로드 실패:', localError);
+        setProjects([]);
+      }
     }
   }, []);
 
@@ -162,8 +223,8 @@ export default function CPListPage() {
     }
   };
 
-  // 선택 삭제
-  const handleDeleteSelected = () => {
+  // 선택 삭제 (DB + localStorage)
+  const handleDeleteSelected = async () => {
     if (selectedRows.size === 0) {
       alert('삭제할 항목을 선택해주세요.');
       return;
@@ -173,6 +234,16 @@ export default function CPListPage() {
       return;
     }
 
+    // DB에서 삭제
+    for (const cpNo of selectedRows) {
+      try {
+        await fetch(`/api/control-plan?cpNo=${cpNo}`, { method: 'DELETE' });
+      } catch (e) {
+        console.error(`CP ${cpNo} DB 삭제 실패:`, e);
+      }
+    }
+
+    // localStorage 및 UI 업데이트
     const remaining = projects.filter(p => !selectedRows.has(p.id));
     localStorage.setItem('cp-projects', JSON.stringify(remaining));
     setProjects(remaining);
@@ -262,7 +333,7 @@ export default function CPListPage() {
         <div className="rounded-lg overflow-hidden border border-gray-400 bg-white">
           <table className="w-full border-collapse text-xs">
             <thead>
-              <tr className="bg-[#0d9488] text-white" style={{ height: '28px' }}>
+              <tr className="bg-[#0d9488] text-white h-7">
                 <th className="border border-white px-1 py-1 text-center align-middle w-8">
                   <input
                     type="checkbox"
@@ -282,10 +353,9 @@ export default function CPListPage() {
               {filteredProjects.map((p, index) => (
                 <tr
                   key={`${p.id}-${index}`}
-                  className={`hover:bg-teal-50 cursor-pointer transition-colors ${
+                  className={`hover:bg-teal-50 cursor-pointer transition-colors h-7 ${
                     index % 2 === 0 ? 'bg-teal-50/50' : 'bg-white'
                   } ${selectedRows.has(p.id) ? 'bg-teal-100' : ''}`}
-                  style={{ height: '28px' }}
                   onClick={() => toggleRow(p.id)}
                 >
                   <td className="border border-gray-400 px-1 py-0.5 text-center align-middle">
@@ -304,50 +374,56 @@ export default function CPListPage() {
                     </a>
                   </td>
                   <td className="border border-gray-400 px-2 py-1 text-left align-middle">
-                    {p.cpInfo?.cpProjectName || <span className="text-red-500 italic">미입력</span>}
-                  </td>
-                  <td className="border border-gray-400 px-2 py-1 text-left align-middle">
                     <a href={`/control-plan?id=${p.id}`} className="text-teal-600 hover:underline font-semibold">
                       {p.cpInfo?.subject || <span className="text-red-500 italic">미입력</span>}
                     </a>
                   </td>
                   <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                    {p.cpInfo?.customerName || <span className="text-red-500 italic">미입력</span>}
+                    {p.cpInfo?.customerName || <span className="text-gray-400">-</span>}
                   </td>
                   <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                    {p.cpInfo?.modelYear || <span className="text-red-500 italic">미입력</span>}
+                    {p.cpInfo?.cpResponsibleName || <span className="text-gray-400">-</span>}
                   </td>
                   <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                    {p.cpInfo?.processResponsibility || <span className="text-red-500 italic">미입력</span>}
+                    {p.cpInfo?.cpStartDate || <span className="text-gray-400">-</span>}
                   </td>
                   <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                    {p.cpInfo?.cpResponsibleName || <span className="text-red-500 italic">미입력</span>}
+                    {p.cpInfo?.cpRevisionDate || <span className="text-gray-400">-</span>}
                   </td>
                   <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                    {p.cpInfo?.cpStartDate || <span className="text-red-500 italic">미입력</span>}
+                    {p.parentApqpNo ? (
+                      <span className="px-1 py-0.5 bg-green-100 text-green-700 rounded text-xs font-semibold">{p.parentApqpNo}</span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
                   </td>
                   <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                    {p.cpInfo?.cpRevisionDate || <span className="text-red-500 italic">미입력</span>}
-                  </td>
-                  <td className="border border-gray-400 px-2 py-1 text-center align-middle">{p.revisionNo || 'Rev.00'}</td>
-                  <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                    {p.linkedFmeaId ? (
-                      <a href={`/pfmea/worksheet?id=${p.linkedFmeaId}`} className="text-yellow-600 hover:underline font-semibold">
-                        🔗 {p.linkedFmeaId}
+                    {p.parentFmeaId || p.linkedFmeaId ? (
+                      <a href={`/pfmea/worksheet?id=${p.parentFmeaId || p.linkedFmeaId}`} className="text-yellow-600 hover:underline font-semibold">
+                        🔗 {p.parentFmeaId || p.linkedFmeaId}
                       </a>
                     ) : (
-                      <span className="text-gray-400">미연동</span>
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="border border-gray-400 px-2 py-1 text-center align-middle">
+                    {p.parentCpId ? (
+                      <a href={`/control-plan?id=${p.parentCpId}`} className="text-green-600 hover:underline font-semibold">
+                        🔗 {p.parentCpId}
+                      </a>
+                    ) : (
+                      <span className="text-gray-400">-</span>
                     )}
                   </td>
                 </tr>
               ))}
               {/* 빈 행 */}
               {Array.from({ length: Math.max(0, 10 - filteredProjects.length) }).map((_, idx) => (
-                <tr key={`empty-${idx}`} className={`${(filteredProjects.length + idx) % 2 === 0 ? 'bg-teal-50/50' : 'bg-white'}`} style={{ height: '28px' }}>
+                <tr key={`empty-${idx}`} className={`h-7 ${(filteredProjects.length + idx) % 2 === 0 ? 'bg-teal-50/50' : 'bg-white'}`}>
                   <td className="border border-gray-400 px-1 py-0.5 text-center align-middle">
                     <input type="checkbox" disabled className="w-3.5 h-3.5 opacity-30" />
                   </td>
-                  {Array.from({ length: 12 }).map((_, i) => (
+                  {Array.from({ length: 10 }).map((_, i) => (
                     <td key={i} className="border border-gray-400 px-2 py-1 text-center align-middle text-gray-300">-</td>
                   ))}
                 </tr>

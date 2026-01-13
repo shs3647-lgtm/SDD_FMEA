@@ -276,7 +276,7 @@ export default function CPLogPage() {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-xs min-w-[1200px]">
               <thead>
-                <tr className="bg-[#0d9488] text-white" style={{ height: '28px' }}>
+                <tr className="bg-[#0d9488] text-white h-7">
                   <th className="border border-white px-2 py-1 text-center align-middle w-10">No</th>
                   <th className="border border-white px-2 py-1 text-center align-middle w-40">일시</th>
                   <th className="border border-white px-2 py-1 text-center align-middle w-20">사용자ID</th>
@@ -299,8 +299,7 @@ export default function CPLogPage() {
                   filteredLogs.map((log, index) => (
                     <tr 
                       key={log.id} 
-                      className={`hover:bg-teal-50 ${index % 2 === 0 ? 'bg-white' : 'bg-teal-50/50'}`}
-                      style={{ height: '28px' }}
+                      className={`hover:bg-teal-50 h-7 ${index % 2 === 0 ? 'bg-white' : 'bg-teal-50/50'}`}
                     >
                       <td className="border border-gray-400 px-2 py-1 text-center align-middle font-bold text-teal-600">
                         {index + 1}
