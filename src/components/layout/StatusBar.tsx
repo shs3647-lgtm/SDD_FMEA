@@ -62,17 +62,22 @@ export function StatusBar({
 
   // 스크롤 컨테이너 가져오기
   const getScrollContainer = useCallback(() => {
-    // CP 워크시트 스크롤 컨테이너 확인
-    let container = document.getElementById('cp-worksheet-scroll-container');
-    if (container && container.scrollWidth > container.clientWidth) {
+    // CP Import 스크롤 컨테이너 확인 (우선순위 1)
+    let container = document.getElementById('cp-import-scroll-container');
+    if (container) {
       return container;
     }
-    // all-tab-scroll-wrapper 확인 (All 탭용)
+    // CP 워크시트 스크롤 컨테이너 확인 (우선순위 2)
+    container = document.getElementById('cp-worksheet-scroll-container');
+    if (container) {
+      return container;
+    }
+    // all-tab-scroll-wrapper 확인 (All 탭용, 우선순위 3)
     container = document.getElementById('all-tab-scroll-wrapper');
-    if (container && container.scrollWidth > container.clientWidth) {
+    if (container) {
       return container;
     }
-    // 기본 worksheet-scroll-container 확인
+    // 기본 worksheet-scroll-container 확인 (우선순위 4)
     container = document.getElementById(scrollContainerId);
     return container;
   }, [scrollContainerId]);
@@ -159,16 +164,23 @@ export function StatusBar({
   useEffect(() => {
     const handleScroll = () => updateScrollPosition();
     
+    // 초기 로드 시 약간의 지연 후 확인 (테이블 렌더링 대기)
+    const initialTimeout = setTimeout(() => {
+      updateScrollPosition();
+    }, 100);
+    
     // 주기적으로 컨테이너 확인 (탭 전환 대응)
     const interval = setInterval(() => {
       updateScrollPosition();
     }, 500);
 
     // 모든 잠재적 스크롤 컨테이너에 리스너 추가
+    const cpImportContainer = document.getElementById('cp-import-scroll-container');
     const cpContainer = document.getElementById('cp-worksheet-scroll-container');
     const allTabContainer = document.getElementById('all-tab-scroll-wrapper');
     const defaultContainer = document.getElementById(scrollContainerId);
     
+    cpImportContainer?.addEventListener('scroll', handleScroll);
     cpContainer?.addEventListener('scroll', handleScroll);
     allTabContainer?.addEventListener('scroll', handleScroll);
     defaultContainer?.addEventListener('scroll', handleScroll);
@@ -177,7 +189,9 @@ export function StatusBar({
     updateScrollPosition();
 
     return () => {
+      clearTimeout(initialTimeout);
       clearInterval(interval);
+      cpImportContainer?.removeEventListener('scroll', handleScroll);
       cpContainer?.removeEventListener('scroll', handleScroll);
       allTabContainer?.removeEventListener('scroll', handleScroll);
       defaultContainer?.removeEventListener('scroll', handleScroll);

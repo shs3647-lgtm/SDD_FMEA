@@ -160,20 +160,117 @@ function CPImportPageContent() {
     }
   };
 
-  // 전체/그룹 파일 선택 (임시 구현)
-  const handleFullFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 전체 파일 선택 - 모든 시트의 모든 행과 열 데이터 파싱
+  const handleFullFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
     setFullFileName(file.name);
     setIsFullParsing(true);
-    setTimeout(() => {
-      const sampleData: ImportedData[] = [
-        { id: '1', processNo: '10', category: 'full', itemCode: 'processNo', value: '10', createdAt: new Date() },
-        { id: '2', processNo: '10', category: 'full', itemCode: 'processName', value: '자재입고', createdAt: new Date() },
-      ];
-      setFullPendingData(sampleData);
+    
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(arrayBuffer);
+      
+      const parsedData: ImportedData[] = [];
+      
+      // 시트명과 itemCode 매핑
+      const sheetMapping: Record<string, { category: string; headers: string[]; itemCodes: string[] }> = {
+        '공정현황': {
+          category: 'processInfo',
+          headers: ['공정번호', '공정명', '레벨', '공정설명', '설비/금형/지그'],
+          itemCodes: ['processNo', 'processName', 'level', 'processDesc', 'equipment'],
+        },
+        '검출장치': {
+          category: 'detector',
+          headers: ['공정번호', '공정명', 'EP', '자동검사장치'],
+          itemCodes: ['processNo', 'processName', 'ep', 'autoDetector'],
+        },
+        '관리항목': {
+          category: 'controlItem',
+          headers: ['공정번호', '공정명', '제품특성', '공정특성', '특별특성', '스펙/공차'],
+          itemCodes: ['processNo', 'processName', 'productChar', 'processChar', 'specialChar', 'spec'],
+        },
+        '관리방법': {
+          category: 'controlMethod',
+          headers: ['공정번호', '공정명', '평가방법', '샘플크기', '주기', '책임1', '책임2'],
+          itemCodes: ['processNo', 'processName', 'evalMethod', 'sampleSize', 'frequency', 'owner1', 'owner2'],
+        },
+        '대응계획': {
+          category: 'reactionPlan',
+          headers: ['공정번호', '공정명', '제품특성', '공정특성', '대응계획'],
+          itemCodes: ['processNo', 'processName', 'productChar', 'processChar', 'reactionPlan'],
+        },
+      };
+      
+      // 모든 시트 순회
+      workbook.worksheets.forEach((worksheet, sheetIdx) => {
+        const sheetName = worksheet.name;
+        const mapping = sheetMapping[sheetName];
+        
+        if (!mapping) {
+          console.warn(`⚠️ 알 수 없는 시트: ${sheetName}`);
+          return;
+        }
+        
+        console.log(`📋 시트 "${sheetName}" 파싱 시작...`);
+        let rowCount = 0;
+        
+        // 3행부터 데이터 읽기 (1행: 헤더, 2행: 안내)
+        worksheet.eachRow((row, rowNumber) => {
+          if (rowNumber <= 2) return; // 헤더/안내 행 스킵
+          
+          // 공정번호와 공정명 추출 (첫 번째, 두 번째 컬럼)
+          const processNo = String(row.getCell(1).value || '').trim();
+          const processName = String(row.getCell(2).value || '').trim();
+          
+          // 공정번호가 없으면 스킵
+          if (!processNo) return;
+          
+          rowCount++;
+          
+          // 모든 컬럼 데이터 추출 (빈 값도 포함)
+          mapping.headers.forEach((header, colIdx) => {
+            const itemCode = mapping.itemCodes[colIdx];
+            const cell = row.getCell(colIdx + 1);
+            let value = '';
+            
+            // 셀 값 추출 (다양한 타입 처리)
+            if (cell.value !== null && cell.value !== undefined) {
+              if (typeof cell.value === 'object' && 'text' in cell.value) {
+                value = String(cell.value.text || '').trim();
+              } else if (typeof cell.value === 'object' && 'result' in cell.value) {
+                value = String(cell.value.result || '').trim();
+              } else {
+                value = String(cell.value || '').trim();
+              }
+            }
+            
+            // 모든 컬럼 데이터 추가 (빈 값도 포함하여 모든 데이터 추출)
+            parsedData.push({
+              id: `full-${sheetIdx}-${rowNumber}-${colIdx}`,
+              processNo,
+              processName: itemCode === 'processName' ? value : processName || '',
+              category: mapping.category,
+              itemCode,
+              value,
+              createdAt: new Date(),
+            });
+          });
+        });
+        
+        console.log(`✅ 시트 "${sheetName}": ${rowCount}개 행 파싱 완료`);
+      });
+      
+      setFullPendingData(parsedData);
+      console.log('✅ 전체 Import 파싱 완료:', parsedData.length, '건');
+    } catch (error) {
+      console.error('❌ Excel 파싱 실패:', error);
+      alert('Excel 파일을 읽는데 실패했습니다.');
+    } finally {
       setIsFullParsing(false);
-    }, 500);
+    }
   };
   
   const handleGroupFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -294,28 +391,28 @@ function CPImportPageContent() {
     
     return (
       <table className="w-full border-collapse min-w-[1050px] border-spacing-0">
-        <thead className="sticky top-0 z-[1]">
+        <thead className="sticky top-0 z-[10]">
           <tr className="h-[18px]">
-            <th colSpan={3} className="bg-gray-600 text-white text-[10px] font-medium text-center border border-gray-400 antialiased">관리</th>
+            <th colSpan={3} className="bg-gray-600 text-white text-[10px] font-medium text-center border border-gray-400 antialiased sticky top-0">관리</th>
             {GROUP_HEADERS.map(grp => (
-              <th key={grp.key} colSpan={grp.colSpan} className={`${grp.color} text-white text-[10px] font-medium text-center border border-gray-400 antialiased`}>
+              <th key={grp.key} colSpan={grp.colSpan} className={`${grp.color} text-white text-[10px] font-medium text-center border border-gray-400 antialiased sticky top-0`}>
                 {grp.label}
               </th>
             ))}
           </tr>
           <tr className="h-[22px]">
-            <th className={`${tw.headerCell} w-[22px]`}>
+            <th className={`${tw.headerCell} w-[22px] bg-[#0d9488] sticky top-[18px]`}>
               <input type="checkbox" className="w-3 h-3" onChange={(e) => {
                 if (e.target.checked) setSelectedRows(new Set(data.map(d => d.processNo)));
                 else setSelectedRows(new Set());
               }} />
             </th>
-            <th className={`${tw.headerCell} w-[25px]`}>No</th>
-            <th className={`${tw.headerCell} w-[45px]`}>작업</th>
+            <th className={`${tw.headerCell} w-[25px] bg-[#0d9488] sticky top-[18px]`}>No</th>
+            <th className={`${tw.headerCell} w-[45px] bg-[#0d9488] sticky top-[18px]`}>작업</th>
             {PREVIEW_COLUMNS.map(col => {
               const groupColor = { processInfo: 'bg-teal-500', detector: 'bg-purple-500', controlItem: 'bg-blue-500', controlMethod: 'bg-green-500', reactionPlan: 'bg-orange-400' }[col.group || 'processInfo'];
               return (
-                <th key={col.key} className={`${groupColor} text-white px-0.5 py-0.5 border border-gray-400 text-[10px] font-medium text-center ${col.width} cursor-pointer whitespace-nowrap antialiased ${selectedColumn === col.key ? 'ring-2 ring-yellow-400' : ''}`}
+                <th key={col.key} className={`${groupColor} text-white px-0.5 py-0.5 border border-gray-400 text-[10px] font-medium text-center ${col.width} cursor-pointer whitespace-nowrap antialiased sticky top-[18px] ${selectedColumn === col.key ? 'ring-2 ring-yellow-400' : ''}`}
                   onClick={() => handleColumnClick(col.key)}>
                   {col.label}
                 </th>
@@ -325,7 +422,7 @@ function CPImportPageContent() {
         </thead>
         <tbody>
           {processNos.length === 0 ? (
-            Array.from({ length: 10 }).map((_, i) => (
+            Array.from({ length: 20 }).map((_, i) => (
               <tr key={`empty-${i}`} className={`h-5 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                 <td className={tw.cellCenter}></td>
                 <td className={tw.cellCenter}>{i + 1}</td>
@@ -395,7 +492,7 @@ function CPImportPageContent() {
     <>
       <CPTopNav selectedCpId={selectedCpId} />
       
-      <div className="min-h-screen bg-[#f5f7fa] px-2 py-2 pt-9 font-[Malgun_Gothic]">
+      <div className="h-screen overflow-hidden bg-[#f5f7fa] px-2 py-2 pt-9 font-[Malgun_Gothic] flex flex-col">
         {/* 헤더 */}
         <div className="flex items-center justify-between mb-2 bg-white px-2 py-1 rounded border border-gray-300">
           <div className="flex items-center gap-2">
@@ -529,7 +626,7 @@ function CPImportPageContent() {
         </div>
 
         {/* 미리보기 테이블 */}
-        <div className={`flex-1 overflow-x-auto overflow-y-auto max-h-[380px] bg-white border-2 ${activeTab === 'full' ? 'border-teal-500' : activeTab === 'group' ? 'border-blue-500' : 'border-orange-500'}`}>
+        <div id="cp-import-scroll-container" className={`flex-1 overflow-x-auto overflow-y-auto bg-white border-2 ${activeTab === 'full' ? 'border-teal-500' : activeTab === 'group' ? 'border-blue-500' : 'border-orange-500'}`}>
           {activeTab === 'full' && renderPreviewTable(fullData, 'full')}
           {activeTab === 'group' && renderPreviewTable(groupData, 'group')}
           {activeTab === 'individual' && renderPreviewTable(itemData, 'individual')}

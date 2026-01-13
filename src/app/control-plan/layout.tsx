@@ -21,7 +21,7 @@ export default function ControlPlanLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-[#f5f7fa]">
+    <div className="flex h-screen overflow-hidden bg-[#f5f7fa]">
       {/* ===== 1. 사이드바 (48px, fixed) ===== */}
       <Sidebar />
 
