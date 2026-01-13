@@ -322,8 +322,8 @@ export default function AllTabEmpty({
     }
     
     // FC: state.l3에서 failureCauses 계산
-    if (state?.l3) {
-      state.l3.forEach((we: any) => {
+    if ((state as any)?.l3) {
+      (state as any).l3.forEach((we: any) => {
         if (we.failureCauses) {
           stateFc += we.failureCauses.filter((fc: any) => fc.name || fc.id).length;
         }
@@ -349,7 +349,7 @@ export default function AllTabEmpty({
     });
     
     return { linked: linkedCounts, state: stateCounts, mismatch, hasMismatch };
-  }, [failureLinks, state?.l1, state?.l2, state?.l3]);
+  }, [failureLinks, state?.l1, state?.l2, (state as any)?.l3]);
   
   // ★★★ 2026-01-12: 개선방향 패널 상태 ★★★
   const [showImprovePanel, setShowImprovePanel] = useState(false);
@@ -892,7 +892,7 @@ export default function AllTabEmpty({
                   for (const r of currentFMGroup.rows) {
                     if (r.fcId === currentFcId) continue; // 현재 행은 스킵
                     
-                    const targetUniqueKey = `${controlModal.fmId}-${r.fcId}`;
+                    const targetUniqueKey: string = `${controlModal.fmId}-${r.fcId}`;
                     const targetDetectionKey = `detection-${targetUniqueKey}`;
                     const targetDetectionValue = state.riskData?.[targetDetectionKey] || '';
                     
@@ -1082,7 +1082,7 @@ export default function AllTabEmpty({
               ? `${controlModal.fmId}-${controlModal.fcId}` 
               : String(controlModal.rowIndex);
             const savedValue = (state.riskData || {})[`${controlModal.type}-${uniqueKey}`] || '';
-            return savedValue ? savedValue.split('\n').filter(Boolean) : [];
+            return savedValue ? String(savedValue).split('\n').filter(Boolean) : [];
           })()}
         />
       )}
@@ -1104,7 +1104,7 @@ export default function AllTabEmpty({
         onClose={closeLldModal}
         onSelect={handleLldSelect}
         currentValue={lldModal.currentValue}
-        fmeaId={state?.fmeaId || 'pfm26-001'}  // ★ 현재 FMEA ID 전달
+        fmeaId={(state as any)?.fmeaId || 'pfm26-001'}  // ★ 현재 FMEA ID 전달
       />
       
       {/* ★ 사용자 선택 모달 (책임자성명) */}
@@ -1112,7 +1112,6 @@ export default function AllTabEmpty({
         isOpen={userModal.isOpen}
         onClose={closeUserModal}
         onSelect={handleUserSelect}
-        currentValue={userModal.currentValue}
       />
       
       {/* AP 결과 모달 (5AP/6AP) */}

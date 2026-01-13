@@ -100,13 +100,13 @@ function extractFmeaType(id: string): { code: string; label: string; color: stri
  * 예시: pfm26-M001 (Master), pfm26-F001 (Family), pfm26-P001 (Part)
  */
 function formatFmeaId(id: string, index: number): string {
-  // 기존 ID가 PFM 형식이면 대문자로 정규화하여 반환
-  if (id?.toUpperCase().startsWith('PFM')) return id.toUpperCase();
+  // ★ 소문자로 통일하여 반환
+  if (id) return id.toLowerCase();
   
-  // 년도 추출 (현재 년도 기준), 기본 유형 P
+  // ID가 없으면 기본값 생성 (소문자)
   const year = new Date().getFullYear().toString().slice(-2);
   const seq = (index + 1).toString().padStart(3, '0');
-  return `PFM${year}-P${seq}`;
+  return `pfm${year}-p${seq}`;
 }
 
 // 온프레미스 운영 모드 - 샘플 데이터 없음
@@ -412,7 +412,7 @@ export default function FMEAListPage() {
                 </td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle font-bold text-[#00587a]">{index + 1}</td>
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle font-semibold text-blue-600">
-                  <a href={`/pfmea/worksheet?id=${p.id}`} className="hover:underline">
+                  <a href={`/pfmea/register?id=${p.id.toLowerCase()}`} className="hover:underline">
                     {formatFmeaId(p.id, index)}
                   </a>
                 </td>
@@ -430,10 +430,10 @@ export default function FMEAListPage() {
                 <td className="border border-gray-400 px-2 py-1 text-center align-middle">
                   {p.parentFmeaId ? (
                     <a 
-                      href={`/pfmea/worksheet?id=${p.parentFmeaId}`} 
+                      href={`/pfmea/register?id=${p.parentFmeaId.toLowerCase()}`} 
                       className="text-blue-600 hover:underline text-[10px] font-semibold"
                       onClick={(e) => e.stopPropagation()}
-                      title={`상위 FMEA: ${p.parentFmeaId?.toUpperCase()}`}
+                      title={`상위 FMEA: ${p.parentFmeaId?.toLowerCase()}`}
                     >
                       {(() => {
                         const parentType = extractFmeaType(p.parentFmeaId);
@@ -442,7 +442,7 @@ export default function FMEAListPage() {
                             <span className={`px-1 py-0 rounded text-[9px] font-bold ${parentType.color}`}>
                               {parentType.code}
                             </span>
-                            <span>{p.parentFmeaId?.toUpperCase().split('-').pop()}</span>
+                            <span>{p.parentFmeaId?.toLowerCase().split('-').pop()}</span>
                           </span>
                         );
                       })()}
@@ -500,11 +500,13 @@ export default function FMEAListPage() {
                         </span>
                       );
                     }
+                          // ★ FMEA명 클릭 시 등록화면으로 이동 (해당 FMEA 정보 표시)
                     return (
                       <a 
-                        href={`/pfmea/worksheet?id=${p.id}`} 
+                        href={`/pfmea/register?id=${p.id.toLowerCase()}`} 
                         className="text-blue-600 hover:underline font-semibold cursor-pointer"
                         onClick={(e) => e.stopPropagation()}
+                        title="클릭하여 FMEA 등록정보 확인"
                       >
                         {fmeaName}
                       </a>

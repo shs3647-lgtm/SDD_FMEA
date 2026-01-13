@@ -9,7 +9,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { UserInfo, USER_STORAGE_KEY } from '@/types/user';
-import { getAllUsers, createSampleUsers, deleteUser, createUser } from '@/lib/user-db';
+import { getAllUsers, createSampleUsers, deleteUser, createUser, updateUser } from '@/lib/user-db';
 import { downloadStyledExcel } from '@/lib/excel-utils';
 import * as XLSX from 'xlsx';
 

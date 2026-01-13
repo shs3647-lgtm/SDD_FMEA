@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
           apqpStartDate: apqp.apqpStartDate,
           apqpRevisionDate: apqp.apqpRevisionDate,
           apqpResponsibleName: apqp.apqpResponsibleName,
-          parentProject: apqp.parentProject,
+          parentApqpNo: apqp.parentApqpNo,
           parentFmeaId: apqp.parentFmeaId,
           baseCpId: apqp.baseCpId,
           leader: apqp.cftMembers[0]?.name || '',
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { apqpNo, apqpInfo, cftMembers, parentFmeaId, baseCpId, parentProject } = body;
+    const { apqpNo, apqpInfo, cftMembers, parentFmeaId, baseCpId, parentApqpNo } = body;
 
     if (!apqpNo || !apqpInfo) {
       return NextResponse.json(
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
           partNo: apqpInfo.partNo || null,
           targetDate: apqpInfo.targetDate || null,
           status: 'planning',
-          parentProject: parentProject || null,
+          parentApqpNo: parentApqpNo || null,
           parentFmeaId: parentFmeaId || null,
           baseCpId: baseCpId || null,
         }
@@ -236,7 +236,7 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { apqpNo, apqpInfo, cftMembers, parentFmeaId, baseCpId, parentProject } = body;
+    const { apqpNo, apqpInfo, cftMembers, parentFmeaId, baseCpId, parentApqpNo } = body;
 
     if (!apqpNo) {
       return NextResponse.json(
@@ -276,7 +276,7 @@ export async function PUT(request: NextRequest) {
           productName: apqpInfo?.productName || apqpInfo?.subject,
           partNo: apqpInfo?.partNo,
           targetDate: apqpInfo?.targetDate,
-          parentProject: parentProject,
+          parentApqpNo: parentApqpNo,
           parentFmeaId: parentFmeaId,
           baseCpId: baseCpId,
         }

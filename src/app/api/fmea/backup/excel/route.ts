@@ -158,15 +158,15 @@ export async function POST(req: NextRequest) {
     const finalRows: any[] = [];
 
     if (state.l1?.types) {
-      state.l1.types.forEach(type => {
-        type.functions?.forEach(fn => {
-          fn.requirements?.forEach(req => {
+      state.l1.types.forEach((type: any) => {
+        type.functions?.forEach((fn: any) => {
+          fn.requirements?.forEach((req: any) => {
             const linkedItems = failureLinks.filter((l: any) => l.feId === req.id);
             if (linkedItems.length === 0) {
               finalRows.push({ l1Name, l1Type: type.name, l1Function: fn.name, l1Requirement: req.name });
             } else {
               linkedItems.forEach((link: any) => {
-                const proc = state.l2?.find(p => p.id === link.fmProcessId || p.name === link.fmProcess);
+                const proc = state.l2?.find((p: any) => p.id === link.fmProcessId || p.name === link.fmProcess);
                 const riskData = (state as any).riskData || {};
                 const uniqueKey = link.fmId && link.fcId ? `${link.fmId}-${link.fcId}` : '';
                 const prevention = riskData[`prevention-${uniqueKey}`] || '';

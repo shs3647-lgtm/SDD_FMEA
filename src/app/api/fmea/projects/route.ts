@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { fmeaId, fmeaType, project, fmeaInfo, cftMembers, parentFmeaId, parentFmeaType } = body;
+    const { fmeaId, fmeaType, project, fmeaInfo, cftMembers, parentApqpNo, parentFmeaId, parentFmeaType } = body;
 
     if (!fmeaId) {
       return NextResponse.json({ 
@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
       project,
       fmeaInfo,
       cftMembers,
+      parentApqpNo,  // ★ 상위 APQP
       parentFmeaId,
       parentFmeaType,
     });

@@ -47,6 +47,7 @@ interface UseRegisterHandlersProps {
   selectedParentApqp: string | null;   // ★ 상위 APQP (최상위)
   selectedParentFmea: string | null;   // 상위 FMEA
   selectedBaseCp: string | null;       // 상위 CP
+  setSelectedBaseCp: React.Dispatch<React.SetStateAction<string | null>>;  // ★ 상위 CP 설정 함수
   setSaveStatus: React.Dispatch<React.SetStateAction<SaveStatus>>;
   setShowMissingFields: React.Dispatch<React.SetStateAction<boolean>>;
   setAvailableFmeas: React.Dispatch<React.SetStateAction<FmeaSelectItem[]>>;
@@ -67,6 +68,7 @@ export function useRegisterHandlers({
   selectedParentApqp,
   selectedParentFmea,
   selectedBaseCp,
+  setSelectedBaseCp,  // ★ 상위 CP 설정 함수 추가
   setSaveStatus,
   setShowMissingFields,
   setAvailableFmeas,
@@ -79,11 +81,20 @@ export function useRegisterHandlers({
 }: UseRegisterHandlersProps) {
   const router = useRouter();
   
-  // CP 유형 변경 시 ID 재생성
+  // CP 유형 변경 시 ID 재생성 및 MASTER CP는 상위 CP를 자신으로 설정
   const handleCpTypeChange = useCallback((newType: CPType) => {
     setCpInfo(prev => ({ ...prev, cpType: newType }));
-    setCpId(generateCPId(newType));
-  }, [setCpInfo, setCpId]);
+    const newCpId = generateCPId(newType);
+    setCpId(newCpId);
+    
+    // ★ MASTER CP는 상위 CP가 자신이 되도록 설정
+    if (newType === 'M') {
+      setSelectedBaseCp(newCpId);
+    } else if (cpInfo.cpType === 'M' && newType !== 'M') {
+      // MASTER에서 다른 타입으로 변경 시 상위 CP 초기화
+      setSelectedBaseCp(null);
+    }
+  }, [setCpInfo, setCpId, setSelectedBaseCp, cpInfo.cpType]);
   
   // 필드 업데이트
   const updateField = useCallback((field: keyof CPInfo, value: string) => {
@@ -136,11 +147,22 @@ export function useRegisterHandlers({
   
   // CP 선택 모달 열기 (기초정보용)
   const openCpSelectModal = useCallback(async (type: 'M' | 'F' | 'P') => {
+    // ★ MASTER CP는 상위 CP가 자신이므로 모달을 열지 않고 자동 설정
+    if (type === 'M') {
+      if (cpId) {
+        setSelectedBaseCp(cpId);
+        alert('MASTER CP는 상위 CP가 자신으로 자동 설정되었습니다.');
+      } else {
+        alert('CP ID가 생성되지 않았습니다. 저장 후 다시 시도해주세요.');
+      }
+      return;
+    }
+    
     setCpSelectType(type);
     try {
       const stored = localStorage.getItem('cp-projects');
       if (!stored) {
-        alert(`등록된 ${type === 'M' ? 'Master' : type === 'F' ? 'Family' : 'Part'} CP가 없습니다.`);
+        alert(`등록된 ${type === 'F' ? 'Family' : 'Part'} CP가 없습니다.`);
         return;
       }
       
@@ -157,7 +179,7 @@ export function useRegisterHandlers({
         }));
       
       if (filtered.length === 0) {
-        alert(`등록된 ${type === 'M' ? 'Master' : type === 'F' ? 'Family' : 'Part'} CP가 없습니다.`);
+        alert(`등록된 ${type === 'F' ? 'Family' : 'Part'} CP가 없습니다.`);
         return;
       }
       
@@ -167,7 +189,7 @@ export function useRegisterHandlers({
       console.error('CP 목록 로드 실패:', e);
       alert('CP 목록을 불러올 수 없습니다.');
     }
-  }, [cpId, setAvailableCps, setCpSelectModalOpen, setCpSelectType]);
+  }, [cpId, setSelectedBaseCp, setAvailableCps, setCpSelectModalOpen, setCpSelectType]);
   
   // 저장 (DB API 호출)
   const handleSave = useCallback(async () => {
@@ -176,21 +198,77 @@ export function useRegisterHandlers({
       return;
     }
 
+    // ★ 저장 전 단일 역할 중복 체크 (Champion, Leader, PM, Moderator는 각각 1명만 허용)
+    const SINGLE_ROLES = ['Champion', 'Leader', 'PM', 'Moderator'];
+    for (const role of SINGLE_ROLES) {
+      const membersWithRole = cftMembers.filter(m => m.role === role);
+      if (membersWithRole.length > 1) {
+        const memberNames = membersWithRole.map(m => m.name || '(이름 없음)').join(', ');
+        alert(`${role}은 한 명만 등록할 수 있습니다.\n\n현재 ${role}: ${membersWithRole.length}명\n${memberNames}\n\n중복된 ${role}의 역할을 변경해주세요.`);
+        console.error(`[CP 등록] ❌ 저장 실패: ${role} 중복`, membersWithRole);
+        setSaveStatus('idle');
+        return;
+      }
+    }
+    
+    // ★ 이름이 없는 멤버는 저장 불가 (즉시 중단)
+    const membersWithoutName = cftMembers.filter(m => !m.name || m.name.trim() === '');
+    if (membersWithoutName.length > 0) {
+      const rolesWithoutName = membersWithoutName.map(m => m.role || '(역할 없음)').join(', ');
+      alert(`이름이 없는 CFT 멤버가 있습니다.\n\n이름 없는 멤버: ${membersWithoutName.length}명\n역할: ${rolesWithoutName}\n\n이름을 입력하거나 해당 행을 삭제해주세요.`);
+      console.error('[CP 등록] ❌ 저장 실패: 이름 없는 멤버 존재', membersWithoutName);
+      setSaveStatus('idle');
+      return;
+    }
+
+    // CP ID가 없으면 자동 생성
+    let finalCpId = cpId;
+    if (!finalCpId || finalCpId.trim() === '') {
+      finalCpId = generateCPId(cpInfo.cpType);
+      setCpId(finalCpId);
+    }
+
     setSaveStatus('saving');
     
     try {
       // 1. DB에 저장
+      // ★ parentApqpNo 정규화 (문자열로 변환, 빈 값은 null)
+      const normalizedParentApqpNo = selectedParentApqp && selectedParentApqp.trim() !== '' 
+        ? selectedParentApqp.trim() 
+        : null;
+      
+      // ★ 이름이 있는 멤버만 저장 (이름 없는 멤버는 제외)
+      const membersToSave = cftMembers.filter((m: any) => m.name && m.name.trim() !== '');
+      
+      if (membersToSave.length === 0) {
+        alert('이름이 있는 CFT 멤버가 최소 1명 이상 필요합니다.');
+        console.error('[CP 등록] ❌ 저장 실패: 이름 있는 멤버 없음');
+        setSaveStatus('idle');
+        return;
+      }
+      
+      const saveData = {
+        cpNo: finalCpId,
+        cpInfo,
+        cftMembers: membersToSave, // ★ 이름 있는 멤버만 저장
+        parentApqpNo: normalizedParentApqpNo,  // ★ 상위 APQP (정규화된 값)
+        parentFmeaId: selectedParentFmea,  // 상위 FMEA
+        baseCpId: selectedBaseCp,          // 상위 CP
+      };
+      
+      console.log('💾 CP 저장 데이터:', {
+        cpNo: finalCpId,
+        parentApqpNo: normalizedParentApqpNo,
+        parentApqpNo_raw: selectedParentApqp,
+        parentFmeaId: selectedParentFmea,
+        baseCpId: selectedBaseCp,
+        engineeringLocation: cpInfo.engineeringLocation,
+      });
+      
       const response = await fetch('/api/control-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cpNo: cpId,
-          cpInfo,
-          cftMembers: cftMembers.filter((m: any) => m.name), // 빈 멤버 제외
-          parentApqpNo: selectedParentApqp,  // ★ 상위 APQP (최상위)
-          parentFmeaId: selectedParentFmea,  // 상위 FMEA
-          baseCpId: selectedBaseCp,          // 상위 CP
-        }),
+        body: JSON.stringify(saveData),
       });
 
       const result = await response.json();
@@ -203,10 +281,10 @@ export function useRegisterHandlers({
 
       // 2. localStorage에도 백업 (오프라인 지원)
       const data = {
-        id: cpId,
+        id: finalCpId,
         cpInfo,
         cftMembers,
-        parentApqpNo: selectedParentApqp,
+        parentApqpNo: selectedParentApqp || null,  // ★ 문자열 (apqpNo)로 저장
         parentFmeaId: selectedParentFmea,
         baseCpId: selectedBaseCp,
         createdAt: new Date().toISOString(),
@@ -216,19 +294,19 @@ export function useRegisterHandlers({
       let projects = [];
       const stored = localStorage.getItem('cp-projects');
       if (stored) projects = JSON.parse(stored);
-      projects = projects.filter((p: any) => p.id !== cpId);
+      projects = projects.filter((p: any) => p.id !== finalCpId);
       projects.unshift(data);
       localStorage.setItem('cp-projects', JSON.stringify(projects));
       
       // ★ 마지막 작업 CP ID 저장 (다음 방문 시 자동 로드용)
-      localStorage.setItem('cp-last-edited', cpId);
+      localStorage.setItem('cp-last-edited', finalCpId);
       
       setSaveStatus('saved');
       setShowMissingFields(true);
       
       // ★ 저장 후 URL을 수정 모드로 업데이트 (새로고침 시 데이터 유지)
       if (!isEditMode) {
-        router.replace(`/control-plan/register?id=${cpId}`);
+        router.replace(`/control-plan/register?id=${finalCpId}`);
       }
       
       setTimeout(() => setSaveStatus('idle'), 2000);
@@ -238,9 +316,10 @@ export function useRegisterHandlers({
       // DB 실패 시 localStorage만 저장 (폴백)
       try {
         const data = {
-          id: cpId,
+          id: finalCpId,
           cpInfo,
           cftMembers,
+          parentApqpNo: selectedParentApqp || null,  // ★ 상위 APQP 추가
           parentFmeaId: selectedParentFmea,
           baseCpId: selectedBaseCp,
           createdAt: new Date().toISOString(),
@@ -250,7 +329,7 @@ export function useRegisterHandlers({
         let projects = [];
         const stored = localStorage.getItem('cp-projects');
         if (stored) projects = JSON.parse(stored);
-        projects = projects.filter((p: any) => p.id !== cpId);
+        projects = projects.filter((p: any) => p.id !== finalCpId);
         projects.unshift(data);
         localStorage.setItem('cp-projects', JSON.stringify(projects));
         
@@ -261,7 +340,7 @@ export function useRegisterHandlers({
         setSaveStatus('idle');
       }
     }
-  }, [cpInfo, cpId, cftMembers, selectedParentFmea, selectedBaseCp, setSaveStatus, setShowMissingFields]);
+  }, [cpInfo, cpId, cftMembers, selectedParentApqp, selectedParentFmea, selectedBaseCp, setSaveStatus, setShowMissingFields, isEditMode, router]);
   
   return {
     handleCpTypeChange,

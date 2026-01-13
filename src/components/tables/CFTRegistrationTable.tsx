@@ -36,7 +36,10 @@ interface CFTRegistrationTableProps {
 }
 
 // 기본 역할 목록
+// ★ 단일 역할: Champion, Leader, PM, Moderator는 각각 1명만 허용
+// ★ 다중 역할: CFT 팀원만 여러 명 추가 가능
 const CFT_ROLES = ['Champion', 'Leader', 'PM', 'Moderator', 'CFT 팀원'];
+const SINGLE_ROLE_LIST = ['Champion', 'Leader', 'PM', 'Moderator']; // 각각 1명만 허용
 
 // 초기 멤버 생성
 export const createInitialCFTMembers = (): CFTMember[] => {
@@ -91,6 +94,16 @@ export const CFTRegistrationTable: React.FC<CFTRegistrationTableProps> = ({
 
   // 필드 업데이트
   const updateField = (index: number, field: keyof CFTMember, value: string) => {
+    // ★ 단일 역할 중복 방지 (Champion, Leader, PM, Moderator는 각각 1명만 허용)
+    if (field === 'role' && SINGLE_ROLE_LIST.includes(value)) {
+      const existingMember = members.find((m, idx) => idx !== index && m.role === value);
+      if (existingMember) {
+        const roleName = value === 'Champion' ? 'Champion' : value === 'Leader' ? 'Leader' : value === 'PM' ? 'PM' : 'Moderator';
+        alert(`${roleName}은 한 명만 등록할 수 있습니다.\n기존 ${roleName}: ${existingMember.name || '(이름 없음)'} (${existingMember.department || '부서 없음'})\n\n기존 ${roleName}의 역할을 먼저 변경해주세요.`);
+        return; // 변경하지 않음
+      }
+    }
+    
     const updated = [...members];
     updated[index] = { ...updated[index], [field]: value };
     onMembersChange(updated);

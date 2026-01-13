@@ -2,9 +2,53 @@ http://localhost:3000
 
 === VERSION INFO ===
 Version: 3.0.0-release
-Last Updated: 2026-01-10 17:00
+Last Updated: 2026-01-13
 Entry Point: Welcome Board (자동 리다이렉트)
 Status: PRODUCTION READY
+
+=== 주요 URL 목록 ===
+
+[메인]
+- Welcome Board: http://localhost:3000
+- 대시보드: http://localhost:3000/dashboard
+
+[PFMEA]
+- PFMEA 등록: http://localhost:3000/pfmea/register
+- PFMEA 리스트: http://localhost:3000/pfmea/list
+- PFMEA 작성화면: http://localhost:3000/pfmea/worksheet
+- FMEA4판: http://localhost:3000/pfmea/fmea4
+- PFMEA 개정관리: http://localhost:3000/pfmea/revision
+- 습득교훈: http://localhost:3000/pfmea/lessons-learned
+
+[DFMEA]
+- DFMEA 등록: http://localhost:3000/dfmea/register
+- DFMEA 리스트: http://localhost:3000/dfmea/list
+- DFMEA 작성화면: http://localhost:3000/dfmea/worksheet
+- DFMEA 개정관리: http://localhost:3000/dfmea/revision
+
+[Control Plan]
+- CP 등록: http://localhost:3000/control-plan/register
+- CP 리스트: http://localhost:3000/control-plan/list
+- CP 작성화면: http://localhost:3000/control-plan/worksheet
+- CP 개정관리: http://localhost:3000/control-plan/revision
+- CP CFT 등록: http://localhost:3000/control-plan/cft
+- CP 접속 로그: http://localhost:3000/control-plan/log
+
+[APQP]
+- APQP 등록: http://localhost:3000/apqp/register
+- APQP 리스트: http://localhost:3000/apqp/list
+- APQP 작성화면: http://localhost:3000/apqp/worksheet
+- APQP 개정관리: http://localhost:3000/apqp/revision
+
+[기초정보]
+- 고객사정보: http://localhost:3000/master/customer
+- 사용자정보: http://localhost:3000/master/user
+- PFMEA 임포트: http://localhost:3000/pfmea/import
+- DFMEA 임포트: http://localhost:3000/dfmea/import
+- DB 뷰어: http://localhost:3000/admin/db-viewer
+
+[PFD]
+- PFD 작성화면: http://localhost:3000/pfd/worksheet
 
 === 사이드바 메뉴 구조 ===
 

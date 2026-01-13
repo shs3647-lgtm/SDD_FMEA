@@ -497,6 +497,7 @@ model FmeaProject {
   id              String   @id @default(uuid())
   fmeaId          String   @unique // PFM26-M001 형식
   fmeaType        String   @default("P") // 'M' | 'F' | 'P' (Master/Family/Part)
+  parentApqpNo    String?  // ★ 상위 APQP (최상위)
   parentFmeaId    String?  // 상위 FMEA ID (Master는 본인 ID)
   parentFmeaType  String?  // 상위 FMEA 유형
   status          String   @default("active") // 'active' | 'archived' | 'deleted'

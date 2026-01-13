@@ -35,8 +35,8 @@ export default function CustomerMasterPage() {
     refreshData();
   }, []);
 
-  const refreshData = () => {
-    const loadedCustomers = getAllCustomers();
+  const refreshData = async () => {
+    const loadedCustomers = await getAllCustomers();
     setCustomers(loadedCustomers);
   };
 
@@ -62,13 +62,13 @@ export default function CustomerMasterPage() {
   };
 
   // 저장
-  const handleSave = () => {
+  const handleSave = async () => {
     if (editingCustomer) {
       if (!editingCustomer.name) {
         alert('고객사명은 필수입니다.');
         return;
       }
-      const existing = getAllCustomers();
+      const existing = await getAllCustomers();
       const idx = existing.findIndex(c => c.id === editingCustomer.id);
       if (idx >= 0) {
         existing[idx] = { ...editingCustomer, updatedAt: new Date().toISOString() };
@@ -145,7 +145,7 @@ export default function CustomerMasterPage() {
         };
 
         if (newCustomer.name) {
-          const existing = getAllCustomers();
+          const existing = await getAllCustomers();
           existing.push(newCustomer);
           localStorage.setItem(BIZINFO_STORAGE_KEYS.customers, JSON.stringify(existing));
           importedCount++;

@@ -328,7 +328,7 @@ export function RiskOptCellRenderer({
         colIdx={colIdx}
         fcRowSpan={fcRowSpan}
         style={style}
-        value={value}
+        value={String(value || '')}
         riskDataKey={key}
         modalType={modalType}
         globalRowIdx={globalRowIdx}

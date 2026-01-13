@@ -33,6 +33,7 @@ export interface CreateProjectData {
   project?: any;
   fmeaInfo?: any;
   cftMembers?: any[];
+  parentApqpNo?: string | null;  // ★ 상위 APQP (최상위)
   parentFmeaId?: string | null;
   parentFmeaType?: string | null;
 }
@@ -48,7 +49,7 @@ export async function getProjects(fmeaId?: string | null): Promise<FMEAProjectDa
     throw new Error('Database not configured');
   }
 
-  const targetId = fmeaId?.toUpperCase() || null;
+  const targetId = fmeaId?.toLowerCase() || null;
   const whereClause = targetId ? { fmeaId: targetId } : {};
   
   // 프로젝트 목록 조회 (등록정보, CFT 멤버 포함)
@@ -77,9 +78,10 @@ export async function getProjects(fmeaId?: string | null): Promise<FMEAProjectDa
     const legacyData = legacyMap.get(p.fmeaId);
     
     return {
-      id: p.fmeaId.toUpperCase(),
+      id: p.fmeaId.toLowerCase(),
       fmeaType: p.fmeaType,
-      parentFmeaId: p.parentFmeaId ? p.parentFmeaId.toUpperCase() : null,
+      parentApqpNo: p.parentApqpNo || null,  // ★ 상위 APQP
+      parentFmeaId: p.parentFmeaId ? p.parentFmeaId.toLowerCase() : null,
       parentFmeaType: p.parentFmeaType,
       status: p.status,
       step: p.step,
@@ -132,9 +134,9 @@ export async function getProjects(fmeaId?: string | null): Promise<FMEAProjectDa
     if (!projects.find(p => p.fmeaId === id)) {
       const type = id.includes('-M') ? 'M' : id.includes('-F') ? 'F' : 'P';
       result.push({
-        id: id.toUpperCase(),
+        id: id.toLowerCase(),
         fmeaType: type,
-        parentFmeaId: type === 'M' ? id.toUpperCase() : null,
+        parentFmeaId: type === 'M' ? id.toLowerCase() : null,
         parentFmeaType: type === 'M' ? 'M' : null,
         status: 'active',
         step: 1,
@@ -177,19 +179,19 @@ function determineParentInfo(
   let parentType: string | null = null;
   
   if (actualType === 'M') {
-    // Master는 자기 자신이 parent (항상 대문자로 정규화)
-    parentId = fmeaId.toUpperCase();
+    // Master는 자기 자신이 parent (항상 소문자로 정규화)
+    parentId = fmeaId.toLowerCase();
     parentType = 'M';
   } else if (parentFmeaId) {
-    // Family/Part는 선택된 상위 FMEA를 parent로 가짐 (대문자로 정규화)
-    parentId = parentFmeaId.toUpperCase();
+    // Family/Part는 선택된 상위 FMEA를 parent로 가짐 (소문자로 정규화)
+    parentId = parentFmeaId.toLowerCase();
     // parentFmeaType이 제공되면 사용, 없으면 parentId에서 추출
     if (parentFmeaType) {
-      parentType = parentFmeaType.toUpperCase();
+      parentType = parentFmeaType.toUpperCase(); // 타입은 대문자 유지 (M/F/P)
     } else {
-      // parentId에서 타입 추출 (예: PFM26-M001 -> M)
-      const match = parentId.match(/PFM\d{2}-([MFP])/i);
-      parentType = match ? match[1].toUpperCase() : null;
+      // parentId에서 타입 추출 (예: pfm26-m001 -> M)
+      const match = parentId.match(/pfm\d{2}-([mfp])/i);
+      parentType = match ? match[1].toUpperCase() : null; // 타입은 대문자로 변환
     }
   }
   
@@ -416,15 +418,15 @@ export async function createOrUpdateProject(data: CreateProjectData): Promise<vo
     throw new Error('Database not configured');
   }
 
-  const fmeaId = data.fmeaId.toUpperCase();
-  const { fmeaType, project, fmeaInfo, cftMembers, parentFmeaId, parentFmeaType } = data;
+  const fmeaId = data.fmeaId.toLowerCase();
+  const { fmeaType, project, fmeaInfo, cftMembers, parentApqpNo, parentFmeaId, parentFmeaType } = data;
 
   if (!fmeaId) {
     throw new Error('fmeaId is required');
   }
 
   const { parentId, parentType } = determineParentInfo(fmeaId, fmeaType, parentFmeaId, parentFmeaType);
-  console.log(`[프로젝트 저장] FMEA ID: ${fmeaId}, Type: ${fmeaType || 'P'}, Parent: ${parentId}, ParentType: ${parentType}`);
+  console.log(`[프로젝트 저장] FMEA ID: ${fmeaId}, Type: ${fmeaType || 'P'}, Parent APQP: ${parentApqpNo}, Parent FMEA: ${parentId}, ParentType: ${parentType}`);
 
   // 트랜잭션으로 모든 테이블 저장
   await prisma.$transaction(async (tx) => {
@@ -434,6 +436,7 @@ export async function createOrUpdateProject(data: CreateProjectData): Promise<vo
       create: {
         fmeaId,
         fmeaType: fmeaType || (fmeaId.includes('-M') ? 'M' : fmeaId.includes('-F') ? 'F' : 'P'),
+        parentApqpNo: parentApqpNo || null,  // ★ 상위 APQP
         parentFmeaId: parentId,
         parentFmeaType: parentType,
         status: 'active',
@@ -441,6 +444,7 @@ export async function createOrUpdateProject(data: CreateProjectData): Promise<vo
       },
       update: {
         fmeaType: fmeaType || (fmeaId.includes('-M') ? 'M' : fmeaId.includes('-F') ? 'F' : 'P'),
+        parentApqpNo: parentApqpNo || null,  // ★ 상위 APQP
         parentFmeaId: parentId,
         parentFmeaType: parentType,
         updatedAt: new Date(),
@@ -539,7 +543,7 @@ export async function deleteProject(fmeaId: string): Promise<void> {
     throw new Error('fmeaId is required');
   }
 
-  const normalizedId = fmeaId.toUpperCase();
+  const normalizedId = fmeaId.toLowerCase();
 
   // CASCADE 삭제 (registration, cftMembers, worksheetData 자동 삭제)
   await prisma.fmeaProject.delete({

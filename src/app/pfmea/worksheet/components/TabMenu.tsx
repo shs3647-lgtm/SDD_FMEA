@@ -83,11 +83,6 @@ export default function TabMenu({ state, setState, setStateSynced, setDirty, sav
                       localStorage.setItem(`pfmea_tab_${fmeaId}`, tab.id);
                     } catch (e) { /* ignore */ }
                   }
-                  // ★★★ 2026-01-12: ALL 탭 클릭 시 트리뷰(전체화면)로 복귀 ★★★
-                  if (tab.id === 'all') {
-                    console.log('🔵 ALL 탭 클릭! onAllClick 호출');
-                    onAllClick?.();
-                  }
                 }}
                 className={`
                   px-2 sm:px-3 lg:px-4 py-1 sm:py-1.5

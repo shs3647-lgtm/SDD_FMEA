@@ -475,7 +475,7 @@ export function StructureRow({
           setState={setState}
           setDirty={setDirty}
           handleSelect={handleSelect}
-          setIsProcessModalOpen={setIsProcessModalOpen}
+          setIsProcessModalOpen={setIsProcessModalOpen || (() => {})}
           saveToLocalStorage={saveToLocalStorage}
           zebraBg={l2ZebraBg}  // ✅ 공정 인덱스 기준 줄무늬 색상
           rowSpan={spanCount || 1}
@@ -493,7 +493,7 @@ export function StructureRow({
         saveToLocalStorage={saveToLocalStorage} 
         isConfirmed={isConfirmed}
       />
-      <EditableL3Cell value={row.l3Name} l3Id={row.l3Id} l2Id={row.l2Id} state={state} setState={setState} setDirty={setDirty} handleSelect={handleSelect} setTargetL2Id={setTargetL2Id} setIsWorkElementModalOpen={setIsWorkElementModalOpen} saveToLocalStorage={saveToLocalStorage} zebraBg={zebraBg} isConfirmed={isConfirmed} />
+      <EditableL3Cell value={row.l3Name} l3Id={row.l3Id} l2Id={row.l2Id} state={state} setState={setState} setDirty={setDirty} handleSelect={handleSelect} setTargetL2Id={setTargetL2Id || (() => {})} setIsWorkElementModalOpen={setIsWorkElementModalOpen || (() => {})} saveToLocalStorage={saveToLocalStorage} zebraBg={zebraBg} isConfirmed={isConfirmed} />
     </>
   );
 }
@@ -817,7 +817,8 @@ export default function StructureTab(props: StructureTabProps) {
                 id: np.id,
                 no: np.no,
                 name: np.name,
-                l3: [{ id: `we_${Date.now()}_${Math.random()}`, name: '', m4: '' }],
+                order: newL2.length,
+                l3: [{ id: `we_${Date.now()}_${Math.random()}`, name: '', m4: '', order: 0, functions: [] }],
                 functions: [],
                 failureModes: [],
                 failureCauses: [],
@@ -841,10 +842,12 @@ export default function StructureTab(props: StructureTabProps) {
           setState(prev => {
             const newL2 = prev.l2.map(proc => {
               if (proc.id !== targetL2Id) return proc;
-              const newL3 = selectedElements.map(elem => ({
+              const newL3 = selectedElements.map((elem, idx) => ({
                 id: elem.id,
                 name: elem.name,
-                m4: elem.m4,
+                m4: elem.m4 || '',
+                order: idx,
+                functions: [],
               }));
               return { ...proc, l3: newL3 };
             });

@@ -22,6 +22,7 @@ interface TableSummary {
   category: string;
   columns: number;
   rows: number;
+  missingCount?: number; // 누락 건수
   status: 'loading' | 'success' | 'error';
 }
 
@@ -306,21 +307,55 @@ export default function DBViewerPage() {
       const countResult = await countRes.json();
       const allDbTables = countResult.tables || [];
 
-      // 각 테이블별로 컬럼 수 조회
+      // 각 테이블별로 컬럼 수 및 누락 건수 조회
       const results = await Promise.all(
         tables.map(async (t) => {
           try {
+            // 컬럼 정보 조회 (limit=1로 빠르게)
             const res = await fetch(`/api/admin/db/data?schema=public&table=${t.value}&limit=1`);
             const result = await res.json();
             const tableInfo = allDbTables.find((tb: { table: string; rows: number }) => tb.table === t.value);
             
             if (result.success) {
+              const columns = result.result?.columns?.length || 0;
+              const rows = tableInfo?.rows || 0;
+              
+              // 누락 건수 계산 (데이터가 있을 때만)
+              let missingCount = 0;
+              if (rows > 0 && columns > 0) {
+                try {
+                  // 전체 데이터 로드 (최대 1000건)
+                  const dataRes = await fetch(`/api/admin/db/data?schema=public&table=${t.value}&limit=1000`);
+                  const dataResult = await dataRes.json();
+                  
+                  if (dataResult.success && dataResult.result?.data && dataResult.result?.columns) {
+                    const data = dataResult.result.data;
+                    const dataColumns = dataResult.result.columns;
+                    
+                    // 각 행의 각 컬럼에서 누락 개수 계산
+                    data.forEach((row: Record<string, unknown>) => {
+                      dataColumns.forEach((col: string) => {
+                        const value = row[col];
+                        if (value === null || value === undefined || value === '' || 
+                            (typeof value === 'string' && value.trim() === '')) {
+                          missingCount++;
+                        }
+                      });
+                    });
+                  }
+                } catch (err) {
+                  // 누락 개수 계산 실패 시 무시 (콘솔에만 로그)
+                  console.warn(`누락 개수 계산 실패 (${t.value}):`, err);
+                }
+              }
+              
               return {
                 table: t.value,
                 label: t.label,
                 category: t.category || module,
-                columns: result.result?.columns?.length || 0,
-                rows: tableInfo?.rows || 0,
+                columns,
+                rows,
+                missingCount,
                 status: 'success' as const,
               };
             } else {
@@ -330,6 +365,7 @@ export default function DBViewerPage() {
                 category: t.category || module,
                 columns: 0,
                 rows: 0,
+                missingCount: 0,
                 status: 'error' as const,
               };
             }
@@ -340,6 +376,7 @@ export default function DBViewerPage() {
               category: t.category || module,
               columns: 0,
               rows: 0,
+              missingCount: 0,
               status: 'error' as const,
             };
           }
@@ -381,20 +418,6 @@ export default function DBViewerPage() {
       loadTableData(tableName);
     }
   };
-  
-  // 사용하지 않는 함수 (하위 호환성)
-  const handleFmeaIdChange = (fmeaId: string) => {
-    setSelectedFmeaId(fmeaId);
-    // 현재 선택된 테이블이 있으면 다시 로드
-    if (selectedTable) {
-      const tableInfo = Object.values(MODULE_TABLES).flat().find(t => t.value === selectedTable);
-      if (tableInfo?.hasFmeaId && fmeaId) {
-        loadTableData(selectedTable, fmeaId);
-      } else {
-        loadTableData(selectedTable);
-      }
-    }
-  };
 
   // 셀 값 포맷팅
   const formatValue = (value: unknown): string => {
@@ -421,7 +444,7 @@ export default function DBViewerPage() {
   const allTablesCount = Object.values(MODULE_TABLES).reduce((sum, arr) => sum + arr.length, 0);
 
   return (
-    <div className="min-h-screen bg-gray-100 font-[Malgun_Gothic]">
+    <div className="w-full bg-gray-100 font-[Malgun_Gothic] pt-2">
       {/* 헤더 */}
       <div className="bg-[#00587a] text-white px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -539,6 +562,7 @@ export default function DBViewerPage() {
                       <tr>
                         <th className="px-2 py-1.5 text-left font-semibold border-b">테이블</th>
                         <th className="px-2 py-1.5 text-center font-semibold border-b w-12">컬럼</th>
+                        <th className="px-2 py-1.5 text-center font-semibold border-b w-14">누락</th>
                         <th className="px-2 py-1.5 text-center font-semibold border-b w-14">데이터</th>
                       </tr>
                     </thead>
@@ -566,6 +590,21 @@ export default function DBViewerPage() {
                           </td>
                           <td className="px-2 py-2 border-b text-center">
                             {t.status === 'loading' ? '...' : t.status === 'error' ? '-' : t.columns}
+                          </td>
+                          <td className="px-2 py-2 border-b text-center">
+                            {t.status === 'loading' ? '...' : t.status === 'error' ? (
+                              <span className="text-red-500">-</span>
+                            ) : t.missingCount !== undefined ? (
+                              t.missingCount === 0 ? (
+                                <span className="text-green-600 font-semibold">0</span>
+                              ) : t.missingCount === t.rows * t.columns ? (
+                                <span className="text-red-600 font-semibold">{t.missingCount}</span>
+                              ) : (
+                                <span className="text-orange-600 font-semibold">{t.missingCount}</span>
+                              )
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
                           </td>
                           <td className="px-2 py-2 border-b text-center">
                             {t.status === 'loading' ? '...' : t.status === 'error' ? (
@@ -618,30 +657,53 @@ export default function DBViewerPage() {
                     <p className="text-sm">데이터 로딩 중...</p>
                   </div>
                 ) : tableData && tableData.data.length > 0 ? (
-                  <table className="w-full border-collapse text-xs">
-                    <thead className="sticky top-0 bg-gray-200 z-10">
-                      <tr>
-                        <th className="border border-gray-300 px-2 py-1.5 text-center bg-gray-300 font-bold w-8">#</th>
-                        {tableData.columns.map(col => (
-                          <th key={col} className="border border-gray-300 px-2 py-1.5 text-center bg-gray-200 font-semibold whitespace-nowrap">
-                            {col}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tableData.data.map((row, idx) => (
-                        <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                          <td className="border border-gray-300 px-2 py-1 text-center text-gray-500 font-mono">{idx + 1}</td>
-                          {tableData.columns.map(col => (
-                            <td key={col} className="border border-gray-300 px-2 py-1 whitespace-nowrap" title={String(row[col] || '')}>
-                              {formatValue(row[col])}
-                            </td>
+                  (() => {
+                    // 각 컬럼별 누락 개수 계산
+                    const missingCounts = tableData.columns.map(col => {
+                      return tableData.data.filter(row => {
+                        const value = row[col];
+                        return value === null || value === undefined || value === '' || (typeof value === 'string' && value.trim() === '');
+                      }).length;
+                    });
+
+                    return (
+                      <table className="w-full border-collapse text-xs">
+                        <thead className="sticky top-0 bg-gray-200 z-10">
+                          <tr>
+                            <th className="border border-gray-300 px-2 py-1.5 text-center bg-gray-300 font-bold w-8">#</th>
+                            {tableData.columns.map((col, colIdx) => (
+                              <th key={col} className="border border-gray-300 px-2 py-1.5 text-center bg-gray-200 font-semibold whitespace-nowrap">
+                                <div className="flex items-center justify-center gap-1">
+                                  <span>{col}</span>
+                                  <span className={`text-[10px] font-bold px-1 py-0.5 rounded ${
+                                    missingCounts[colIdx] === 0 
+                                      ? 'bg-green-100 text-green-700' 
+                                      : missingCounts[colIdx] === tableData.data.length
+                                      ? 'bg-red-100 text-red-700'
+                                      : 'bg-orange-100 text-orange-700'
+                                  }`}>
+                                    누락: {missingCounts[colIdx]}
+                                  </span>
+                                </div>
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {tableData.data.map((row, idx) => (
+                            <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                              <td className="border border-gray-300 px-2 py-1 text-center text-gray-500 font-mono">{idx + 1}</td>
+                              {tableData.columns.map(col => (
+                                <td key={col} className="border border-gray-300 px-2 py-1 whitespace-nowrap" title={String(row[col] || '')}>
+                                  {formatValue(row[col])}
+                                </td>
+                              ))}
+                            </tr>
                           ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                        </tbody>
+                      </table>
+                    );
+                  })()
                 ) : (
                   <div className="text-center py-16 text-gray-500">
                     <span className="text-4xl">📭</span>
@@ -655,7 +717,7 @@ export default function DBViewerPage() {
       </div>
 
       {/* 푸터 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gray-200 border-t border-gray-300 px-4 py-1 text-xs text-gray-600 flex justify-between">
+      <div className="bg-gray-200 border-t border-gray-300 px-4 py-1 text-xs text-gray-600 flex justify-between">
         <span>💡 TIP: 테이블을 클릭하면 데이터를 볼 수 있습니다. | 선택된 프로젝트: {selectedProjectId || '전체'}</span>
         <span>Schema: public | Module: {activeModule} | 전체: {allTablesCount}개 테이블</span>
       </div>

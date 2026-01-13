@@ -107,24 +107,134 @@ function APQPRegisterPageContent() {
   const [loading, setLoading] = useState(false);
 
 
-  // ★ DB API에서 APQP 데이터 로드 (CP와 동일한 구조)
+  // ★ DB API에서 APQP 데이터 로드 (FMEA와 동일한 구조)
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      let targetId = editId;
-
-      // 마지막 작업 APQP 자동 로드
-      if (!isEditMode) {
-        const lastEditedId = localStorage.getItem('apqp-last-edited');
-        if (lastEditedId) {
-          targetId = lastEditedId;
-        }
-      }
-
-      if (targetId) {
+      
+      // ★ 수정 모드가 아니면 DB에서 최신 APQP 정보 로드
+      if (!isEditMode || !editId) {
+        let lastApqp: any = null;
+        
+        // 1. DB에서 전체 APQP 목록 조회하여 가장 최근 것 로드 (우선순위 1)
+        console.log('[APQP 등록] DB에서 최신 APQP 조회 시도...');
         try {
-          // DB API에서 APQP 데이터 로드
-          const response = await fetch(`/api/apqp?apqpNo=${targetId}`);
+          const res = await fetch('/api/apqp');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.apqps && data.apqps.length > 0) {
+              // 가장 최근 것 선택 (createdAt 기준 내림차순 정렬되어 있다고 가정)
+              lastApqp = data.apqps[0];
+              // 전체 정보를 위해 다시 상세 조회
+              const detailRes = await fetch(`/api/apqp?apqpNo=${lastApqp.apqpNo}`);
+              if (detailRes.ok) {
+                const detailData = await detailRes.json();
+                if (detailData.success && detailData.apqp) {
+                  lastApqp = detailData.apqp;
+                }
+              }
+              console.log('[APQP 등록] ✅ DB에서 최신 APQP 로드:', lastApqp.apqpNo);
+            } else {
+              console.warn('[APQP 등록] ⚠️ DB에 등록된 APQP가 없습니다.');
+            }
+          } else {
+            console.error('[APQP 등록] ❌ DB 조회 실패:', res.status, res.statusText);
+          }
+        } catch (error) {
+          console.error('[APQP 등록] ❌ DB 조회 중 오류:', error);
+        }
+        
+        // 2. localStorage의 마지막 작업 APQP ID로 시도 (임시 데이터, 폴백용)
+        if (!lastApqp) {
+          const lastEditedId = localStorage.getItem('apqp-last-edited');
+          if (lastEditedId) {
+            console.log('[APQP 등록] DB에 데이터 없음, localStorage 임시 데이터 확인:', lastEditedId);
+            try {
+              const normalizedLastId = lastEditedId.toLowerCase();
+              const res = await fetch(`/api/apqp?apqpNo=${normalizedLastId}`);
+              if (res.ok) {
+                const result = await res.json();
+                if (result.success && result.apqp) {
+                  lastApqp = result.apqp;
+                  console.log('[APQP 등록] ✅ localStorage 기반 APQP 로드 (임시 데이터):', lastApqp.apqpNo);
+                }
+              }
+            } catch (error) {
+              console.warn('[APQP 등록] localStorage 기반 로드 실패:', error);
+            }
+          }
+        }
+        
+        // 3. 마지막 APQP 정보가 있으면 로드
+        if (lastApqp) {
+          setApqpId(lastApqp.apqpNo);
+          setApqpInfo({
+            companyName: lastApqp.companyName || '',
+            engineeringLocation: lastApqp.engineeringLocation || '',
+            customerName: lastApqp.customerName || '',
+            modelYear: lastApqp.modelYear || '',
+            subject: lastApqp.subject || '',
+            apqpStartDate: lastApqp.apqpStartDate || '',
+            apqpRevisionDate: lastApqp.apqpRevisionDate || '',
+            apqpProjectName: lastApqp.productName || lastApqp.subject || '',
+            apqpId: lastApqp.apqpNo,
+            processResponsibility: lastApqp.processResponsibility || '',
+            confidentialityLevel: lastApqp.confidentialityLevel || '',
+            apqpResponsibleName: lastApqp.apqpResponsibleName || '',
+          });
+          
+          // ★ CFT 멤버 로드 (필드 매핑 포함)
+          if (lastApqp.cftMembers && lastApqp.cftMembers.length > 0) {
+            const mappedMembers: CFTMember[] = lastApqp.cftMembers.map((m: any, idx: number) => ({
+              id: m.id || (idx + 1).toString(),
+              role: m.role || '',
+              name: m.name || '',
+              department: m.department || '',
+              position: m.position || '',
+              task: m.task || m.responsibility || '',
+              email: m.email || '',
+              phone: m.phone || '',
+              remark: m.remark || m.remarks || '',
+            }));
+            while (mappedMembers.length < 10) {
+              mappedMembers.push({
+                id: (mappedMembers.length + 1).toString(),
+                role: '',
+                name: '',
+                department: '',
+                position: '',
+                task: '',
+                email: '',
+                phone: '',
+                remark: '',
+              });
+            }
+            setCftMembers(mappedMembers);
+            console.log('[APQP 등록] ✅ CFT 멤버 로드:', mappedMembers.length, '행');
+          } else {
+            // CFT 멤버가 없어도 최소 10개 행 유지
+            setCftMembers(createInitialCFTMembers());
+            console.log('[APQP 등록] ⚠️ CFT 멤버 없음, 초기 멤버로 설정');
+          }
+          
+          // URL을 수정 모드로 업데이트
+          router.replace(`/apqp/register?id=${lastApqp.apqpNo}`);
+          console.log('[APQP 등록] ✅ 마지막 APQP 정보 자동 로드 완료:', lastApqp.apqpNo);
+          setLoading(false);
+          return;
+        }
+        
+        // 4. 정말 아무것도 없으면 초기 상태 유지 (하지만 CFT는 최소 10개 행 표시)
+        console.warn('[APQP 등록] ⚠️ 로드할 APQP가 없습니다. 초기 상태 유지.');
+        setLoading(false);
+        return;
+      }
+      
+      // ★ 수정 모드: DB에서 특정 APQP 로드
+      if (editId) {
+        try {
+          const normalizedEditId = editId.toLowerCase();
+          const response = await fetch(`/api/apqp?apqpNo=${normalizedEditId}`);
           const result = await response.json();
 
           if (result.success && result.apqp) {
@@ -145,40 +255,69 @@ function APQPRegisterPageContent() {
               apqpResponsibleName: apqp.apqpResponsibleName || '',
             });
 
-            // CFT 멤버 로드
+            // ★ CFT 멤버 로드 (필드 매핑 포함)
             if (apqp.cftMembers && apqp.cftMembers.length > 0) {
-              const loadedMembers = apqp.cftMembers.map((m: any) => ({
+              const mappedMembers: CFTMember[] = apqp.cftMembers.map((m: any, idx: number) => ({
+                id: m.id || (idx + 1).toString(),
                 role: m.role || '',
-                factory: m.factory || '',
-                department: m.department || '',
                 name: m.name || '',
+                department: m.department || '',
                 position: m.position || '',
-                phone: m.phone || '',
+                task: m.task || m.responsibility || '',
                 email: m.email || '',
-                remark: m.remark || '',
+                phone: m.phone || '',
+                remark: m.remark || m.remarks || '',
               }));
-              // 10행까지 채우기
-              while (loadedMembers.length < 10) {
-                loadedMembers.push({ role: '', factory: '', department: '', name: '', position: '', phone: '', email: '', remark: '' });
+              
+              // ★ 단일 역할 중복 제거 (Champion, Leader, PM, Moderator는 각각 첫 번째만 유지)
+              const SINGLE_ROLES = ['Champion', 'Leader', 'PM', 'Moderator'];
+              for (const role of SINGLE_ROLES) {
+                const membersWithRole = mappedMembers.filter(m => m.role === role);
+                if (membersWithRole.length > 1) {
+                  let firstFound = false;
+                  mappedMembers.forEach((m) => {
+                    if (m.role === role) {
+                      if (!firstFound) {
+                        firstFound = true;
+                      } else {
+                        m.role = '';
+                        console.warn(`[APQP 등록] ⚠️ 중복 ${role} 제거: ${m.name || '(이름 없음)'}`);
+                      }
+                    }
+                  });
+                  console.warn(`[APQP 등록] ⚠️ ${role} 중복 발견: ${membersWithRole.length}명 → 첫 번째만 유지`);
+                }
               }
-              setCftMembers(loadedMembers);
+              
+              while (mappedMembers.length < 10) {
+                mappedMembers.push({
+                  id: (mappedMembers.length + 1).toString(),
+                  role: '',
+                  name: '',
+                  department: '',
+                  position: '',
+                  task: '',
+                  email: '',
+                  phone: '',
+                  remark: '',
+                });
+              }
+              setCftMembers(mappedMembers);
+              console.log('[APQP 등록] ✅ CFT 멤버 로드:', mappedMembers.length, '행');
+            } else {
+              setCftMembers(createInitialCFTMembers());
+              console.log('[APQP 등록] ⚠️ CFT 멤버 없음, 초기 멤버로 설정');
             }
 
-            // URL 업데이트
-            if (!isEditMode) {
-              router.replace(`/apqp/register?id=${apqp.apqpNo}`);
-            }
             console.log('[APQP 등록] ✅ DB에서 APQP 로드 완료:', apqp.apqpNo);
             setLoading(false);
             return;
           }
         } catch (error) {
-          console.warn('[APQP 등록] DB 로드 실패, 신규 ID 생성:', error);
+          console.error('[APQP 등록] ❌ DB 로드 실패:', error);
         }
       }
-
-      // DB에 없으면 신규 ID 생성
-      setApqpId(generateAPQPId());
+      
       setLoading(false);
     };
 
@@ -245,10 +384,144 @@ function APQPRegisterPageContent() {
     }
   };
 
+  // ★ DB에서 APQP 데이터 불러오기 (수동 버튼)
+  const handleLoadFromDB = async () => {
+    const targetId = editId || apqpId;
+    
+    if (!targetId || targetId.trim() === '') {
+      alert('APQP ID를 입력하거나 URL에 ID를 포함해주세요.\n\n예: /apqp/register?id=pj26-001');
+      return;
+    }
+
+    setSaveStatus('saving'); // 로딩 상태 표시
+    
+    try {
+      const normalizedId = targetId.toLowerCase().trim();
+      console.log('[APQP 등록] 🔄 수동 불러오기 시작:', normalizedId);
+      
+      const response = await fetch(`/api/apqp?apqpNo=${normalizedId}`);
+      const result = await response.json();
+      
+      if (!result.success || !result.apqp) {
+        alert(`APQP ID "${normalizedId}"를 찾을 수 없습니다.\n\nDB에 등록된 APQP인지 확인해주세요.`);
+        setSaveStatus('idle');
+        return;
+      }
+      
+      const apqp = result.apqp;
+      
+      // APQP 정보 로드
+      setApqpId(apqp.apqpNo);
+      setApqpInfo({
+        companyName: apqp.companyName || '',
+        engineeringLocation: apqp.engineeringLocation || '',
+        customerName: apqp.customerName || '',
+        modelYear: apqp.modelYear || '',
+        subject: apqp.subject || '',
+        apqpStartDate: apqp.apqpStartDate || '',
+        apqpRevisionDate: apqp.apqpRevisionDate || '',
+        apqpProjectName: apqp.productName || apqp.subject || '',
+        apqpId: apqp.apqpNo,
+        processResponsibility: apqp.processResponsibility || '',
+        confidentialityLevel: apqp.confidentialityLevel || '',
+        apqpResponsibleName: apqp.apqpResponsibleName || '',
+      });
+      
+      // CFT 멤버 로드
+      if (apqp.cftMembers && apqp.cftMembers.length > 0) {
+        const mappedMembers: CFTMember[] = apqp.cftMembers.map((m: any, idx: number) => ({
+          id: m.id || (idx + 1).toString(),
+          role: m.role || '',
+          name: m.name || '',
+          department: m.department || '',
+          position: m.position || '',
+          task: m.task || m.responsibility || '',
+          email: m.email || '',
+          phone: m.phone || '',
+          remark: m.remark || m.remarks || '',
+        }));
+        
+        // 단일 역할 중복 제거
+        const SINGLE_ROLES = ['Champion', 'Leader', 'PM', 'Moderator'];
+        for (const role of SINGLE_ROLES) {
+          const membersWithRole = mappedMembers.filter(m => m.role === role);
+          if (membersWithRole.length > 1) {
+            let firstFound = false;
+            mappedMembers.forEach((m) => {
+              if (m.role === role) {
+                if (!firstFound) {
+                  firstFound = true;
+                } else {
+                  m.role = '';
+                  console.warn(`[APQP 등록] ⚠️ 중복 ${role} 제거: ${m.name || '(이름 없음)'}`);
+                }
+              }
+            });
+          }
+        }
+        
+        while (mappedMembers.length < 10) {
+          mappedMembers.push({
+            id: (mappedMembers.length + 1).toString(),
+            role: '',
+            name: '',
+            department: '',
+            position: '',
+            task: '',
+            email: '',
+            phone: '',
+            remark: '',
+          });
+        }
+        setCftMembers(mappedMembers);
+        console.log(`[APQP 등록] ✅ CFT 멤버 로드: ${mappedMembers.length}행`);
+      } else {
+        setCftMembers(createInitialCFTMembers());
+      }
+      
+      // URL 업데이트
+      router.replace(`/apqp/register?id=${apqp.apqpNo.toLowerCase()}`);
+      
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+      
+      alert(`✅ APQP 데이터를 성공적으로 불러왔습니다.\n\nAPQP ID: ${apqp.apqpNo}\nAPQP명: ${apqp.subject || '(제목 없음)'}\nCFT 멤버: ${apqp.cftMembers?.length || 0}명`);
+      console.log('[APQP 등록] ✅ 수동 불러오기 완료:', apqp.apqpNo);
+      
+    } catch (error: any) {
+      console.error('[APQP 등록] ❌ 수동 불러오기 실패:', error);
+      alert(`데이터 불러오기 실패:\n\n${error.message || '알 수 없는 오류가 발생했습니다.'}\n\nAPQP ID를 확인하고 다시 시도해주세요.`);
+      setSaveStatus('idle');
+    }
+  };
+
   // ★ DB API로 저장 (신규/수정 자동 판단)
   const handleSave = async () => {
     if (!apqpInfo.subject.trim()) {
       alert('APQP명을 입력해주세요.');
+      return;
+    }
+
+    // ★ 저장 전 단일 역할 중복 체크 (Champion, Leader, PM, Moderator는 각각 1명만 허용)
+    const SINGLE_ROLES = ['Champion', 'Leader', 'PM', 'Moderator'];
+    for (const role of SINGLE_ROLES) {
+      const membersWithRole = cftMembers.filter(m => m.role === role);
+      if (membersWithRole.length > 1) {
+        const memberNames = membersWithRole.map(m => m.name || '(이름 없음)').join(', ');
+        alert(`${role}은 한 명만 등록할 수 있습니다.\n\n현재 ${role}: ${membersWithRole.length}명\n${memberNames}\n\n중복된 ${role}의 역할을 변경해주세요.`);
+        console.error(`[APQP 등록] ❌ 저장 실패: ${role} 중복`, membersWithRole);
+        setSaveStatus('idle');
+        return;
+      }
+    }
+    
+    // ★ 이름이 없는 멤버는 저장 불가 (즉시 중단)
+    const membersWithoutName = cftMembers.filter(m => !m.name || m.name.trim() === '');
+    if (membersWithoutName.length > 0) {
+      const rolesWithoutName = membersWithoutName.map(m => m.role || '(역할 없음)').join(', ');
+      alert(`이름이 없는 CFT 멤버가 있습니다.\n\n이름 없는 멤버: ${membersWithoutName.length}명\n역할: ${rolesWithoutName}\n\n이름을 입력하거나 해당 행을 삭제해주세요.`);
+      console.error('[APQP 등록] ❌ 저장 실패: 이름 없는 멤버 존재', membersWithoutName);
+      setSaveStatus('idle');
       return;
     }
 
@@ -282,7 +555,8 @@ function APQPRegisterPageContent() {
             apqpResponsibleName: apqpInfo.apqpResponsibleName,
             productName: apqpInfo.apqpProjectName,
           },
-          cftMembers: cftMembers.filter(m => m.name && m.name.trim()),
+          // ★ 이름이 있는 멤버만 저장 (이름 없는 멤버는 제외)
+          cftMembers: cftMembers.filter(m => m.name && m.name.trim() !== ''),
         }),
       });
 
@@ -352,14 +626,35 @@ function APQPRegisterPageContent() {
             {isEditMode && <span className="px-2 py-0.5 text-xs bg-yellow-200 text-yellow-800 rounded font-bold">수정모드</span>}
           </div>
           <div className="flex gap-2">
+            {(isEditMode || apqpId) && (
+              <button 
+                onClick={handleLoadFromDB} 
+                disabled={saveStatus === 'saving'}
+                className={`px-3 py-1.5 border text-xs rounded font-semibold ${
+                  saveStatus === 'saving' 
+                    ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed' 
+                    : 'bg-purple-100 border-purple-400 text-purple-700 hover:bg-purple-200'
+                }`}
+                title="DB에서 APQP 데이터 불러오기"
+              >
+                {saveStatus === 'saving' ? '⏳ 불러오는 중...' : '🔄 불러오기'}
+              </button>
+            )}
             <button onClick={handleNewRegister} className="px-3 py-1.5 bg-green-100 border border-green-400 text-green-700 text-xs rounded hover:bg-green-200 font-semibold">
               ➕ 새로 등록
             </button>
             <button 
               onClick={handleSave}
-              className={`px-4 py-1.5 text-xs font-bold rounded ${saveStatus === 'saved' ? 'bg-green-500 text-white' : 'bg-[#2563eb] text-white hover:bg-[#1d4ed8]'}`}
+              disabled={saveStatus === 'saving'}
+              className={`px-4 py-1.5 text-xs font-bold rounded ${
+                saveStatus === 'saving' 
+                  ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed' 
+                  : saveStatus === 'saved'
+                  ? 'bg-green-500 text-white'
+                  : 'bg-[#2563eb] text-white hover:bg-[#1d4ed8]'
+              }`}
             >
-              {saveStatus === 'saved' ? '✓ 저장됨' : '💾 저장'}
+              {saveStatus === 'saving' ? '⏳ 저장 중...' : saveStatus === 'saved' ? '✓ 저장됨' : '💾 저장'}
             </button>
           </div>
         </div>
@@ -550,7 +845,36 @@ function APQPRegisterPageContent() {
           <CFTRegistrationTable
             title="CFT 등록"
             members={cftMembers}
-            onMembersChange={setCftMembers}
+            onMembersChange={(newMembers) => {
+              // ★ 단일 역할 중복 자동 제거 (Champion, Leader, PM, Moderator는 각각 첫 번째만 유지)
+              const SINGLE_ROLES = ['Champion', 'Leader', 'PM', 'Moderator'];
+              let hasDuplicates = false;
+              
+              for (const role of SINGLE_ROLES) {
+                const membersWithRole = newMembers.filter(m => m.role === role);
+                if (membersWithRole.length > 1) {
+                  hasDuplicates = true;
+                  let firstFound = false;
+                  const cleanedMembers = newMembers.map((m) => {
+                    if (m.role === role) {
+                      if (!firstFound) {
+                        firstFound = true;
+                        return m;
+                      } else {
+                        console.warn(`[APQP 등록] ⚠️ 중복 ${role} 자동 제거: ${m.name || '(이름 없음)'}`);
+                        return { ...m, role: '' }; // 중복 역할 제거
+                      }
+                    }
+                    return m;
+                  });
+                  setCftMembers(cleanedMembers);
+                  return;
+                }
+              }
+              
+              // 중복이 없으면 그대로 설정
+              setCftMembers(newMembers);
+            }}
             onUserSearch={handleCftUserSearch}
             onSave={handleCftSave}
             onReset={handleCftReset}

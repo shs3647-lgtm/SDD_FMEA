@@ -49,15 +49,11 @@ const createEmptyCFTMember = (): CFTMember => ({
 
 // 역할 옵션
 const ROLE_OPTIONS = [
-  '팀장',
-  '설계담당',
-  '품질담당',
-  '생산담당',
-  '구매담당',
-  '공정담당',
-  '시험담당',
-  '고객대응',
-  '기타',
+  'Champion',
+  'Leader',
+  'PM',
+  'Moderator',
+  'CFT 팀원',
 ];
 
 // =====================================================
@@ -100,6 +96,24 @@ export default function CPCFTPage() {
       const stored = localStorage.getItem(`cp-cft-${selectedProjectId}`);
       if (stored) {
         const parsed = JSON.parse(stored);
+        
+        // ★ Champion 중복 제거 (첫 번째 Champion만 유지, 나머지는 빈 역할로 변경)
+        const champions = parsed.filter((m: CFTMember) => m.role === 'Champion');
+        if (champions.length > 1) {
+          // 첫 번째 Champion만 유지하고 나머지는 역할 제거
+          let firstChampionFound = false;
+          parsed.forEach((m: CFTMember) => {
+            if (m.role === 'Champion') {
+              if (!firstChampionFound) {
+                firstChampionFound = true;
+              } else {
+                m.role = ''; // 중복 Champion의 역할 제거
+              }
+            }
+          });
+          console.warn(`⚠️ Champion 중복 발견: ${champions.length}명 → 첫 번째만 유지, 나머지 역할 제거`);
+        }
+        
         // 최소 5개 행 보장
         while (parsed.length < 5) {
           parsed.push(createEmptyCFTMember());
@@ -117,7 +131,24 @@ export default function CPCFTPage() {
 
   // 필드 업데이트
   const updateField = useCallback((id: string, field: keyof CFTMember, value: string) => {
-    setMembers(prev => prev.map(m => m.id === id ? { ...m, [field]: value } : m));
+    setMembers(prev => {
+      // Champion 중복 체크 (이름 유무와 관계없이 한 명만 허용)
+      if (field === 'role' && value === 'Champion') {
+        const existingChampion = prev.find(m => m.id !== id && m.role === 'Champion');
+        if (existingChampion) {
+          alert(`Champion은 한 명만 등록할 수 있습니다.\n기존 Champion: ${existingChampion.name || '(이름 없음)'} (${existingChampion.department || '부서 없음'})\n\n기존 Champion의 역할을 먼저 변경해주세요.`);
+          return prev; // 변경하지 않음
+        }
+      }
+      
+      // 다른 역할로 변경할 때, 기존에 Champion이었고 다른 곳에 Champion이 없으면 허용
+      if (field === 'role' && value !== 'Champion') {
+        // 역할 변경은 허용
+        return prev.map(m => m.id === id ? { ...m, [field]: value } : m);
+      }
+      
+      return prev.map(m => m.id === id ? { ...m, [field]: value } : m);
+    });
   }, []);
 
   // 멤버 추가
@@ -149,6 +180,15 @@ export default function CPCFTPage() {
   const handleSave = useCallback(() => {
     if (!selectedProjectId) {
       alert('CP 프로젝트를 선택해주세요.');
+      return;
+    }
+
+    // 저장 전 Champion 중복 체크
+    const champions = members.filter(m => m.role === 'Champion');
+    if (champions.length > 1) {
+      const championNames = champions.map(m => m.name || '(이름 없음)').join(', ');
+      alert(`Champion은 한 명만 등록할 수 있습니다.\n\n현재 Champion: ${champions.length}명\n${championNames}\n\n중복된 Champion의 역할을 변경해주세요.`);
+      setSaveStatus('idle');
       return;
     }
 
@@ -192,7 +232,7 @@ export default function CPCFTPage() {
 
   return (
     <>
-      <CPTopNav selectedCpId={selectedProjectId} rowCount={members.filter(m => m.name).length} />
+      <CPTopNav selectedCpId={selectedProjectId} />
       
       <div className="min-h-screen bg-[#f0f0f0] px-3 py-3 pt-9 font-[Malgun_Gothic]">
         {/* 헤더 */}

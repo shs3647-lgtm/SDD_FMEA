@@ -25,6 +25,7 @@ function CPRegisterPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const editId = searchParams.get('id')?.toLowerCase() || null; // ★ 소문자 정규화
+  const fmeaIdFromUrl = searchParams.get('fmeaId')?.toLowerCase() || null; // ★ FMEA 리스트에서 선택한 경우
   const isEditMode = !!editId;
 
   // 상태 관리
@@ -96,6 +97,7 @@ function CPRegisterPageContent() {
     cpId, setCpId,
     cftMembers,
     selectedParentApqp: selectedParentApqp?.apqpNo || null, selectedParentFmea, selectedBaseCp,
+    setSelectedBaseCp,  // ★ 상위 CP 설정 함수 전달
     setSaveStatus, setShowMissingFields,
     setAvailableFmeas, setFmeaSelectModalOpen, setFmeaSelectType,
     setAvailableCps, setCpSelectModalOpen, setCpSelectType,
@@ -105,16 +107,22 @@ function CPRegisterPageContent() {
   // 초기화 및 수정 모드 데이터 로드
   useEffect(() => {
     const loadCpData = async () => {
+      // URL 파라미터에서 fmeaId 확인 (FMEA 리스트에서 선택한 경우)
+      const urlParams = new URLSearchParams(window.location.search);
+      const fmeaIdFromUrl = urlParams.get('fmeaId');
+      
       if (isEditMode && editId) {
         setLoading(true);
         try {
-          // 1. DB에서 먼저 로드 시도
-          const response = await fetch(`/api/control-plan?cpNo=${editId}`);
+          // 1. DB에서 먼저 로드 시도 (소문자로 정규화)
+          const normalizedEditId = editId.toLowerCase();
+          const response = await fetch(`/api/control-plan?cpNo=${normalizedEditId}`);
           const result = await response.json();
 
           if (result.success && result.data) {
             const cp = result.data;
             setCpId(cp.cpNo);
+            const cpType = (cp.cpType || 'P') as 'M' | 'F' | 'P';
             setCpInfo({
               companyName: cp.companyName || '',
               engineeringLocation: cp.engineeringLocation || '',
@@ -128,26 +136,68 @@ function CPRegisterPageContent() {
               processResponsibility: cp.processResponsibility || '',
               confidentialityLevel: cp.confidentialityLevel || '',
               cpResponsibleName: cp.cpResponsibleName || '',
-              cpType: (cp.cpType || 'P') as 'M' | 'F' | 'P',
+              cpType: cpType,
             });
             if (cp.fmeaNo || cp.fmeaId) {
               setSelectedParentFmea(cp.fmeaNo || cp.fmeaId);
             }
+            // ★ MASTER CP는 상위 CP가 자신이 되도록 설정
+            if (cpType === 'M') {
+              setSelectedBaseCp(cp.cpNo);
+            } else if (cp.baseCpId || cp.parentCpId) {
+              setSelectedBaseCp(cp.baseCpId || cp.parentCpId);
+            }
+            // ★ parentApqpNo 로드
+            if (cp.parentApqpNo) {
+              setSelectedParentApqp({ apqpNo: cp.parentApqpNo, subject: cp.subject || '' });
+            }
             // CFT 멤버 로드
             if (cp.cftMembers && cp.cftMembers.length > 0) {
-              const loadedMembers = cp.cftMembers.map((m: any) => ({
+              const loadedMembers = cp.cftMembers.map((m: any, idx: number) => ({
+                id: m.id || (idx + 1).toString(),
                 role: m.role || '',
-                factory: m.factory || '',
-                department: m.department || '',
                 name: m.name || '',
+                department: m.department || '',
                 position: m.position || '',
-                phone: m.phone || '',
+                task: m.task || '',
                 email: m.email || '',
+                phone: m.phone || '',
                 remark: m.remark || '',
               }));
+              
+              // ★ 단일 역할 중복 제거 (Champion, Leader, PM, Moderator는 각각 첫 번째만 유지)
+              const SINGLE_ROLES = ['Champion', 'Leader', 'PM', 'Moderator'];
+              for (const role of SINGLE_ROLES) {
+                const membersWithRole = loadedMembers.filter(m => m.role === role);
+                if (membersWithRole.length > 1) {
+                  let firstFound = false;
+                  loadedMembers.forEach((m) => {
+                    if (m.role === role) {
+                      if (!firstFound) {
+                        firstFound = true;
+                      } else {
+                        m.role = '';
+                        console.warn(`[CP 등록] ⚠️ 중복 ${role} 제거: ${m.name || '(이름 없음)'}`);
+                      }
+                    }
+                  });
+                  console.warn(`[CP 등록] ⚠️ ${role} 중복 발견: ${membersWithRole.length}명 → 첫 번째만 유지`);
+                }
+              }
+              
               // 10개 최소 행 유지
               while (loadedMembers.length < 10) {
-                loadedMembers.push({ role: '', factory: '', department: '', name: '', position: '', phone: '', email: '', remark: '' });
+                loadedMembers.push({ 
+                  id: (loadedMembers.length + 1).toString(),
+                  role: '', 
+                  name: '', 
+                  department: '', 
+                  position: '', 
+                  task: '',
+                  phone: '', 
+                  email: '', 
+                  remark: '' 
+                });
               }
               setCftMembers(loadedMembers);
             }
@@ -163,6 +213,10 @@ function CPRegisterPageContent() {
                 setCpInfo(found.cpInfo || INITIAL_CP);
                 if (found.parentFmeaId) setSelectedParentFmea(found.parentFmeaId);
                 if (found.baseCpId) setSelectedBaseCp(found.baseCpId);
+                // ★ parentApqpNo 로드
+                if (found.parentApqpNo) {
+                  setSelectedParentApqp({ apqpNo: found.parentApqpNo, subject: found.cpInfo?.subject || '' });
+                }
                 if (found.cftMembers) setCftMembers(found.cftMembers);
                 console.log(`✅ localStorage에서 CP ${found.id} 로드 완료`);
               }
@@ -178,73 +232,133 @@ function CPRegisterPageContent() {
             if (found) {
               setCpId(found.id);
               setCpInfo(found.cpInfo || INITIAL_CP);
+              // ★ parentApqpNo 로드
+              if (found.parentApqpNo) {
+                setSelectedParentApqp({ apqpNo: found.parentApqpNo, subject: found.cpInfo?.subject || '' });
+              }
             }
           }
         } finally {
           setLoading(false);
         }
       } else {
-        // 신규 등록 모드: 마지막 작업 CP가 있으면 자동 로드
-        const lastEditedCpId = localStorage.getItem('cp-last-edited');
-        if (lastEditedCpId) {
-          try {
-            // DB에서 마지막 작업 CP 로드 시도
-            const response = await fetch(`/api/control-plan?cpNo=${lastEditedCpId}`);
-            const result = await response.json();
-            
-            if (result.success && result.data) {
-              const cp = result.data;
-              setCpId(cp.cpNo);
-              setCpInfo({
-                companyName: cp.companyName || '',
-                engineeringLocation: cp.engineeringLocation || '',
-                customerName: cp.customerName || '',
-                modelYear: cp.modelYear || '',
-                subject: cp.subject || '',
-                cpStartDate: cp.cpStartDate || '',
-                cpRevisionDate: cp.cpRevisionDate || '',
-                cpProjectName: cp.subject || '',
-                cpId: cp.cpNo,
-                processResponsibility: cp.processResponsibility || '',
-                confidentialityLevel: cp.confidentialityLevel || '',
-                cpResponsibleName: cp.cpResponsibleName || '',
-                cpType: (cp.cpType || 'P') as 'M' | 'F' | 'P',
-              });
-              if (cp.parentFmeaId) setSelectedParentFmea(cp.parentFmeaId);
-              if (cp.baseCpId) setSelectedBaseCp(cp.baseCpId);
-              if (cp.parentProjectId) setSelectedParentProject(cp.parentProjectId);
-              
-              // CFT 멤버 로드
-              if (cp.cftMembers && cp.cftMembers.length > 0) {
-                const loadedMembers = cp.cftMembers.map((m: any) => ({
-                  role: m.role || '',
-                  factory: m.factory || '',
-                  department: m.department || '',
-                  name: m.name || '',
-                  position: m.position || '',
-                  phone: m.phone || '',
-                  email: m.email || '',
-                  remark: m.remark || '',
-                }));
-                while (loadedMembers.length < 10) {
-                  loadedMembers.push({ role: '', factory: '', department: '', name: '', position: '', phone: '', email: '', remark: '' });
+        // ★ 신규 등록 모드: DB에서 최신 CP 정보 로드
+        let lastCp: any = null;
+        
+        // 1. DB에서 전체 CP 목록 조회하여 가장 최근 것 로드 (우선순위 1)
+        console.log('[CP 등록] DB에서 최신 CP 조회 시도...');
+        try {
+          const res = await fetch('/api/control-plan');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.data && data.data.length > 0) {
+              // 가장 최근 것 선택 (createdAt 기준 내림차순 정렬되어 있다고 가정)
+              const latestCpNo = data.data[0].cpNo;
+              // 전체 정보를 위해 다시 상세 조회
+              const detailRes = await fetch(`/api/control-plan?cpNo=${latestCpNo}`);
+              if (detailRes.ok) {
+                const detailData = await detailRes.json();
+                if (detailData.success && detailData.data) {
+                  lastCp = detailData.data;
+                  console.log('[CP 등록] ✅ DB에서 최신 CP 로드:', lastCp.cpNo);
                 }
-                setCftMembers(loadedMembers);
               }
-              
-              // URL을 수정 모드로 업데이트 (뒤로가기 지원)
-              router.replace(`/control-plan/register?id=${cp.cpNo}`);
-              console.log(`✅ 마지막 작업 CP 자동 로드: ${cp.cpNo}`);
-              setLoading(false);
-              return;
+            } else {
+              console.warn('[CP 등록] ⚠️ DB에 등록된 CP가 없습니다.');
             }
-          } catch (error) {
-            console.warn('마지막 작업 CP 로드 실패, 신규 모드로 전환:', error);
+          } else {
+            console.error('[CP 등록] ❌ DB 조회 실패:', res.status, res.statusText);
+          }
+        } catch (error) {
+          console.error('[CP 등록] ❌ DB 조회 중 오류:', error);
+        }
+        
+        // 2. localStorage의 마지막 작업 CP ID로 시도 (임시 데이터, 폴백용)
+        if (!lastCp) {
+          const lastEditedCpId = localStorage.getItem('cp-last-edited');
+          if (lastEditedCpId) {
+            console.log('[CP 등록] DB에 데이터 없음, localStorage 임시 데이터 확인:', lastEditedCpId);
+            try {
+              const normalizedId = lastEditedCpId.toLowerCase();
+              const response = await fetch(`/api/control-plan?cpNo=${normalizedId}`);
+              const result = await response.json();
+              
+              if (result.success && result.data) {
+                lastCp = result.data;
+                console.log('[CP 등록] ✅ localStorage 기반 CP 로드 (임시 데이터):', lastCp.cpNo);
+              }
+            } catch (error) {
+              console.warn('[CP 등록] localStorage 기반 로드 실패:', error);
+            }
           }
         }
         
-        // 마지막 작업 CP가 없으면 신규 ID 생성
-        setCpId(generateCPId(cpInfo.cpType));
+        // 3. 마지막 CP 정보가 있으면 로드
+        if (lastCp) {
+          setCpId(lastCp.cpNo);
+          const cpType = (lastCp.cpType || 'P') as 'M' | 'F' | 'P';
+          setCpInfo({
+            companyName: lastCp.companyName || '',
+            engineeringLocation: lastCp.engineeringLocation || '',
+            customerName: lastCp.customerName || '',
+            modelYear: lastCp.modelYear || '',
+            subject: lastCp.subject || '',
+            cpStartDate: lastCp.cpStartDate || '',
+            cpRevisionDate: lastCp.cpRevisionDate || '',
+            cpProjectName: lastCp.subject || '',
+            cpId: lastCp.cpNo,
+            processResponsibility: lastCp.processResponsibility || '',
+            confidentialityLevel: lastCp.confidentialityLevel || '',
+            cpResponsibleName: lastCp.cpResponsibleName || '',
+            cpType: cpType,
+          });
+          if (lastCp.fmeaNo || lastCp.fmeaId) {
+            setSelectedParentFmea(lastCp.fmeaNo || lastCp.fmeaId);
+          }
+          // ★ MASTER CP는 상위 CP가 자신이 되도록 설정
+          if (cpType === 'M') {
+            setSelectedBaseCp(lastCp.cpNo);
+          } else if (lastCp.baseCpId || lastCp.parentCpId) {
+            setSelectedBaseCp(lastCp.baseCpId || lastCp.parentCpId);
+          }
+          // ★ parentApqpNo 로드
+          if (lastCp.parentApqpNo) {
+            setSelectedParentApqp({ apqpNo: lastCp.parentApqpNo, subject: lastCp.subject || '' });
+          }
+          
+          // ★ CFT 멤버 로드 (필드 매핑 포함)
+          if (lastCp.cftMembers && lastCp.cftMembers.length > 0) {
+            const mappedMembers = lastCp.cftMembers.map((m: any, idx: number) => ({
+              id: m.id || (idx + 1).toString(),
+              role: m.role || '',
+              factory: m.factory || '',
+              department: m.department || '',
+              name: m.name || '',
+              position: m.position || '',
+              phone: m.phone || '',
+              email: m.email || '',
+              remark: m.remark || m.remarks || '',
+            }));
+            while (mappedMembers.length < 10) {
+              mappedMembers.push({ role: '', factory: '', department: '', name: '', position: '', phone: '', email: '', remark: '' });
+            }
+            setCftMembers(mappedMembers);
+            console.log('[CP 등록] ✅ CFT 멤버 로드:', mappedMembers.length, '행');
+          } else {
+            // CFT 멤버가 없어도 최소 10개 행 유지
+            setCftMembers(createInitialCFTMembers());
+            console.log('[CP 등록] ⚠️ CFT 멤버 없음, 초기 멤버로 설정');
+          }
+          
+          // URL을 수정 모드로 업데이트
+          router.replace(`/control-plan/register?id=${lastCp.cpNo}`);
+          console.log('[CP 등록] ✅ 마지막 CP 정보 자동 로드 완료:', lastCp.cpNo);
+          setLoading(false);
+          return;
+        }
+        
+        // 4. 정말 아무것도 없으면 초기 상태 유지 (하지만 CFT는 최소 10개 행 표시)
+        console.warn('[CP 등록] ⚠️ 로드할 CP가 없습니다. 초기 상태 유지.');
         setLoading(false);
       }
     };
@@ -254,8 +368,7 @@ function CPRegisterPageContent() {
 
   // 기초정보 선택 (상위 프로젝트 + 고객 정보 설정)
   const handleBizInfoSelect = (info: BizInfoProject) => {
-    // 상위 프로젝트 설정 (프로그램명 또는 제품명)
-    setSelectedParentProject(info.program || info.productName || info.customerName || '');
+    // 상위 프로젝트는 APQP 모달에서 선택
     
     setCpInfo(prev => ({
       ...prev,
@@ -304,7 +417,7 @@ function CPRegisterPageContent() {
       setCpInfo(INITIAL_CP);
       setCftMembers(createInitialCFTMembers());
       setCpId(generateCPId('P'));
-      setSelectedParentProject(null);
+      setSelectedParentApqp(null);
       setSelectedParentFmea(null);
       setSelectedBaseCp(null);
       
@@ -326,6 +439,134 @@ function CPRegisterPageContent() {
   const handleCftReset = () => {
     if (confirm('CFT 목록을 초기화하시겠습니까?')) {
       setCftMembers(createInitialCFTMembers());
+    }
+  };
+
+  // ★ DB에서 CP 데이터 불러오기 (수동 버튼)
+  const handleLoadFromDB = async () => {
+    const targetId = editId || cpId;
+    
+    if (!targetId || targetId.trim() === '') {
+      alert('CP ID를 입력하거나 URL에 ID를 포함해주세요.\n\n예: /control-plan/register?id=cp26-m001');
+      return;
+    }
+
+    setSaveStatus('saving'); // 로딩 상태 표시
+    
+    try {
+      const normalizedId = targetId.toLowerCase().trim();
+      console.log('[CP 등록] 🔄 수동 불러오기 시작:', normalizedId);
+      
+      const response = await fetch(`/api/control-plan?cpNo=${normalizedId}`);
+      const result = await response.json();
+      
+      if (!result.success || !result.data) {
+        alert(`CP ID "${normalizedId}"를 찾을 수 없습니다.\n\nDB에 등록된 CP인지 확인해주세요.`);
+        setSaveStatus('idle');
+        return;
+      }
+      
+      const cp = result.data;
+      
+      // CP 정보 로드
+      setCpId(cp.cpNo);
+      const cpType = (cp.cpType || 'P') as 'M' | 'F' | 'P';
+      setCpInfo({
+        companyName: cp.companyName || '',
+        engineeringLocation: cp.engineeringLocation || '',
+        customerName: cp.customerName || '',
+        modelYear: cp.modelYear || '',
+        subject: cp.subject || '',
+        cpStartDate: cp.cpStartDate || '',
+        cpRevisionDate: cp.cpRevisionDate || '',
+        cpProjectName: cp.subject || '',
+        cpId: cp.cpNo,
+        processResponsibility: cp.processResponsibility || '',
+        confidentialityLevel: cp.confidentialityLevel || '',
+        cpResponsibleName: cp.cpResponsibleName || '',
+        cpType: cpType,
+      });
+      
+      if (cp.fmeaNo || cp.fmeaId) {
+        setSelectedParentFmea(cp.fmeaNo || cp.fmeaId);
+      }
+      
+      // ★ MASTER CP는 상위 CP가 자신이 되도록 설정
+      if (cpType === 'M') {
+        setSelectedBaseCp(cp.cpNo);
+      } else if (cp.baseCpId || cp.parentCpId) {
+        setSelectedBaseCp(cp.baseCpId || cp.parentCpId);
+      }
+      
+      if (cp.parentApqpNo) {
+        setSelectedParentApqp({ apqpNo: cp.parentApqpNo, subject: cp.subject || '' });
+      }
+      
+      // CFT 멤버 로드
+      if (cp.cftMembers && cp.cftMembers.length > 0) {
+        const mappedMembers = cp.cftMembers.map((m: any, idx: number) => ({
+          id: m.id || (idx + 1).toString(),
+          role: m.role || '',
+          name: m.name || '',
+          department: m.department || '',
+          position: m.position || '',
+          task: m.task || '',
+          email: m.email || '',
+          phone: m.phone || '',
+          remark: m.remark || '',
+        }));
+        
+        // 단일 역할 중복 제거
+        const SINGLE_ROLES = ['Champion', 'Leader', 'PM', 'Moderator'];
+        for (const role of SINGLE_ROLES) {
+          const membersWithRole = mappedMembers.filter(m => m.role === role);
+          if (membersWithRole.length > 1) {
+            let firstFound = false;
+            mappedMembers.forEach((m) => {
+              if (m.role === role) {
+                if (!firstFound) {
+                  firstFound = true;
+                } else {
+                  m.role = '';
+                  console.warn(`[CP 등록] ⚠️ 중복 ${role} 제거: ${m.name || '(이름 없음)'}`);
+                }
+              }
+            });
+          }
+        }
+        
+        while (mappedMembers.length < 10) {
+          mappedMembers.push({
+            id: (mappedMembers.length + 1).toString(),
+            role: '',
+            name: '',
+            department: '',
+            position: '',
+            task: '',
+            email: '',
+            phone: '',
+            remark: '',
+          });
+        }
+        setCftMembers(mappedMembers);
+        console.log(`[CP 등록] ✅ CFT 멤버 로드: ${mappedMembers.length}행`);
+      } else {
+        setCftMembers(createInitialCFTMembers());
+      }
+      
+      // URL 업데이트
+      router.replace(`/control-plan/register?id=${cp.cpNo.toLowerCase()}`);
+      
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+      
+      alert(`✅ CP 데이터를 성공적으로 불러왔습니다.\n\nCP ID: ${cp.cpNo}\nCP명: ${cp.subject || '(제목 없음)'}\nCFT 멤버: ${cp.cftMembers?.length || 0}명`);
+      console.log('[CP 등록] ✅ 수동 불러오기 완료:', cp.cpNo);
+      
+    } catch (error: any) {
+      console.error('[CP 등록] ❌ 수동 불러오기 실패:', error);
+      alert(`데이터 불러오기 실패:\n\n${error.message || '알 수 없는 오류가 발생했습니다.'}\n\nCP ID를 확인하고 다시 시도해주세요.`);
+      setSaveStatus('idle');
     }
   };
 
@@ -359,9 +600,33 @@ function CPRegisterPageContent() {
             <span className="text-xs text-gray-500 ml-2">CP No: {cpId}</span>
           </div>
           <div className="flex gap-2">
+            {(isEditMode || cpId) && (
+              <button 
+                onClick={handleLoadFromDB} 
+                disabled={saveStatus === 'saving'}
+                className={`px-3 py-1.5 border text-xs rounded font-semibold ${
+                  saveStatus === 'saving' 
+                    ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed' 
+                    : 'bg-purple-100 border-purple-400 text-purple-700 hover:bg-purple-200'
+                }`}
+                title="DB에서 CP 데이터 불러오기"
+              >
+                {saveStatus === 'saving' ? '⏳ 불러오는 중...' : '🔄 불러오기'}
+              </button>
+            )}
             <button onClick={handleNewRegister} className="px-3 py-1.5 bg-green-100 border border-green-400 text-green-700 text-xs rounded hover:bg-green-200 font-semibold">➕ 새로 등록</button>
-            <button onClick={handleSave} className={`px-4 py-1.5 text-xs font-bold rounded ${saveStatus === 'saved' ? 'bg-green-500 text-white' : 'bg-teal-600 text-white hover:bg-teal-700'}`}>
-              {saveStatus === 'saved' ? '✓ 저장됨' : '💾 저장'}
+            <button 
+              onClick={handleSave} 
+              disabled={saveStatus === 'saving'}
+              className={`px-4 py-1.5 text-xs font-bold rounded ${
+                saveStatus === 'saving' 
+                  ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed' 
+                  : saveStatus === 'saved'
+                  ? 'bg-green-500 text-white'
+                  : 'bg-teal-600 text-white hover:bg-teal-700'
+              }`}
+            >
+              {saveStatus === 'saving' ? '⏳ 저장 중...' : saveStatus === 'saved' ? '✓ 저장됨' : '💾 저장'}
             </button>
           </div>
         </div>
@@ -486,7 +751,45 @@ function CPRegisterPageContent() {
 
         {/* CFT 리스트 */}
         <div id="cft-section" className="mt-6 scroll-mt-20">
-          <CFTRegistrationTable title="CFT 리스트" members={cftMembers} onMembersChange={setCftMembers} onUserSearch={handleCftUserSearch} onSave={handleCftSave} onReset={handleCftReset} saveStatus={cftSaveStatus} minRows={10} />
+          <CFTRegistrationTable 
+            title="CFT 리스트" 
+            members={cftMembers} 
+            onMembersChange={(newMembers) => {
+              // ★ 단일 역할 중복 자동 제거 (Champion, Leader, PM, Moderator는 각각 첫 번째만 유지)
+              const SINGLE_ROLES = ['Champion', 'Leader', 'PM', 'Moderator'];
+              let hasDuplicates = false;
+              
+              for (const role of SINGLE_ROLES) {
+                const membersWithRole = newMembers.filter(m => m.role === role);
+                if (membersWithRole.length > 1) {
+                  hasDuplicates = true;
+                  let firstFound = false;
+                  const cleanedMembers = newMembers.map((m) => {
+                    if (m.role === role) {
+                      if (!firstFound) {
+                        firstFound = true;
+                        return m;
+                      } else {
+                        console.warn(`[CP 등록] ⚠️ 중복 ${role} 자동 제거: ${m.name || '(이름 없음)'}`);
+                        return { ...m, role: '' }; // 중복 역할 제거
+                      }
+                    }
+                    return m;
+                  });
+                  setCftMembers(cleanedMembers);
+                  return;
+                }
+              }
+              
+              // 중복이 없으면 그대로 설정
+              setCftMembers(newMembers);
+            }} 
+            onUserSearch={handleCftUserSearch} 
+            onSave={handleCftSave} 
+            onReset={handleCftReset} 
+            saveStatus={cftSaveStatus} 
+            minRows={10} 
+          />
         </div>
 
         {/* CFT 접속 로그 */}

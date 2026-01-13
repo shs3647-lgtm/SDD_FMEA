@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { cpNo, cpInfo, cftMembers, parentFmeaId, baseCpId } = body;
+    const { cpNo, cpInfo, cftMembers, parentFmeaId, baseCpId, parentApqpNo } = body;
 
     if (!cpNo) {
       return NextResponse.json(
@@ -36,17 +36,31 @@ export async function POST(request: NextRequest) {
 
     const cpNoLower = cpNo.toLowerCase(); // ★ 소문자 정규화
 
+    // 디버그: 저장 전 데이터 확인
+    console.log('📥 CP 저장 요청:', {
+      cpNo: cpNoLower,
+      parentApqpNo: parentApqpNo || body.parentApqpNo,
+      engineeringLocation: cpInfo?.engineeringLocation,
+      cpInfo: cpInfo,
+    });
+
     // 1. CP 등록 정보 저장 (CpRegistration)
+    // ★ parentApqpNo 정규화 (빈 문자열, null, undefined 처리)
+    const normalizedParentApqpNo = (parentApqpNo || body.parentApqpNo);
+    const finalParentApqpNo = normalizedParentApqpNo && normalizedParentApqpNo.trim() !== '' 
+      ? normalizedParentApqpNo.trim() 
+      : null;
+    
     const registrationData = {
       cpNo: cpNoLower,
       // 상위 연결 (3개)
-      parentApqpNo: body.parentApqpNo || null,             // ★ 상위 APQP (최상위)
+      parentApqpNo: finalParentApqpNo,  // ★ 상위 APQP (최상위) - 정규화된 값
       fmeaId: parentFmeaId?.toLowerCase() || null,         // 상위 FMEA (소문자)
       fmeaNo: parentFmeaId?.toLowerCase() || null,
-      parentCpId: body.baseCpId?.toLowerCase() || null,    // 상위 CP (소문자)
+      parentCpId: baseCpId?.toLowerCase() || body.baseCpId?.toLowerCase() || null,    // 상위 CP (소문자)
       // 회사 정보
       companyName: cpInfo?.companyName || '',
-      engineeringLocation: cpInfo?.engineeringLocation || '',
+      engineeringLocation: cpInfo?.engineeringLocation || '',  // ★ 엔지니어링 위치
       customerName: cpInfo?.customerName || '',
       modelYear: cpInfo?.modelYear || '',
       subject: cpInfo?.subject || '',
@@ -59,13 +73,26 @@ export async function POST(request: NextRequest) {
       status: 'draft',
     };
 
+    console.log('💾 저장할 registrationData:', {
+      cpNo: registrationData.cpNo,
+      parentApqpNo: registrationData.parentApqpNo,
+      engineeringLocation: registrationData.engineeringLocation,
+      fmeaId: registrationData.fmeaId,
+      parentCpId: registrationData.parentCpId,
+    });
+
     const savedRegistration = await prisma.cpRegistration.upsert({
       where: { cpNo: cpNoLower },
       create: registrationData,
       update: registrationData,
     });
 
-    console.log(`✅ CP 등록정보 저장 완료: ${savedRegistration.cpNo}`);
+    console.log(`✅ CP 등록정보 저장 완료: ${savedRegistration.cpNo}`, {
+      parentApqpNo: savedRegistration.parentApqpNo,
+      engineeringLocation: savedRegistration.engineeringLocation,
+      fmeaId: savedRegistration.fmeaId,
+      parentCpId: savedRegistration.parentCpId,
+    });
 
     // 2. CFT 멤버 저장 (CpCftMember)
     if (cftMembers && Array.isArray(cftMembers) && cftMembers.length > 0) {
@@ -197,6 +224,8 @@ export async function GET(request: NextRequest) {
         cpNo: true,
         fmeaId: true,
         fmeaNo: true,
+        parentApqpNo: true,  // ★ 상위 APQP
+        parentCpId: true,    // ★ 상위 CP
         companyName: true,
         customerName: true,
         modelYear: true,
@@ -218,6 +247,18 @@ export async function GET(request: NextRequest) {
         },
       },
     });
+
+    // 디버그: 조회된 데이터 확인
+    console.log('📋 CP 목록 조회:', cps.length, '건');
+    if (cps.length > 0) {
+      const sample = cps[0];
+      console.log('📋 첫 번째 CP 샘플:', {
+        cpNo: sample.cpNo,
+        parentApqpNo: sample.parentApqpNo,
+        parentCpId: sample.parentCpId,
+        subject: sample.subject,
+      });
+    }
 
     return NextResponse.json({
       success: true,

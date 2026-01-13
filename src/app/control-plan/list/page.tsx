@@ -6,7 +6,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import CPTopNav from '@/components/layout/CPTopNav';
 
 // =====================================================
@@ -51,9 +51,16 @@ const COLUMN_HEADERS = [
   '상위 CP',
 ];
 
-// CP ID 포맷 생성
+// CP ID 포맷 생성 (표시용 - 대문자로 표시)
 function formatCpId(id: string, index: number): string {
-  if (id.startsWith('CP')) return id;
+  // 소문자로 시작하는 경우 대문자로 변환
+  if (id && id.length > 0) {
+    const upperId = id.toUpperCase();
+    if (upperId.match(/^CP\d{2}-[MFP]\d{3}$/)) {
+      return upperId;
+    }
+  }
+  // 형식이 맞지 않으면 기본 형식으로 생성
   const year = new Date().getFullYear().toString().slice(-2);
   const seq = (index + 1).toString().padStart(3, '0');
   return `CP${year}-${seq}`;
@@ -84,88 +91,120 @@ const DEFAULT_SAMPLE_DATA: CPProject[] = [
 // 메인 컴포넌트
 // =====================================================
 export default function CPListPage() {
-  const [projects, setProjects] = useState<CPProject[]>([]);
+  const [projects, setProjects] = useState<CPProject[]>(() => {
+    // 초기값: localStorage에서 즉시 로드
+    try {
+      const stored = localStorage.getItem('cp-projects');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.sort((a: CPProject, b: CPProject) => 
+            (b.createdAt || '').localeCompare(a.createdAt || '')
+          );
+        }
+      }
+    } catch (e) {
+      console.warn('초기 로드 실패:', e);
+    }
+    return DEFAULT_SAMPLE_DATA;
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [error, setError] = useState<string | null>(null);
 
-  // 데이터 로드 (DB 우선, localStorage 폴백)
+  // 데이터 로드 (localStorage 우선, 빠른 응답)
   const loadData = useCallback(async () => {
+    setError(null);
+    
     try {
-      // 1. DB에서 먼저 로드 시도
-      const response = await fetch('/api/control-plan');
-      const result = await response.json();
-
-      if (result.success && result.data && result.data.length > 0) {
-        // DB 데이터를 프론트엔드 포맷으로 변환 (CpRegistration 구조)
-        const dbProjects: CPProject[] = result.data.map((cp: any) => ({
-          id: cp.cpNo,
-          cpInfo: {
-            subject: cp.subject || '',
-            cpProjectName: cp.subject || '',
-            cpStartDate: cp.cpStartDate || '',
-            cpRevisionDate: cp.cpRevisionDate || '',
-            customerName: cp.customerName || '',
-            modelYear: cp.modelYear || '',
-            processResponsibility: cp.processResponsibility || '',
-            cpResponsibleName: cp.cpResponsibleName || '',
-          },
-          linkedFmeaId: cp.fmeaNo || cp.fmeaId || null,
-          parentApqpNo: cp.parentApqpNo || null,       // ★ 상위 APQP
-          parentFmeaId: cp.parentFmeaId || cp.fmeaNo || cp.fmeaId || null, // 상위 FMEA
-          parentCpId: cp.baseCpId || cp.parentCpId || null, // 상위 CP
-          createdAt: cp.createdAt || new Date().toISOString(),
-          status: cp.status || 'draft',
-          revisionNo: 'Rev.00',
-          cftCount: cp._count?.cftMembers || 0,
-          processCount: cp._count?.processes || 0,
-        }));
-
-        console.log(`✅ DB에서 CP ${dbProjects.length}건 로드 완료`);
-        setProjects(dbProjects);
-        
-        // localStorage 동기화
-        localStorage.setItem('cp-projects', JSON.stringify(dbProjects));
-        return;
-      }
-
-      // 2. DB가 비어있으면 localStorage에서 로드
-      console.log('ℹ️ DB가 비어있음, localStorage에서 로드');
+      // 1. localStorage에서 즉시 로드
       const storedCp = localStorage.getItem('cp-projects');
-      let cpProjects = storedCp ? JSON.parse(storedCp) : [];
+      let cpProjects: CPProject[] = [];
       
+      if (storedCp) {
+        try {
+          cpProjects = JSON.parse(storedCp);
+        } catch (e) {
+          console.warn('localStorage 파싱 실패:', e);
+        }
+      }
+      
+      // 2. 데이터가 없으면 기본 샘플 데이터 사용
       if (!Array.isArray(cpProjects) || cpProjects.length === 0) {
-        localStorage.setItem('cp-projects', JSON.stringify(DEFAULT_SAMPLE_DATA));
         cpProjects = DEFAULT_SAMPLE_DATA;
+        try {
+          localStorage.setItem('cp-projects', JSON.stringify(DEFAULT_SAMPLE_DATA));
+        } catch (e) {
+          console.warn('localStorage 저장 실패:', e);
+        }
       }
 
+      // 3. 정렬 후 표시
       const sorted = cpProjects.sort((a: CPProject, b: CPProject) => 
         (b.createdAt || '').localeCompare(a.createdAt || '')
       );
 
       setProjects(sorted);
-    } catch (error) {
-      console.error('❌ DB 연결 실패, localStorage에서 로드:', error);
       
-      // DB 실패 시 localStorage 폴백
-      try {
-        const storedCp = localStorage.getItem('cp-projects');
-        let cpProjects = storedCp ? JSON.parse(storedCp) : [];
+      // 4. 백그라운드에서 DB 동기화 (비동기, 에러 무시)
+      fetch('/api/control-plan')
+        .then(res => res.ok ? res.json() : null)
+        .then(result => {
+          if (result?.success && result?.data && result.data.length > 0) {
+            const dbProjects: CPProject[] = result.data.map((cp: any) => {
+              // ★ parentApqpNo 정규화 (빈 문자열, null, undefined 처리)
+              const normalizedParentApqpNo = cp.parentApqpNo && cp.parentApqpNo.trim() !== '' 
+                ? cp.parentApqpNo.trim() 
+                : null;
+              
+              console.log('🔍 CP 로드:', {
+                cpNo: cp.cpNo,
+                parentApqpNo_raw: cp.parentApqpNo,
+                parentApqpNo_normalized: normalizedParentApqpNo,
+                subject: cp.subject,
+              });
+              
+              return {
+                id: cp.cpNo,
+                cpInfo: {
+                  subject: cp.subject || '',
+                  cpProjectName: cp.subject || '',
+                  cpStartDate: cp.cpStartDate || '',
+                  cpRevisionDate: cp.cpRevisionDate || '',
+                  customerName: cp.customerName || '',
+                  modelYear: cp.modelYear || '',
+                  processResponsibility: cp.processResponsibility || '',
+                  cpResponsibleName: cp.cpResponsibleName || '',
+                },
+                linkedFmeaId: cp.fmeaNo || cp.fmeaId || null,
+                parentApqpNo: normalizedParentApqpNo,  // ★ 상위 APQP 매핑 (정규화된 값)
+                parentFmeaId: cp.fmeaId || cp.fmeaNo || null,  // ★ 상위 FMEA (fmeaId 우선)
+                parentCpId: cp.parentCpId || null,  // ★ 상위 CP (DB에서 직접)
+                createdAt: cp.createdAt || new Date().toISOString(),
+                status: cp.status || 'draft',
+                revisionNo: 'Rev.00',
+                cftCount: cp._count?.cftMembers || 0,
+                processCount: cp._count?.processes || 0,
+              };
+            });
+            
+            setProjects(dbProjects);
+            try {
+              localStorage.setItem('cp-projects', JSON.stringify(dbProjects));
+            } catch (e) {
+              console.warn('localStorage 동기화 실패:', e);
+            }
+          }
+        })
+        .catch(err => {
+          console.warn('DB 동기화 실패 (무시):', err);
+        });
         
-        if (!Array.isArray(cpProjects) || cpProjects.length === 0) {
-          localStorage.setItem('cp-projects', JSON.stringify(DEFAULT_SAMPLE_DATA));
-          cpProjects = DEFAULT_SAMPLE_DATA;
-        }
-
-        const sorted = cpProjects.sort((a: CPProject, b: CPProject) => 
-          (b.createdAt || '').localeCompare(a.createdAt || '')
-        );
-
-        setProjects(sorted);
-      } catch (localError) {
-        console.error('❌ localStorage 로드 실패:', localError);
-        setProjects([]);
-      }
+    } catch (error: any) {
+      console.error('❌ 데이터 로드 실패:', error);
+      setError(error?.message || '데이터 로드 실패');
+      setProjects(DEFAULT_SAMPLE_DATA);
     }
   }, []);
 
@@ -261,12 +300,16 @@ export default function CPListPage() {
       return;
     }
     const selectedId = Array.from(selectedRows)[0];
-    window.location.href = `/control-plan/register?id=${selectedId}`;
+    // CP ID를 소문자로 정규화하여 전달
+    const normalizedId = selectedId.toLowerCase();
+    window.location.href = `/control-plan/register?id=${normalizedId}`;
   };
+
+  // 로딩/에러는 인라인으로 표시 (페이지 전체를 막지 않음)
 
   return (
     <>
-      <CPTopNav selectedCpId="" rowCount={filteredProjects.length} />
+      <CPTopNav selectedCpId="" />
       
       <div className="min-h-screen bg-[#f0f0f0] px-3 py-3 pt-9 font-[Malgun_Gothic]">
         {/* 헤더 */}
@@ -369,12 +412,12 @@ export default function CPListPage() {
                   </td>
                   <td className="border border-gray-400 px-2 py-1 text-center align-middle font-bold text-teal-700">{index + 1}</td>
                   <td className="border border-gray-400 px-2 py-1 text-center align-middle font-semibold text-teal-600">
-                    <a href={`/control-plan?id=${p.id}`} className="hover:underline">
+                    <a href={`/control-plan/register?id=${p.id.toLowerCase()}`} className="hover:underline">
                       {formatCpId(p.id, index)}
                     </a>
                   </td>
                   <td className="border border-gray-400 px-2 py-1 text-left align-middle">
-                    <a href={`/control-plan?id=${p.id}`} className="text-teal-600 hover:underline font-semibold">
+                    <a href={`/control-plan/register?id=${p.id.toLowerCase()}`} className="text-teal-600 hover:underline font-semibold">
                       {p.cpInfo?.subject || <span className="text-red-500 italic">미입력</span>}
                     </a>
                   </td>
@@ -391,7 +434,7 @@ export default function CPListPage() {
                     {p.cpInfo?.cpRevisionDate || <span className="text-gray-400">-</span>}
                   </td>
                   <td className="border border-gray-400 px-2 py-1 text-center align-middle">
-                    {p.parentApqpNo ? (
+                    {p.parentApqpNo && p.parentApqpNo.trim() !== '' ? (
                       <span className="px-1 py-0.5 bg-green-100 text-green-700 rounded text-xs font-semibold">{p.parentApqpNo}</span>
                     ) : (
                       <span className="text-gray-400">-</span>

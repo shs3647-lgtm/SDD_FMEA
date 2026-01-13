@@ -287,7 +287,7 @@ export default function CPRevisionManagementPage() {
 
   return (
     <>
-      <CPTopNav selectedCpId={selectedProjectId} rowCount={revisions.length} />
+      <CPTopNav selectedCpId={selectedProjectId} />
       
       <div className="min-h-screen bg-[#f0f0f0] px-3 py-3 pt-9 font-[Malgun_Gothic]">
         {/* 헤더 */}

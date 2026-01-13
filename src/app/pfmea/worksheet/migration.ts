@@ -27,7 +27,8 @@ import {
   createHybridId, 
   createL1Path, 
   createL2Path, 
-  createL3Path, 
+  createL3Path,
+  createIndexedId, 
   createLinkId,
   createMergeGroupId,
   extractFmeaSeq,
@@ -362,7 +363,7 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
           l1FuncId: db.l1Functions[0]?.id || '',
           l2StructId: l2Struct.id,
           parentId: l2Struct.id, // ★ 모자관계
-          name: '(자동생성)',
+          functionName: '(자동생성)',
           productChar: '',
           specialChar: '',
         };
@@ -593,7 +594,7 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
           fmeaId: oldData.fmeaId,
           l2FuncId: db.l2Functions[0].id,
           l2StructId: db.l2Structures[0]?.id || '',
-          productCharId: null,
+          productCharId: undefined,
           mode: oldLink.fmText,
           specialChar: false,
         };
@@ -649,7 +650,7 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
         l3StructId: db.l3Functions[0].l3StructId,
         l2StructId: db.l3Functions[0].l2StructId,
         cause: oldLink.fcText || '(자동생성)',
-        occurrence: null,
+        occurrence: undefined,
         parentId: db.l3Functions[0].id, // ★ 모자관계
       };
       db.failureCauses.push(fc);
@@ -773,13 +774,11 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
         
         // 심각도는 failureLink에서 가져오거나 failureEffects에서 최대값
         let severity = 0;
-        // ★ link.feSeverity (직접) 또는 link.cache?.feSeverity (캐시) 또는 link.severity
-        if (typeof link.feSeverity === 'number' && link.feSeverity > 0) {
-          severity = link.feSeverity;
-        } else if (typeof link.severity === 'number' && link.severity > 0) {
-          severity = link.severity;
-        } else if (link.cache?.feSeverity) {
-          severity = link.cache.feSeverity;
+        // ★ link.severity 또는 failureEffect에서 가져오기
+        if (typeof (link as any).severity === 'number' && (link as any).severity > 0) {
+          severity = (link as any).severity;
+        } else if ((link as any).cache?.feSeverity) {
+          severity = (link as any).cache.feSeverity;
         } else {
           // failureEffects에서 해당 feId의 심각도 찾기
           const fe = db.failureEffects.find(e => e.id === link.feId);
@@ -793,9 +792,9 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
         
         // ★★★ 하나라도 값이 있으면 RiskAnalysis 생성 (조건 완화) ★★★
         if (severity > 0 || occurrence > 0 || detection > 0 || preventionControl || detectionControl) {
-          const ap = (severity > 0 && occurrence > 0 && detection > 0) 
+          const apValue = (severity > 0 && occurrence > 0 && detection > 0) 
             ? calculateAP(severity, occurrence, detection) 
-            : '';
+            : 'L'; // 기본값 'L' 사용
           
           const riskAnalysis: RiskAnalysis = {
             id: uid(),
@@ -804,11 +803,11 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
             severity,
             occurrence,
             detection,
-            ap,
+            ap: apValue as 'H' | 'M' | 'L',
             preventionControl,
             detectionControl,
-            createdAt: new Date(),
-            updatedAt: new Date(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
           };
           
           db.riskAnalyses.push(riskAnalysis);
@@ -823,9 +822,9 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
             severity,
             occurrence,
             detection,
-            linkFeSeverity: link.feSeverity,
-            linkSeverity: link.severity,
-            cacheFeSeverity: link.cache?.feSeverity,
+            linkFeSeverity: (link as any).feSeverity,
+            linkSeverity: (link as any).severity,
+            cacheFeSeverity: (link as any).cache?.feSeverity,
             oKeyExists: oKey in riskData,
             dKeyExists: dKey in riskData,
           });
@@ -871,9 +870,9 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
               severity: 0,
               occurrence,
               detection,
-              ap: '',
-              createdAt: new Date(),
-              updatedAt: new Date(),
+              ap: 'L' as 'H' | 'M' | 'L',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
             };
             db.riskAnalyses.push(riskAnalysis);
           }

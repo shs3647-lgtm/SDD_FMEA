@@ -201,7 +201,6 @@ export async function POST(request: NextRequest) {
       message: errorMessage,
       code: errorCode,
       stack: error.stack,
-      body: body, // 입력 데이터 확인용
     });
     
     // PostgreSQL unique constraint 오류
