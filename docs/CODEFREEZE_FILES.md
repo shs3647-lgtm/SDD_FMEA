@@ -101,7 +101,22 @@
 | `src/app/pfmea/worksheet/panels/APTable/APTable5.tsx` | **350px** (RIGHT_PANEL_WIDTH) | codefreeze-20260110-modal-treeview-350px |
 | `src/app/pfmea/worksheet/panels/APTable/APTable6.tsx` | **350px** (RIGHT_PANEL_WIDTH) | codefreeze-20260110-modal-treeview-350px |
 
-### 5. 기초정보
+### 5. Control Plan (CP) 화면
+| 파일 | 코드프리즈 태그 |
+|------|----------------|
+| `src/app/control-plan/layout.tsx` | **codefreeze-20260113-cp-layout-alignment** ⚠️ UI 절대 변경 금지 |
+| `src/app/control-plan/worksheet/page.tsx` | **codefreeze-20260113-cp-layout-alignment** ⚠️ UI 절대 변경 금지 |
+| `src/app/control-plan/worksheet/components/CPTopMenuBar.tsx` | **codefreeze-20260113-cp-layout-alignment** ⚠️ UI 절대 변경 금지 |
+| `src/app/control-plan/worksheet/components/CPTabMenu.tsx` | **codefreeze-20260113-cp-layout-alignment** ⚠️ UI 절대 변경 금지 |
+| `src/components/layout/CommonTopNav.tsx` | **codefreeze-20260113-cp-layout-alignment** ⚠️ UI 절대 변경 금지 |
+
+**⚠️ 중요: CP 화면 레이아웃 절대 변경 금지**
+- 사이드바 간격: 5px (53px 위치)
+- 메뉴바 좌측 정렬: left-[53px] 통일
+- 워크시트: fixed 레이아웃 (top-[100px])
+- FMEA와 동일한 구조 유지 필수
+
+### 6. 기초정보
 | 파일 | 코드프리즈 태그 |
 |------|----------------|
 | `src/app/master/user/page.tsx` | codefreeze-20260110-master-info |
