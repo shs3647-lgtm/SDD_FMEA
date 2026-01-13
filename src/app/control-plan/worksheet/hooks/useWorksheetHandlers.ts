@@ -85,11 +85,11 @@ export function useWorksheetHandlers({
   }, [state.items, state.cpNo, setState, closeContextMenu]);
   
   // 행 아래에 추가
-  const handleInsertRowBelow = useCallback((rowIdx: number, type: ContextMenuType) => {
+  const handleInsertRowBelow = useCallback((rowIdx: number, type: ContextMenuType, colKey?: string) => {
     const currentItem = state.items[rowIdx];
     
-    // A, B열에서 행 추가 시: 병합 없이 새로운 행 추가 (고유한 processNo/processName)
-    if (type === 'process') {
+    // A, B열에서 행 추가 시: 병합 없이 A~S열까지 새로운 행 추가
+    if (type === 'process' && (colKey === 'processNo' || colKey === 'processName')) {
       // A, B열에서 행 추가 시 고유한 값으로 설정하여 병합 방지
       const uniqueId = `_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const newItem = createEmptyItem(
@@ -97,6 +97,7 @@ export function useWorksheetHandlers({
         uniqueId,  // A열: 고유값 (병합 방지)
         uniqueId   // B열: 고유값 (병합 방지)
       );
+      // C~S열은 createEmptyItem에서 이미 기본값으로 초기화됨
       
       const newItems = [...state.items];
       newItems.splice(rowIdx + 1, 0, newItem);
@@ -106,7 +107,39 @@ export function useWorksheetHandlers({
       return;
     }
     
-    // D, E, I열에서 행 추가 시: 부모 상속(병합)
+    // D열(processDesc)에서 행 추가 시: A, B열은 병합, C~S열은 새 행 추가
+    if (type === 'process' && colKey === 'processDesc') {
+      // 부모 행 찾기: 위쪽으로 올라가면서 processNo와 processName이 있는 행 찾기
+      let parentProcessNo = '';
+      let parentProcessName = '';
+      for (let i = rowIdx; i >= 0; i--) {
+        const item = state.items[i];
+        if (item.processNo && item.processName && !item.processNo.startsWith('_') && !item.processName.startsWith('_')) {
+          parentProcessNo = item.processNo;
+          parentProcessName = item.processName;
+          break;
+        }
+      }
+      
+      // D열에서 행 추가 시:
+      // - A열(공정번호), B열(공정명): 부모 값으로 설정 (rowSpan 병합됨)
+      // - C열(레벨)부터 S열까지: 기본값으로 초기화 (병합 없이 일반 셀로 생성)
+      const newItem = createEmptyItem(
+        state.cpNo,
+        parentProcessNo,  // A열: 부모 값 (rowSpan 병합됨)
+        parentProcessName  // B열: 부모 값 (rowSpan 병합됨)
+      );
+      // C~S열은 createEmptyItem에서 이미 기본값으로 초기화됨
+      
+      const newItems = [...state.items];
+      newItems.splice(rowIdx + 1, 0, newItem);
+      newItems.forEach((item, idx) => item.sortOrder = idx);
+      setState(prev => ({ ...prev, items: newItems, dirty: true }));
+      closeContextMenu();
+      return;
+    }
+    
+    // E, I열에서 행 추가 시: 부모 상속(병합)
     // 부모 행 찾기: 위쪽으로 올라가면서 processNo와 processName이 있는 행 찾기
     let parentProcessNo = '';
     let parentProcessName = '';
@@ -119,7 +152,7 @@ export function useWorksheetHandlers({
       }
     }
     
-    // D, E, I열에서 행 추가 시:
+    // E, I열에서 행 추가 시:
     // - A열(공정번호), B열(공정명): 부모 값으로 설정 (rowSpan 병합됨)
     // - C열(레벨), D열(공정설명): 현재 행의 값으로 설정 (E열에서 행 추가 시 병합됨)
     // - E열(설비/금형/JIG): E열에서 행 추가 시 빈 값, 나머지는 현재 행의 값
@@ -130,19 +163,22 @@ export function useWorksheetHandlers({
       parentProcessName  // B열: 부모 값 (rowSpan 병합됨)
     );
     
-    // E열에서 행 추가 시: C열(레벨), D열(공정설명)도 현재 행의 값으로 복사 (병합됨)
+    // E열에서 행 추가 시: E열은 병합 없이 행만 추가, 상위 부모(A, B, C, D)는 독립적으로 병합
     if (type === 'work') {
+      // E열에서 행 추가 시: C열(레벨), D열(공정설명)은 현재 행의 값으로 복사 (병합됨)
       newItem.processLevel = currentItem?.processLevel || '';
       newItem.processDesc = currentItem?.processDesc || '';
-      // E열(workElement)은 빈 값으로 설정 (병합 안 됨)
+      // E열(workElement)은 빈 값으로 설정 (병합 안 됨, createEmptyItem에서 이미 빈 값)
+      // A, B열은 부모 값으로 설정되어 독립적으로 병합됨
     } else if (type === 'char') {
-      // I열에서 행 추가 시: C열(레벨), D열(공정설명), E열(설비/금형/JIG)도 현재 행의 값으로 복사 (병합됨)
+      // I열에서 행 추가 시: 상위 부모들(A, B, C, D, E)은 병합 상태 유지, I열은 병합 없이 행만 추가
+      // C열(레벨), D열(공정설명), E열(설비/금형/JIG)는 현재 행의 값으로 복사 (병합 유지)
       newItem.processLevel = currentItem?.processLevel || '';
       newItem.processDesc = currentItem?.processDesc || '';
       newItem.workElement = currentItem?.workElement || '';
-      // I열(productChar)은 빈 값으로 설정 (병합 안 됨)
+      // I열(productChar)은 빈 값으로 설정 (병합 안 됨, createEmptyItem에서 이미 빈 값)
+      // A, B열은 부모 값으로 설정되어 독립적으로 병합됨
     }
-    // D열에서 행 추가 시(type === 'process' && colKey === 'processDesc'): C, D열은 빈 값 (병합 안 됨)
     
     const newItems = [...state.items];
     newItems.splice(rowIdx + 1, 0, newItem);

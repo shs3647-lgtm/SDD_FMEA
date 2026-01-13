@@ -216,9 +216,9 @@ function CPWorksheetContent() {
   }, []);
 
   // 수동 모드: 엔터 키로 행 추가
-  const handleEnterKey = useCallback((rowIdx: number, type: ContextMenuType) => {
+  const handleEnterKey = useCallback((rowIdx: number, type: ContextMenuType, colKey?: string) => {
     if (inputMode === 'manual') {
-      handleInsertRowBelow(rowIdx, type);
+      handleInsertRowBelow(rowIdx, type, colKey);
     }
   }, [inputMode, handleInsertRowBelow]);
   
@@ -291,7 +291,7 @@ function CPWorksheetContent() {
               maxHeight: '100%',
             }}
           >
-            <table className={`border-collapse w-full table-auto min-w-[${totalWidth}px]`}>
+            <table className={`border-separate w-full table-auto min-w-[${totalWidth}px]`} style={{ borderSpacing: 0 }}>
             <thead style={{ background: '#ffffff' }}>
               {/* 1행: 그룹 헤더 */}
               <tr>

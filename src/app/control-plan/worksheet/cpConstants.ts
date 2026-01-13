@@ -9,33 +9,33 @@
 
 // ============ 색상 정의 ============
 export const COLORS = {
-  // 1. 공정현황 (파란색 계열)
+  // 1. 공정현황 (파란색 계열) - 줄무늬 대비 강화
   process: {
     header: '#1565c0',
     headerLight: '#42a5f5',
-    cell: '#e3f2fd',
-    cellAlt: '#bbdefb',
+    cell: '#e3f2fd',      // 짝수 행: 연한 파란색
+    cellAlt: '#c5d9f0',   // 홀수 행: 더 진한 파란색 (대비 강화)
   },
-  // 2. 관리항목 (녹색 계열)
+  // 2. 관리항목 (녹색 계열) - 줄무늬 대비 강화
   control: {
     header: '#2e7d32',
     headerLight: '#66bb6a',
-    cell: '#e8f5e9',
-    cellAlt: '#c8e6c9',
+    cell: '#e8f5e9',      // 짝수 행: 연한 녹색
+    cellAlt: '#c8e6c9',   // 홀수 행: 더 진한 녹색 (대비 강화)
   },
-  // 3. 관리방법 (주황색 계열)
+  // 3. 관리방법 (주황색 계열) - 줄무늬 대비 강화
   method: {
     header: '#f57c00',
     headerLight: '#ffb74d',
-    cell: '#fff3e0',
-    cellAlt: '#ffe0b2',
+    cell: '#fff3e0',      // 짝수 행: 연한 주황색
+    cellAlt: '#ffe0b2',   // 홀수 행: 더 진한 주황색 (대비 강화)
   },
-  // 4. 대응계획 (보라색 계열)
+  // 4. 대응계획 (보라색 계열) - 줄무늬 대비 강화
   action: {
     header: '#7b1fa2',
     headerLight: '#ba68c8',
-    cell: '#f3e5f5',
-    cellAlt: '#e1bee7',
+    cell: '#f3e5f5',      // 짝수 행: 연한 보라색
+    cellAlt: '#e1bee7',   // 홀수 행: 더 진한 보라색 (대비 강화)
   },
   // 특별특성 색상
   special: {
@@ -82,7 +82,7 @@ export interface CPColumnDef {
 export const CP_COLUMNS: CPColumnDef[] = [
   // ■ 0. 단계 열 (연한 파란색)
   { id: 0, group: '단계', name: '컬럼', key: 'rowNo', width: 40,
-    headerColor: '#90caf9', cellColor: '#e3f2fd', cellAltColor: '#bbdefb', align: 'center', editable: false },
+    headerColor: '#90caf9', cellColor: '#e3f2fd', cellAltColor: '#c5d9f0', align: 'center', editable: false },
   // ■ 1. 공정현황 (5컬럼)
   { id: 1, group: '공정현황', name: '공정번호', key: 'processNo', width: 45,
     headerColor: COLORS.control.headerLight, cellColor: COLORS.control.cell, cellAltColor: COLORS.control.cellAlt, align: 'center', pfmeaSync: true },

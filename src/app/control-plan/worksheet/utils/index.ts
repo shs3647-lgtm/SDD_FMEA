@@ -95,32 +95,7 @@ export function createSampleItems(cpId: string): CPItem[] {
       reactionPlan: '폐기', 
       sortOrder: 2 
     },
-    { 
-      ...createEmptyItem(cpId, '30', '검사'), 
-      processDesc: '품질검사', 
-      workElement: '외관검사', 
-      productChar: '외관결함', 
-      processChar: '-', 
-      specialChar: '', 
-      specTolerance: '외관기준', 
-      evalMethod: '육안검사', 
-      sampleSize: '전수', 
-      sampleFreq: '전수', 
-      controlMethod: '표준서', 
-      owner1: '품질', 
-      owner2: '', 
-      reactionPlan: '선별', 
-      sortOrder: 3 
-    },
   ];
-  
-  // 세로 스크롤 테스트용 빈 행 30개 추가
-  for (let i = 0; i < 30; i++) {
-    items.push({
-      ...createEmptyItem(cpId, '', ''),
-      sortOrder: items.length,
-    });
-  }
   
   return items;
 }

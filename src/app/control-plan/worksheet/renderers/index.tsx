@@ -21,7 +21,7 @@ interface RenderCellProps {
   onCellChange: (itemId: string, key: string, value: any) => void;
   onContextMenu: (e: React.MouseEvent, rowIdx: number, type: ContextMenuType, colKey?: string) => void;
   onAutoModeClick: (rowIdx: number, type: ContextMenuType) => void;
-  onEnterKey?: (rowIdx: number, type: ContextMenuType) => void;
+  onEnterKey?: (rowIdx: number, type: ContextMenuType, colKey?: string) => void;
 }
 
 export function renderCell({
@@ -40,7 +40,7 @@ export function renderCell({
   onEnterKey,
 }: RenderCellProps): React.ReactNode {
   const value = (item as any)[col.key];
-  // 줄무늬 패턴 복구
+  // 줄무늬 패턴: 짝수 행은 cellColor, 홀수 행은 cellAltColor
   const bgColor = rowIdx % 2 === 0 ? col.cellColor : col.cellAltColor;
   
   const cellStyle: React.CSSProperties = {
@@ -50,6 +50,7 @@ export function renderCell({
     background: bgColor,
     textAlign: col.align,
     border: '1px solid #ccc',
+    borderBottom: '1px solid #ccc', // 행 구분선 (1px)
     minHeight: HEIGHTS.body,
     verticalAlign: 'middle',
   };
@@ -70,7 +71,7 @@ export function renderCell({
         // 나머지 열은 'general' 타입으로 행 추가
         type = 'general';
       }
-      onEnterKey(rowIdx, type);
+      onEnterKey(rowIdx, type, col.key);
     }
   };
 

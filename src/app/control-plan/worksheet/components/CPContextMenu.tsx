@@ -10,7 +10,7 @@ interface CPContextMenuProps {
   contextMenu: ContextMenuState;
   onClose: () => void;
   onInsertAbove: (rowIdx: number, type: ContextMenuType) => void;
-  onInsertBelow: (rowIdx: number, type: ContextMenuType) => void;
+  onInsertBelow: (rowIdx: number, type: ContextMenuType, colKey?: string) => void;
   onDelete: (rowIdx: number) => void;
   onCancel?: () => void;
 }
@@ -77,7 +77,7 @@ export function CPContextMenu({
           <>
             <button
               onClick={() => {
-                onInsertBelow(contextMenu.rowIdx, contextMenu.type);
+                onInsertBelow(contextMenu.rowIdx, contextMenu.type, contextMenu.colKey);
                 onClose();
               }}
               className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 flex items-center gap-2"
@@ -111,7 +111,7 @@ export function CPContextMenu({
             </button>
             <button
               onClick={() => {
-                onInsertBelow(contextMenu.rowIdx, contextMenu.type);
+                onInsertBelow(contextMenu.rowIdx, contextMenu.type, contextMenu.colKey);
                 onClose();
               }}
               className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 flex items-center gap-2"
