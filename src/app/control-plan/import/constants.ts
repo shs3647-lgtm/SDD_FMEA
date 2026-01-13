@@ -83,7 +83,7 @@ export const PREVIEW_COLUMNS: PreviewColumn[] = [
   { key: 'owner1', label: '책임1', width: 'w-[40px]', group: 'controlMethod' },
   { key: 'owner2', label: '책임2', width: 'w-[40px]', group: 'controlMethod' },
   // 대응계획 (1컬럼) - Orange
-  { key: 'reactionPlan', label: '대응계획', width: 'w-[90px]', group: 'reactionPlan' },
+  { key: 'reactionPlan', label: '조치방법', width: 'w-[90px]', group: 'reactionPlan' },
 ];
 
 // 그룹별 색상
