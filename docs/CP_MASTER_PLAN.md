@@ -10,6 +10,9 @@
 
 ## 🔒 구현 완료 기능 (Code Freeze: 2026-01-13)
 
+### 코드프리즈 태그
+- `codefreeze-20260113-apqp-string-unified`: CP/FMEA 등록 페이지 selectedParentApqp 문자열 통일 (수평전개 완료)
+
 ### 13.1 CP 등록 화면 (`/control-plan/register`)
 
 | 기능 | 상태 | 설명 |

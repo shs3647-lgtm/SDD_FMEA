@@ -45,7 +45,7 @@
 ### 1. PFMEA 화면
 | 파일 | 코드프리즈 태그 |
 |------|----------------|
-| `src/app/pfmea/register/page.tsx` | codefreeze-20260110-register-final |
+| `src/app/pfmea/register/page.tsx` | codefreeze-20260110-register-final<br/>codefreeze-20260113-apqp-string-unified |
 | `src/app/pfmea/list/page.tsx` | codefreeze-20260110-full-system |
 | `src/app/pfmea/worksheet/page.tsx` | codefreeze-20260110-all-ui-freeze<br/>codefreeze-20260111-worksheet-110percent (110% 배율) |
 | `src/app/pfmea/import/page.tsx` | codefreeze-20260110-pfmea-import |
