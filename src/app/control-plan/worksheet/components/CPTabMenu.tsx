@@ -50,7 +50,7 @@ export default function CPTabMenu({
   
   return (
     <div 
-      className="fixed top-16 left-[50px] right-0 h-9 z-[98] px-0 sm:px-1 flex items-center justify-between overflow-hidden border-b-[2px] border-[#004d40]"
+      className="fixed top-16 left-[53px] right-0 h-9 z-[98] px-0 sm:px-1 flex items-center justify-between overflow-hidden border-b-[2px] border-[#004d40]"
       style={{ background: 'linear-gradient(to right, #004d40, #00695c, #004d40)' }}
     >
       {/* 좌측: 탭 버튼들 */}

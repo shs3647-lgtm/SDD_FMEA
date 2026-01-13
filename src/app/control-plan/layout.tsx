@@ -25,25 +25,13 @@ export default function ControlPlanLayout({
       {/* ===== 1. 사이드바 (48px, fixed) ===== */}
       <Sidebar />
 
-      {/* ===== 구분선: 2px 흰색 (사이드바 | 콘텐츠) ===== */}
-      <div 
-        className="fixed h-screen z-40 bg-white"
-        style={{ 
-          left: `${LAYOUT.sidebar.width}px`, 
-          width: '2px',
-        }} 
-      />
-
       {/* ===== 메인 콘텐츠 영역 ===== */}
-      {/* 사이드바(48px) + 구분선(2px) = 50px */}
+      {/* 사이드바(48px) + 5px 간격 = 53px */}
       <div 
-        className="flex-1 flex flex-col p-0 m-0 ml-[50px]"
+        className="flex-1 flex flex-col p-0 m-0 ml-[53px]"
       >
-        {/* 콘텐츠 - 패딩 없이 꽉 채움 (바둑판 정렬) + 좌우 스크롤 */}
-        {/* 기본 배율 110% */}
-        <main className="flex-1 overflow-x-auto overflow-y-hidden p-0 m-0" style={{ zoom: 1.1 }}>
-          {children}
-        </main>
+        {/* 콘텐츠 - 패딩 없이 꽉 채움 */}
+        {children}
 
         {/* 상태바 */}
         <StatusBar />

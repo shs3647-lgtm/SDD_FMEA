@@ -269,9 +269,13 @@ function CPWorksheetContent() {
         dirty={state.dirty}
       />
       
-      <div className="min-h-screen bg-[#f5f7fa] pt-[100px] font-[Malgun_Gothic]">
-        <div className="overflow-auto bg-white border-t border-gray-300 max-h-[calc(100vh-100px)]">
-          <table className={`border-collapse w-full table-auto min-w-[${totalWidth}px]`}>
+      {/* ========== 메인 레이아웃 (메뉴 아래) ========== */}
+      <div className="fixed top-[100px] left-[53px] right-0 bottom-0 flex flex-row overflow-auto">
+        
+        {/* ===== 좌측: 워크시트 영역 ===== */}
+        <div className="flex-1 flex flex-col min-w-0 bg-white overflow-hidden">
+          <div className="overflow-auto bg-white border-t border-gray-300 flex-1">
+            <table className={`border-collapse w-full table-auto min-w-[${totalWidth}px]`}>
             <thead>
               {/* 1행: 그룹 헤더 */}
               <tr>
@@ -343,6 +347,7 @@ function CPWorksheetContent() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
       

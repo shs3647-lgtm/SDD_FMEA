@@ -51,7 +51,7 @@ export default function CPTopMenuBar({
 
   return (
     <div 
-      className="flex items-center gap-2 fixed top-8 left-[50px] right-0 h-8 px-2 z-[99] border-t border-b border-white/30"
+      className="flex items-center gap-2 fixed top-8 left-[53px] right-0 h-8 px-2 z-[99] border-t border-b border-white/30"
       style={{ background: 'linear-gradient(to right, #0f766e, #14b8a6, #0f766e)' }}
     >
       {/* CP명 */}

@@ -67,7 +67,7 @@ export default function CommonTopNav({
 
   return (
     <div
-      className="fixed top-0 left-[50px] right-0 z-[100] flex items-center h-8 border-b border-white/20"
+      className="fixed top-0 left-[53px] right-0 z-[100] flex items-center h-8 border-b border-white/20"
       style={{ background: `linear-gradient(to right, ${gradientFrom}, ${gradientTo}, ${gradientFrom})` }}
     >
       {/* 바로가기 레이블 - 작은 화면에서 숨김 */}
