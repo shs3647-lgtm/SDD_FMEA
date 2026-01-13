@@ -105,16 +105,29 @@
 | 파일 | 코드프리즈 태그 |
 |------|----------------|
 | `src/app/control-plan/layout.tsx` | **codefreeze-20260113-cp-layout-alignment** ⚠️ UI 절대 변경 금지 |
-| `src/app/control-plan/worksheet/page.tsx` | **codefreeze-20260113-cp-layout-alignment** ⚠️ UI 절대 변경 금지 |
+| `src/app/control-plan/worksheet/page.tsx` | **codefreeze-20260113-cp-layout-alignment**<br/>**codefreeze-20260113-cp-enter-key-row-add** ⚠️ UI 절대 변경 금지 |
 | `src/app/control-plan/worksheet/components/CPTopMenuBar.tsx` | **codefreeze-20260113-cp-layout-alignment** ⚠️ UI 절대 변경 금지 |
 | `src/app/control-plan/worksheet/components/CPTabMenu.tsx` | **codefreeze-20260113-cp-layout-alignment** ⚠️ UI 절대 변경 금지 |
+| `src/app/control-plan/worksheet/renderers/index.tsx` | **codefreeze-20260113-cp-enter-key-row-add** ⚠️ UI 절대 변경 금지 |
+| `src/app/control-plan/worksheet/hooks/useRowSpan.ts` | **codefreeze-20260113-cp-rowspan-logic** ⚠️ 로직 절대 변경 금지 |
+| `src/app/control-plan/worksheet/hooks/useWorksheetHandlers.ts` | **codefreeze-20260113-cp-row-add-logic** ⚠️ 로직 절대 변경 금지 |
+| `src/app/control-plan/worksheet/utils/index.ts` | **codefreeze-20260113-cp-utils** ⚠️ 로직 절대 변경 금지 |
 | `src/components/layout/CommonTopNav.tsx` | **codefreeze-20260113-cp-layout-alignment** ⚠️ UI 절대 변경 금지 |
+| `src/app/globals.css` | **codefreeze-20260113-cp-scrollbar** ⚠️ 스타일 절대 변경 금지 |
+| `src/app/layout.tsx` | **codefreeze-20260113-cp-layout-padding** ⚠️ 레이아웃 절대 변경 금지 |
+| `src/components/layout/StatusBar.tsx` | **codefreeze-20260113-cp-statusbar** ⚠️ UI 절대 변경 금지 |
 
 **⚠️ 중요: CP 화면 레이아웃 절대 변경 금지**
 - 사이드바 간격: 5px (53px 위치)
 - 메뉴바 좌측 정렬: left-[53px] 통일
 - 워크시트: fixed 레이아웃 (top-[100px])
 - FMEA와 동일한 구조 유지 필수
+
+**⚠️ 중요: CP 워크시트 행 추가 로직 절대 변경 금지**
+- 엔터 키 행 추가 기능: D열에서 C~S열만 독립 행으로 추가
+- A/B열은 부모 값 상속하여 rowSpan 병합
+- rowSpan 계산: 빈 값은 병합하지 않음
+- 컨텍스트 메뉴 위/아래 행 추가도 동일 로직
 
 ### 6. 기초정보
 | 파일 | 코드프리즈 태그 |
@@ -216,4 +229,29 @@ codefreeze-20260111-pre-fmea-new-write  (FMEA 새로 작성 전 전체 시스템
 
 ---
 
-## 📅 마지막 업데이트: 2026-01-11 15:53
+---
+
+## ✅ 최근 코드프리즈 내역 (2026-01-13)
+
+### 8. CP 워크시트 엔터 키 행 추가 기능 및 rowSpan 병합 로직 확정
+- **태그**: `codefreeze-20260113-cp-enter-key-row-add`, `codefreeze-20260113-cp-rowspan-logic`, `codefreeze-20260113-cp-row-add-logic`
+- **날짜**: 2026-01-13
+- **내용**:
+  - 엔터 키로 행 추가 기능 구현 (수동 모드)
+  - D열(공정설명)에서 행 추가 시 C~S열만 독립 행으로 추가
+  - A/B열은 부모 값 상속하여 rowSpan 병합
+  - rowSpan 계산 로직 개선: 빈 값은 병합하지 않도록 수정
+  - 컨텍스트 메뉴 위/아래 행 추가도 동일 로직 적용
+- **파일**:
+  - `src/app/control-plan/worksheet/page.tsx`
+  - `src/app/control-plan/worksheet/renderers/index.tsx`
+  - `src/app/control-plan/worksheet/hooks/useRowSpan.ts`
+  - `src/app/control-plan/worksheet/hooks/useWorksheetHandlers.ts`
+  - `src/app/control-plan/worksheet/utils/index.ts`
+  - `src/app/globals.css`
+  - `src/app/layout.tsx`
+  - `src/components/layout/StatusBar.tsx`
+
+---
+
+## 📅 마지막 업데이트: 2026-01-13
