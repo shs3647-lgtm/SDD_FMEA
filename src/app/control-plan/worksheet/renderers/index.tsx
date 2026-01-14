@@ -106,12 +106,12 @@ export function renderCell({
         style={{ 
           ...cellStyle, 
           verticalAlign: 'middle',
-          cursor: inputMode === 'manual' ? 'context-menu' : (isProcessName && inputMode === 'auto' ? 'pointer' : 'default'),
+          cursor: isProcessName && inputMode === 'auto' ? 'pointer' : 'context-menu',
           background: isProcessName && inputMode === 'auto' ? '#e3f2fd' : cellStyle.background, // 자동모드 시 강조
         }}
         rowSpan={spanInfo.span}
-        onContextMenu={inputMode === 'manual' ? (e) => onContextMenu(e, rowIdx, 'process', col.key) : undefined}
-        onClick={isProcessName && inputMode === 'auto' ? () => onAutoModeClick(rowIdx, 'process') : undefined}
+        onContextMenu={(e) => onContextMenu(e, rowIdx, 'process', col.key)}
+        onClick={isProcessName && inputMode === 'auto' ? () => onAutoModeClick(rowIdx, 'process', col.key) : undefined}
       >
         <div className="flex items-center gap-1 justify-center">
           {isProcessName && inputMode === 'auto' && <span className="text-blue-500 text-[8px]">➕</span>}
@@ -249,12 +249,12 @@ export function renderCell({
         key={col.id} 
         style={{ 
           ...cellStyle, 
-          cursor: inputMode === 'manual' ? 'context-menu' : 'pointer', 
+          cursor: 'context-menu', 
           verticalAlign: 'middle',
           background: inputMode === 'auto' ? '#e3f2fd' : bgColor, // 자동모드 시 강조
         }}
         rowSpan={spanInfo.span}
-        onContextMenu={inputMode === 'manual' ? (e) => onContextMenu(e, rowIdx, 'process', col.key) : undefined}
+        onContextMenu={(e) => onContextMenu(e, rowIdx, 'process', col.key)}
         onClick={inputMode === 'auto' ? () => onAutoModeClick(rowIdx, 'process', col.key) : undefined}
       >
         <div className="flex items-center gap-1">
@@ -283,12 +283,12 @@ export function renderCell({
         key={col.id} 
         style={{ 
           ...cellStyle, 
-          cursor: inputMode === 'manual' ? 'context-menu' : 'pointer', 
+          cursor: 'context-menu', 
           verticalAlign: 'middle',
           background: inputMode === 'auto' ? '#e8f5e9' : bgColor, // 자동모드 시 강조
         }}
         rowSpan={spanInfo.span}
-        onContextMenu={inputMode === 'manual' ? (e) => onContextMenu(e, rowIdx, 'work', col.key) : undefined}
+        onContextMenu={(e) => onContextMenu(e, rowIdx, 'work', col.key)}
         onClick={inputMode === 'auto' ? () => onAutoModeClick(rowIdx, 'work') : undefined}
       >
         <div className="flex items-center gap-1 justify-center">
@@ -318,11 +318,11 @@ export function renderCell({
         style={{ 
           ...cellStyle, 
           verticalAlign: 'middle',
-          cursor: inputMode === 'manual' ? 'context-menu' : 'pointer',
+          cursor: 'context-menu',
           background: inputMode === 'auto' ? '#fff3e0' : bgColor, // 자동모드 시 강조
         }}
         rowSpan={spanInfo.span}
-        onContextMenu={inputMode === 'manual' ? (e) => onContextMenu(e, rowIdx, 'char', col.key) : undefined}
+        onContextMenu={(e) => onContextMenu(e, rowIdx, 'char', col.key)}
         onClick={inputMode === 'auto' ? () => onAutoModeClick(rowIdx, 'char') : undefined}
       >
         <div className="flex items-center gap-1 justify-center">
@@ -340,15 +340,15 @@ export function renderCell({
     );
   }
   
-  // 기본 텍스트 입력 (중앙정렬) - 나머지 열에도 컨텍스트 메뉴 추가
+  // 기본 텍스트 입력 (중앙정렬) - 나머지 열에도 컨텍스트 메뉴 추가 (자동모드에서도 활성화)
   return (
     <td 
       key={col.id} 
       style={{ 
         ...cellStyle, 
-        cursor: inputMode === 'manual' ? 'context-menu' : 'default',
+        cursor: 'context-menu',
       }}
-      onContextMenu={inputMode === 'manual' ? (e) => onContextMenu(e, rowIdx, 'general', col.key) : undefined}
+      onContextMenu={(e) => onContextMenu(e, rowIdx, 'general', col.key)}
     >
       <input
         type="text"

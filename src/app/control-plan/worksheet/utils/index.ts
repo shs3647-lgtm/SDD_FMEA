@@ -40,7 +40,7 @@ export function createEmptyItem(
 }
 
 /**
- * 샘플 데이터 생성
+ * 샘플 데이터 생성 (프레스, 가류 2행)
  */
 export function createSampleItems(cpId: string): CPItem[] {
   const items: CPItem[] = [
@@ -62,23 +62,6 @@ export function createSampleItems(cpId: string): CPItem[] {
       sortOrder: 0 
     },
     { 
-      ...createEmptyItem(cpId, '10', '프레스'), 
-      processDesc: '성형', 
-      workElement: '금형작업', 
-      productChar: '치수불량', 
-      processChar: '온도', 
-      specialChar: 'SC', 
-      specTolerance: '180±10℃', 
-      evalMethod: '온도계', 
-      sampleSize: '3', 
-      sampleFreq: '1회/H', 
-      controlMethod: 'CP관리', 
-      owner1: '품질', 
-      owner2: '', 
-      reactionPlan: '조건조정', 
-      sortOrder: 1 
-    },
-    { 
       ...createEmptyItem(cpId, '20', '가류'), 
       processDesc: '가열성형', 
       workElement: '온도관리', 
@@ -93,7 +76,7 @@ export function createSampleItems(cpId: string): CPItem[] {
       owner1: '생산', 
       owner2: '품질', 
       reactionPlan: '폐기', 
-      sortOrder: 2 
+      sortOrder: 1 
     },
   ];
   
