@@ -30,17 +30,40 @@ interface ProcessFlowInputModalProps {
 // DB에서 CP 마스터 공정 로드 (우선순위 1 - PUBLIC DB)
 const loadMasterProcessesFromDB = async (): Promise<ProcessItem[]> => {
   try {
-    // CP 마스터 공정 데이터 조회 (PFMEA와 동일한 구조)
+    console.log('🔄 [CP 모달] API 호출 시작: /api/control-plan/master-processes');
     const res = await fetch('/api/control-plan/master-processes');
-    if (res.ok) {
-      const data = await res.json();
-      if (data.processes && data.processes.length > 0) {
-        console.log('✅ DB에서 CP 마스터 공정 로드:', data.processes.length, '개');
-        return data.processes;
-      }
+    console.log('📡 [CP 모달] API 응답 상태:', res.status, res.statusText);
+    
+    if (!res.ok) {
+      console.error('❌ [CP 모달] API 응답 실패:', res.status, res.statusText);
+      const errorText = await res.text();
+      console.error('❌ [CP 모달] 에러 내용:', errorText);
+      return [];
     }
-  } catch (e) {
-    console.error('CP 마스터 공정 로드 실패:', e);
+    
+    const data = await res.json();
+    console.log('📦 [CP 모달] API 응답 데이터:', {
+      success: data.success,
+      processesCount: data.processes?.length || 0,
+      source: data.source,
+      datasetName: data.datasetName,
+      message: data.message,
+    });
+    
+    if (data.success && data.processes && data.processes.length > 0) {
+      console.log('✅ [CP 모달] DB에서 CP 마스터 공정 로드:', data.processes.length, '개');
+      console.log('📋 [CP 모달] 공정 목록:', data.processes.map((p: any) => `${p.no}:${p.name}`).join(', '));
+      return data.processes;
+    } else {
+      console.warn('⚠️ [CP 모달] 공정 데이터 없음:', {
+        success: data.success,
+        processesCount: data.processes?.length || 0,
+        message: data.message || '알 수 없는 이유',
+      });
+    }
+  } catch (e: any) {
+    console.error('❌ [CP 모달] CP 마스터 공정 로드 실패:', e);
+    console.error('❌ [CP 모달] 에러 상세:', e.message, e.stack);
   }
   return [];
 };
