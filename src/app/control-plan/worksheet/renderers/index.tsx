@@ -255,7 +255,7 @@ export function renderCell({
         }}
         rowSpan={spanInfo.span}
         onContextMenu={inputMode === 'manual' ? (e) => onContextMenu(e, rowIdx, 'process', col.key) : undefined}
-        onClick={inputMode === 'auto' ? () => onAutoModeClick(rowIdx, 'process') : undefined}
+        onClick={inputMode === 'auto' ? () => onAutoModeClick(rowIdx, 'process', col.key) : undefined}
       >
         <div className="flex items-center gap-1">
           {inputMode === 'auto' && <span className="text-blue-500 text-[8px]">➕</span>}
