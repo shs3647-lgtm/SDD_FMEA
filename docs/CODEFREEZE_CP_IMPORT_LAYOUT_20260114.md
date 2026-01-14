@@ -2,7 +2,7 @@
 
 **코드프리즈 날짜**: 2026-01-14  
 **태그**: `codefreeze-20260114-cp-import-layout`  
-**커밋**: `8c21d10`
+**커밋**: `6d6a2af`
 
 ## 핵심 변경 내용
 
@@ -102,7 +102,7 @@ git checkout codefreeze-20260114-cp-import-layout^
 또는
 
 ```bash
-git reset --hard 8c21d10^
+git reset --hard 6d6a2af^
 ```
 
 ## 관련 문서
