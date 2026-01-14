@@ -18,7 +18,7 @@ export interface ImportMenuBarProps {
   // 전체 Import
   downloadFullTemplate: () => void;
   downloadFullSampleTemplate: () => void;
-  fullFileInputRef: RefObject<HTMLInputElement>;
+  fullFileInputRef: RefObject<HTMLInputElement | null>;
   fullFileName: string;
   onFullFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onFullImport: () => void;
@@ -33,7 +33,7 @@ export interface ImportMenuBarProps {
   onSheetChange: (sheet: string) => void;
   downloadGroupSheetTemplate: () => void;
   downloadGroupSheetSampleTemplate: () => void;
-  groupFileInputRef: RefObject<HTMLInputElement>;
+  groupFileInputRef: RefObject<HTMLInputElement | null>;
   groupFileName: string;
   onGroupFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onGroupImport: () => void;
@@ -48,7 +48,7 @@ export interface ImportMenuBarProps {
   onItemChange: (item: string) => void;
   downloadItemTemplate: (item: string) => void;
   downloadItemSampleTemplate: (item: string) => void;
-  itemFileInputRef: RefObject<HTMLInputElement>;
+  itemFileInputRef: RefObject<HTMLInputElement | null>;
   itemFileName: string;
   onItemFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onItemImport: () => void;

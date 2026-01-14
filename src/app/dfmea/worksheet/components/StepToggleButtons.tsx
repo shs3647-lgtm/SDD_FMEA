@@ -29,7 +29,8 @@ export default function StepToggleButtons({ state, setState }: StepToggleButtons
     { step: 6, label: '6ST' },
   ];
 
-  const visibleSteps = state.visibleSteps || [2, 3, 4, 5, 6];
+  // ✅ visibleSteps가 배열인지 확인 (안전한 기본값 처리)
+  const visibleSteps = Array.isArray(state.visibleSteps) ? state.visibleSteps : [2, 3, 4, 5, 6];
   const isAllTab = state.tab === 'all';
 
   /**
@@ -37,7 +38,7 @@ export default function StepToggleButtons({ state, setState }: StepToggleButtons
    */
   const toggleStep = useCallback((step: number) => {
     setState(prev => {
-      const currentSteps = prev.visibleSteps || [2, 3, 4, 5, 6];
+      const currentSteps = Array.isArray(prev.visibleSteps) ? prev.visibleSteps : [2, 3, 4, 5, 6];
       const isVisible = currentSteps.includes(step);
       
       // 최소 1개는 선택되어야 함
@@ -57,25 +58,64 @@ export default function StepToggleButtons({ state, setState }: StepToggleButtons
   }, [setState]);
 
   /**
-   * 단계 버튼 클릭 핸들러
+   * 단계 버튼 클릭 핸들러 - 모든 탭에서 토글 동작
+   * 6ST 클릭 시 5단계 + 6단계 함께 토글
    */
   const handleStepClick = useCallback((step: number) => {
     console.log(`[StepToggle] ${step}ST 클릭 - tab=${state.tab}, visible=[${visibleSteps.join(',')}]`);
     
-    if (!isAllTab) {
-      // ALL 탭이 아니면 먼저 ALL 탭으로 이동 + 해당 단계만 표시
-      console.log(`[StepToggle] ALL 탭 이동 + ${step}ST만 표시`);
-      setState(prev => ({ 
+    setState(prev => {
+      const currentSteps = Array.isArray(prev.visibleSteps) ? prev.visibleSteps : [2, 3, 4, 5, 6];
+      let newSteps: number[];
+      
+      // 6ST 클릭 시 5단계 + 6단계 함께 토글
+      if (step === 6) {
+        const hasBoth5And6 = currentSteps.includes(5) && currentSteps.includes(6);
+        const hasOnly5 = currentSteps.includes(5) && !currentSteps.includes(6);
+        const hasOnly6 = !currentSteps.includes(5) && currentSteps.includes(6);
+        
+        if (hasBoth5And6) {
+          // [5, 6]이 모두 있으면 둘 다 제거 (단, 최소 1개는 유지)
+          if (currentSteps.length === 2) {
+            console.log(`[StepToggle] 최소 1개 필요 - 토글 취소`);
+            return prev;
+          }
+          newSteps = currentSteps.filter(s => s !== 5 && s !== 6);
+        } else if (hasOnly5 || hasOnly6) {
+          // 5만 있거나 6만 있으면 [5, 6] 추가
+          newSteps = [...new Set([...currentSteps, 5, 6])].sort((a, b) => a - b);
+        } else {
+          // 둘 다 없으면 [5, 6] 추가
+          newSteps = [...currentSteps, 5, 6].sort((a, b) => a - b);
+        }
+        
+        console.log(`[StepToggle] 6ST 클릭 → [5, 6] ${hasBoth5And6 ? '숨김' : '표시'} → [${newSteps.join(',')}]`);
+      } else {
+        // 2ST~5ST는 기존 토글 동작
+        const isVisible = currentSteps.includes(step);
+        
+        // 최소 1개는 선택되어야 함
+        if (isVisible && currentSteps.length === 1) {
+          console.log(`[StepToggle] 최소 1개 필요 - 토글 취소`);
+          return prev;
+        }
+        
+        newSteps = isVisible
+          ? currentSteps.filter(s => s !== step)
+          : [...currentSteps, step].sort((a, b) => a - b);
+        
+        console.log(`[StepToggle] ${step}ST ${isVisible ? '숨김' : '표시'} → [${newSteps.join(',')}]`);
+      }
+      
+      // ALL 탭이 아니면 ALL 탭으로 이동
+      return { 
         ...prev, 
         tab: 'all', 
         levelView: 'all', 
-        visibleSteps: [step]  // 클릭한 단계만 표시
-      }));
-    } else {
-      // ALL 탭에서는 토글 동작
-      toggleStep(step);
-    }
-  }, [state.tab, isAllTab, visibleSteps, setState, toggleStep]);
+        visibleSteps: newSteps 
+      };
+    });
+  }, [state.tab, visibleSteps, setState]);
 
   /**
    * 전체보기 버튼 클릭 핸들러
@@ -101,11 +141,11 @@ export default function StepToggleButtons({ state, setState }: StepToggleButtons
               key={s.step}
               onClick={() => handleStepClick(s.step)}
               className={`${STEP_TOGGLE_STYLES.button.base} ${
-                isAllTab && isActive
+                isActive
                   ? STEP_TOGGLE_STYLES.button.active
                   : STEP_TOGGLE_STYLES.button.inactive
               }`}
-              title={isAllTab ? `${s.step}단계 ${isActive ? '숨기기' : '표시'}` : `${s.step}단계만 보기`}
+              title={`${s.step}단계 ${isActive ? '숨기기' : '표시'}`}
             >
               {s.label}
             </button>
@@ -120,7 +160,7 @@ export default function StepToggleButtons({ state, setState }: StepToggleButtons
       <button
         onClick={handleAllClick}
         className={`${STEP_TOGGLE_STYLES.button.base} ${
-          isAllTab && visibleSteps.length === 5
+          visibleSteps.length === 5
             ? STEP_TOGGLE_STYLES.button.active
             : STEP_TOGGLE_STYLES.button.inactive
         }`}

@@ -1,22 +1,31 @@
 /**
  * @file terminology.ts
- * @description PFMEA 표준 용어 정의 (약어, 원어, 한글)
+ * @description DFMEA 표준 용어 정의 (약어, 원어, 한글)
  * @version 1.0.0
  * @created 2025-12-29
+ * @updated 2026-01-14 - DFMEA 용어로 변경
  * 
  * ⚠️ 모든 컬럼명, 모달, 화면에서 이 파일의 용어를 참조할 것
  * ⚠️ 약어 사용 시 반드시 원어 주석 포함
  */
 
-// ============ 4M 분류 (Man, Machine, Input Material, Environment) ============
+// ============ DFMEA 구조분석 용어 ============
+// DFMEA는 설계 관점이므로 4M 분류가 없음
+// 구조: 제품명 → A'SSY → 부품/특성
 
 /**
- * 4M 분류 정의
- * - MN: Man (사람) - 작업자 관련 원인
- * - MC: Machine (설비) - 설비/장비 관련 원인
- * - IM: In-Material (부자재) - 원자재/부자재 관련 원인
- * - EN: Environment (환경) - 작업환경 관련 원인
+ * DFMEA 구조 레벨 정의
+ * - L1: 제품명 (Product Name)
+ * - L2: A'SSY (Assembly) - 타입 포함
+ * - L3: 부품 또는 특성 (Part or Characteristic)
  */
+export const DFMEA_STRUCTURE_LEVELS = {
+  L1: { abbr: 'L1', en: 'Product Name', ko: '제품명', description: '최상위 제품명' },
+  L2: { abbr: 'L2', en: 'Assembly', ko: 'A\'SSY', description: '조립체/서브시스템' },
+  L3: { abbr: 'L3', en: 'Part/Characteristic', ko: '부품 또는 특성', description: '부품 또는 특성' },
+} as const;
+
+// 하위 호환성을 위한 4M 정의 (사용 안 함)
 export const M4_CATEGORIES = {
   MN: { abbr: 'MN', en: 'Man', ko: '사람', description: '작업자 관련 원인' },
   MC: { abbr: 'MC', en: 'Machine', ko: '설비', description: '설비/장비 관련 원인' },
@@ -25,14 +34,12 @@ export const M4_CATEGORIES = {
 } as const;
 
 export type M4Type = keyof typeof M4_CATEGORIES;
-
 export const M4_OPTIONS: M4Type[] = ['MN', 'MC', 'IM', 'EN'];
-
 export const M4_COLORS: Record<M4Type, { bg: string; text: string }> = {
-  MN: { bg: '#ffebee', text: '#d32f2f' }, // 빨강 (사람)
-  MC: { bg: '#e3f2fd', text: '#1565c0' }, // 파랑 (설비)
-  IM: { bg: '#e8f5e9', text: '#2e7d32' }, // 녹색 (자재)
-  EN: { bg: '#fff3e0', text: '#f57c00' }, // 주황 (환경)
+  MN: { bg: '#ffebee', text: '#d32f2f' },
+  MC: { bg: '#e3f2fd', text: '#1565c0' },
+  IM: { bg: '#e8f5e9', text: '#2e7d32' },
+  EN: { bg: '#fff3e0', text: '#f57c00' },
 };
 
 // ============ 구분 (Category: Your Plant, Ship to Plant, End User) ============
@@ -106,86 +113,81 @@ export const SPECIAL_CHAR_TYPES = {
 
 export const SPECIAL_CHAR_OPTIONS = ['', 'CC', 'SC', 'HC', 'FFF', 'HI', '-'];
 
-// ============ 40열 컬럼 표준 정의 ============
+// ============ DFMEA 35열 컬럼 표준 정의 ============
 
 /**
- * 40열 컬럼 표준명
+ * DFMEA 35열 컬럼 표준명 (DFMEA_PRD.md 기반)
  * 
  * 2단계 구조분석 (4열):
- * - 완제품 공정명, NO+공정명, 4M, 작업요소
+ * - 제품명, A'SSY, 타입, 부품 또는 특성
  * 
- * 3단계 기능분석 (8열):
- * - 구분, 완제품기능, 요구사항, 공정기능, 제품특성, 작업요소, 작업요소기능, 공정특성
+ * 3단계 기능분석 (7열):
+ * - 분류, 제품 기능, 요구사항, 초점요소 기능, 요구사항, 부품 기능 또는 특성, 요구사항
  * 
- * 4단계 고장분석 (6열):
- * - 구분, 고장영향(FE), 심각도(S), 고장형태(FM), 작업요소, 고장원인(FC)
+ * 4단계 고장분석 (4열):
+ * - 고장영향(FE), 심각도(S), 고장형태(FM), 고장원인(FC)
  * 
- * 5단계 리스크분석 (8열):
- * - 예방관리(PC), 발생도(O), 검출관리(DC), 검출도(D), AP, RPN, 특별특성(SC), 습득교훈
+ * 5단계 리스크분석 (7열):
+ * - 예방관리(PC), 발생도(O), 검출관리(DC), 검출도(D), AP, 특별특성(SC), 습득교훈
  * 
- * 6단계 최적화 (14열):
- * - 예방관리개선, 검출관리개선, 책임자성명, 목표완료일자, 상태, 개선결과근거, 완료일자,
- *   심각도(후), 발생도(후), 검출도(후), 특별특성(후), AP(후), RPN(후), 비고
+ * 6단계 최적화 (13열):
+ * - 설계 예방 조치, 설계 검출 조치, 책임자, 목표 완료일, 상태, 보고서 이름, 완료일,
+ *   심각도, 발생도, 검출도, S/C, AP, 비고
  */
 export const COLUMN_STANDARD = {
-  // 2단계 구조분석
+  // 2단계 구조분석 (DFMEA)
   structure: {
-    l1Name: '완제품 공정명',
-    l2Name: 'NO+공정명',      // NO+공정명 = 공정번호 + 공정명
-    m4: '4M',                  // 4M = Man/Machine/Input Material/Environment
-    l3Name: '작업요소',
+    l1Name: '제품명',              // Product Name
+    l2Name: 'A\'SSY',              // Assembly
+    l2Type: '타입',                // Type
+    l3Name: '부품 또는 특성',       // Part or Characteristic
   },
   
-  // 3단계 기능분석
+  // 3단계 기능분석 (DFMEA)
   function: {
-    category: '구분',          // 구분 = Your Plant / Ship to Plant / User
-    l1Function: '완제품기능',
-    l1Requirement: '요구사항',
-    l2Function: '공정기능',
-    productChar: '제품특성',
-    l3WorkElement: '작업요소',
-    l3Function: '작업요소기능',
-    processChar: '공정특성',
+    category: '분류',              // Category
+    l1ProductFunction: '제품 기능', // Product Function
+    l1Requirement: '요구사항',      // Requirement
+    l2FocusFunction: '초점요소 기능', // Focus Element Function
+    l2FocusRequirement: '요구사항',  // Focus Requirement
+    l3PartFunction: '부품 기능 또는 특성', // Part Function or Characteristic
+    l3PartRequirement: '요구사항',   // Part Requirement
   },
   
-  // 4단계 고장분석
+  // 4단계 고장분석 (DFMEA)
   failure: {
-    feCategory: '구분',        // 구분 = Your Plant / Ship to Plant / User
     failureEffect: '고장영향(FE)',  // FE = Failure Effect
     severity: '심각도(S)',          // S = Severity
     failureMode: '고장형태(FM)',    // FM = Failure Mode
-    fcWorkElement: '작업요소',
     failureCause: '고장원인(FC)',   // FC = Failure Cause
   },
   
-  // 5단계 리스크분석
+  // 5단계 리스크분석 (DFMEA)
   risk: {
     prevention: '예방관리(PC)',     // PC = Prevention Control
     occurrence: '발생도(O)',        // O = Occurrence
     detection: '검출관리(DC)',      // DC = Detection Control
     detectability: '검출도(D)',     // D = Detection
     ap: 'AP',                       // AP = Action Priority
-    rpn: 'RPN',                     // RPN = Risk Priority Number
     specialChar: '특별특성(SC)',    // SC = Special Characteristic
-    lessonLearned: '습득교훈',
+    lessonLearned: '습득교훈',      // Lessons Learned
   },
   
-  // 6단계 최적화
+  // 6단계 최적화 (DFMEA)
   optimization: {
-    preventionImprove: '예방관리개선',
-    detectionImprove: '검출관리개선',
-    responsible: '책임자성명',
-    targetDate: '목표완료일자',
-    status: '상태',
-    resultEvidence: '개선결과근거',
-    completionDate: '완료일자',
-    newSeverity: '심각도(후)',
-    newOccurrence: '발생도(후)',
-    newDetectability: '검출도(후)',
-    newSpecialChar: '특별특성(후)',
-    newAP: 'AP(후)',
-    newRPN: 'RPN(후)',
-    remarks: '비고',
+    designPreventionAction: '설계 예방 조치',  // Design Prevention Action
+    designDetectionAction: '설계 검출 조치',  // Design Detection Action
+    responsible: '책임자',                    // Responsible
+    targetDate: '목표 완료일',                // Target Completion Date
+    status: '상태',                          // Status
+    reportName: '보고서 이름',                // Report Name
+    completionDate: '완료일',                // Completion Date
+    effectSeverity: '심각도',                // Effect Severity
+    effectOccurrence: '발생도',               // Effect Occurrence
+    effectDetection: '검출도',                // Effect Detection
+    effectSC: 'S/C',                         // Effect Special Characteristic
+    effectAP: 'AP',                          // Effect Action Priority
+    remarks: '비고',                         // Remarks
   },
 } as const;
 

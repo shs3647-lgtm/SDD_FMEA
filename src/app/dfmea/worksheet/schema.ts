@@ -1,6 +1,6 @@
 /**
  * @file schema.ts
- * @description FMEA 원자성 관계형 DB 스키마 (Atomic Relational Schema)
+ * @description DFMEA 원자성 관계형 DB 스키마 (Atomic Relational Schema)
  * 
  * 설계 원칙:
  * 1. 모든 데이터는 원자적 단위(Atomic Unit)로 분리
@@ -8,8 +8,12 @@
  * 3. 자동변환 금지 - 사용자 입력값 그대로 저장
  * 4. 셀합치기(rowSpan)는 표시용이며 데이터 원자성에 영향 없음
  * 
+ * DFMEA 구조 (설계 관점):
+ * - L1: 제품명 (Product Name)
+ * - L2: A'SSY (Assembly) - 타입 포함
+ * - L3: 부품 또는 특성 (Part or Characteristic)
+ * 
  * 약어 정의 (참조: terminology.ts):
- * - 4M: Man(MN,사람) / Machine(MC,설비) / In-Material(IM,부자재) / Environment(EN,환경)
  * - 구분: Your Plant(자사) / Ship to Plant(고객사) / User(사용자) ※EU 사용금지
  * - FE: Failure Effect (고장영향)
  * - FM: Failure Mode (고장형태)
@@ -20,98 +24,104 @@
  * - PC: Prevention Control (예방관리)
  * - DC: Detection Control (검출관리)
  * - AP: Action Priority (조치우선순위, H/M/L)
- * - RPN: Risk Priority Number (위험우선순위, S×O×D)
  * - SC: Special Characteristic (특별특성, CC/SC/HC 등)
  */
 
 // ============ 기본 원자 단위 ============
 export interface AtomicRecord {
-  id: string;           // 고유 ID (PK)
+  id: string;           // 고유 ID (PK) - 하이브리드 포맷: {FMEA_SEQ}-{TYPE}-{PATH}-{SEQ}
   createdAt?: string;   // 생성일
   updatedAt?: string;   // 수정일
+  
+  // ★★★ 모자관계 (부모-자식) ★★★
+  parentId?: string;    // 부모 ID (계층 추적용)
+  
+  // ★★★ 병합 그룹 (같은 그룹 = 같은 데이터) ★★★
+  mergeGroupId?: string;  // 병합 그룹 ID
+  rowSpan?: number;       // 병합된 행 수 (1 = 비병합)
+  colSpan?: number;       // 병합된 열 수 (1 = 비병합)
 }
 
 // ============ 구조분석 (2단계) - Structure Tables ============
 
 /**
- * 1L 완제품 공정 (최상위)
+ * 1L 제품명 (최상위) - DFMEA
  * - 상위: 없음 (루트)
- * - 하위: L2Structure (메인공정)
+ * - 하위: L2Structure (A'SSY)
  */
 export interface L1Structure extends AtomicRecord {
   fmeaId: string;       // FK: FMEA 프로젝트 ID
-  name: string;         // 완제품 공정명
+  name: string;         // 제품명 (Product Name)
   // 확정 상태
   confirmed?: boolean;
 }
 
 /**
- * 2L 메인공정
- * - 상위: L1Structure (완제품 공정) - FK: l1Id
- * - 하위: L3Structure (작업요소)
+ * 2L A'SSY (Assembly) - DFMEA
+ * - 상위: L1Structure (제품명) - FK: l1Id
+ * - 하위: L3Structure (부품 또는 특성)
  */
 export interface L2Structure extends AtomicRecord {
   fmeaId: string;       // FK: FMEA 프로젝트 ID
-  l1Id: string;         // FK: L1Structure.id (상위 완제품 공정)
-  no: string;           // 공정 번호
-  name: string;         // 공정명
+  l1Id: string;         // FK: L1Structure.id (상위 제품명)
+  name: string;         // A'SSY (Assembly)
+  type?: string;        // 타입 (Type) - DFMEA 추가
   order: number;        // 순서
 }
 
 /**
- * 3L 작업요소
- * - 상위: L2Structure (메인공정) - FK: l2Id
+ * 3L 부품 또는 특성 - DFMEA
+ * - 상위: L2Structure (A'SSY) - FK: l2Id
  * - 하위: 없음
  */
 export interface L3Structure extends AtomicRecord {
   fmeaId: string;       // FK: FMEA 프로젝트 ID
   l1Id: string;         // FK: L1Structure.id (연결용)
-  l2Id: string;         // FK: L2Structure.id (상위 메인공정)
-  m4: 'MN' | 'MC' | 'IM' | 'EN' | '';  // 4M 분류
-  name: string;         // 작업요소명
+  l2Id: string;         // FK: L2Structure.id (상위 A'SSY)
+  name: string;         // 부품 또는 특성 (Part or Characteristic)
   order: number;        // 순서
 }
 
 // ============ 기능분석 (3단계) - Function Tables ============
 
 /**
- * 1L 완제품 기능 (구분 → 기능 → 요구사항 통합)
- * - 상위: L1Structure (완제품 공정) - FK: l1StructId
+ * 1L 제품 기능 (분류 → 제품 기능 → 요구사항) - DFMEA
+ * - 상위: L1Structure (제품명) - FK: l1StructId
  * - 하위: 없음 (원자적 단위로 분리)
  */
 export interface L1Function extends AtomicRecord {
   fmeaId: string;         // FK: FMEA 프로젝트 ID
-  l1StructId: string;     // FK: L1Structure.id (상위 구조분석)
-  category: 'Your Plant' | 'Ship to Plant' | 'User';  // 구분
-  functionName: string;   // 기능명
-  requirement: string;    // 요구사항 (원자 단위)
+  l1StructId: string;     // FK: L1Structure.id (상위 구조분석 - 제품명)
+  category?: string;      // 분류 (Category) - DFMEA 추가
+  functionName: string;   // 제품 기능 (Product Function)
+  requirement: string;    // 요구사항 (Requirement) - 원자 단위
 }
 
 /**
- * 2L 메인공정 기능 (기능 → 제품특성 통합)
- * - 상위: L2Structure (메인공정) - FK: l2StructId
+ * 2L 초점요소 기능 (초점요소 기능 → 요구사항) - DFMEA
+ * - 상위: L2Structure (A'SSY) - FK: l2StructId
  * - 하위: 없음 (원자적 단위로 분리)
  */
 export interface L2Function extends AtomicRecord {
   fmeaId: string;         // FK: FMEA 프로젝트 ID
-  l2StructId: string;     // FK: L2Structure.id (상위 구조분석 - 메인공정)
-  functionName: string;   // 기능명
-  productChar: string;    // 제품특성 (원자 단위)
+  l2StructId: string;     // FK: L2Structure.id (상위 구조분석 - A'SSY)
+  functionName: string;    // 초점요소 기능 (Focus Element Function)
+  requirement: string;    // 요구사항 (Requirement) - 원자 단위
   specialChar?: string;   // 특별특성
 }
 
 /**
- * 3L 작업요소 기능 (기능 → 공정특성 통합)
- * - 상위: L3Structure (작업요소) - FK: l3StructId
+ * 3L 부품 기능 (부품 기능 또는 특성 → 요구사항) - DFMEA
+ * - 상위: L3Structure (부품 또는 특성) - FK: l3StructId
  * - 하위: 없음 (원자적 단위로 분리)
  */
 export interface L3Function extends AtomicRecord {
   fmeaId: string;         // FK: FMEA 프로젝트 ID
-  l3StructId: string;     // FK: L3Structure.id (상위 구조분석 - 작업요소)
-  l2StructId: string;     // FK: L2Structure.id (연결용 - 메인공정)
-  functionName: string;   // 기능명
-  processChar: string;    // 공정특성 (원자 단위)
-  specialChar?: string;   // 특별특성
+  l3StructId: string;     // FK: L3Structure.id (상위 구조분석 - 부품 또는 특성)
+  l2StructId: string;     // FK: L2Structure.id (연결용 - A'SSY)
+  functionName: string;    // 부품 기능 또는 특성 (Part Function or Characteristic)
+  requirement: string;    // 요구사항 (Requirement) - 원자 단위
+  specialChar?: string;    // 특별특성
 }
 
 // ============ 고장분석 (4단계) - Failure Tables ============
@@ -137,23 +147,91 @@ export interface FailureEffect extends AtomicRecord {
 export interface FailureMode extends AtomicRecord {
   fmeaId: string;         // FK: FMEA 프로젝트 ID
   l2FuncId: string;       // FK: L2Function.id (상위 기능분석 - 제품특성)
-  l2StructId: string;     // FK: L2Structure.id (메인공정 - 역전개용)
+  l2StructId: string;     // FK: L2Structure.id (A'SSY - 역전개용)
+  productCharId?: string; // FK: productChar.id (제품특성 연결용) - ✅ 추가
   mode: string;           // 고장형태 내용
   specialChar?: boolean;  // 특별특성 여부
 }
 
 /**
  * 3L 고장원인 (Failure Cause - FC)
- * - 상위: L3Function (공정특성) - FK: l3FuncId
+ * - 상위: L3Function (부품 특성) - FK: l3FuncId
  * - 연결: FailureLink를 통해 FM과 연결
  */
 export interface FailureCause extends AtomicRecord {
   fmeaId: string;         // FK: FMEA 프로젝트 ID
-  l3FuncId: string;       // FK: L3Function.id (상위 기능분석 - 공정특성)
-  l3StructId: string;     // FK: L3Structure.id (작업요소 - 역전개용)
-  l2StructId: string;     // FK: L2Structure.id (메인공정 - 연결용)
+  l3FuncId: string;       // FK: L3Function.id (상위 기능분석 - 부품 특성)
+  l3StructId: string;     // FK: L3Structure.id (부품 또는 특성 - 역전개용)
+  l2StructId: string;     // FK: L2Structure.id (A'SSY - 연결용)
+  processCharId?: string; // ✅ FK: 부품 특성 ID (FailureMode의 productCharId와 동일 패턴)
   cause: string;          // 고장원인 내용
   occurrence?: number;    // 발생도 (1-10)
+}
+
+// ============ 고장분석 통합 테이블 (All 화면 렌더링용) ============
+
+/**
+ * 고장분석 통합 데이터 (FailureAnalysis)
+ * - 고장연결 결과 + 역전개 기능분석 + 역전개 구조분석 통합 저장
+ * - All 화면에서 정확한 렌더링을 위한 원자성 데이터
+ */
+export interface FailureAnalysis extends AtomicRecord {
+  fmeaId: string;         // FK: FMEA 프로젝트 ID
+  linkId: string;         // FK: FailureLink.id (고장연결)
+  
+  // ============ 고장연결 정보 (고장형태, 고장원인, 고장영향) ============
+  fmId: string;           // FK: FailureMode.id
+  fmText: string;         // 고장형태 내용
+  fmProcessName: string;  // A'SSY명 (L2 Structure.name)
+  
+  feId: string;           // FK: FailureEffect.id
+  feText: string;         // 고장영향 내용
+  feCategory: string;     // 구분 (Your Plant/Ship to Plant/User)
+  feSeverity: number;     // 심각도 (1-10)
+  
+  fcId: string;           // FK: FailureCause.id
+  fcText: string;         // 고장원인 내용
+  fcOccurrence?: number;  // 발생도 (1-10)
+  fcWorkElementName: string; // 부품 또는 특성명 (L3 Structure.name)
+  // DFMEA: 4M 없음 (제거됨)
+  
+  // ============ 역전개 기능분석 정보 ============
+  // L1 (제품 기능)
+  l1FuncId: string;       // FK: L1Function.id
+  l1Category: string;     // 구분 (Your Plant/Ship to Plant/User)
+  l1FuncName: string;     // 제품 기능명
+  l1Requirement: string;  // 요구사항
+  
+  // L2 (A'SSY 기능)
+  l2FuncId: string;       // FK: L2Function.id
+  l2FuncName: string;     // A'SSY 기능명
+  l2ProductChar: string;  // 제품특성
+  l2SpecialChar?: string; // 특별특성
+  
+  // L3 (부품 기능)
+  l3FuncId: string;       // FK: L3Function.id
+  l3FuncName: string;     // 부품 기능명
+  l3ProcessChar: string;  // 부품 특성
+  l3SpecialChar?: string; // 특별특성
+  
+  // ============ 역전개 구조분석 정보 ============
+  // L1 (제품)
+  l1StructId: string;     // FK: L1Structure.id
+  l1StructName: string;   // 제품명
+  
+  // L2 (A'SSY)
+  l2StructId: string;     // FK: L2Structure.id
+  l2StructName: string;   // A'SSY명 (공정번호 없음)
+  l2StructType?: string; // A'SSY 타입 (DFMEA 추가)
+  
+  // L3 (부품 또는 특성)
+  l3StructId: string;     // FK: L3Structure.id
+  // DFMEA: 4M 없음 (제거됨)
+  l3StructName: string;   // 부품 또는 특성명
+  
+  // ============ 메타데이터 ============
+  order: number;          // 정렬 순서
+  confirmed: boolean;     // 확정 여부
 }
 
 // ============ 고장연결 (Failure Link) - 관계 테이블 ============
@@ -162,18 +240,30 @@ export interface FailureCause extends AtomicRecord {
  * 고장연결 (FM을 중심으로 FE, FC 연결)
  * - FM 1 : N FE (고장형태 하나에 여러 고장영향)
  * - FM 1 : N FC (고장형태 하나에 여러 고장원인)
+ * 
+ * ★★★ 하이브리드 ID 포맷 ★★★
+ * ID: {FMEA_SEQ}-LK-FM{SEQ}-FE{SEQ}-FC{SEQ}
+ * 예: M001-LK-FM001-FE002-FC003 = FMEA1의 FM1-FE2-FC3 연결
  */
 export interface FailureLink extends AtomicRecord {
   fmeaId: string;         // FK: FMEA 프로젝트 ID
   
   // 고장형태 (중심축)
   fmId: string;           // FK: FailureMode.id
+  fmSeq?: number;         // FM 순번 (ID에서 추출 가능)
   
   // 고장영향 (1:N 관계에서 개별 연결)
   feId: string;           // FK: FailureEffect.id
+  feSeq?: number;         // FE 순번 (ID에서 추출 가능)
   
   // 고장원인 (1:N 관계에서 개별 연결)
   fcId: string;           // FK: FailureCause.id
+  fcSeq?: number;         // FC 순번 (ID에서 추출 가능)
+  
+  // ★★★ 경로 정보 (역전개 추적용) ★★★
+  fmPath?: string;        // FM 경로 (예: P01C1)
+  fePath?: string;        // FE 경로 (예: T1R1)
+  fcPath?: string;        // FC 경로 (예: P01W1C1)
   
   // 캐시된 데이터 (조회 성능 최적화)
   cache?: {
@@ -260,6 +350,10 @@ export interface FMEAWorksheetDB {
   // 고장연결 (관계 테이블)
   failureLinks: FailureLink[];
   
+  // 고장분석 통합 데이터 (All 화면 렌더링용)
+  // 고장연결 + 역전개 기능분석 + 역전개 구조분석
+  failureAnalyses: FailureAnalysis[];
+  
   // 리스크분석/최적화 (5-6단계)
   riskAnalyses: RiskAnalysis[];
   optimizations: Optimization[];
@@ -296,6 +390,7 @@ export const createEmptyDB = (fmeaId: string): FMEAWorksheetDB => ({
   failureModes: [],
   failureCauses: [],
   failureLinks: [],
+  failureAnalyses: [], // 고장분석 통합 데이터
   riskAnalyses: [],
   optimizations: [],
   confirmed: {
@@ -366,7 +461,7 @@ export function getLinkedDataByFK(db: FMEAWorksheetDB): {
   
   const rows: any[] = [];
   
-  // L2(공정)별로 그룹핑
+  // L2(A'SSY)별로 그룹핑
   const l2Groups = new Map<string, { fmId: string; links: FailureLink[] }[]>();
   
   fmGroups.forEach((fmLinks, fmId) => {
@@ -529,10 +624,10 @@ export interface ValidationResult {
 }
 
 /**
- * 구조분석 (2단계) 검증
- * - L1Structure: 완제품 공정명 필수
- * - L2Structure: 최소 1개 공정, 공정명 필수
- * - L3Structure: 각 공정에 최소 1개 작업요소, 작업요소명 필수
+ * 구조분석 (2단계) 검증 (DFMEA)
+ * - L1Structure: 제품명 필수
+ * - L2Structure: 최소 1개 A'SSY, A'SSY명 필수
+ * - L3Structure: 각 A'SSY에 최소 1개 부품 또는 특성, 부품명 필수
  */
 export function validateStructure(db: FMEAWorksheetDB): ValidationResult {
   const errors: ValidationError[] = [];
@@ -543,23 +638,23 @@ export function validateStructure(db: FMEAWorksheetDB): ValidationResult {
   // L1 검증
   totalCount++;
   if (!db.l1Structure || !db.l1Structure.name || db.l1Structure.name.trim() === '') {
-    errors.push({ level: 'error', field: 'l1Structure.name', message: '완제품 공정명이 누락되었습니다.' });
+    errors.push({ level: 'error', field: 'l1Structure.name', message: '제품명이 누락되었습니다.' });
     missingCount++;
   }
   
   // L2 검증
   if (db.l2Structures.length === 0) {
-    errors.push({ level: 'error', field: 'l2Structures', message: '최소 1개의 메인공정이 필요합니다.' });
+    errors.push({ level: 'error', field: 'l2Structures', message: '최소 1개의 A\'SSY가 필요합니다.' });
     missingCount++;
   } else {
     db.l2Structures.forEach((l2, idx) => {
       totalCount++;
       if (!l2.name || l2.name.trim() === '' || l2.name.includes('클릭') || l2.name.includes('선택')) {
-        errors.push({ level: 'error', field: `l2Structures[${idx}].name`, message: `${idx + 1}번 공정명이 누락되었습니다.`, itemId: l2.id });
+        errors.push({ level: 'error', field: `l2Structures[${idx}].name`, message: `${idx + 1}번 A'SSY명이 누락되었습니다.`, itemId: l2.id });
         missingCount++;
       }
       if (!l2.l1Id) {
-        warnings.push({ level: 'warning', field: `l2Structures[${idx}].l1Id`, message: `${idx + 1}번 공정의 상위 FK가 누락되었습니다.`, itemId: l2.id });
+        warnings.push({ level: 'warning', field: `l2Structures[${idx}].l1Id`, message: `${idx + 1}번 A'SSY의 상위 FK가 누락되었습니다.`, itemId: l2.id });
       }
     });
   }
@@ -568,11 +663,11 @@ export function validateStructure(db: FMEAWorksheetDB): ValidationResult {
   db.l3Structures.forEach((l3, idx) => {
     totalCount++;
     if (!l3.name || l3.name.trim() === '' || l3.name.includes('클릭') || l3.name.includes('추가')) {
-      errors.push({ level: 'error', field: `l3Structures[${idx}].name`, message: `작업요소명이 누락되었습니다.`, itemId: l3.id });
+      errors.push({ level: 'error', field: `l3Structures[${idx}].name`, message: `부품 또는 특성명이 누락되었습니다.`, itemId: l3.id });
       missingCount++;
     }
     if (!l3.l2Id) {
-      warnings.push({ level: 'warning', field: `l3Structures[${idx}].l2Id`, message: `작업요소의 상위 공정 FK가 누락되었습니다.`, itemId: l3.id });
+      warnings.push({ level: 'warning', field: `l3Structures[${idx}].l2Id`, message: `부품 또는 특성의 상위 A'SSY FK가 누락되었습니다.`, itemId: l3.id });
     }
   });
   
@@ -591,7 +686,7 @@ export function validateStructure(db: FMEAWorksheetDB): ValidationResult {
  * 기능분석 (3단계) 검증
  * - L1Function: 구분, 기능명, 요구사항 필수, l1StructId FK 필수
  * - L2Function: 기능명, 제품특성 필수, l2StructId FK 필수
- * - L3Function: 기능명, 공정특성 필수, l3StructId FK 필수
+ * - L3Function: 기능명, 부품 특성 필수, l3StructId FK 필수
  */
 export function validateFunction(db: FMEAWorksheetDB): ValidationResult {
   const errors: ValidationError[] = [];
@@ -607,7 +702,7 @@ export function validateFunction(db: FMEAWorksheetDB): ValidationResult {
       missingCount++;
     }
     if (!f.functionName || f.functionName.trim() === '') {
-      errors.push({ level: 'error', field: `l1Functions[${idx}].functionName`, message: '완제품 기능명이 누락되었습니다.', itemId: f.id });
+      errors.push({ level: 'error', field: `l1Functions[${idx}].functionName`, message: '제품 기능명이 누락되었습니다.', itemId: f.id });
       missingCount++;
     }
     if (!f.requirement || f.requirement.trim() === '') {
@@ -623,7 +718,7 @@ export function validateFunction(db: FMEAWorksheetDB): ValidationResult {
   db.l2Functions.forEach((f, idx) => {
     totalCount++;
     if (!f.functionName || f.functionName.trim() === '') {
-      errors.push({ level: 'error', field: `l2Functions[${idx}].functionName`, message: '메인공정 기능명이 누락되었습니다.', itemId: f.id });
+      errors.push({ level: 'error', field: `l2Functions[${idx}].functionName`, message: 'A\'SSY 기능명이 누락되었습니다.', itemId: f.id });
       missingCount++;
     }
     if (!f.productChar || f.productChar.trim() === '') {
@@ -631,7 +726,7 @@ export function validateFunction(db: FMEAWorksheetDB): ValidationResult {
       missingCount++;
     }
     if (!f.l2StructId) {
-      warnings.push({ level: 'warning', field: `l2Functions[${idx}].l2StructId`, message: '상위 구조분석(공정) FK가 누락되었습니다.', itemId: f.id });
+      warnings.push({ level: 'warning', field: `l2Functions[${idx}].l2StructId`, message: '상위 구조분석(A\'SSY) FK가 누락되었습니다.', itemId: f.id });
     }
   });
   
@@ -639,15 +734,15 @@ export function validateFunction(db: FMEAWorksheetDB): ValidationResult {
   db.l3Functions.forEach((f, idx) => {
     totalCount++;
     if (!f.functionName || f.functionName.trim() === '') {
-      errors.push({ level: 'error', field: `l3Functions[${idx}].functionName`, message: '작업요소 기능명이 누락되었습니다.', itemId: f.id });
+      errors.push({ level: 'error', field: `l3Functions[${idx}].functionName`, message: '부품 기능명이 누락되었습니다.', itemId: f.id });
       missingCount++;
     }
     if (!f.processChar || f.processChar.trim() === '') {
-      errors.push({ level: 'error', field: `l3Functions[${idx}].processChar`, message: '공정특성이 누락되었습니다.', itemId: f.id });
+      errors.push({ level: 'error', field: `l3Functions[${idx}].processChar`, message: '부품 특성이 누락되었습니다.', itemId: f.id });
       missingCount++;
     }
     if (!f.l3StructId) {
-      warnings.push({ level: 'warning', field: `l3Functions[${idx}].l3StructId`, message: '상위 구조분석(작업요소) FK가 누락되었습니다.', itemId: f.id });
+      warnings.push({ level: 'warning', field: `l3Functions[${idx}].l3StructId`, message: '상위 구조분석(부품 또는 특성) FK가 누락되었습니다.', itemId: f.id });
     }
   });
   
@@ -701,7 +796,7 @@ export function validateFailure(db: FMEAWorksheetDB): ValidationResult {
       warnings.push({ level: 'warning', field: `failureModes[${idx}].l2FuncId`, message: '상위 기능분석(제품특성) FK가 누락되었습니다.', itemId: fm.id });
     }
     if (!fm.l2StructId) {
-      warnings.push({ level: 'warning', field: `failureModes[${idx}].l2StructId`, message: '상위 구조분석(공정) FK가 누락되었습니다.', itemId: fm.id });
+      warnings.push({ level: 'warning', field: `failureModes[${idx}].l2StructId`, message: '상위 구조분석(A\'SSY) FK가 누락되었습니다.', itemId: fm.id });
     }
   });
   
@@ -713,10 +808,10 @@ export function validateFailure(db: FMEAWorksheetDB): ValidationResult {
       missingCount++;
     }
     if (!fc.l3FuncId) {
-      warnings.push({ level: 'warning', field: `failureCauses[${idx}].l3FuncId`, message: '상위 기능분석(공정특성) FK가 누락되었습니다.', itemId: fc.id });
+      warnings.push({ level: 'warning', field: `failureCauses[${idx}].l3FuncId`, message: '상위 기능분석(부품 특성) FK가 누락되었습니다.', itemId: fc.id });
     }
     if (!fc.l3StructId) {
-      warnings.push({ level: 'warning', field: `failureCauses[${idx}].l3StructId`, message: '상위 구조분석(작업요소) FK가 누락되었습니다.', itemId: fc.id });
+      warnings.push({ level: 'warning', field: `failureCauses[${idx}].l3StructId`, message: '상위 구조분석(부품 또는 특성) FK가 누락되었습니다.', itemId: fc.id });
     }
   });
   
@@ -941,7 +1036,7 @@ export function flattenDB(db: FMEAWorksheetDB): FlattenedRow[] {
     fmGroups.set(link.fmId, group);
   });
   
-  // L2(공정)별로 다시 그룹핑
+  // L2(A'SSY)별로 다시 그룹핑
   const l2Groups = new Map<string, Map<string, FailureLink[]>>();
   fmGroups.forEach((fmLinks, fmId) => {
     const fm = db.failureModes.find(m => m.id === fmId);

@@ -9,7 +9,6 @@
 
 import React from 'react';
 import { getEnabledPanels, type PanelConfig } from '../panels';
-import { rightPanelMenuStyle, panelButtonStyle } from './RightPanelMenuStyles';
 
 interface RightPanelMenuProps {
   /** 현재 활성화된 탭 (색상 결정) */
@@ -46,13 +45,35 @@ export default function RightPanelMenu({
   const panels = getEnabledPanels(state);
 
   return (
-    <div style={rightPanelMenuStyle(getBackgroundColor())}>
+    <div style={{
+      height: '32px',
+      background: getBackgroundColor(),
+      borderTop: '1px solid rgba(255,255,255,0.4)',
+      borderBottom: '1px solid rgba(255,255,255,0.4)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      paddingRight: '8px',
+      gap: '6px',
+      position: 'sticky',
+      top: '64px',
+      zIndex: 70,
+    }}>
       {panels.map((panel) => (
         <button
           key={panel.id}
           onClick={() => onPanelChange(panel.id)}
-          className="px-3 py-1 rounded transition-all text-xs"
-          style={panelButtonStyle(activePanel === panel.id)}
+          className="px-3 py-1 rounded transition-all"
+          style={{
+            background: activePanel === panel.id 
+              ? 'rgba(255,255,255,0.3)' 
+              : 'rgba(255,255,255,0.15)',
+            border: 'none',
+            color: '#fff',
+            fontSize: '12px',
+            fontWeight: activePanel === panel.id ? 600 : 400,
+            cursor: 'pointer',
+          }}
           onMouseOver={(e) => {
             if (activePanel !== panel.id) {
               e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
@@ -71,6 +92,8 @@ export default function RightPanelMenu({
     </div>
   );
 }
+
+
 
 
 

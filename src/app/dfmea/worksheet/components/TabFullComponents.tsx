@@ -6,9 +6,11 @@
 import React from 'react';
 import { COLORS } from '../constants';
 import { 
-  StructureColgroup, StructureHeader, StructureRow,
+  StructureTab, StructureColgroup, StructureHeader, StructureRow,
   RiskHeader, RiskRow,
+  RiskTabConfirmable,
   OptHeader, OptRow,
+  OptTabConfirmable,
   DocHeader, DocRow,
 } from '../tabs';
 import { FunctionTab } from '../tabs';
@@ -38,33 +40,10 @@ export function getStepNumber(tab: string): number {
   return map[tab] || 0;
 }
 
-// 구조분석 탭
+// 구조분석 탭 - ✅ StructureTab으로 위임 (확정/수정 로직 포함)
 export function StructureTabFull(props: any) {
-  const { rows, l1Spans, l2Spans, state, setState, setDirty, handleInputBlur, handleInputKeyDown, handleSelect, setIsProcessModalOpen, setIsWorkElementModalOpen, setTargetL2Id } = props;
-  return (
-    <>
-      <StructureColgroup />
-      <thead style={stickyTheadStyle}>
-        <StructureHeader onProcessModalOpen={() => setIsProcessModalOpen(true)} />
-      </thead>
-      <tbody>
-        {rows.length === 0 ? (
-          <tr className="h-7 bg-white">
-            <td colSpan={4} className="text-center p-5 text-[#999] text-xs">
-              데이터가 없습니다. 공정을 선택해주세요.
-            </td>
-          </tr>
-        ) : rows.map((row: any, idx: number) => {
-          const zebraBg = idx % 2 === 1 ? '#bbdefb' : '#e3f2fd';
-          return (
-            <tr key={`structure-${idx}-${row.l3Id}`} className={`h-6 ${zebraBg}`}>
-              <StructureRow row={row} idx={idx} state={state} setState={setState} rows={rows} l1Spans={l1Spans} l2Spans={l2Spans} setDirty={setDirty} handleInputBlur={handleInputBlur} handleInputKeyDown={handleInputKeyDown} handleSelect={handleSelect} setIsProcessModalOpen={setIsProcessModalOpen} setIsWorkElementModalOpen={setIsWorkElementModalOpen} setTargetL2Id={setTargetL2Id} zebraBg={zebraBg} />
-            </tr>
-          );
-        })}
-      </tbody>
-    </>
-  );
+  // ✅ saveToLocalStorage 포함하여 StructureTab에 전달
+  return <StructureTab {...props} />;
 }
 
 // 기능분석 탭
@@ -77,39 +56,14 @@ export function FailureTabFull(props: any) {
   return <FailureTabNew {...props} />;
 }
 
-// 리스크분석 탭
+// 리스크분석 탭 - 확정 기능 포함
 export function RiskTabFull(props: any) {
-  const { rows, onAPClick } = props;
-  
-  return (
-    <>
-      <thead style={stickyTheadStyle}><RiskHeader onAPClick={onAPClick} /></thead>
-      <tbody>
-        {rows.map((row: any, idx: number) => (
-          <tr key={`risk-${idx}-${row.l3Id}`} className="h-6">
-            <RiskRow />
-          </tr>
-        ))}
-      </tbody>
-    </>
-  );
+  return <RiskTabConfirmable {...props} />;
 }
 
-// 최적화 탭
+// 최적화 탭 - 확정 기능 포함
 export function OptTabFull(props: any) {
-  const { rows } = props;
-  return (
-    <>
-      <thead style={stickyTheadStyle}><OptHeader /></thead>
-      <tbody>
-        {rows.map((row: any, idx: number) => (
-          <tr key={`opt-${idx}-${row.l3Id}`} className="h-6">
-            <OptRow row={row} />
-          </tr>
-        ))}
-      </tbody>
-    </>
-  );
+  return <OptTabConfirmable {...props} />;
 }
 
 // 문서화 탭

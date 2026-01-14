@@ -13,9 +13,10 @@ import CPTopMenuBar from './components/CPTopMenuBar';
 import CPTabMenu, { CPInputMode } from './components/CPTabMenu';
 import { CPContextMenu } from './components/CPContextMenu';
 import { AutoInputModal } from './components/AutoInputModal';
+import ProcessFlowInputModal from './components/ProcessFlowInputModal';
 import { renderCell } from './renderers';
 import { useProcessRowSpan, useDescRowSpan, useWorkRowSpan, useCharRowSpan, useContextMenu, useWorksheetHandlers } from './hooks';
-import { createSampleItems } from './utils';
+import { createSampleItems, createEmptyItem } from './utils';
 import { CPState, SaveStatus, AutoModalState, ContextMenuType } from './types';
 import { 
   CP_COLUMNS, HEIGHTS,
@@ -53,6 +54,12 @@ function CPWorksheetContent() {
     rowIdx: -1,
     type: 'process',
     position: 'below',
+  });
+  
+  // 공정명 입력 모달 상태
+  const [processModal, setProcessModal] = useState({
+    visible: false,
+    rowIdx: -1,
   });
   
   // 계산된 값
@@ -212,8 +219,105 @@ function CPWorksheetContent() {
   
   // 자동 모드: 셀 클릭 시 모달 열기
   const handleAutoModeClick = useCallback((rowIdx: number, type: ContextMenuType) => {
-    setAutoModal({ visible: true, rowIdx, type, position: 'below' });
+    // 공정명 셀 클릭 시 ProcessFlowInputModal 열기
+    if (type === 'process') {
+      setProcessModal({ visible: true, rowIdx });
+    } else {
+      setAutoModal({ visible: true, rowIdx, type, position: 'below' });
+    }
   }, []);
+  
+  // 공정명 모달: 저장 핸들러
+  const handleProcessSave = useCallback((selectedProcesses: any[]) => {
+    if (selectedProcesses.length === 0) return;
+    
+    const targetRowIdx = processModal.rowIdx;
+    
+    setState(prev => {
+      const newItems = [...prev.items];
+      
+      // 선택된 모든 공정에 대해 행 생성
+      selectedProcesses.forEach((process, idx) => {
+        if (idx === 0 && targetRowIdx >= 0 && targetRowIdx < newItems.length) {
+          // 첫 번째 공정: 현재 행 업데이트
+          newItems[targetRowIdx] = {
+            ...newItems[targetRowIdx],
+            processNo: process.no,
+            processName: process.name,
+          };
+        } else {
+          // 나머지 공정: 새 행 추가
+          const newItem = createEmptyItem(
+            prev.cpNo,
+            process.no,
+            process.name
+          );
+          newItem.sortOrder = newItems.length;
+          
+          // 첫 번째 공정이 현재 행에 업데이트된 경우 그 아래에 추가
+          // 그렇지 않으면 맨 아래에 추가
+          if (idx === 1 && targetRowIdx >= 0 && targetRowIdx < newItems.length) {
+            newItems.splice(targetRowIdx + 1, 0, newItem);
+          } else {
+            newItems.push(newItem);
+          }
+        }
+      });
+      
+      // sortOrder 재정렬
+      newItems.forEach((item, idx) => item.sortOrder = idx);
+      
+      return {
+        ...prev,
+        items: newItems,
+        dirty: true,
+      };
+    });
+    
+    setProcessModal({ visible: false, rowIdx: -1 });
+  }, [processModal.rowIdx, state.cpNo]);
+  
+  // 공정명 모달: 연속 입력 핸들러
+  const handleProcessContinuousAdd = useCallback((process: any, addNewRow: boolean) => {
+    const targetRowIdx = processModal.rowIdx;
+    
+    if (targetRowIdx >= 0 && targetRowIdx < state.items.length) {
+      // 현재 행 업데이트
+      setState(prev => ({
+        ...prev,
+        items: prev.items.map((item, idx) => {
+          if (idx === targetRowIdx) {
+            return {
+              ...item,
+              processNo: process.no,
+              processName: process.name,
+            };
+          }
+          return item;
+        }),
+        dirty: true,
+      }));
+      
+      // 새 행 추가
+      if (addNewRow) {
+        const newItem = {
+          ...state.items[targetRowIdx],
+          id: `item_${Date.now()}`,
+          processNo: '',
+          processName: '',
+          sortOrder: state.items.length,
+        };
+        setState(prev => ({
+          ...prev,
+          items: [...prev.items, newItem],
+          dirty: true,
+        }));
+        
+        // 다음 행으로 포커스 이동
+        setProcessModal({ visible: true, rowIdx: targetRowIdx + 1 });
+      }
+    }
+  }, [processModal.rowIdx, state.items]);
 
   // 수동 모드: 엔터 키로 행 추가
   const handleEnterKey = useCallback((rowIdx: number, type: ContextMenuType, colKey?: string) => {
@@ -457,6 +561,18 @@ function CPWorksheetContent() {
         onClose={() => setAutoModal(prev => ({ ...prev, visible: false }))}
         onPositionChange={(pos) => setAutoModal(prev => ({ ...prev, position: pos }))}
         onInsert={handleAutoModalInsert}
+      />
+      
+      {/* 공정명 입력 모달 */}
+      <ProcessFlowInputModal
+        isOpen={processModal.visible}
+        onClose={() => setProcessModal({ visible: false, rowIdx: -1 })}
+        onSave={handleProcessSave}
+        onContinuousAdd={handleProcessContinuousAdd}
+        currentRowIdx={processModal.rowIdx}
+        existingProcessNames={state.items
+          .filter(item => item.processName && !item.processName.startsWith('_'))
+          .map(item => item.processName)}
       />
     </>
   );

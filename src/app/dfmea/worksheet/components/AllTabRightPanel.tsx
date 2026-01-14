@@ -66,7 +66,7 @@ export default function AllTabRightPanel({
         </div>
       ) : (
         <div className="flex-1 overflow-hidden">
-          <APTableInline onClose={() => setShowAPInAll(false)} showClose={false} stage={apStageInAll} />
+          <APTableInline onClose={() => setShowAPInAll(false)} stage={apStageInAll} />
         </div>
       )}
     </>

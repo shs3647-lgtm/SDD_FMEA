@@ -28,9 +28,29 @@ interface ProcessSelectModalProps {
   existingProcessNames?: string[];
   existingProcessesInfo?: ProcessWithL3Info[];
   productLineName?: string;  // 완제품공정명 (상위항목)
+  // ✅ 연속입력 모드: 저장 시 워크시트에 즉시 반영 + 새 행 추가
+  onContinuousAdd?: (process: ProcessItem, addNewRow: boolean) => void;
 }
 
-// 기초정보에서 공정명 로드
+// DB에서 마스터 FMEA 공정 로드
+const loadMasterProcessesFromDB = async (): Promise<ProcessItem[]> => {
+  try {
+    // 마스터 FMEA (pfm26-M001) 공정 데이터 조회
+    const res = await fetch('/api/fmea/master-processes');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.processes && data.processes.length > 0) {
+        console.log('✅ DB에서 마스터 공정 로드:', data.processes.length, '개');
+        return data.processes;
+      }
+    }
+  } catch (e) {
+    console.error('마스터 공정 로드 실패:', e);
+  }
+  return [];
+};
+
+// 기초정보에서 공정명 로드 (localStorage 폴백)
 const loadProcessesFromBasicInfo = (): ProcessItem[] => {
   if (typeof window === 'undefined') return [];
   
@@ -57,21 +77,7 @@ const loadProcessesFromBasicInfo = (): ProcessItem[] => {
       if (processSet.size > 0) return Array.from(processSet.values());
     }
     
-    // 기본 샘플 데이터
-    return [
-      { id: 'p1', no: '10', name: '자재입고' },
-      { id: 'p2', no: '11', name: '가온' },
-      { id: 'p3', no: '20', name: '수입검사' },
-      { id: 'p4', no: '30', name: '믹싱' },
-      { id: 'p5', no: '40', name: '압출' },
-      { id: 'p6', no: '50', name: '재단' },
-      { id: 'p7', no: '60', name: '비드' },
-      { id: 'p8', no: '70', name: '성형' },
-      { id: 'p9', no: '80', name: '가류' },
-      { id: 'p10', no: '90', name: '검사' },
-      { id: 'p11', no: '100', name: '완성검사' },
-      { id: 'p12', no: '110', name: '포장' },
-    ];
+    return [];
   } catch (e) {
     console.error('Failed to load processes:', e);
     return [];
@@ -85,37 +91,137 @@ export default function ProcessSelectModal({
   onDelete,
   existingProcessNames = [],
   existingProcessesInfo = [],
-  productLineName = '완제품 제조라인'
+  productLineName = '완제품 제조라인',
+  onContinuousAdd,
 }: ProcessSelectModalProps) {
   const [processes, setProcesses] = useState<ProcessItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [newNo, setNewNo] = useState('');
+  const [newName, setNewName] = useState('');
+
+  const [loading, setLoading] = useState(false);
+  const [dataSource, setDataSource] = useState<string>('');
+  
+  // ✅ 연속입력 모드 상태
+  const [continuousMode, setContinuousMode] = useState(false);
+  const [addedCount, setAddedCount] = useState(0);
+  
+  // 드래그 상태
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [modalPosition, setModalPosition] = useState({ top: 200, right: 0 });
+
+  // 드래그 시작
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.target instanceof HTMLElement && e.target.closest('button')) return;
+    setIsDragging(true);
+    setDragStart({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  // 드래그 중
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - dragStart.x;
+      const deltaY = e.clientY - dragStart.y;
+      
+      setModalPosition(prev => ({
+        top: Math.max(0, Math.min(window.innerHeight - 200, prev.top + deltaY)),
+        right: Math.max(-350, Math.min(window.innerWidth - 350, prev.right - deltaX))
+      }));
+      
+      setDragStart({ x: e.clientX, y: e.clientY });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, dragStart]);
+
+  // 모달이 열릴 때 위치 초기화
+  useEffect(() => {
+    if (isOpen) {
+      setModalPosition({ top: 200, right: 0 });
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
-      const loaded = loadProcessesFromBasicInfo();
-      setProcesses(loaded);
+      setLoading(true);
+      setDataSource('');
       
-      const preSelected = new Set<string>();
-      loaded.forEach(p => {
-        if (existingProcessNames.includes(p.name)) {
-          preSelected.add(p.id);
+      // DB에서 마스터 공정 로드 (우선), 없으면 localStorage 폴백
+      const loadData = async () => {
+        console.log('🔄 공정 데이터 로드 시작...');
+        
+        let loaded = await loadMasterProcessesFromDB();
+        
+        if (loaded.length > 0) {
+          setDataSource('Master FMEA (DB)');
+          console.log('✅ 마스터 공정 사용:', loaded.length, '개');
+        } else {
+          // DB에 없으면 localStorage에서 로드
+          loaded = loadProcessesFromBasicInfo();
+          if (loaded.length > 0) {
+            setDataSource('localStorage');
+            console.log('⚠️ localStorage 폴백:', loaded.length, '개');
+          } else {
+            setDataSource('없음 - 직접 입력 필요');
+            console.log('❌ 공정 데이터 없음');
+          }
         }
-      });
-      setSelectedIds(preSelected);
+        
+        console.log('📋 로드된 공정:', loaded.map(p => p.name).join(', '));
+        setProcesses(loaded);
+        
+        const preSelected = new Set<string>();
+        loaded.forEach(p => {
+          if (existingProcessNames.includes(p.name)) {
+            preSelected.add(p.id);
+          }
+        });
+        setSelectedIds(preSelected);
+        setLoading(false);
+      };
+      
+      loadData();
       setSearch('');
       setEditingId(null);
+      // ✅ 연속입력 상태 초기화
+      setContinuousMode(false);
+      setAddedCount(0);
     }
   }, [isOpen, existingProcessNames]);
 
   const filteredProcesses = useMemo(() => {
-    if (!search.trim()) return processes;
-    const q = search.toLowerCase();
-    return processes.filter(p => 
-      p.no.includes(q) || p.name.toLowerCase().includes(q)
-    );
+    let result = processes;
+    
+    // 검색 필터링
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = processes.filter(p => 
+        p.no.includes(q) || p.name.toLowerCase().includes(q)
+      );
+    }
+    
+    // 공정 번호 기준 숫자 정렬 (10, 20, 30 순서)
+    return [...result].sort((a, b) => {
+      const numA = parseInt(a.no.replace(/\D/g, '')) || 0; // 숫자만 추출
+      const numB = parseInt(b.no.replace(/\D/g, '')) || 0;
+      return numA - numB; // 오름차순 정렬
+    });
   }, [processes, search]);
   
   const toggleSelect = useCallback((id: string) => {
@@ -194,20 +300,74 @@ export default function ProcessSelectModal({
 
   const isCurrentlySelected = (name: string) => existingProcessNames.includes(name);
 
+  // 신규 공정 추가
+  const handleAddNew = () => {
+    if (!newName.trim()) return;
+    
+    // 중복 확인 - 이미 존재하면 무시
+    if (processes.some(p => p.name === newName.trim())) return;
+    
+    // 공정번호 자동 생성 (입력 안했으면)
+    const procNo = newNo.trim() || String((processes.length + 1) * 10);
+    
+    const newProc: ProcessItem = {
+      id: `proc_new_${Date.now()}`,
+      no: procNo,
+      name: newName.trim(),
+    };
+    
+    setProcesses(prev => [newProc, ...prev]);  // 최상단에 추가
+    setSelectedIds(prev => new Set([...prev, newProc.id]));
+    
+    // localStorage에도 저장
+    try {
+      const savedData = localStorage.getItem('pfmea_master_data') || '[]';
+      const masterData = JSON.parse(savedData);
+      masterData.push({
+        id: newProc.id,
+        code: 'A2',
+        value: newProc.name,
+        processNo: procNo,
+        createdAt: new Date().toISOString()
+      });
+      localStorage.setItem('pfmea_master_data', JSON.stringify(masterData));
+      console.log('✅ 신규 공정 저장:', newProc.name);
+    } catch (e) {
+      console.error('저장 오류:', e);
+    }
+    
+    // ✅ 연속입력 모드: 워크시트에 즉시 반영 + 새 행 추가
+    if (continuousMode && onContinuousAdd) {
+      onContinuousAdd(newProc, true); // 새 행 추가 요청
+      setAddedCount(prev => prev + 1);
+      console.log(`[연속입력] "${newProc.name}" 추가 완료 (총 ${addedCount + 1}개)`);
+    }
+    
+    setNewNo('');
+    setNewName('');
+  };
+
   if (!isOpen) return null;
 
   return (
     <div 
-      className="fixed inset-0 z-[9999] flex items-start justify-end bg-black/40 pt-20 pr-5"
+      className="fixed inset-0 z-[9999] bg-black/40"
       onClick={onClose}
     >
       <div 
-        className="bg-white rounded-lg shadow-2xl w-[500px] flex flex-col overflow-hidden max-h-[calc(100vh-120px)]"
+        className="fixed bg-white rounded-lg shadow-2xl w-[350px] max-w-[350px] min-w-[350px] flex flex-col overflow-hidden max-h-[calc(100vh-120px)] cursor-move"
+        style={{ 
+          top: `${modalPosition.top}px`, 
+          right: `${modalPosition.right}px` 
+        }}
         onClick={e => e.stopPropagation()}
         onKeyDown={e => e.stopPropagation()}
       >
-        {/* 헤더 */}
-        <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+        {/* 헤더 - 드래그 가능 */}
+        <div 
+          className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white cursor-move select-none"
+          onMouseDown={handleMouseDown}
+        >
           <div className="flex items-center gap-2">
             <span className="text-base">🏭</span>
             <h2 className="text-xs font-bold">메인공정명 선택</h2>
@@ -222,32 +382,107 @@ export default function ProcessSelectModal({
           <span className="px-2 py-1 text-[10px] font-bold bg-blue-600 text-white rounded">{productLineName}</span>
         </div>
 
-        {/* ===== 하위항목 라벨 ===== */}
-        <div className="px-3 py-1 border-b bg-gradient-to-r from-green-50 to-emerald-50">
+        {/* ===== 하위항목 라벨 + 데이터 소스 + 연속입력 토글 ===== */}
+        <div className="px-3 py-1 border-b bg-gradient-to-r from-green-50 to-emerald-50 flex items-center justify-between">
           <span className="text-[10px] font-bold text-green-700">▼ 하위항목: 메인공정명</span>
+          <div className="flex items-center gap-2">
+            <span className={`text-[9px] px-2 py-0.5 rounded ${dataSource.includes('Master') ? 'bg-blue-100 text-blue-700' : dataSource.includes('local') ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>
+              {loading ? '로딩중...' : `📂 ${dataSource} (${processes.length}개)`}
+            </span>
+            {/* ✅ 연속입력 토글 */}
+            {onContinuousAdd && (
+              <button
+                onClick={() => {
+                  setContinuousMode(!continuousMode);
+                  if (!continuousMode) setAddedCount(0);
+                }}
+                className={`px-2 py-0.5 text-[10px] font-bold rounded transition-all ${
+                  continuousMode 
+                    ? 'bg-purple-600 text-white ring-2 ring-purple-300' 
+                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                }`}
+                title={continuousMode ? '연속입력 모드 ON: 저장 시 워크시트에 즉시 반영 + 새 행 추가' : '연속입력 모드 OFF'}
+              >
+                🔄 연속입력 {continuousMode ? 'ON' : 'OFF'}
+                {continuousMode && addedCount > 0 && <span className="ml-1 px-1 bg-white/30 rounded">{addedCount}</span>}
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* 검색 영역 */}
-        <div className="px-3 py-2 border-b bg-gray-50">
+        {/* ===== 신규 공정 추가 ===== */}
+        <div className={`px-3 py-1.5 border-b flex items-center gap-1 ${continuousMode ? 'bg-purple-50' : 'bg-green-50'}`}>
+          <span className={`text-[10px] font-bold shrink-0 ${continuousMode ? 'text-purple-700' : 'text-green-700'}`}>+</span>
           <input
             type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="🔍 공정명 또는 번호 검색..."
-            className="w-full px-2 py-1.5 text-[11px] border rounded focus:ring-1 focus:ring-blue-500 outline-none"
+            value={newNo}
+            onChange={(e) => setNewNo(e.target.value)}
+            placeholder="No"
+            className={`w-12 px-1 py-0.5 text-[10px] border rounded focus:outline-none focus:ring-1 text-center ${
+              continuousMode ? 'focus:ring-purple-500 border-purple-300' : 'focus:ring-green-500'
+            }`}
           />
+          <input
+            type="text"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); handleAddNew(); } }}
+            placeholder={continuousMode ? "입력 후 Enter → 즉시 반영 + 새 행 추가" : "공정명 입력..."}
+            className={`flex-1 px-2 py-0.5 text-[10px] border rounded focus:outline-none focus:ring-1 ${
+              continuousMode ? 'focus:ring-purple-500 border-purple-300' : 'focus:ring-green-500'
+            }`}
+            autoFocus={continuousMode}
+          />
+          <button
+            onClick={handleAddNew}
+            disabled={!newName.trim()}
+            className={`px-2 py-0.5 text-[10px] font-bold text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed ${
+              continuousMode ? 'bg-purple-600' : 'bg-green-600'
+            }`}
+          >
+            저장
+          </button>
         </div>
 
-        {/* 버튼 영역 (표준화: 검색 아래, 가로 배치) */}
-        <div className="px-3 py-2 border-b bg-white flex items-center gap-2">
-          <button onClick={selectAll} className="px-4 py-1.5 text-[13px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600">전체</button>
-          <button onClick={deselectAll} className="px-4 py-1.5 text-[13px] font-bold bg-gray-300 text-gray-700 rounded hover:bg-gray-400">해제</button>
-          <button onClick={handleSave} className="px-4 py-1.5 text-[13px] font-bold bg-green-600 text-white rounded hover:bg-green-700">적용</button>
-          <button onClick={clearAndSave} className="px-4 py-1.5 text-[13px] font-bold bg-red-500 text-white rounded hover:bg-red-600">삭제</button>
+        {/* 검색 + 버튼: [전체][해제][적용][삭제] */}
+        <div className="px-2 py-1.5 border-b bg-gray-50">
+          {/* 첫 줄: 검색 */}
+          <div className="mb-1">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="🔍 공정명 또는 번호 검색..."
+              className="w-full px-2 py-0.5 text-[9px] border rounded focus:ring-1 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          {/* 두 번째 줄: 버튼들 (표준화: 가로 배치) */}
+          <div className="flex items-center gap-2">
+            <button onClick={selectAll} className="px-4 py-1.5 text-[13px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600">전체</button>
+            <button onClick={deselectAll} className="px-4 py-1.5 text-[13px] font-bold bg-gray-300 text-gray-700 rounded hover:bg-gray-400">해제</button>
+            <button onClick={handleSave} className="px-4 py-1.5 text-[13px] font-bold bg-green-600 text-white rounded hover:bg-green-700">적용</button>
+            <button onClick={clearAndSave} className="px-4 py-1.5 text-[13px] font-bold bg-red-500 text-white rounded hover:bg-red-600">삭제</button>
+          </div>
         </div>
 
         {/* 컴팩트 테이블 - 고정 높이 */}
         <div className="overflow-auto p-2 h-80 min-h-[320px]">
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+                <p className="text-xs text-gray-500">마스터 공정 데이터 로딩중...</p>
+              </div>
+            </div>
+          ) : processes.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <p className="text-lg mb-2">📭</p>
+                <p className="text-xs text-gray-500 mb-2">등록된 공정이 없습니다</p>
+                <p className="text-[10px] text-gray-400">위 입력창에서 직접 추가해주세요</p>
+              </div>
+            </div>
+          ) : (
           <div className="grid grid-cols-2 gap-1">
             {filteredProcesses.map(proc => {
                 const isSelected = selectedIds.has(proc.id);
@@ -331,6 +566,7 @@ export default function ProcessSelectModal({
                 </div>
               ))}
             </div>
+          )}
         </div>
 
         {/* 푸터 - 선택 수 표시만 */}

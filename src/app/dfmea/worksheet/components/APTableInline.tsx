@@ -6,7 +6,6 @@
 'use client';
 
 import React from 'react';
-import { apTableHeaderStyle, apTableCellStyle } from './APTableInlineStyles';
 
 // AP 테이블 데이터
 const AP_TABLE_DATA: { s: string; o: string; d: ('H' | 'M' | 'L')[] }[] = [
@@ -67,7 +66,7 @@ export default function APTableInline({ onClose, showClose = true, stage = 5 }: 
   
   return (
     <div className="flex flex-col h-full">
-      <div className="text-white py-1.5 px-2.5 text-[11px] font-bold flex justify-center items-center" style={apTableHeaderStyle(headerBg)}>
+      <div className="text-white py-1.5 px-2.5 text-[11px] font-bold flex justify-center items-center" style={{ background: headerBg }}>
         <span>📊 {stageLabel} 기준표 (H:{hCount} M:{mCount} L:{lCount})</span>
       </div>
       <div className="flex-1 overflow-auto p-0.5 bg-white">
@@ -99,7 +98,7 @@ export default function APTableInline({ onClose, showClose = true, stage = 5 }: 
                   )}
                   <td className="border border-black p-0.5 text-center bg-gray-100 text-[9px]">{row.o}</td>
                   {row.d.map((ap, dIdx) => (
-                    <td key={dIdx} className="border border-black p-0.5 text-center font-bold text-[10px]" style={apTableCellStyle(AP_COLORS[ap].bg, AP_COLORS[ap].text)}>
+                    <td key={dIdx} className="border border-black p-0.5 text-center font-bold text-[10px]" style={{ background: AP_COLORS[ap].bg, color: AP_COLORS[ap].text }}>
                       {ap}
                     </td>
                   ))}

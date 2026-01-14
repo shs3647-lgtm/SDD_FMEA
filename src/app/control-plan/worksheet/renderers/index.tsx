@@ -99,24 +99,31 @@ export function renderCell({
     }
     // 고유값(언더스코어로 시작하는 값)인 경우 빈 값처럼 표시
     const displayValue = (value && typeof value === 'string' && value.startsWith('_')) ? '' : (value || '');
+    const isProcessName = col.key === 'processName';
     return (
       <td 
         key={col.id} 
         style={{ 
           ...cellStyle, 
           verticalAlign: 'middle',
-          cursor: inputMode === 'manual' ? 'context-menu' : 'default',
+          cursor: inputMode === 'manual' ? 'context-menu' : (isProcessName && inputMode === 'auto' ? 'pointer' : 'default'),
+          background: isProcessName && inputMode === 'auto' ? '#e3f2fd' : cellStyle.background, // 자동모드 시 강조
         }}
         rowSpan={spanInfo.span}
         onContextMenu={inputMode === 'manual' ? (e) => onContextMenu(e, rowIdx, 'process', col.key) : undefined}
+        onClick={isProcessName && inputMode === 'auto' ? () => onAutoModeClick(rowIdx, 'process') : undefined}
       >
-        <input
-          type="text"
-          value={displayValue}
-          onChange={(e) => onCellChange(item.id, col.key, e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="w-full bg-transparent outline-none text-center text-[9px]"
-        />
+        <div className="flex items-center gap-1 justify-center">
+          {isProcessName && inputMode === 'auto' && <span className="text-blue-500 text-[8px]">➕</span>}
+          <input
+            type="text"
+            value={displayValue}
+            onChange={(e) => onCellChange(item.id, col.key, e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="w-full bg-transparent outline-none text-center text-[9px]"
+            onClick={(e) => isProcessName && inputMode === 'auto' && e.stopPropagation()}
+          />
+        </div>
       </td>
     );
   }

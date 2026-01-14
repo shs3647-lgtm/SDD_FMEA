@@ -70,6 +70,30 @@ export const PANEL_REGISTRY: PanelConfig[] = [
     component: lazy(() => import('./RPNChart/ParetoChart')),
     order: 3,
   },
+  {
+    id: '5ap',
+    label: '5AP',
+    icon: '🎯',
+    component: lazy(() => import('./APTable/APTable5')),
+    color: '#1e3a5f',
+    order: 4,
+  },
+  {
+    id: '6ap',
+    label: '6AP',
+    icon: '✅',
+    component: lazy(() => import('./APTable/APTable6')),
+    color: '#2e7d32',
+    order: 5,
+  },
+  {
+    id: 'rpn-chart',
+    label: 'RPN',
+    icon: '📊',
+    component: lazy(() => import('./APTable/RPNChart')),
+    color: '#7c3aed',
+    order: 6,
+  },
 ];
 
 /**
