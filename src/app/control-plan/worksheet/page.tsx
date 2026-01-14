@@ -659,10 +659,10 @@ function CPWorksheetContent() {
         onClose={() => setProcessModal({ visible: false, rowIdx: -1 })}
         onSave={handleProcessSave}
         onContinuousAdd={handleProcessContinuousAdd}
-        currentRowIdx={processModal.rowIdx}
         existingProcessNames={state.items
           .filter(item => item.processName && !item.processName.startsWith('_'))
           .map(item => item.processName)}
+        existingProcessesInfo={[]}
       />
       
       {/* 공정설명 입력 모달 */}
