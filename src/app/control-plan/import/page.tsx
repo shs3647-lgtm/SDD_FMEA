@@ -30,6 +30,33 @@ const ITEM_COLUMN_MAP: Record<string, string> = {
   reactionPlanItem: 'reactionPlan', ep: 'ep', autoDetector: 'autoDetector',
 };
 
+// ★ itemCode 표준화 매핑 (PFMEA 벤치마킹: A1~A7, B1~B10)
+// 파싱 단계에서부터 표준화하여 일관성 보장
+const STANDARDIZE_ITEM_CODE: Record<string, string> = {
+  'processNo': 'A1',      // 공정번호
+  'processName': 'A2',    // 공정명
+  'level': 'A3',          // 레벨
+  'processDesc': 'A4',    // 공정설명
+  'equipment': 'A5',      // 설비
+  'ep': 'A6',             // EP
+  'autoDetector': 'A7',   // 자동검출
+  'productChar': 'B1',    // 제품특성
+  'processChar': 'B2',    // 공정특성
+  'specialChar': 'B3',    // 특별특성
+  'spec': 'B4',           // 규격
+  'evalMethod': 'B5',     // 평가방법
+  'sampleSize': 'B6',     // 샘플크기
+  'frequency': 'B7',      // 빈도
+  'owner1': 'B8',         // 책임자1
+  'owner2': 'B9',         // 책임자2
+  'reactionPlan': 'B10',  // 대응계획
+};
+
+// itemCode 표준화 헬퍼 함수
+const standardizeItemCode = (itemCode: string): string => {
+  return STANDARDIZE_ITEM_CODE[itemCode] || itemCode;
+};
+
 function CPImportPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -153,21 +180,21 @@ function CPImportPageContent() {
         const value = String(row.getCell(2).value || '').trim();
         
         if (processNo && value) {
-          // 공정번호 데이터
+          // 공정번호 데이터 (표준화: A1)
           parsedData.push({
             id: `i-${rowNumber}-1`,
             processNo,
             category: 'individual',
-            itemCode: 'processNo',
+            itemCode: standardizeItemCode('processNo'), // A1
             value: processNo,
             createdAt: new Date(),
           });
-          // 개별 항목 데이터
+          // 개별 항목 데이터 (표준화)
           parsedData.push({
             id: `i-${rowNumber}-2`,
             processNo,
             category: 'individual',
-            itemCode,
+            itemCode: standardizeItemCode(itemCode), // A2, A4, B1 등
             value,
             createdAt: new Date(),
           });
@@ -199,32 +226,32 @@ function CPImportPageContent() {
       
       const parsedData: ImportedData[] = [];
       
-      // 시트명과 itemCode 매핑
+      // 시트명과 itemCode 매핑 (표준화된 itemCode 사용)
       const sheetMapping: Record<string, { category: string; headers: string[]; itemCodes: string[] }> = {
         '공정현황': {
           category: 'processInfo',
           headers: ['공정번호', '공정명', '레벨', '공정설명', '설비/금형/지그'],
-          itemCodes: ['processNo', 'processName', 'level', 'processDesc', 'equipment'],
+          itemCodes: ['A1', 'A2', 'A3', 'A4', 'A5'], // 표준화된 itemCode
         },
         '검출장치': {
           category: 'detector',
           headers: ['공정번호', '공정명', 'EP', '자동검사장치'],
-          itemCodes: ['processNo', 'processName', 'ep', 'autoDetector'],
+          itemCodes: ['A1', 'A2', 'A6', 'A7'], // 표준화된 itemCode
         },
         '관리항목': {
           category: 'controlItem',
           headers: ['공정번호', '공정명', '제품특성', '공정특성', '특별특성', '스펙/공차'],
-          itemCodes: ['processNo', 'processName', 'productChar', 'processChar', 'specialChar', 'spec'],
+          itemCodes: ['A1', 'A2', 'B1', 'B2', 'B3', 'B4'], // 표준화된 itemCode
         },
         '관리방법': {
           category: 'controlMethod',
           headers: ['공정번호', '공정명', '평가방법', '샘플크기', '주기', '책임1', '책임2'],
-          itemCodes: ['processNo', 'processName', 'evalMethod', 'sampleSize', 'frequency', 'owner1', 'owner2'],
+          itemCodes: ['A1', 'A2', 'B5', 'B6', 'B7', 'B8', 'B9'], // 표준화된 itemCode
         },
         '대응계획': {
           category: 'reactionPlan',
           headers: ['공정번호', '공정명', '제품특성', '공정특성', '대응계획'],
-          itemCodes: ['processNo', 'processName', 'productChar', 'processChar', 'reactionPlan'],
+          itemCodes: ['A1', 'A2', 'B1', 'B2', 'B10'], // 표준화된 itemCode
         },
       };
       
@@ -402,12 +429,14 @@ function CPImportPageContent() {
           }
           
           // 모든 컬럼 데이터 추가 (빈 값도 포함하여 모든 데이터 추출)
+          // ★ itemCode 표준화 적용
+          const standardizedItemCode = standardizeItemCode(itemCode);
           parsedData.push({
             id: `group-${selectedSheet}-${rowNumber}-${colIdx}`,
             processNo,
-            processName: itemCode === 'processName' ? value : processName || '',
+            processName: standardizedItemCode === 'A2' ? value : processName || '', // A2 = 공정명
             category: mapping.category,
-            itemCode,
+            itemCode: standardizedItemCode, // 표준화된 itemCode (A1, A2, A3 등)
             value,
             createdAt: new Date(),
           });
@@ -473,34 +502,13 @@ function CPImportPageContent() {
       localStorage.setItem(key, JSON.stringify({ full: fullData, group: groupData, item: itemData }));
       
       // 2. DB 저장 (모든 데이터를 flat 형식으로 변환)
-      // ★ itemCode 표준화: processNo → A1, processName → A2 (PFMEA 벤치마킹)
-      const itemCodeMap: Record<string, string> = {
-        'processNo': 'A1',      // 공정번호
-        'processName': 'A2',    // 공정명
-        'level': 'A3',          // 레벨
-        'processDesc': 'A4',    // 공정설명
-        'equipment': 'A5',      // 설비
-        'ep': 'A6',             // EP
-        'autoDetector': 'A7',   // 자동검출
-        'productChar': 'B1',    // 제품특성
-        'processChar': 'B2',    // 공정특성
-        'specialChar': 'B3',    // 특별특성
-        'spec': 'B4',           // 규격
-        'evalMethod': 'B5',     // 평가방법
-        'sampleSize': 'B6',     // 샘플크기
-        'frequency': 'B7',      // 빈도
-        'owner1': 'B8',         // 책임자1
-        'owner2': 'B9',         // 책임자2
-        'reactionPlan': 'B10',  // 대응계획
-      };
-      
+      // ★ itemCode는 이미 파싱 단계에서 표준화되었으므로 그대로 사용
       const allData = [...fullData, ...groupData, ...itemData];
       const flatData = allData.map(d => ({
         id: d.id,
         processNo: d.processNo,
         category: d.category,
-        // itemCode 표준화: 기존 itemCode가 매핑에 있으면 변환, 없으면 그대로 사용
-        itemCode: itemCodeMap[d.itemCode] || d.itemCode,
+        itemCode: d.itemCode, // 이미 표준화됨 (A1, A2, A3 등)
         value: d.value,
         createdAt: d.createdAt,
       }));
