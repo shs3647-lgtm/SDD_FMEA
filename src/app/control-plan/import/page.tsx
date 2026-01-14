@@ -340,32 +340,32 @@ function CPImportPageContent() {
       
       const parsedData: ImportedData[] = [];
       
-      // 선택된 시트의 매핑 정보
+      // 선택된 시트의 매핑 정보 (표준화된 itemCode 사용)
       const sheetMapping: Record<string, { category: string; headers: string[]; itemCodes: string[] }> = {
         'processInfo': {
           category: 'processInfo',
           headers: ['공정번호', '공정명', '레벨', '공정설명', '설비/금형/지그'],
-          itemCodes: ['processNo', 'processName', 'level', 'processDesc', 'equipment'],
+          itemCodes: ['A1', 'A2', 'A3', 'A4', 'A5'], // 표준화된 itemCode
         },
         'detector': {
           category: 'detector',
           headers: ['공정번호', '공정명', 'EP', '자동검사장치'],
-          itemCodes: ['processNo', 'processName', 'ep', 'autoDetector'],
+          itemCodes: ['A1', 'A2', 'A6', 'A7'], // 표준화된 itemCode
         },
         'controlItem': {
           category: 'controlItem',
           headers: ['공정번호', '공정명', '제품특성', '공정특성', '특별특성', '스펙/공차'],
-          itemCodes: ['processNo', 'processName', 'productChar', 'processChar', 'specialChar', 'spec'],
+          itemCodes: ['A1', 'A2', 'B1', 'B2', 'B3', 'B4'], // 표준화된 itemCode
         },
         'controlMethod': {
           category: 'controlMethod',
           headers: ['공정번호', '공정명', '평가방법', '샘플크기', '주기', '책임1', '책임2'],
-          itemCodes: ['processNo', 'processName', 'evalMethod', 'sampleSize', 'frequency', 'owner1', 'owner2'],
+          itemCodes: ['A1', 'A2', 'B5', 'B6', 'B7', 'B8', 'B9'], // 표준화된 itemCode
         },
         'reactionPlan': {
           category: 'reactionPlan',
           headers: ['공정번호', '공정명', '제품특성', '공정특성', '대응계획'],
-          itemCodes: ['processNo', 'processName', 'productChar', 'processChar', 'reactionPlan'],
+          itemCodes: ['A1', 'A2', 'B1', 'B2', 'B10'], // 표준화된 itemCode
         },
       };
       
