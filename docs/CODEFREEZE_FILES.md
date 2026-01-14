@@ -54,6 +54,19 @@
 - 전체 공정 선택 시 모든 공정 워크시트 반영 로직
 - 상세 내용: `docs/CODEFREEZE_CP_PROCESS_INPUT_MODAL_20260114.md` 참조
 
+### 0-2. CP 공정설명 입력 모달 (2026-01-14)
+| 파일 | 코드프리즈 태그 |
+|------|----------------|
+| `src/app/control-plan/worksheet/components/ProcessDescInputModal.tsx` | codefreeze-20260114-cp-process-desc-input-modal |
+| `src/app/control-plan/worksheet/page.tsx` (모달 통합 부분) | codefreeze-20260114-cp-process-desc-input-modal |
+| `src/app/control-plan/worksheet/renderers/index.tsx` (공정설명 셀 클릭) | codefreeze-20260114-cp-process-desc-input-modal |
+
+**⚠️ 중요: CP 공정설명 입력 모달 절대 변경 금지**
+- 우측 350px 고정 위치
+- 단일 선택 (라디오 버튼)
+- 공정 정보 표시 영역 유지
+- 상세 내용: `docs/CODEFREEZE_CP_PROCESS_DESC_INPUT_MODAL_20260114.md` 참조
+
 ### 0. DFMEA 모듈 재작성 (2026-01-14)
 | 파일 | 코드프리즈 태그 |
 |------|----------------|
