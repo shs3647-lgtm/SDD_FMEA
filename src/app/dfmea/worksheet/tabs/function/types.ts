@@ -26,6 +26,7 @@ export type ModalType = 'l1Type' | 'l1Function' | 'l1Requirement' | 'l2Function'
 export interface FunctionTabProps {
   state: WorksheetState;
   setState: React.Dispatch<React.SetStateAction<WorksheetState>>;
+  setStateSynced?: (updater: React.SetStateAction<WorksheetState>) => void;  // ✅ stateRef 동기 업데이트 버전
   rows: FlatRow[];
   l1Spans: number[];
   l1TypeSpans: number[];
@@ -35,4 +36,5 @@ export interface FunctionTabProps {
   handleInputBlur: () => void;
   handleInputKeyDown: (e: React.KeyboardEvent) => void;
   saveToLocalStorage?: () => void;
+  saveAtomicDB?: () => void;  // ✅ DB 저장 함수 추가
 }

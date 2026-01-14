@@ -1,72 +1,175 @@
 /**
  * @file FailureLinkTab.tsx
- * @description 고장연결 탭 - FM 중심 연결 관리 (SVG 연결선)
- * 좌측 60%: FE/FM/FC 3개 독립 테이블
- * 우측 40% 상단: 고장 연결도 (FM 중심, SVG 선 연결)
- * 우측 40% 하단: 연결 결과 테이블
+ * @description 고장연결 탭 - FM 중심 연결 관리 (전면 재작성 버전)
+ * 
+ * 핵심 구조:
+ * - FE(고장영향): L1.failureScopes에서 추출
+ * - FM(고장형태): L2.failureModes에서 추출
+ * - FC(고장원인): L3.failureCauses에서 추출
+ * - 연결: FM을 중심으로 FE와 FC를 연결 (1:N 관계)
+ * 
+ * 데이터 구조 (정규화):
+ * failureLinks: Array<{
+ *   fmId: string;      // FK: L2.failureModes.id
+ *   fmText: string;    // 고장형태 텍스트
+ *   fmProcess: string; // A'SSY명 (DFMEA)
+ *   feId: string;      // FK: L1.failureScopes.id (빈 문자열 가능)
+ *   feText: string;    // 고장영향 텍스트
+ *   feScope: string;   // 구분 (Your Plant/Ship to Plant/User)
+ *   severity: number;  // 심각도
+ *   fcId: string;      // FK: L3.failureCauses.id (빈 문자열 가능)
+ *   fcText: string;    // 고장원인 텍스트
+ *   fcProcess: string; // A'SSY명 (DFMEA)
+ *   fcWorkElem: string;// 부품 또는 특성명 (DFMEA: 4M 제거됨)
+ * }>
  */
 
 'use client';
 
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { FailureTabProps } from './types';
-import { uid, COLORS, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
-// 유틸리티 함수 import
-import { 
-  groupFailureLinksByFM,
-  calculateLastRowMerge
-} from '../../utils';
+import { uid, COLORS, FONT_SIZES } from '../../constants';
+import { groupFailureLinksByFM, calculateLastRowMerge } from '../../utils';
 import FailureLinkTables from './FailureLinkTables';
 import FailureLinkDiagram from './FailureLinkDiagram';
 import FailureLinkResult from './FailureLinkResult';
 import { useSVGLines } from './hooks/useSVGLines';
 import { 
-  containerStyle, 
-  rightPanelStyle, 
-  rightHeaderStyle, 
-  modeButtonStyle, 
-  resultButtonStyle,
-  fmeaNameStyle,
-  actionButtonGroupStyle,
-  actionButtonStyle
+  containerStyle, rightPanelStyle, rightHeaderStyle, modeButtonStyle, 
+  resultButtonStyle, fmeaNameStyle, actionButtonGroupStyle, actionButtonStyle
 } from './FailureLinkStyles';
 import { saveToAIHistory } from '@/lib/ai-recommendation';
 
-interface FEItem { id: string; scope: string; feNo: string; text: string; severity?: number; }
-interface FMItem { id: string; fmNo: string; processName: string; text: string; }
-interface FCItem { id: string; fcNo: string; processName: string; m4: string; workElem: string; text: string; }
-interface LinkResult { fmId: string; feId: string; feNo: string; feScope: string; feText: string; severity: number; fmText: string; fmProcess: string; fcId: string; fcNo: string; fcProcess: string; fcM4: string; fcWorkElem: string; fcText: string; }
+// 타입 정의
+interface FEItem { 
+  id: string; 
+  scope: string; 
+  feNo: string; 
+  text: string; 
+  severity?: number;
+  // ★ 역전개 정보
+  functionName?: string;
+  requirement?: string; 
+}
 
-export default function FailureLinkTab({ state, setState, setDirty, saveToLocalStorage }: FailureTabProps) {
+interface FMItem { 
+  id: string; 
+  fmNo: string; 
+  processName: string; 
+  text: string;
+  // ★ 역전개 정보 (공정기능, 제품특성)
+  processFunction?: string;  // 공정기능
+  productChar?: string;      // 제품특성
+}
+
+interface FCItem { 
+  id: string; 
+  fcNo: string; 
+  processName: string; 
+  m4: string; 
+  workElem: string; 
+  text: string;
+  // ★ 역전개 정보 (작업요소 기능, 공정특성)
+  workFunction?: string;  // 작업요소 기능
+  processChar?: string;   // 공정특성
+}
+
+interface LinkResult { 
+  fmId: string; 
+  feId: string; 
+  feNo: string; 
+  feScope: string; 
+  feText: string; 
+  severity: number; 
+  // ★ FE 역전개 정보
+  feFunctionName?: string;
+  feRequirement?: string;
+  fmText: string; 
+  fmProcess: string; 
+  fcId: string; 
+  fcNo: string; 
+  fcProcess: string; 
+  fcM4: string; 
+  fcWorkElem: string; 
+  fcText: string;
+  // ★ FC 역전개 정보
+  fcWorkFunction?: string;  // 작업요소 기능
+  fcProcessChar?: string;   // 공정특성
+}
+
+export default function FailureLinkTab({ state, setState, setStateSynced, setDirty, saveToLocalStorage, saveToLocalStorageOnly, saveAtomicDB }: FailureTabProps) {
+  // ========== 상태 관리 ==========
   const [currentFMId, setCurrentFMId] = useState<string | null>(null);
   const [linkedFEs, setLinkedFEs] = useState<Map<string, FEItem>>(new Map());
   const [linkedFCs, setLinkedFCs] = useState<Map<string, FCItem>>(new Map());
-  const initialLinks = (state as any).failureLinks || [];
-  const [savedLinks, setSavedLinks] = useState<LinkResult[]>(initialLinks);
+  const [savedLinks, setSavedLinks] = useState<LinkResult[]>([]);
   const [editMode, setEditMode] = useState<'edit' | 'confirm'>('edit');
-  // 저장된 결과가 있으면 분석결과 뷰를 기본으로 표시
-  const [viewMode, setViewMode] = useState<'diagram' | 'result'>(initialLinks.length > 0 ? 'result' : 'diagram');
-  const [selectedProcess, setSelectedProcess] = useState<string>('all'); // 공정 필터 (FM용)
-  const [fcLinkScope, setFcLinkScope] = useState<'current' | 'all'>('current'); // FC 연결 범위: 해당공정/모든공정
+  const [viewMode, setViewMode] = useState<'diagram' | 'result'>('diagram');
+  const [selectedProcess, setSelectedProcess] = useState<string>('all');
+  const [fcLinkScope, setFcLinkScope] = useState<'current' | 'all'>('current');
+  
+  // 고장연결 확정 상태
+  const isConfirmed = (state as any).failureLinkConfirmed || false;
+  
+  // Refs
   const chainAreaRef = useRef<HTMLDivElement>(null);
   const fmNodeRef = useRef<HTMLDivElement>(null);
   const feColRef = useRef<HTMLDivElement>(null);
   const fcColRef = useRef<HTMLDivElement>(null);
-  
-  // ========== 초기 데이터 로드 (화면 전환 시에도 항상 복원) ==========
   const isInitialLoad = useRef(true);
+  // ✅ 연결확정 직후 useEffect가 linkedFEs/linkedFCs를 덮어쓰지 않도록 방지
+  const justConfirmedRef = useRef(false);
+
+  // ========== 초기 데이터 로드 (화면 전환 시에도 항상 복원) ==========
+  const stateFailureLinksJson = JSON.stringify((state as any).failureLinks || []);
   useEffect(() => {
     const stateLinks = (state as any).failureLinks || [];
-    // ✅ 수정: isInitialLoad 조건 제거 - state.failureLinks가 있으면 항상 복원
-    if (stateLinks.length > 0) {
-      console.log('[FailureLinkTab] 데이터 복원: state.failureLinks →', stateLinks.length, '개');
+    // ✅ 수정: state.failureLinks가 있으면 항상 복원 (savedLinks와 비교하여 중복 방지)
+    if (stateLinks.length > 0 && stateLinks.length !== savedLinks.length) {
+      console.log('[FailureLinkTab] ✅ 데이터 복원: state.failureLinks →', stateLinks.length, '개');
       setSavedLinks(stateLinks);
-      // ✅ 고장사슬을 기본값으로 유지 (result 화면으로 자동 전환하지 않음)
+      isInitialLoad.current = false;
+    } else if (stateLinks.length > 0 && isInitialLoad.current) {
+      console.log('[FailureLinkTab] ✅ 초기 로드: state.failureLinks →', stateLinks.length, '개');
+      setSavedLinks(stateLinks);
       isInitialLoad.current = false;
     }
-  }, [(state as any).failureLinks]);
+  }, [stateFailureLinksJson]); // ✅ JSON 문자열로 깊은 비교
 
-  // 제거: useEffect로 인한 무한 루프 방지 (toggleFE/toggleFC에서 직접 처리)
+  // ✅ 성능 최적화: 편집 중에는 localStorage만 저장, 전체확정에서만 DB 저장
+  const saveTemp = saveToLocalStorageOnly ?? saveToLocalStorage;
+
+  // ========== savedLinks 변경 시 자동 동기화 + 저장 ==========
+  const savedLinksJson = JSON.stringify(savedLinks);
+  const prevSavedLinksRef = useRef<string>('[]');
+  useEffect(() => {
+    // 초기 로드 시에는 스킵 (무한 루프 방지)
+    if (isInitialLoad.current) return;
+    
+    // 이전 값과 동일하면 스킵
+    if (savedLinksJson === prevSavedLinksRef.current) return;
+    prevSavedLinksRef.current = savedLinksJson;
+    
+    // savedLinks가 변경되면 state에 동기화
+    console.log('[FailureLinkTab] 🔄 savedLinks 변경 감지:', savedLinks.length, '건 → state 동기화');
+    setState((prev: any) => {
+      // 이미 동일하면 업데이트 안 함
+      const currentLinks = prev.failureLinks || [];
+      if (JSON.stringify(currentLinks) === savedLinksJson) {
+        return prev;
+      }
+      return { ...prev, failureLinks: savedLinks };
+    });
+    
+    // ✅ 변경 시 자동 저장 (debounce)
+    const saveTimer = setTimeout(() => {
+      setDirty(true);
+      saveTemp?.();
+      console.log('[FailureLinkTab] ✅ 자동 저장 완료:', savedLinks.length, '건');
+    }, 300);
+    
+    return () => clearTimeout(saveTimer);
+  }, [savedLinksJson, setState, setDirty, saveTemp]);
 
   // ========== FE 데이터 추출 (확정된 것만 사용 + 중복 제거) ==========
   const isL1Confirmed = state.failureL1Confirmed || false;
@@ -85,13 +188,19 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
     (state.l1?.failureScopes || []).forEach((fs: any) => {
       if (!fs.effect || !fs.id) return;
       
-      // 구분(scope) 찾기: reqId로 type 조회
+      // ★ 역전개: reqId로 구분/완제품기능/요구사항 찾기
       let scope = 'Your Plant';
+      let functionName = '';
+      let requirement = '';
       if (fs.reqId) {
         (state.l1?.types || []).forEach((type: any) => {
           (type.functions || []).forEach((fn: any) => {
             (fn.requirements || []).forEach((req: any) => {
-              if (req.id === fs.reqId) scope = type.name || 'Your Plant';
+              if (req.id === fs.reqId) {
+                scope = type.name || 'Your Plant';
+                functionName = fn.name || '';
+                requirement = req.name || '';
+              }
             });
           });
         });
@@ -100,727 +209,1344 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
       // 중복 체크: 동일 구분 + 동일 고장영향은 하나로 통합
       const key = `${scope}|${fs.effect}`;
       if (seen.has(key)) {
-        return; // 이미 추가된 조합이면 스킵
+        console.log('[FE 중복 제거]', scope, '-', fs.effect);
+        return; // 중복이면 스킵
       }
       seen.add(key);
       
-      const scopeName = scope || 'Your Plant';
-      const prefix = scopeName === 'Your Plant' ? 'Y' : scopeName === 'Ship to Plant' ? 'S' : scopeName === 'User' ? 'U' : 'X';
-      const feNo = `${prefix}${(counters[scopeName] || 0) + 1}`;
-      counters[scopeName] = (counters[scopeName] || 0) + 1;
-      items.push({ id: fs.id, scope: scopeName, feNo, text: fs.effect, severity: fs.severity });
+      // 번호 생성 (Your Plant → Y, Ship to Plant → S, User → U)
+      const getPrefix = (s: string) => {
+        if (s === 'Your Plant' || s === 'YP' || s.startsWith('Y')) return 'Y';
+        if (s === 'Ship to Plant' || s === 'SP' || s.startsWith('S')) return 'S';
+        if (s === 'User' || s.startsWith('U')) return 'U';
+        return 'U'; // 기본값 User
+      };
+      const prefix = getPrefix(scope);
+      counters[scope] = (counters[scope] || 0) + 1;
+      const feNo = `${prefix}${counters[scope]}`;
+      
+      items.push({ 
+        id: fs.id, 
+        scope, 
+        feNo, 
+        text: fs.effect, 
+        severity: fs.severity || 0,
+        // ★ 역전개 정보 추가
+        functionName,
+        requirement,
+      });
     });
+    
+    // ✅ 정렬: Your Plant → Ship to Plant → User 순서
+    const scopeOrder: Record<string, number> = { 'Your Plant': 0, 'YP': 0, 'Ship to Plant': 1, 'SP': 1, 'User': 2 };
+    items.sort((a, b) => (scopeOrder[a.scope] ?? 9) - (scopeOrder[b.scope] ?? 9));
+    
+    console.log('[FE 데이터]', items.length, '개 (확정됨 + 중복 제거됨 + 정렬됨):', items.map(f => `${f.feNo}:${f.text.substring(0, 20)}`));
+    console.log('[FE 데이터] 심각도 확인:', items.map(f => ({ feNo: f.feNo, severity: f.severity })));
     return items;
   }, [state.l1, isL1Confirmed]);
 
-  // FM 데이터 추출 (번호 포함)
+  // ========== FM 데이터 추출 (확정된 것만 사용 + 중복 제거) ==========
+  const isL2Confirmed = state.failureL2Confirmed || false;
+  
   const fmData: FMItem[] = useMemo(() => {
+    // ✅ 핵심: 2L 고장형태 분석이 확정되지 않으면 FM 데이터 반환 안함
+    if (!isL2Confirmed) {
+      console.log('[FM 데이터] 2L 고장분석 미확정 → 빈 배열 반환');
+      return [];
+    }
+    
     const items: FMItem[] = [];
+    const seen = new Set<string>(); // 공정명+고장형태 조합으로 중복 체크
     let counter = 1;
+    
     (state.l2 || []).forEach((proc: any) => {
       if (!proc.name || proc.name.includes('클릭')) return;
+      
       (proc.failureModes || []).forEach((fm: any) => {
-        if (fm.name && !fm.name.includes('클릭') && !fm.name.includes('추가')) {
-          items.push({ id: fm.id || uid(), fmNo: `M${counter}`, processName: proc.name, text: fm.name });
-          counter++;
+        if (!fm.name || fm.name.includes('클릭') || fm.name.includes('추가')) return;
+        if (!fm.id) fm.id = uid(); // ID 보장
+        
+        // 중복 체크: 동일 공정 + 동일 고장형태는 하나로 통합
+        const key = `${proc.name}|${fm.name}`;
+        if (seen.has(key)) {
+          console.log('[FM 중복 제거]', proc.name, '-', fm.name);
+          return; // 중복이면 스킵
         }
+        seen.add(key);
+        
+        // ★ 역전개: productCharId로 제품특성 → 공정기능 역추적
+        let processFunction = '';
+        let productChar = '';
+        if (fm.productCharId) {
+          (proc.functions || []).forEach((fn: any) => {
+            (fn.productChars || []).forEach((pc: any) => {
+              if (pc.id === fm.productCharId) {
+                processFunction = fn.name || '';
+                productChar = pc.name || '';
+              }
+            });
+          });
+        }
+        // fallback: 첫 번째 function과 productChar 사용
+        if (!processFunction && (proc.functions || []).length > 0) {
+          const firstFunc = proc.functions[0];
+          processFunction = firstFunc.name || '';
+          if ((firstFunc.productChars || []).length > 0) {
+            productChar = firstFunc.productChars[0].name || '';
+          }
+        }
+        
+        items.push({ 
+          id: fm.id, 
+          fmNo: `M${counter}`, 
+          processName: proc.name, 
+          text: fm.name,
+          // ★ 역전개 정보
+          processFunction,
+          productChar,
+        });
+        counter++;
       });
     });
+    
+    console.log('[FM 데이터]', items.length, '개 (확정됨 + 중복 제거됨):', items.map(f => `${f.fmNo}:${f.text.substring(0, 20)}`));
     return items;
-  }, [state.l2]);
+  }, [state.l2, isL2Confirmed]);
 
-  // FC 데이터 추출 (번호 포함)
+  // ========== FC 데이터 추출 (확정된 것만 사용 + 중복 제거) ==========
+  // ✅ FailureL3Tab.tsx의 flatRows 로직과 동일하게 공정특성 기준으로 추출
+  const isL3Confirmed = state.failureL3Confirmed || false;
+  
   const fcData: FCItem[] = useMemo(() => {
+    // ✅ 핵심: 3L 고장원인 분석이 확정되지 않으면 FC 데이터 반환 안함
+    if (!isL3Confirmed) {
+      console.log('[FC 데이터] 3L 고장분석 미확정 → 빈 배열 반환');
+      return [];
+    }
+    
     const items: FCItem[] = [];
+    const seen = new Set<string>(); // 공정명+작업요소+고장원인 조합으로 중복 체크
     let counter = 1;
-    (state.l2 || []).forEach((proc: any) => {
-      if (!proc.name || proc.name.includes('클릭')) return;
-      (proc.l3 || []).forEach((we: any) => {
-        if (!we.name || we.name.includes('클릭') || we.name.includes('추가')) return;
+    
+    // ✅ 의미 있는 이름인지 확인하는 헬퍼 함수
+    const isMeaningful = (name: string) => {
+      if (!name || name.trim() === '') return false;
+      const placeholders = ['클릭', '선택', '입력', '추가', '필요', '기능분석에서'];
+      return !placeholders.some(p => name.includes(p));
+    };
+    
+    const processes = (state.l2 || []).filter((p: any) => p.name && !p.name.includes('클릭'));
+    
+    processes.forEach((proc: any) => {
+      const allCauses = proc.failureCauses || [];  // 공정 레벨에 저장된 고장원인
+      const workElements = (proc.l3 || []).filter((we: any) => we.name && !we.name.includes('클릭'));
+      
+      // ✅ 공정특성 기준으로 순회 (FailureL3Tab.tsx와 동일)
+      workElements.forEach((we: any) => {
+        const weName = we.name || '';
         const m4 = we.m4 || we.fourM || 'MN';
-        (we.failureCauses || []).forEach((fc: any) => {
-          if (fc.name && !fc.name.includes('클릭') && !fc.name.includes('추가')) {
-            items.push({ id: fc.id || uid(), fcNo: `C${counter}`, processName: proc.name, m4, workElem: we.name, text: fc.name });
+        
+        // 의미 있는 공정특성 수집
+        const functions = we.functions || [];
+        const allProcessChars: any[] = [];
+        
+        functions.forEach((f: any) => {
+          if (!isMeaningful(f.name)) return;
+          (f.processChars || []).forEach((pc: any) => {
+            if (!isMeaningful(pc.name)) return;
+            allProcessChars.push({ ...pc, funcId: f.id, funcName: f.name });
+          });
+        });
+        
+        // 각 공정특성에 연결된 고장원인 추출
+        allProcessChars.forEach((pc: any) => {
+          const linkedCauses = allCauses.filter((c: any) => c.processCharId === pc.id);
+          
+          linkedCauses.forEach((fc: any) => {
+            if (!isMeaningful(fc.name)) return;
+            if (!fc.id) fc.id = uid();
+            
+            const key = `${proc.name}|${weName}|${fc.name}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            
+            items.push({ 
+              id: fc.id, 
+              fcNo: `C${counter}`, 
+              processName: proc.name, 
+              m4, 
+              workElem: weName, 
+              text: fc.name,
+              // ★ 역전개 정보
+              workFunction: pc.funcName || '',  // 작업요소 기능
+              processChar: pc.name || '',       // 공정특성
+            });
             counter++;
-          }
+          });
+        });
+      });
+      
+      // ✅ 하위호환: processCharId가 없는 고장원인 (기존 we.failureCauses 구조)
+      workElements.forEach((we: any) => {
+        const weName = we.name || '';
+        const m4 = we.m4 || we.fourM || 'MN';
+        
+        (we.failureCauses || []).forEach((fc: any) => {
+          if (!isMeaningful(fc.name)) return;
+          if (!fc.id) fc.id = uid();
+          
+          const key = `${proc.name}|${weName}|${fc.name}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+          
+          items.push({ 
+            id: fc.id, 
+            fcNo: `C${counter}`, 
+            processName: proc.name, 
+            m4, 
+            workElem: weName, 
+            text: fc.name 
+          });
+          counter++;
         });
       });
     });
+    
+    console.log('[FC 데이터]', items.length, '개 (확정됨 + 중복 제거됨):', items.map(f => `${f.fcNo}:${f.text.substring(0, 20)}`));
     return items;
-  }, [state.l2]);
+  }, [state.l2, isL3Confirmed]);
 
+  // ========== 현재 선택된 FM ==========
   const currentFM = useMemo(() => fmData.find(f => f.id === currentFMId), [fmData, currentFMId]);
 
-  // SVG 연결선 계산 훅
+  // ========== viewMode 초기화 (5ST/6ST/ALL 버튼으로 들어온 경우 result 화면 표시) ==========
+  useEffect(() => {
+    const requestedViewMode = (state as any).failureLinkViewMode;
+    if (requestedViewMode === 'result') {
+      setViewMode('result');
+      setSelectedProcess('all');
+      // ✅ failureLinkViewMode 플래그 초기화 (한 번만 적용)
+      setState((prev: any) => {
+        const { failureLinkViewMode, ...rest } = prev;
+        return rest;
+      });
+      console.log('[FailureLinkTab] 5ST/6ST/ALL 버튼으로 전체 화면 표시');
+    }
+  }, [(state as any).failureLinkViewMode, setState]);
+
+  // ========== 첫 번째 FM 자동 선택 (고장사슬 기본 표시) ==========
+  useEffect(() => {
+    // FM 데이터가 있고 현재 선택된 FM이 없으면 첫 번째 FM 자동 선택 (diagram 모드일 때만)
+    if (viewMode === 'diagram' && fmData.length > 0 && !currentFMId) {
+      const firstFM = fmData[0];
+      console.log('[FailureLinkTab] 첫 번째 FM 자동 선택:', firstFM.fmNo, firstFM.text);
+      setCurrentFMId(firstFM.id);
+      setSelectedProcess(firstFM.processName);
+    }
+  }, [fmData, currentFMId, viewMode]);
+
+  // ========== SVG 연결선 ==========
   const { svgPaths, drawLines } = useSVGLines(
-    chainAreaRef,
-    fmNodeRef,
-    feColRef,
-    fcColRef,
-    linkedFEs,
-    linkedFCs,
-    currentFM
+    chainAreaRef, fmNodeRef, feColRef, fcColRef, linkedFEs, linkedFCs, currentFM
   );
 
-  // 공정 목록 추출
-  const processList = useMemo(() => {
-    const procs = new Set<string>();
-    (state.l2 || []).forEach((proc: any) => {
-      if (proc.name && !proc.name.includes('클릭')) {
-        procs.add(proc.name);
-      }
-    });
-    return Array.from(procs);
-  }, [state.l2]);
-
-  // 필터링된 FM 데이터
-  const filteredFmData = useMemo(() => {
-    if (selectedProcess === 'all') return fmData;
-    return fmData.filter(fm => fm.processName === selectedProcess);
-  }, [fmData, selectedProcess]);
-
-  // 필터링된 FC 데이터
-  // FC 필터링: fcLinkScope에 따라 해당공정/모든공정 선택
-  const filteredFcData = useMemo(() => {
-    // 복합연결(모든공정) 모드면 전체 FC 표시
-    if (fcLinkScope === 'all') return fcData;
-    // 단순연결(해당공정) 모드면 현재 FM의 공정과 같은 FC만 표시
-    if (selectedProcess === 'all') return fcData;
-    return fcData.filter(fc => fc.processName === selectedProcess);
-  }, [fcData, selectedProcess, fcLinkScope]);
-
-  // 연결 현황 계산 (ID 기반 정확한 매칭)
-  const linkStats = useMemo(() => {
-    // FE 연결 현황 (빈 문자열 제외, 정확한 ID 매칭)
-    const feLinkedIds = new Set<string>(
-      savedLinks
-        .filter(l => l.feId && l.feId.trim() !== '') // 빈 문자열 및 공백 제외
-        .map(l => l.feId)
-    );
-    const feLinkedTexts = new Set<string>(
-      savedLinks
-        .filter(l => l.feText && l.feText.trim() !== '') // 하위호환용
-        .map(l => l.feText)
-    );
-    const feLinkedCount = feData.filter(fe => 
-      feLinkedIds.has(fe.id) || (fe.text && feLinkedTexts.has(fe.text))
-    ).length;
-    const feMissingCount = feData.length - feLinkedCount;
-
-    // FM 연결 현황 (빈 문자열 제외)
-    const fmLinkedIds = new Set<string>(
-      savedLinks
-        .filter(l => l.fmId && l.fmId.trim() !== '')
-        .map(l => l.fmId)
-    );
-    const fmLinkedCount = fmData.filter(fm => fmLinkedIds.has(fm.id)).length;
-    const fmMissingCount = fmData.length - fmLinkedCount;
-
-    // FC 연결 현황 (빈 문자열 제외, 정확한 ID 매칭)
-    const fcLinkedIds = new Set<string>(
-      savedLinks
-        .filter(l => l.fcId && l.fcId.trim() !== '') // 빈 문자열 및 공백 제외
-        .map(l => l.fcId)
-    );
-    const fcLinkedTexts = new Set<string>(
-      savedLinks
-        .filter(l => l.fcText && l.fcText.trim() !== '') // 하위호환용
-        .map(l => l.fcText)
-    );
-    const fcLinkedCount = fcData.filter(fc => 
-      fcLinkedIds.has(fc.id) || (fc.text && fcLinkedTexts.has(fc.text))
-    ).length;
-    const fcMissingCount = fcData.length - fcLinkedCount;
-
-    // 각 FM별 연결된 FE/FC 개수 계산
-    const fmLinkCounts = new Map<string, { feCount: number; fcCount: number }>();
-    fmData.forEach(fm => {
-      const feCount = savedLinks.filter(l => l.fmId === fm.id && l.feId && l.feId.trim() !== '').length;
-      const fcCount = savedLinks.filter(l => l.fmId === fm.id && l.fcId && l.fcId.trim() !== '').length;
-      fmLinkCounts.set(fm.id, { feCount, fcCount });
-    });
-
-    console.log('[linkStats 재계산]', {
-      savedLinksCount: savedLinks.length,
-      feLinkedIds: Array.from(feLinkedIds),
-      fcLinkedIds: Array.from(fcLinkedIds),
-      fmLinkedIds: Array.from(fmLinkedIds)
-    });
-
-    return { 
-      feLinkedCount, feMissingCount, 
-      fmLinkedCount, fmMissingCount, 
-      fcLinkedCount, fcMissingCount, 
-      feLinkedIds, feLinkedTexts, // ID와 텍스트 모두 반환
-      fmLinkedIds, 
-      fcLinkedIds, fcLinkedTexts, // ID와 텍스트 모두 반환
-      fmLinkCounts // 각 FM별 연결 카운트
-    };
-  }, [savedLinks, feData, fmData, fcData]);
-
-  // SVG 연결선 계산은 useSVGLines 훅에서 처리 (위에서 정의됨)
-
-  const selectFM = useCallback((id: string) => {
-    // 이미 선택된 FM을 다시 클릭하면 해제
-    if (currentFMId === id) {
-      setCurrentFMId(null);
-      setLinkedFEs(new Map());
-      setLinkedFCs(new Map());
-      setViewMode('diagram');
-      setTimeout(drawLines, 50);
+  // ========== FE 더블클릭 (연결 해제) - FC와 동일한 패턴 ==========
+  const unlinkFE = useCallback((id: string) => {
+    const fe = feData.find(f => f.id === id);
+    if (!fe) {
+      console.log('[unlinkFE] FE를 찾을 수 없음:', id);
       return;
     }
     
-    setCurrentFMId(id);
-    setViewMode('diagram'); // FM 선택 시 고장사슬 화면으로 자동 전환
-    // 선택한 FM의 공정으로 자동 필터링
-    const selectedFm = fmData.find(f => f.id === id);
-    if (selectedFm) {
-      setSelectedProcess(selectedFm.processName);
+    console.log('[unlinkFE 시작]', { feId: id, feText: fe.text, currentFMId });
+    
+    // 1. 먼저 linkedFEs (미저장 상태)에서 제거 시도
+    let removedFromLinked = false;
+    setLinkedFEs(prev => {
+      if (prev.has(id)) {
+        const next = new Map(prev);
+        next.delete(id);
+        console.log('[FE 선택 해제] linkedFEs에서 제거:', fe.text);
+        removedFromLinked = true;
+        return next;
+      }
+      return prev;
+    });
+    
+    // 2. savedLinks에서 해당 FE와 관련된 연결 모두 찾기 (현재 FM 기준)
+    if (currentFMId) {
+      const existingLinks = savedLinks.filter(l => 
+        l.fmId === currentFMId && (l.feId === id || l.feText === fe.text)
+      );
+      
+      console.log('[unlinkFE] 기존 연결 검색:', existingLinks.length, '개 발견');
+      
+      if (existingLinks.length > 0) {
+        // 연결 해제 (ID 또는 텍스트 기반)
+        const filtered = savedLinks.filter(l => 
+          !(l.fmId === currentFMId && (l.feId === id || l.feText === fe.text))
+        );
+        
+        console.log('[FE 연결 해제 (더블클릭)]', fe.text, 'from FM:', currentFMId, '| 제거:', existingLinks.length, '개');
+        
+        setSavedLinks(filtered);
+        setState((prev: any) => ({ ...prev, failureLinks: filtered }));
+        setDirty(true);
+        requestAnimationFrame(() => {
+          saveTemp?.(); // ✅ 편집 중: localStorage만
+        });
+        
+        alert(`✅ "${fe.text}" 연결이 해제되었습니다.`);
+      } else if (!removedFromLinked) {
+        console.log('[unlinkFE] 현재 FM과 연결 없음');
+      }
+    } else {
+      if (!removedFromLinked) {
+        alert('⚠️ 고장형태(FM)를 먼저 선택해주세요.');
+      }
     }
-    // linkedFEs/linkedFCs는 useEffect에서 savedLinks를 기반으로 업데이트됨
+    
     setTimeout(drawLines, 50);
-  }, [currentFMId, fmData, drawLines]);
+  }, [currentFMId, feData, savedLinks, setState, setDirty, saveToLocalStorage, saveAtomicDB, drawLines]);
 
-  // currentFMId 변경 시 savedLinks에서 해당 FM의 연결된 FE/FC 로드
+  // ========== viewMode 변경 시 화살표 다시 그리기 ==========
   useEffect(() => {
+    if (viewMode === 'diagram') {
+      // diagram 모드로 전환 시 화살표 다시 그리기 (여러 타이밍)
+      const timer1 = setTimeout(drawLines, 100);
+      const timer2 = setTimeout(drawLines, 300);
+      const timer3 = setTimeout(drawLines, 500);
+      const timer4 = setTimeout(drawLines, 1000);
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+        clearTimeout(timer3);
+        clearTimeout(timer4);
+      };
+    }
+  }, [viewMode, drawLines]);
+
+  // ========== 컴포넌트 마운트/탭 전환 시 화살표 다시 그리기 ==========
+  useEffect(() => {
+    // 컴포넌트가 마운트될 때 화살표 그리기 (탭 전환 후)
+    const timer1 = setTimeout(drawLines, 100);
+    const timer2 = setTimeout(drawLines, 300);
+    const timer3 = setTimeout(drawLines, 500);
+    const timer4 = setTimeout(drawLines, 1000);
+    const timer5 = setTimeout(drawLines, 2000);
+    
+    console.log('[FailureLinkTab] 컴포넌트 마운트, 화살표 그리기 예약');
+    
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+      clearTimeout(timer4);
+      clearTimeout(timer5);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 마운트 시 한 번만 실행
+
+  // ========== 연결 통계 계산 ==========
+  const linkStats = useMemo(() => {
+    // ID 기반 연결 확인 (빈 문자열 제외)
+    const feLinkedIds = new Set<string>();
+    const fcLinkedIds = new Set<string>();
+    const fmLinkedIds = new Set<string>();
+    const fmLinkCounts = new Map<string, { feCount: number; fcCount: number }>();
+    
+    savedLinks.forEach(link => {
+      if (link.fmId) fmLinkedIds.add(link.fmId);
+      if (link.feId && link.feId.trim() !== '') feLinkedIds.add(link.feId);
+      if (link.fcId && link.fcId.trim() !== '') fcLinkedIds.add(link.fcId);
+      
+      // FM별 연결 카운트 (ID, 번호, 텍스트 모두 확인)
+      if (!fmLinkCounts.has(link.fmId)) {
+        fmLinkCounts.set(link.fmId, { feCount: 0, fcCount: 0 });
+      }
+      const counts = fmLinkCounts.get(link.fmId)!;
+      
+      // FE 카운트: feId, feNo, feText 중 하나라도 있으면 카운트
+      if ((link.feId && link.feId.trim() !== '') || 
+          (link.feNo && link.feNo.trim() !== '') || 
+          (link.feText && link.feText.trim() !== '')) {
+        counts.feCount++;
+      }
+      
+      // FC 카운트: fcId, fcNo, fcText 중 하나라도 있으면 카운트
+      if ((link.fcId && link.fcId.trim() !== '') || 
+          (link.fcNo && link.fcNo.trim() !== '') || 
+          (link.fcText && link.fcText.trim() !== '')) {
+        counts.fcCount++;
+      }
+    });
+    
+    // 하위호환: 텍스트 기반 매칭 (trim 처리)
+    const feLinkedTexts = new Set<string>(
+      savedLinks
+        .filter(l => l.feText && l.feText.trim() !== '')
+        .map(l => l.feText.trim())
+    );
+    const fcLinkedTexts = new Set<string>(
+      savedLinks
+        .filter(l => l.fcText && l.fcText.trim() !== '')
+        .map(l => l.fcText.trim())
+    );
+    
+    // 번호 기반 매칭도 추가
+    const feLinkedNos = new Set<string>(
+      savedLinks
+        .filter(l => l.feNo && l.feNo.trim() !== '')
+        .map(l => l.feNo.trim())
+    );
+    const fcLinkedNos = new Set<string>(
+      savedLinks
+        .filter(l => l.fcNo && l.fcNo.trim() !== '')
+        .map(l => l.fcNo.trim())
+    );
+    
+    const feLinkedCount = feData.filter(fe => 
+      feLinkedIds.has(fe.id) || 
+      feLinkedTexts.has(fe.text.trim()) || 
+      feLinkedNos.has(fe.feNo)
+    ).length;
+    const fcLinkedCount = fcData.filter(fc => 
+      fcLinkedIds.has(fc.id) || 
+      fcLinkedTexts.has(fc.text.trim()) || 
+      fcLinkedNos.has(fc.fcNo)
+    ).length;
+    const fmLinkedCount = fmData.filter(fm => fmLinkedIds.has(fm.id)).length;
+    
+    return {
+      feLinkedIds, feLinkedTexts, feLinkedCount, feMissingCount: feData.length - feLinkedCount,
+      fcLinkedIds, fcLinkedTexts, fcLinkedCount, fcMissingCount: fcData.length - fcLinkedCount,
+      fmLinkedIds, fmLinkedCount, fmMissingCount: fmData.length - fmLinkedCount,
+      fmLinkCounts
+    };
+  }, [savedLinks, feData, fmData, fcData]);
+
+  // ========== FM 선택 시 연결된 FE/FC 로드 ==========
+  useEffect(() => {
+    // ✅ 연결확정 직후에는 이 useEffect가 linkedFEs/linkedFCs를 덮어쓰지 않음
+    if (justConfirmedRef.current) {
+      console.log('[FM 선택] ⏭️ justConfirmed=true, 덮어쓰기 스킵');
+      justConfirmedRef.current = false; // 다음에는 정상 작동
+      return;
+    }
+    
     if (!currentFMId) {
       setLinkedFEs(new Map());
       setLinkedFCs(new Map());
       return;
     }
     
-    const fmLinks = savedLinks.filter(l => l.fmId === currentFMId);
     const newFEs = new Map<string, FEItem>();
     const newFCs = new Map<string, FCItem>();
+    
+    const fmLinks = savedLinks.filter(l => l.fmId === currentFMId);
+    console.log('[FM 선택] 연결된 links:', fmLinks.length, '개', fmLinks.map(l => ({ feId: l.feId, feText: l.feText, fcId: l.fcId, fcText: l.fcText })));
+    
     fmLinks.forEach(link => {
-      // feId/fcId로 조회 (ID 기반)
-      if (link.feId) {
-        const feItem = feData.find(f => f.id === link.feId);
-        if (feItem) newFEs.set(feItem.id, feItem);
+      // FE 로드 (ID → 번호 → 텍스트 순서로 매칭 시도)
+      let feItem: FEItem | undefined;
+      
+      // 1단계: ID로 찾기
+      if (link.feId && link.feId.trim() !== '') {
+        feItem = feData.find(f => f.id === link.feId);
+        if (feItem) {
+          console.log('[FE 로드] ID 매칭 성공:', link.feId, '→', feItem.text);
+        }
       }
-      if (link.fcId) {
-        const fcItem = fcData.find(f => f.id === link.fcId);
-        if (fcItem) newFCs.set(fcItem.id, fcItem);
+      
+      // 2단계: ID 매칭 실패 시 번호로 찾기 (번호는 변경되지 않으므로 더 안정적)
+      if (!feItem && link.feNo && link.feNo.trim() !== '') {
+        feItem = feData.find(f => f.feNo === link.feNo.trim());
+        if (feItem) {
+          console.log('[FE 로드] 번호 매칭 성공:', link.feNo, '→', feItem.id, feItem.text);
+        }
       }
+      
+      // 3단계: 번호 매칭 실패 시 텍스트로 찾기
+      if (!feItem && link.feText && link.feText.trim() !== '') {
+        const trimmedText = link.feText.trim();
+        feItem = feData.find(f => f.text.trim() === trimmedText);
+        if (feItem) {
+          console.log('[FE 로드] 텍스트 매칭 성공:', trimmedText, '→', feItem.id);
+        }
+      }
+      
+      if (feItem) {
+        newFEs.set(feItem.id, feItem);
+      } else if (link.feId || link.feNo || link.feText) {
+        // FE 데이터가 있는데 매칭 실패한 경우만 경고
+        console.warn('[FE 로드] 매칭 실패 (FE 데이터 불일치):', {
+          feId: link.feId,
+          feNo: link.feNo,
+          feText: link.feText,
+        });
+      }
+      // FE 데이터가 없는 경우는 정상 (FC만 연결된 링크)
+      
+      // FC 로드 (ID → 번호 → 텍스트 순서로 매칭 시도)
+      let fcItem: FCItem | undefined;
+      
+      // 1단계: ID로 찾기
+      if (link.fcId && link.fcId.trim() !== '') {
+        fcItem = fcData.find(f => f.id === link.fcId);
+        if (fcItem) {
+          console.log('[FC 로드] ID 매칭 성공:', link.fcId, '→', fcItem.text);
+        }
+      }
+      
+      // 2단계: ID 매칭 실패 시 번호로 찾기 (번호는 변경되지 않으므로 더 안정적)
+      if (!fcItem && link.fcNo && link.fcNo.trim() !== '') {
+        fcItem = fcData.find(f => f.fcNo === link.fcNo.trim());
+        if (fcItem) {
+          console.log('[FC 로드] 번호 매칭 성공:', link.fcNo, '→', fcItem.id, fcItem.text);
+        }
+      }
+      
+      // 3단계: 번호 매칭 실패 시 텍스트로 찾기
+      if (!fcItem && link.fcText && link.fcText.trim() !== '') {
+        const trimmedText = link.fcText.trim();
+        fcItem = fcData.find(f => f.text.trim() === trimmedText);
+        if (fcItem) {
+          console.log('[FC 로드] 텍스트 매칭 성공:', trimmedText, '→', fcItem.id);
+        }
+      }
+      
+      if (fcItem) {
+        newFCs.set(fcItem.id, fcItem);
+      } else if (link.fcId || link.fcNo || link.fcText) {
+        // FC 데이터가 있는데 매칭 실패한 경우만 경고
+        console.warn('[FC 로드] 매칭 실패 (FC 데이터 불일치):', {
+          fcId: link.fcId,
+          fcNo: link.fcNo,
+          fcText: link.fcText,
+        });
+      }
+      // FC 데이터가 없는 경우는 정상 (FE만 연결된 링크)
     });
+    
     setLinkedFEs(newFEs);
     setLinkedFCs(newFCs);
+    console.log('[FM 선택 완료]', currentFMId, '→ FE:', newFEs.size, 'FC:', newFCs.size, '| savedLinks:', savedLinks.length);
   }, [currentFMId, savedLinks, feData, fcData]);
 
+  // ========== 규격미달(M1) 저장 데이터 vs 화면 표시 비교 ==========
+  // 디버그 로직 제거됨 - 타이밍 이슈로 인한 거짓 양성 에러 방지
+
+  // ========== FM 선택 ==========
+  const selectFM = useCallback((id: string) => {
+    console.log('[selectFM 호출]', { id, currentFMId, fmDataLength: fmData.length });
+    
+    if (currentFMId === id) {
+      // 선택 해제
+      console.log('[selectFM] 동일 FM 클릭 → 선택 해제');
+      setCurrentFMId(null);
+      setLinkedFEs(new Map());
+      setLinkedFCs(new Map());
+      setViewMode('diagram');
+    } else {
+      // 새로 선택
+      console.log('[selectFM] 새 FM 선택:', id);
+      setCurrentFMId(id);
+      setViewMode('diagram');
+      const fm = fmData.find(f => f.id === id);
+      if (fm) {
+        console.log('[selectFM] FM 찾음:', fm.fmNo, fm.text);
+        setSelectedProcess(fm.processName);
+      } else {
+        console.warn('[selectFM] FM을 찾지 못함:', id, '| fmData IDs:', fmData.map(f => f.id));
+      }
+    }
+    setTimeout(drawLines, 50);
+  }, [currentFMId, fmData, drawLines]);
+
+  // ========== 이전/다음 FM 이동 ==========
+  const currentFMIndex = useMemo(() => {
+    if (!currentFMId) return -1;
+    return fmData.findIndex(f => f.id === currentFMId);
+  }, [currentFMId, fmData]);
+
+  const hasPrevFM = currentFMIndex > 0;
+  const hasNextFM = currentFMIndex >= 0 && currentFMIndex < fmData.length - 1;
+
+  const goToPrevFM = useCallback(() => {
+    if (hasPrevFM) {
+      const prevFM = fmData[currentFMIndex - 1];
+      setCurrentFMId(prevFM.id);
+      setTimeout(drawLines, 50);
+    }
+  }, [currentFMIndex, fmData, hasPrevFM, drawLines]);
+
+  const goToNextFM = useCallback(() => {
+    if (hasNextFM) {
+      const nextFM = fmData[currentFMIndex + 1];
+      setCurrentFMId(nextFM.id);
+      setTimeout(drawLines, 50);
+    }
+  }, [currentFMIndex, fmData, hasNextFM, drawLines]);
+
+  // ========== FE 토글 (연결/해제) - N:M 관계 지원 ==========
+  // 하나의 FE는 여러 FM에 연결될 수 있음
   const toggleFE = useCallback((id: string) => {
-    console.log('[toggleFE] 호출됨:', { currentFMId, feId: id, editMode });
     const fe = feData.find(f => f.id === id);
-    if (!fe) {
-      console.log('[toggleFE] FE 데이터 없음:', id);
+    if (!fe) return;
+    
+    // FM이 선택되지 않은 경우
+    if (!currentFMId) {
+      alert('⚠️ 고장형태(FM)를 먼저 선택해주세요.\n\n하나의 고장영향(FE)은 여러 고장형태(FM)에 연결될 수 있습니다.');
       return;
     }
     
-    // savedLinks를 함수형 업데이트로 안전하게 처리
-    setSavedLinks(prev => {
-      const currentLinks = prev;
-      // currentFMId가 있으면 해당 FM과의 연결만 확인, 없으면 모든 FM과의 연결 확인
-      const existingLink = currentFMId 
-        ? currentLinks.find(l => l.fmId === currentFMId && l.feId === id && l.feId && l.feId.trim() !== '')
-        : currentLinks.find(l => l.feId === id && l.feId && l.feId.trim() !== '');
+    // 0단계: 아직 확정되지 않은 임시 연결(Linked 상태)만 있을 때는 단순 토글 해제
+    if (linkedFEs.has(id)) {
+      setLinkedFEs(prev => {
+        const next = new Map(prev);
+        next.delete(id);
+        return next;
+      });
+      setTimeout(drawLines, 50);
+      return;
+    }
+    
+    // 현재 FM과의 연결만 확인 (다른 FM과의 연결은 유지)
+    const existingLink = savedLinks.find(l => 
+      l.fmId === currentFMId && (l.feId === id || l.feText === fe.text)
+    );
+    
+    if (existingLink) {
+      // 현재 FM과의 연결만 해제 (다른 FM과의 연결은 유지됨)
+      const filtered = savedLinks.filter(l => 
+        !(l.fmId === currentFMId && (l.feId === id || l.feText === fe.text))
+      );
       
-      console.log('[toggleFE] 기존 연결 확인:', { 
-        currentFMId, 
-        feId: id, 
-        existingLink: !!existingLink,
-        savedLinksCount: currentLinks.length,
-        allLinks: currentLinks.map(l => ({ fmId: l.fmId, feId: l.feId, fcId: l.fcId }))
+      console.log('[FE 연결 해제]', fe.text, 'from FM:', currentFMId, '(다른 FM 연결 유지)');
+      
+      setSavedLinks(filtered);
+      setState((prev: any) => ({ ...prev, failureLinks: filtered }));
+      setDirty(true);
+      requestAnimationFrame(() => {
+        saveTemp?.(); // ✅ 편집 중: localStorage만
       });
       
-      if (existingLink) {
-        // 이미 저장된 연결이면 해제 (currentFMId가 있으면 해당 FM만, 없으면 모든 FM에서 해제)
-        const filtered = currentFMId
-          ? currentLinks.filter(l => !(l.fmId === currentFMId && l.feId === id))
-          : currentLinks.filter(l => l.feId !== id);
-        
-        console.log('[고장연결 해제] FE:', fe.text, 'FM:', currentFMId || '모든FM', '남은 연결:', filtered.length);
-        
-        // 상태 업데이트 (다음 이벤트 루프에서 실행하여 안전성 보장)
-        requestAnimationFrame(() => {
-          setState((prevState: any) => {
-            console.log('[toggleFE 해제] state.failureLinks 업데이트:', filtered.length);
-            return { ...prevState, failureLinks: filtered };
-          });
-          setDirty(true);
-          setTimeout(() => {
-            saveToLocalStorage?.();
-          }, 100);
-        });
-        
-        // 편집 중인 상태에서도 제거
-        setLinkedFEs(prevFEs => {
-          const next = new Map(prevFEs);
-          next.delete(id);
-          return next;
-        });
-        
-        // 해제 후 분석결과 뷰로 전환
-        if (filtered.length === 0) {
-          setViewMode('diagram');
-        } else {
-          setViewMode('result');
-        }
-        
-        return filtered;
-      } else {
-        // 새로 연결은 편집 모드에서만 (반환값 없음 = 상태 유지)
-        if (currentFMId && editMode === 'edit') {
-          setLinkedFEs(prevFEs => {
-            const next = new Map(prevFEs);
-            next.set(id, fe);
-            return next;
-          });
-        } else if (!currentFMId) {
-          alert('⚠️ 고장형태(FM)를 먼저 선택해주세요.');
-        }
-        return prev; // 상태 변경 없음
-      }
-    });
+      setLinkedFEs(prev => {
+        const next = new Map(prev);
+        next.delete(id);
+        return next;
+      });
+    } else if (editMode === 'edit') {
+      // 새 연결 추가 (기존 다른 FM과의 연결과 별개로 추가됨)
+      setLinkedFEs(prev => {
+        const next = new Map(prev);
+        next.set(id, fe);
+        return next;
+      });
+      console.log('[FE 선택]', fe.text, 'to FM:', currentFMId, '(연결확정으로 저장)');
+    }
+    
     setTimeout(drawLines, 50);
-  }, [currentFMId, editMode, feData, drawLines, setState, setDirty, saveToLocalStorage]);
+  }, [currentFMId, editMode, feData, savedLinks, setState, setDirty, saveToLocalStorage, drawLines]);
+
+  // ========== FC 클릭 (연결 추가) ==========
+  // ========== 공정 순서 비교 함수 ==========
+  const getProcessOrder = useCallback((processName: string): number => {
+    const proc = state.l2.find((p: any) => p.name === processName);
+    if (proc) {
+      // no가 숫자 형태면 파싱, 아니면 order 또는 인덱스 사용
+      const noNum = parseInt(proc.no, 10);
+      if (!isNaN(noNum)) return noNum;
+      return proc.order || state.l2.indexOf(proc) * 10;
+    }
+    return 9999; // 못 찾으면 맨 뒤로
+  }, [state.l2]);
 
   const toggleFC = useCallback((id: string) => {
-    console.log('[toggleFC] 호출됨:', { currentFMId, fcId: id, editMode });
     const fc = fcData.find(f => f.id === id);
-    if (!fc) {
-      console.log('[toggleFC] FC 데이터 없음:', id);
+    if (!fc) return;
+    
+    // FM이 선택되지 않은 경우
+    if (!currentFMId) {
+      alert('⚠️ 고장형태(FM)를 먼저 선택해주세요.\n\n하나의 고장원인(FC)은 여러 고장형태(FM)에 연결될 수 있습니다.');
       return;
     }
     
-    // savedLinks를 함수형 업데이트로 안전하게 처리
-    setSavedLinks(prev => {
-      const currentLinks = prev;
-      // currentFMId가 있으면 해당 FM과의 연결만 확인, 없으면 모든 FM과의 연결 확인
-      const existingLink = currentFMId
-        ? currentLinks.find(l => l.fmId === currentFMId && l.fcId === id && l.fcId && l.fcId.trim() !== '')
-        : currentLinks.find(l => l.fcId === id && l.fcId && l.fcId.trim() !== '');
+    // ✅ 뒷공정 FC 연결 방지: FC 공정이 FM 공정보다 뒤면 연결 불가
+    if (currentFM) {
+      const fmOrder = getProcessOrder(currentFM.processName);
+      const fcOrder = getProcessOrder(fc.processName);
       
-      console.log('[toggleFC] 기존 연결 확인:', { 
-        currentFMId, 
-        fcId: id, 
-        existingLink: !!existingLink,
-        savedLinksCount: currentLinks.length,
-        allLinks: currentLinks.map(l => ({ fmId: l.fmId, feId: l.feId, fcId: l.fcId }))
-      });
-      
-      if (existingLink) {
-        // 이미 저장된 연결이면 해제 (currentFMId가 있으면 해당 FM만, 없으면 모든 FM에서 해제)
-        const filtered = currentFMId
-          ? currentLinks.filter(l => !(l.fmId === currentFMId && l.fcId === id))
-          : currentLinks.filter(l => l.fcId !== id);
-        
-        console.log('[고장연결 해제] FC:', fc.text, 'FM:', currentFMId || '모든FM', '남은 연결:', filtered.length);
-        
-        // 상태 업데이트 (다음 이벤트 루프에서 실행하여 안전성 보장)
-        requestAnimationFrame(() => {
-          setState((prevState: any) => {
-            console.log('[toggleFC 해제] state.failureLinks 업데이트:', filtered.length);
-            return { ...prevState, failureLinks: filtered };
-          });
-          setDirty(true);
-          setTimeout(() => {
-            saveToLocalStorage?.();
-          }, 100);
-        });
-        
-        // 편집 중인 상태에서도 제거
-        setLinkedFCs(prevFCs => {
-          const next = new Map(prevFCs);
-          next.delete(id);
-          return next;
-        });
-        
-        // 해제 후 분석결과 뷰로 전환
-        if (filtered.length === 0) {
-          setViewMode('diagram');
-        } else {
-          setViewMode('result');
-        }
-        
-        return filtered;
-      } else {
-        // 새로 연결은 편집 모드에서만 (반환값 없음 = 상태 유지)
-        if (currentFMId && editMode === 'edit') {
-          setLinkedFCs(prevFCs => {
-            const next = new Map(prevFCs);
-            next.set(id, fc);
-            return next;
-          });
-        } else if (!currentFMId) {
-          alert('⚠️ 고장형태(FM)를 먼저 선택해주세요.');
-        }
-        return prev; // 상태 변경 없음
+      if (fcOrder > fmOrder) {
+        alert(`⚠️ 뒷공정 원인 연결 불가!\n\n고장형태(FM): ${currentFM.processName} (순서: ${fmOrder})\n고장원인(FC): ${fc.processName} (순서: ${fcOrder})\n\n💡 고장원인(FC)은 고장형태(FM)와 같은 공정이거나 앞 공정에서만 연결할 수 있습니다.`);
+        console.log('[FC 연결 차단] 뒷공정 원인:', fc.processName, '>', currentFM.processName);
+        return;
       }
-    });
+    }
+    
+    // 이미 연결된 경우 - 안내 메시지 (ID 또는 텍스트 기반 매칭)
+    const existingLink = savedLinks.find(l => 
+      l.fmId === currentFMId && (l.fcId === id || l.fcText === fc.text)
+    );
+    if (existingLink) {
+      console.log('[FC 이미 연결됨] 더블클릭으로 해제하세요:', fc.text);
+      return; // 이미 연결된 경우 클릭으로는 해제 안함
+    }
+    
+    // 편집 모드에서만 연결 추가
+    if (editMode === 'edit') {
+      setLinkedFCs(prev => {
+        const next = new Map(prev);
+        next.set(id, fc);
+        return next;
+      });
+      console.log('[FC 선택 → 연결]', fc.text, 'to FM:', currentFMId);
+    }
+    
     setTimeout(drawLines, 50);
-  }, [currentFMId, editMode, fcData, drawLines, setState, setDirty, saveToLocalStorage]);
+  }, [currentFMId, currentFM, editMode, fcData, savedLinks, drawLines, getProcessOrder]);
 
+  // ========== FC 더블클릭 (연결 해제) ==========
+  const unlinkFC = useCallback((id: string) => {
+    const fc = fcData.find(f => f.id === id);
+    if (!fc) {
+      console.log('[unlinkFC] FC를 찾을 수 없음:', id);
+      return;
+    }
+    
+    console.log('[unlinkFC 시작]', { fcId: id, fcText: fc.text, currentFMId });
+    
+    // 1. 먼저 linkedFCs (미저장 상태)에서 제거 시도
+    let removedFromLinked = false;
+    setLinkedFCs(prev => {
+      if (prev.has(id)) {
+        const next = new Map(prev);
+        next.delete(id);
+        console.log('[FC 선택 해제] linkedFCs에서 제거:', fc.text);
+        removedFromLinked = true;
+        return next;
+      }
+      return prev;
+    });
+    
+    // 2. savedLinks에서 해당 FC와 관련된 연결 모두 찾기 (현재 FM 기준)
+    if (currentFMId) {
+      const existingLinks = savedLinks.filter(l => 
+        l.fmId === currentFMId && (l.fcId === id || l.fcText === fc.text)
+      );
+      
+      console.log('[unlinkFC] 기존 연결 검색:', existingLinks.length, '개 발견');
+      
+      if (existingLinks.length > 0) {
+        // 연결 해제 (ID 또는 텍스트 기반)
+        const filtered = savedLinks.filter(l => 
+          !(l.fmId === currentFMId && (l.fcId === id || l.fcText === fc.text))
+        );
+        
+        console.log('[FC 연결 해제 (더블클릭)]', fc.text, 'from FM:', currentFMId, '| 제거:', existingLinks.length, '개');
+        
+        setSavedLinks(filtered);
+        setState((prev: any) => ({ ...prev, failureLinks: filtered }));
+        setDirty(true);
+        requestAnimationFrame(() => {
+          saveTemp?.(); // ✅ 편집 중: localStorage만
+        });
+        
+        alert(`✅ "${fc.text}" 연결이 해제되었습니다.`);
+      } else if (!removedFromLinked) {
+        console.log('[unlinkFC] 현재 FM과 연결 없음');
+      }
+    } else {
+      if (!removedFromLinked) {
+        alert('⚠️ 고장형태(FM)를 먼저 선택해주세요.');
+      }
+    }
+    
+    setTimeout(drawLines, 50);
+  }, [currentFMId, fcData, savedLinks, setState, setDirty, saveToLocalStorage, drawLines]);
+
+  // ========== 현재 FM 연결 상태 확인 ==========
+  const isCurrentFMLinked = useMemo(() => {
+    if (!currentFMId) return false;
+    const fmLinks = savedLinks.filter(l => l.fmId === currentFMId);
+    const hasFE = fmLinks.some(l => l.feId && l.feId.trim() !== '');
+    const hasFC = fmLinks.some(l => l.fcId && l.fcId.trim() !== '');
+    return hasFE || hasFC;
+  }, [currentFMId, savedLinks]);
+
+  // ========== 연결 해제 (수정 모드에서만 사용) ==========
+  const unlinkCurrentFM = useCallback(() => {
+    if (!currentFMId || !currentFM) return;
+    
+    if (!confirm(`⚠️ "${currentFM.text}"의 연결을 해제하시겠습니까?\n\n연결된 FE/FC가 모두 해제됩니다.`)) {
+      return;
+    }
+    
+    const newLinks = savedLinks.filter(l => l.fmId !== currentFMId);
+    setSavedLinks(newLinks);
+    
+    // ✅ setStateSynced 패턴 적용
+    const updateFn = (prev: any) => ({ ...prev, failureLinks: newLinks });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
+    setDirty(true);
+    
+    // linkedFEs/linkedFCs 초기화
+    setLinkedFEs(new Map());
+    setLinkedFCs(new Map());
+    
+    setTimeout(() => {
+      saveTemp?.();
+      drawLines();
+    }, 100);
+    
+    console.log('[연결 해제]', currentFM.text);
+    alert(`✅ "${currentFM.text}" 연결이 해제되었습니다.\n\n다시 FE/FC를 선택하여 연결할 수 있습니다.`);
+  }, [currentFMId, currentFM, savedLinks, setState, setStateSynced, setDirty, saveTemp, drawLines]);
+
+  // ========== 연결 확정 (확정 전용, 토글 아님) ==========
   const confirmLink = useCallback(() => {
     if (!currentFMId || !currentFM) return;
-    // savedLinks state 사용 (현재 값 사용)
-    let newLinks = savedLinks.filter(l => l.fmId !== currentFMId);
+    
+    // ✅ 이미 연결되어 있으면 수정 안내 메시지 표시 (토글 방지)
+    if (isCurrentFMLinked) {
+      alert(`ℹ️ "${currentFM.text}"는 이미 연결이 확정되었습니다.\n\n💡 연결을 수정하려면 [🔗 연결해제] 버튼을 사용하세요.`);
+      return;
+    }
+    
     const feArray = Array.from(linkedFEs.values());
     const fcArray = Array.from(linkedFCs.values());
     
-    // ⚠️ 누락 검증: FE와 FC 모두 연결되어야 확정 가능
-    const missingItems: string[] = [];
-    if (feArray.length === 0) {
-      missingItems.push('고장영향(FE)');
-    }
-    if (fcArray.length === 0) {
-      missingItems.push('고장원인(FC)');
-    }
-    
-    if (missingItems.length > 0) {
-      alert(`⚠️ 고장연결 확정 불가\n\n누락된 항목:\n• ${missingItems.join('\n• ')}\n\n고장형태(FM)에 고장영향(FE)과 고장원인(FC)이 모두 연결되어야 확정할 수 있습니다.`);
+    // ✅ 검증(원자성/DB FK 보장): FE/FC 둘 다 있어야 "연결확정" 가능
+    if (feArray.length === 0 || fcArray.length === 0) {
+      const missing = [];
+      if (feArray.length === 0) missing.push('FE(고장영향)');
+      if (fcArray.length === 0) missing.push('FC(고장원인)');
+      alert(`⚠️ ${missing.join(' + ')}를 선택해야 연결확정이 가능합니다.`);
       return;
     }
     
-    // FK 관계 검증: ID가 실제 데이터와 일치하는지 확인
-    const fmExists = fmData.find(fm => fm.id === currentFMId);
-    if (!fmExists) {
-      alert('⚠️ 고장형태(FM)를 찾을 수 없습니다. 페이지를 새로고침해주세요.');
-      return;
-    }
+    // 기존 연결 제거 후 새 연결 추가
+    let newLinks = savedLinks.filter(l => l.fmId !== currentFMId);
     
-    const invalidFEIds = feArray.filter(fe => !feData.find(f => f.id === fe.id)).map(fe => fe.id);
-    const invalidFCIds = fcArray.filter(fc => !fcData.find(f => f.id === fc.id)).map(fc => fc.id);
-    
-    if (invalidFEIds.length > 0 || invalidFCIds.length > 0) {
-      console.error('[고장연결] FK 검증 실패:', { invalidFEIds, invalidFCIds });
-      alert('⚠️ 연결할 데이터를 찾을 수 없습니다. 페이지를 새로고침해주세요.');
-      return;
-    }
-    
-    console.log('[고장연결 확정] FK 관계 검증 통과:', {
-      fmId: currentFMId,
-      feIds: feArray.map(fe => fe.id),
-      fcIds: fcArray.map(fc => fc.id),
-    });
-    
-    // FE와 FC를 각각 독립적으로 저장 (1:N 관계 지원 - 원자성 DB의 FailureLink는 1:1:1이지만, 여러 개의 Link로 표현)
-    // FE 연결
+    // ✅ 원자성 링크 생성: (FM, FE, FC) 완전한 3자 링크만 저장
+    // - 1개의 FM에 여러 FE/FC를 선택할 수 있으므로, FE×FC 조합(카테시안)으로 link row 생성
     feArray.forEach(fe => {
-      newLinks.push({
-        fmId: currentFMId,
-        feId: fe.id,
-        feNo: fe.feNo,
-        feScope: fe.scope,
-        feText: fe.text,
-        severity: fe.severity || 0,
-        fmText: currentFM.text,
-        fmProcess: currentFM.processName,
-        fcId: '',
-        fcNo: '',
-        fcProcess: '',
-        fcM4: '',
-        fcWorkElem: '',
-        fcText: ''
+      fcArray.forEach(fc => {
+        newLinks.push({
+          fmId: currentFMId,
+          fmText: currentFM.text,
+          fmProcess: currentFM.processName,
+          feId: fe.id,
+          feNo: fe.feNo,
+          feScope: fe.scope,
+          feText: fe.text,
+          severity: fe.severity || 0,
+          // ★ 역전개 정보 저장
+          feFunctionName: fe.functionName || '',
+          feRequirement: fe.requirement || '',
+          fcId: fc.id,
+          fcNo: fc.fcNo,
+          fcProcess: fc.processName,
+          fcM4: fc.m4,
+          fcWorkElem: fc.workElem,
+          fcText: fc.text,
+          // ★ FC 역전개 정보 저장
+          fcWorkFunction: fc.workFunction || '',
+          fcProcessChar: fc.processChar || '',
+        });
       });
     });
     
-    // FC 연결
-    fcArray.forEach(fc => {
-      newLinks.push({
-        fmId: currentFMId,
-        feId: '',
-        feNo: '',
-        feScope: '',
-        feText: '',
-        severity: 0,
-        fmText: currentFM.text,
-        fmProcess: currentFM.processName,
-        fcId: fc.id,
-        fcNo: fc.fcNo,
-        fcProcess: fc.processName,
-        fcM4: fc.m4,
-        fcWorkElem: fc.workElem,
-        fcText: fc.text
-      });
-    });
+    console.log('[연결 확정]', currentFM.text, '→ FE:', feArray.length, 'FC:', fcArray.length, '총:', newLinks.length);
+    console.log('[연결 확정] 심각도 확인:', newLinks.map(l => ({ feText: l.feText?.slice(0,10), severity: l.severity })));
     
-    console.log('[고장연결 확정] 저장될 연결 수:', newLinks.length, '개 (FE:', feArray.length, 'FC:', fcArray.length, ')');
+    // ✅ 핵심: useEffect가 linkedFEs/linkedFCs를 덮어쓰지 않도록 플래그 설정
+    justConfirmedRef.current = true;
     
+    // ✅ 로컬 상태 업데이트
     setSavedLinks(newLinks);
-    setState((prev: any) => ({ ...prev, failureLinks: newLinks }));
-    setDirty(true);
-    // 상태 업데이트 후 저장 보장
-    setTimeout(() => {
-      saveToLocalStorage?.();
-    }, 100);
-    setEditMode('edit');
-    alert(`✅ ${currentFM.text} 연결이 확정 및 저장되었습니다.\n\nFE: ${feArray.length}개, FC: ${fcArray.length}개`);
-  }, [currentFMId, currentFM, linkedFEs, linkedFCs, savedLinks, setState, setDirty, saveToLocalStorage, fmData, feData, fcData, editMode]);
-
-  const handleModeChange = useCallback((mode: 'edit' | 'confirm') => {
-    setEditMode(mode);
-    if (mode === 'confirm' && currentFMId && (linkedFEs.size > 0 || linkedFCs.size > 0)) {
-      confirmLink();
-      setViewMode('result'); // 연결확정 후 분석결과 뷰로 전환
+    
+    // ✅ setStateSynced 패턴 적용 (다른 탭과 동일한 패턴)
+    const updateFn = (prev: any) => ({ ...prev, failureLinks: newLinks });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
     }
-  }, [currentFMId, linkedFEs, linkedFCs, confirmLink]);
-
-  const handleSaveAll = useCallback(() => {
-    setState((prev: any) => ({ ...prev, failureLinks: savedLinks }));
     setDirty(true);
-    saveToLocalStorage?.();
-    alert(`✅ 총 ${savedLinks.length}개의 고장연결이 저장되었습니다.`);
-  }, [savedLinks, setState, setDirty, saveToLocalStorage]);
-
-  // 고장연결 데이터 초기화
-  const handleClearAll = useCallback(() => {
-    if (!confirm('⚠️ 모든 고장연결 데이터를 초기화하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) {
+    
+    // ✅ 저장 (setTimeout으로 state 업데이트 대기)
+    setTimeout(() => {
+      saveTemp?.();
+      drawLines(); // 화살표 다시 그리기
+    }, 100);
+    setTimeout(drawLines, 300);
+    
+    // ✅ 자동으로 다음 FM 이동
+    const currentProcess = currentFM.processName;
+    const currentProcessFMs = fmData.filter(fm => fm.processName === currentProcess);
+    
+    // 새로 저장된 links로 연결 상태 확인
+    const allLinkedInProcess = currentProcessFMs.every(fm => {
+      const fmLinks = newLinks.filter(l => l.fmId === fm.id);
+      const hasFE = fmLinks.some(l => l.feId && l.feId.trim() !== '');
+      const hasFC = fmLinks.some(l => l.fcId && l.fcId.trim() !== '');
+      return hasFE && hasFC;
+    });
+    
+    // 같은 공정 내 다음 FM 확인
+    const sameProcFMs = fmData.filter(fm => fm.processName === currentProcess);
+    const currentFMIdx = sameProcFMs.findIndex(fm => fm.id === currentFMId);
+    const nextFMInProc = sameProcFMs[currentFMIdx + 1];
+    
+    // 다음 공정 확인
+    const allProcesses = [...new Set(fmData.map(fm => fm.processName))];
+    const currentIdx = allProcesses.indexOf(currentProcess);
+    const nextProcess = allProcesses[currentIdx + 1];
+    
+    // ✅ 자동 FM 이동 (setTimeout으로 상태 업데이트 대기)
+    // ⚠️ linkedFEs/linkedFCs는 수동으로 초기화하지 않음 - useEffect가 savedLinks 기반으로 로드
+    if (allLinkedInProcess && nextProcess) {
+      // 현재 공정 완료 → 다음 공정의 첫 번째 FM으로 이동
+      const nextFM = fmData.find(fm => fm.processName === nextProcess);
+      if (nextFM) {
+        setTimeout(() => {
+          justConfirmedRef.current = false; // ✅ 다음 FM 로딩을 위해 리셋
+          setCurrentFMId(nextFM.id);
+          setSelectedProcess(nextProcess);
+        }, 200);
+        alert(`✅ ${currentFM.text} 연결 완료!\n\n🎯 ${currentProcess} 공정 완료!\n\n➡️ 다음 공정: ${nextProcess}`);
+        return;
+      }
+    } else if (allLinkedInProcess && !nextProcess) {
+      // 모든 공정 완료
+      setViewMode('result');
+      alert(`✅ ${currentFM.text} 연결 완료!\n\n🎉 모든 공정의 고장연결이 완료되었습니다!\n\n[전체확정] 버튼을 눌러 확정해주세요.`);
+      return;
+    } else if (nextFMInProc) {
+      // 같은 공정 내 다음 FM으로 이동
+      setTimeout(() => {
+        justConfirmedRef.current = false; // ✅ 다음 FM 로딩을 위해 리셋
+        setCurrentFMId(nextFMInProc.id);
+      }, 200);
+      alert(`✅ ${currentFM.text} 연결 완료!\n\n➡️ 다음 FM: ${nextFMInProc.fmNo}: ${nextFMInProc.text}`);
       return;
     }
     
-    const emptyLinks: LinkResult[] = [];
-    setSavedLinks(emptyLinks);
+    // 현재 공정의 마지막 FM
+    alert(`✅ ${currentFM.text} 연결 완료!\n\nFE: ${feArray.length}개, FC: ${fcArray.length}개`);
+  }, [currentFMId, currentFM, linkedFEs, linkedFCs, savedLinks, fmData, setState, setStateSynced, setDirty, saveToLocalStorage, drawLines]);
+
+  // ========== 엔터키로 연결확정 ==========
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 입력 필드에 포커스가 있으면 무시
+      const activeElement = document.activeElement;
+      if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+        return;
+      }
+      
+      // 엔터키를 누르면 연결확정
+      if (e.key === 'Enter' && currentFMId && (linkedFEs.size > 0 || linkedFCs.size > 0)) {
+        e.preventDefault();
+        confirmLink();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentFMId, linkedFEs.size, linkedFCs.size, confirmLink]);
+
+  // ========== 고장연결 전체 확정 ==========
+  const handleConfirmAll = useCallback(() => {
+    // 모든 FM이 FE와 FC에 연결되어 있는지 확인
+    const unlinkedFMs = fmData.filter(fm => {
+      const counts = linkStats.fmLinkCounts.get(fm.id) || { feCount: 0, fcCount: 0 };
+      return counts.feCount === 0 || counts.fcCount === 0;
+    });
+    
+    // ✅ 누락이 있으면 경고 후 계속할지 확인
+    if (unlinkedFMs.length > 0) {
+      const unlinkedList = unlinkedFMs.slice(0, 5).map(fm => `  • ${fm.fmNo}: ${fm.text}`).join('\n');
+      const confirmProceed = window.confirm(
+        `⚠️ 고장연결 누락 경고!\n\n` +
+        `연결이 완료되지 않은 FM이 ${unlinkedFMs.length}건 있습니다:\n\n` +
+        `${unlinkedList}${unlinkedFMs.length > 5 ? `\n  ... 외 ${unlinkedFMs.length - 5}건` : ''}\n\n` +
+        `💡 누락된 항목은 ALL(전체보기) 화면에서 수동으로 입력할 수 있습니다.\n\n` +
+        `그래도 확정하시겠습니까?`
+      );
+      
+      if (!confirmProceed) {
+        return; // 취소하면 확정하지 않음
+      }
+      // 계속 진행하면 아래로 흘러감
+    }
+    
+    // ✅ 강화: failureLinks와 failureLinkConfirmed 모두 저장
+    // ✅ setStateSynced 사용하여 stateRef 즉시 동기화 (DB 저장 전 최신 상태 보장)
+    const updateFn = (prev: any) => ({ 
+      ...prev, 
+      failureLinkConfirmed: true,
+      failureLinks: savedLinks,  // ✅ 고장연결 데이터도 state에 저장
+    });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
+    setDirty(true);
+    
+    // ✅ 전체확정: DB에 확정 저장 (원자성 + 레거시 SSOT)
+    // ✅ setTimeout으로 상태 업데이트 후 저장 (stateRef 반영 보장)
+    console.log('[고장연결 전체확정] ✅ DB 확정 저장 시작:', savedLinks.length, '건');
+    setTimeout(() => {
+      saveToLocalStorage?.(); // 레거시 local backup
+      saveAtomicDB?.();       // PostgreSQL 저장 (확정 시 1회)
+    }, 100);
+    
+    // ===== AI 학습 데이터 저장 =====
+    // 확정된 고장연결 데이터를 AI 시스템에 저장하여 학습
+    try {
+      savedLinks.forEach(link => {
+        saveToAIHistory({
+          processName: link.fmProcess || '',
+          workElement: link.fcWorkElem || '',
+          m4Category: link.fcM4 || '',
+          categoryType: link.feScope || '',
+          failureEffect: link.feText || '',
+          failureMode: link.fmText || '',
+          failureCause: link.fcText || '',
+          severity: link.severity || 0,
+          projectId: state.l1?.name || '',
+        });
+      });
+      console.log(`[AI 학습] ${savedLinks.length}건의 고장연결 데이터가 AI 시스템에 저장되었습니다.`);
+    } catch (e) {
+      console.error('[AI 학습 오류]', e);
+    }
+    
+    const missingCount = linkStats.fmMissingCount;
+    const missingMsg = missingCount > 0 
+      ? `\n\n⚠️ 누락: ${missingCount}개\n💡 ALL(전체보기) 화면에서 수동 입력 가능` 
+      : '';
+    alert(`✅ 고장연결이 확정되었습니다!\n\nFM: ${fmData.length}개\nFE: ${linkStats.feLinkedCount}개\nFC: ${linkStats.fcLinkedCount}개${missingMsg}\n\n🤖 AI 학습 데이터 ${savedLinks.length}건 저장됨`);
+  }, [fmData, linkStats, savedLinks, state.l1, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
+
+  // ========== 고장연결 수정 모드 ==========
+  const handleEditMode = useCallback(() => {
+    const updateFn = (prev: any) => ({ ...prev, failureLinkConfirmed: false });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
+    setDirty(true);
+    requestAnimationFrame(() => {
+      saveTemp?.(); // ✅ 편집 중: localStorage만
+    });
+    alert('📝 고장연결 수정 모드로 전환되었습니다.');
+  }, [setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
+
+  // ========== 초기화 ==========
+  const handleClearAll = useCallback(() => {
+    if (!confirm('⚠️ 모든 고장연결 데이터를 초기화하시겠습니까?')) return;
+    
+    setSavedLinks([]);
     setLinkedFEs(new Map());
     setLinkedFCs(new Map());
     setCurrentFMId(null);
-    setState((prev: any) => ({ ...prev, failureLinks: emptyLinks }));
+    
+    const updateFn = (prev: any) => ({ ...prev, failureLinks: [], failureLinkConfirmed: false });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     setDirty(true);
-    saveToLocalStorage?.();
+    requestAnimationFrame(() => {
+      saveTemp?.(); // ✅ 편집 중: localStorage만
+    });
     setViewMode('diagram');
-    alert('✅ 모든 고장연결 데이터가 초기화되었습니다.');
-    console.log('[고장연결 초기화] 모든 연결 데이터 삭제됨');
-  }, [setState, setDirty, saveToLocalStorage]);
+    alert('✅ 모든 고장연결이 초기화되었습니다.');
+  }, [setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
-  // 역전개: 고장분석 ↔ 기능분석 FK 연결 확인 (자동변환 금지!)
+  // ========== 역전개 ==========
   const handleReverseGenerate = useCallback(() => {
     if (savedLinks.length === 0) {
-      alert('⚠️ 연결된 고장이 없습니다. 먼저 고장연결을 완료하세요.');
+      alert('⚠️ 연결된 고장이 없습니다.');
       return;
     }
-
-    // FK 연결 상태 확인 (자동변환 없음 - DB에 저장된 실제 데이터만 조회)
-    // 1L: 고장영향(FE) ↔ 요구사항 연결 확인
-    const feConnections: { feText: string; feScope: string; reqId: string | null; reqName: string | null }[] = [];
-    savedLinks.forEach(link => {
-      if (link.feId && !feConnections.some(c => c.feText === link.feText)) {
-        // failureScopes에서 reqId 조회
-        const failureScope = (state.l1?.failureScopes || []).find((fs: any) => fs.id === link.feId) as any;
-        const reqId = failureScope?.reqId || null;
-        // 요구사항 이름 조회
-        let reqName: string | null = null;
-        if (reqId) {
-          (state.l1?.types || []).forEach((type: any) => {
-            (type.functions || []).forEach((func: any) => {
-              const req = (func.requirements || []).find((r: any) => r.id === reqId);
-              if (req) reqName = req.name;
-            });
-          });
-        }
-        feConnections.push({ feText: link.feText, feScope: link.feScope, reqId, reqName });
-      }
-    });
-
-    // 2L: 고장형태(FM) ↔ 제품특성 연결 확인
-    const fmConnections: { fmText: string; fmProcess: string; productCharName: string | null }[] = [];
-    savedLinks.forEach(link => {
-      if (link.fmId && !fmConnections.some(c => c.fmText === link.fmText)) {
-        // 공정에서 제품특성 조회
-        const procName = (link.fmProcess || '').replace(/^\d+\s*/, '').trim();
-        let productCharName: string | null = null;
-        (state.l2 || []).forEach((proc: any) => {
-          if (proc.name === procName || proc.name.includes(procName) || procName.includes(proc.name)) {
-            (proc.functions || []).forEach((func: any) => {
-              if ((func.productChars || []).length > 0) {
-                productCharName = func.productChars[0].name;
-              }
-            });
-          }
-        });
-        fmConnections.push({ fmText: link.fmText, fmProcess: link.fmProcess, productCharName });
-      }
-    });
-
-    // 3L: 고장원인(FC) ↔ 공정특성 연결 확인
-    const fcConnections: { fcText: string; workElem: string; processCharName: string | null }[] = [];
-    savedLinks.forEach(link => {
-      if (link.fcId && !fcConnections.some(c => c.fcText === link.fcText)) {
-        // 작업요소에서 공정특성 조회
-        let processCharName: string | null = null;
-        (state.l2 || []).forEach((proc: any) => {
-          (proc.l3 || []).forEach((we: any) => {
-            if (we.name === link.fcWorkElem || we.name.includes(link.fcWorkElem) || (link.fcWorkElem || '').includes(we.name)) {
-              (we.functions || []).forEach((func: any) => {
-                if ((func.processChars || []).length > 0) {
-                  processCharName = func.processChars[0].name;
-                }
-              });
-            }
-          });
-        });
-        fcConnections.push({ fcText: link.fcText, workElem: link.fcWorkElem, processCharName });
-      }
-    });
-
-    // 연결 상태 표시 (DB 데이터 그대로 표시, 자동변환 없음!)
-    let resultMsg = '📊 역전개 - DB 연결 상태 확인 (자동변환 없음)\n\n';
     
-    resultMsg += '【1L 고장영향 ↔ 요구사항】\n';
-    const feLinked = feConnections.filter(c => c.reqName).length;
-    const feMissing = feConnections.length - feLinked;
-    resultMsg += `  ✓ 연결됨: ${feLinked}건 / ✗ 미연결: ${feMissing}건\n`;
+    let msg = '📊 역전개 - FK 연결 상태\n\n';
+    
+    // FE-요구사항 연결 확인
+    const feConnections: { fe: string; req: string | null }[] = [];
+    savedLinks.filter(l => l.feId).forEach(link => {
+      const fs = (state.l1?.failureScopes || []).find((f: any) => f.id === link.feId);
+      let reqName: string | null = null;
+      if (fs?.reqId) {
+        (state.l1?.types || []).forEach((t: any) => {
+          (t.functions || []).forEach((f: any) => {
+            const req = (f.requirements || []).find((r: any) => r.id === fs.reqId);
+            if (req) reqName = req.name;
+          });
+        });
+      }
+      if (!feConnections.some(c => c.fe === link.feText)) {
+        feConnections.push({ fe: link.feText, req: reqName });
+      }
+    });
+    
+    msg += '【FE ↔ 요구사항】\n';
     feConnections.forEach(c => {
-      if (c.reqName) {
-        resultMsg += `    ✅ ${c.feScope}: "${c.feText}" ↔ "${c.reqName}"\n`;
-      } else {
-        resultMsg += `    ❌ ${c.feScope}: "${c.feText}" → (기능분석 데이터 없음)\n`;
-      }
+      msg += c.req ? `  ✅ ${c.fe} → ${c.req}\n` : `  ❌ ${c.fe} → (없음)\n`;
     });
     
-    resultMsg += '\n【2L 고장형태 ↔ 제품특성】\n';
-    const fmLinked = fmConnections.filter(c => c.productCharName).length;
-    const fmMissing = fmConnections.length - fmLinked;
-    resultMsg += `  ✓ 연결됨: ${fmLinked}건 / ✗ 미연결: ${fmMissing}건\n`;
-    fmConnections.forEach(c => {
-      if (c.productCharName) {
-        resultMsg += `    ✅ ${c.fmProcess}: "${c.fmText}" ↔ "${c.productCharName}"\n`;
-      } else {
-        resultMsg += `    ❌ ${c.fmProcess}: "${c.fmText}" → (기능분석 데이터 없음)\n`;
-      }
-    });
-    
-    resultMsg += '\n【3L 고장원인 ↔ 공정특성】\n';
-    const fcLinked = fcConnections.filter(c => c.processCharName).length;
-    const fcMissing = fcConnections.length - fcLinked;
-    resultMsg += `  ✓ 연결됨: ${fcLinked}건 / ✗ 미연결: ${fcMissing}건\n`;
-    fcConnections.forEach(c => {
-      if (c.processCharName) {
-        resultMsg += `    ✅ ${c.workElem}: "${c.fcText}" ↔ "${c.processCharName}"\n`;
-      } else {
-        resultMsg += `    ❌ ${c.workElem}: "${c.fcText}" → (기능분석 데이터 없음)\n`;
-      }
-    });
+    alert(msg);
+  }, [savedLinks, state.l1]);
 
-    resultMsg += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
-    resultMsg += '⚠️ 미연결 항목은 기능분석 탭(1L/2L/3L)에서\n   직접 입력해야 합니다.\n';
-    resultMsg += '📝 FMEA는 자동생성이 아닌, 실제 분석 결과입니다.\n';
+  // ========== 필수 분석 확정 여부 체크 ==========
+  // ✅ 디버깅: 확정 상태 로그
+  console.log('[고장연결] 확정 상태 확인:', {
+    failureL1Confirmed: state.failureL1Confirmed,
+    failureL2Confirmed: state.failureL2Confirmed,
+    failureL3Confirmed: state.failureL3Confirmed,
+    isL1Confirmed,
+    isL2Confirmed,
+    isL3Confirmed,
+  });
+  
+  // ✅ Fallback: 실제 데이터 존재 여부 확인 (확정 플래그가 false여도 데이터가 있으면 통과)
+  const hasFailureEffects = (state.l1?.failureScopes || []).length > 0;
+  const hasFailureModes = state.l2.some((p: any) => (p.failureModes || []).length > 0);
+  const hasFailureCauses = state.l2.some((p: any) => (p.l3 || []).some((we: any) => 
+    (we.functions || []).some((f: any) => (f.processChars || []).some((pc: any) => 
+      (pc.failureCauses || []).length > 0
+    ))
+  ));
+  
+  console.log('[고장연결] 실제 데이터 존재 여부:', {
+    hasFailureEffects,
+    hasFailureModes,
+    hasFailureCauses,
+  });
+  
+  // ✅ 확정 플래그 또는 실제 데이터 존재 여부로 판단
+  const allAnalysisConfirmed = (isL1Confirmed || hasFailureEffects) && 
+                                (isL2Confirmed || hasFailureModes) && 
+                                (isL3Confirmed || hasFailureCauses);
+  const missingAnalysis: string[] = [];
+  if (!isL1Confirmed && !hasFailureEffects) missingAnalysis.push('1L 고장영향');
+  if (!isL2Confirmed && !hasFailureModes) missingAnalysis.push('2L 고장형태');
+  if (!isL3Confirmed && !hasFailureCauses) missingAnalysis.push('3L 고장원인');
 
-    alert(resultMsg);
-    
-    // 기능분석 탭으로 이동 안내
-    if (feMissing > 0 || fmMissing > 0 || fcMissing > 0) {
-      const goToFunction = window.confirm(
-        `미연결 항목이 있습니다.\n\n` +
-        `• 1L 요구사항: ${feMissing}건 미연결\n` +
-        `• 2L 제품특성: ${fmMissing}건 미연결\n` +
-        `• 3L 공정특성: ${fcMissing}건 미연결\n\n` +
-        `기능분석 탭(2L 메인공정 기능)으로 이동하시겠습니까?`
-      );
-      if (goToFunction) {
-        setState((prev: any) => ({ ...prev, tab: 'function-l2' }));
-      }
-    }
-  }, [savedLinks, state.l1, state.l2, setState]);
-
+  // ========== 렌더링 ==========
+  
+  // ✅ 미확정 상태 경고 화면
+  if (!allAnalysisConfirmed) {
+    return (
+      <div style={{ ...containerStyle, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 40 }}>
+        <div style={{ fontSize: 48 }}>⚠️</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: '#e65100' }}>
+          고장분석이 완료되지 않았습니다
+        </div>
+        <div style={{ fontSize: 13, color: '#666', textAlign: 'center', lineHeight: 1.8 }}>
+          고장연결을 진행하려면 아래 분석을 먼저 완료하고 확정해주세요:
+          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {missingAnalysis.map(name => (
+              <div key={name} style={{ 
+                padding: '8px 20px', 
+                background: '#fff3e0', 
+                border: '1px solid #ffb74d', 
+                borderRadius: 6, 
+                color: '#e65100',
+                fontWeight: 600
+              }}>
+                ❌ {name} 분석 미확정
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ marginTop: 16, fontSize: 11, color: '#999' }}>
+          각 분석 탭에서 "확정" 버튼을 눌러 분석을 완료해주세요
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div style={containerStyle}>
-      {/* 좌측: 3개 테이블 (60%) - FailureLinkTables 컴포넌트로 분리됨 */}
+      {/* 좌측: 3개 테이블 (60%) */}
       <FailureLinkTables
         feData={feData}
         fmData={fmData}
         fcData={fcData}
         currentFMId={currentFMId}
+        linkedFEIds={new Set(linkedFEs.keys())}
+        linkedFCIds={new Set(linkedFCs.keys())}
         linkStats={linkStats}
         selectedProcess={selectedProcess}
         fcLinkScope={fcLinkScope}
         onSelectFM={selectFM}
         onToggleFE={toggleFE}
         onToggleFC={toggleFC}
-        onProcessChange={setSelectedProcess}
+        onUnlinkFE={unlinkFE}
+        onUnlinkFC={unlinkFC}
+        onProcessChange={(process: string) => {
+          setSelectedProcess(process);
+          // ✅ ALL 버튼 클릭 시 전체 화면(result)으로 전환
+          if (process === 'all') {
+            setViewMode('result');
+          }
+        }}
         onFcScopeChange={setFcLinkScope}
       />
 
       {/* 우측: 토글 화면 (40%) */}
       <div style={rightPanelStyle}>
-        {/* 헤더 + 토글 버튼 */}
+        {/* ✅ 고장연결 완료 배너 */}
+        {linkStats.fmMissingCount === 0 && savedLinks.length > 0 && !isConfirmed && (
+          <div style={{
+            background: 'linear-gradient(135deg, #4caf50, #2e7d32)',
+            color: '#fff',
+            padding: '12px 16px',
+            borderRadius: '8px',
+            margin: '8px',
+            textAlign: 'center',
+            boxShadow: '0 4px 12px rgba(76, 175, 80, 0.4)',
+            animation: 'pulse 2s infinite',
+          }}>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>
+              🎉 모든 고장연결이 완료되었습니다!
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.9 }}>
+              아래 [전체확정] 버튼을 눌러 확정해주세요
+            </div>
+          </div>
+        )}
+        
+        {/* 헤더 */}
         <div style={rightHeaderStyle}>
-          {/* 고장사슬 토글 버튼 */}
-          <button 
-            onClick={() => setViewMode('diagram')} 
-            style={modeButtonStyle(viewMode === 'diagram')}
-          >
+          <button onClick={() => setViewMode('diagram')} style={modeButtonStyle(viewMode === 'diagram')}>
             고장사슬
           </button>
           
-          {/* FMEA명 + 분석결과 (5:5 비율) */}
-          <div className="flex-1 flex gap-1 min-w-0">
-            {/* FMEA명 (50%) */}
-            <div style={fmeaNameStyle}>
-              {state.l1?.name || 'FMEA'}
-            </div>
-            
-            {/* 분석결과 버튼 (50%) */}
-            <button 
-              onClick={() => setViewMode('result')} 
-              style={resultButtonStyle(viewMode === 'result')}
-            >
-              분석결과 (FE:{new Set(savedLinks.map(l => l.feId).filter(Boolean)).size} FM:{new Set(savedLinks.map(l => l.fmId)).size} FC:{new Set(savedLinks.map(l => l.fcId).filter(Boolean)).size})
-            </button>
-          </div>
+          <button 
+            onClick={() => setViewMode('result')} 
+            style={{
+              flex: 1,
+              padding: '4px 6px',
+              fontSize: '11px',
+              fontWeight: 600,
+              border: '1px solid #0d47a1',
+              borderRadius: '3px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              minWidth: 'fit-content',
+              background: viewMode === 'result' ? '#0d47a1' : '#ffffff',
+              color: viewMode === 'result' ? '#ffffff' : '#0d47a1',
+            }}
+          >
+            분석결과(<span style={{color: viewMode === 'result' ? '#90caf9' : '#1976d2',fontWeight:700}}>FE:{linkStats.feLinkedCount}</span>,<span style={{color: viewMode === 'result' ? '#ffab91' : '#e65100',fontWeight:700}}>FM:{linkStats.fmLinkedCount}</span>,<span style={{color: viewMode === 'result' ? '#a5d6a7' : '#388e3c',fontWeight:700}}>FC:{linkStats.fcLinkedCount}</span>{linkStats.fmMissingCount > 0 && <span style={{color: viewMode === 'result' ? '#ff8a80' : '#d32f2f',fontWeight:700}}>,누락:{linkStats.fmMissingCount}</span>})
+          </button>
           
-          {/* 우측 버튼들 */}
           <div style={actionButtonGroupStyle}>
+            {/* 연결확정 버튼 (이미 확정된 경우 비활성) */}
             <button 
-              onClick={() => handleModeChange('confirm')} 
-              disabled={!currentFMId || (linkedFEs.size === 0 && linkedFCs.size === 0)} 
-              style={actionButtonStyle({
-                bg: '#2196f3',
-                color: '#fff',
-                opacity: (!currentFMId || (linkedFEs.size === 0 && linkedFCs.size === 0)) ? 0.5 : 1,
-              })}
+              onClick={confirmLink} 
+              disabled={!currentFMId || isCurrentFMLinked || (linkedFEs.size === 0 && linkedFCs.size === 0)}
+              className={!isCurrentFMLinked && currentFMId && (linkedFEs.size > 0 || linkedFCs.size > 0) ? 'blink-orange' : ''}
+              style={{
+                ...actionButtonStyle({
+                  bg: isCurrentFMLinked ? '#4caf50' : '#ef6c00', 
+                  color: '#fff',
+                  opacity: (!currentFMId || isCurrentFMLinked || (linkedFEs.size === 0 && linkedFCs.size === 0)) ? 0.5 : 1
+                }),
+                whiteSpace: 'nowrap',
+                minWidth: '80px'
+              }}
             >
-              연결확정
+              {isCurrentFMLinked ? '✅ 확정됨' : '🔗 연결확정'}
             </button>
-            <button 
-              onClick={() => handleModeChange('edit')} 
-              style={actionButtonStyle({
-                bg: editMode === 'edit' ? '#4caf50' : '#fff',
-                color: editMode === 'edit' ? '#fff' : '#333',
-              })}
-            >
-              수정
-            </button>
-            <button 
-              onClick={handleReverseGenerate} 
-              disabled={savedLinks.length === 0} 
-              style={actionButtonStyle({
-                bg: '#fff8e1',
-                color: '#e65100',
-                border: '1px solid #e65100',
-                opacity: savedLinks.length === 0 ? 0.5 : 1,
-                cursor: savedLinks.length > 0 ? 'pointer' : 'not-allowed',
-              })}
-            >
-              🔄 역전개
-            </button>
-            <button 
-              onClick={handleClearAll} 
-              disabled={savedLinks.length === 0} 
-              style={actionButtonStyle({
-                bg: '#ffebee',
-                color: '#f57c00',
-                border: '1px solid #f57c00',
-                opacity: savedLinks.length === 0 ? 0.5 : 1,
-                cursor: savedLinks.length > 0 ? 'pointer' : 'not-allowed',
-              })}
-            >
-              🗑️ 초기화
-            </button>
+            
+            {/* 연결해제 버튼 (확정된 경우만 표시) */}
+            {isCurrentFMLinked && (
+              <button 
+                onClick={unlinkCurrentFM} 
+                style={{
+                  ...actionButtonStyle({
+                    bg: '#ff5722', 
+                    color: '#fff',
+                    opacity: 1
+                  }),
+                  whiteSpace: 'nowrap',
+                  minWidth: '70px'
+                }}
+              >
+                🔓 연결해제
+              </button>
+            )}
+            
+            {/* 전체 확정/수정 버튼 */}
+            {!isConfirmed ? (
+              // 미확정 상태: 전체확정 버튼 표시
+              <button 
+                onClick={handleConfirmAll} 
+                disabled={savedLinks.length === 0}
+                style={{
+                  ...actionButtonStyle({ 
+                    bg: linkStats.fmMissingCount === 0 && savedLinks.length > 0 ? '#2e7d32' : '#4caf50', 
+                    color: '#fff', 
+                    opacity: savedLinks.length === 0 ? 0.5 : 1
+                  }),
+                  // ✅ 완료 시 강조 애니메이션
+                  ...(linkStats.fmMissingCount === 0 && savedLinks.length > 0 ? {
+                    boxShadow: '0 0 12px rgba(46, 125, 50, 0.8)',
+                    animation: 'pulse 1.5s infinite',
+                    fontWeight: 700,
+                  } : {})
+                }}
+              >
+                {linkStats.fmMissingCount === 0 && savedLinks.length > 0 ? '🎉 전체확정' : '✅ 전체확정'}
+              </button>
+            ) : linkStats.fmMissingCount === 0 ? (
+              // 확정 + 모든 FM 연결됨: 완료 상태 표시
+              <button 
+                disabled
+                style={{
+                  ...actionButtonStyle({ 
+                    bg: '#1b5e20', 
+                    color: '#fff',
+                    opacity: 1
+                  }),
+                  boxShadow: '0 0 12px rgba(27, 94, 32, 0.8)',
+                  fontWeight: 700,
+                  cursor: 'default'
+                }}
+              >
+                🎉 고장연결 완료
+              </button>
+            ) : (
+              // 확정 + 일부 FM 미연결: 수정 버튼 표시
+              <button 
+                onClick={handleEditMode}
+                style={actionButtonStyle({ 
+                  bg: '#ff9800', color: '#fff'
+                })}
+              >
+                ✏️ 수정
+              </button>
+            )}
           </div>
         </div>
         
-        {/* 콘텐츠 영역 */}
-        <div className="flex-1 overflow-auto">
-          {/* 고장연결도 뷰 */}
+        {/* 콘텐츠 */}
+        <div className="flex-1 overflow-auto" style={{ paddingBottom: '50px' }}>
           {viewMode === 'diagram' && (
             <FailureLinkDiagram
               currentFM={currentFM}
@@ -831,15 +1557,15 @@ export default function FailureLinkTab({ state, setState, setDirty, saveToLocalS
               fmNodeRef={fmNodeRef}
               feColRef={feColRef}
               fcColRef={fcColRef}
+              onPrevFM={goToPrevFM}
+              onNextFM={goToNextFM}
+              hasPrevFM={hasPrevFM}
+              hasNextFM={hasNextFM}
             />
           )}
-
-          {/* 연결결과 뷰 */}
           {viewMode === 'result' && (
-            <FailureLinkResult
-              savedLinks={savedLinks}
-              fmData={fmData}
-            />
+            // ✅ 고장분석 결과 화면: FM 중심으로 FE(고장영향)↔FC(고장원인) 연결 표시
+            <FailureLinkResult savedLinks={savedLinks} fmData={fmData} />
           )}
         </div>
       </div>

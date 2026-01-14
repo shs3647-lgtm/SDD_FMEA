@@ -1,43 +1,41 @@
 /**
  * @file FunctionL1Tab.tsx
- * @description 완제품(L1) 기능 분석 - 3행 헤더 구조 (구조분석 + 기능분석)
+ * @description 제품(L1) 기능 분석 - 3행 헤더 구조 (구조분석 + 기능분석) (DFMEA)
+ * 
+ * ⚠️⚠️⚠️ 코드프리즈 (CODE FREEZE) ⚠️⚠️⚠️
+ * ============================================
+ * 이 파일은 완전히 프리즈되었습니다.
+ * 
+ * ❌ 절대 수정 금지:
+ * - 코드 변경 금지
+ * - 주석 변경 금지
+ * - 스타일 변경 금지
+ * - 로직 변경 금지
+ * 
+ * ✅ 수정 허용 조건:
+ * 1. 사용자가 명시적으로 수정 요청
+ * 2. 수정 사유와 범위를 명확히 지시
+ * 3. 코드프리즈 경고를 확인하고 진행
+ * 
+ * 📅 프리즈 일자: 2026-01-05
+ * 📌 프리즈 범위: 구조분석부터 3L원인분석까지 전체
+ * ============================================
  */
 
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { FunctionTabProps } from './types';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
-import {
-  containerStyle,
-  tableStyle,
-  colStyle,
-  headerMainRow,
-  headerSubRow,
-  missingPillStyle,
-  missingPillInlineStyle,
-  headerRowBg,
-  dataRowStyle,
-  dataCellStyle,
-  headerMainRowL1,
-  headerFlexContainerL1,
-  headerButtonGroupL1,
-  confirmButtonStyleL1,
-  missingBadgeStyleL1,
-  headerFlexSpan,
-  colHeaderRowL1,
-} from './FunctionTabStyles';
+import { WS, btnConfirm, btnEdit, badgeConfirmed, badgeOk, badgeMissing } from '@/styles/worksheet';
+import { handleEnterBlur } from '../../utils/keyboard';
+import { findLinkedFunctionsForType, findLinkedRequirementsForFunction, getAutoLinkMessage } from '../../utils/auto-link';
 
-// 구분(Type)별 색상 정의
-const TYPE_COLORS: Record<string, { bg: string; light: string; text: string }> = {
-  'Your Plant': { bg: '#1976d2', light: '#bbdefb', text: '#0d47a1' },
-  'Ship to Plant': { bg: '#f57c00', light: '#ffe0b2', text: '#e65100' },
-  'User': { bg: '#7b1fa2', light: '#e1bee7', text: '#4a148c' },
-};
-
-const getTypeColor = (typeName: string) => TYPE_COLORS[typeName] || { bg: '#388e3c', light: '#c8e6c9', text: '#1b5e20' };
+// 구분(Type)별 색상 정의 - 공통 색상 사용
+import { L1_TYPE_COLORS, getL1TypeColor, getZebra, getZebraColors } from '@/styles/level-colors';
+const getTypeColor = getL1TypeColor;
 
 // 스타일 함수
 const BORDER = '1px solid #b0bec5';
@@ -45,11 +43,25 @@ const cellBase: React.CSSProperties = { border: BORDER, padding: '4px 6px', font
 const headerStyle = (bg: string, color = '#fff'): React.CSSProperties => ({ ...cellBase, background: bg, color, fontWeight: FONT_WEIGHTS.bold, textAlign: 'center' });
 const dataCell = (bg: string): React.CSSProperties => ({ ...cellBase, background: bg });
 
-export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalStorage }: FunctionTabProps) {
+export default function FunctionL1Tab({ state, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB }: FunctionTabProps) {
   const [modal, setModal] = useState<{ type: string; id: string; title: string; itemCode: string; parentFunction?: string; parentCategory?: string } | null>(null);
   
   // 확정 상태는 state에서 관리 (localStorage에 저장됨)
-  const isConfirmed = (state as any).l1Confirmed || false;
+  const isConfirmed = state.l1Confirmed || false;
+
+  // ✅ 셀 클릭 시 확정됨 상태면 자동으로 수정 모드로 전환
+  const handleCellClick = useCallback((modalConfig: any) => {
+    if (isConfirmed) {
+      const updateFn = (prev: any) => ({ ...prev, l1Confirmed: false });
+      if (setStateSynced) {
+        setStateSynced(updateFn);
+      } else {
+        setState(updateFn);
+      }
+      setDirty(true);
+    }
+    setModal(modalConfig);
+  }, [isConfirmed, setState, setStateSynced, setDirty]);
 
   // 플레이스홀더 패턴 체크 함수
   const isMissing = (name: string | undefined) => {
@@ -64,29 +76,51 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
     return false;
   };
 
-  // 항목별 누락 건수 분리 계산
+  // 항목별 누락 건수 분리 계산 (✅ 필터링된 데이터만 카운트)
   const missingCounts = React.useMemo(() => {
-    let functionCount = 0;     // 완제품기능 누락
+    let functionCount = 0;     // 제품 기능 누락 (DFMEA)
     let requirementCount = 0;  // 요구사항 누락
     
+    // ✅ 의미 있는 타입만 필터링 (빈 타입 제외)
+    const meaningfulTypes = state.l1.types.filter((t: any) => {
+      const name = t.name || '';
+      return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+    });
+    
     // 구분이 없으면 누락
-    if (state.l1.types.length === 0) {
+    if (meaningfulTypes.length === 0) {
       functionCount += 1;
     }
-    state.l1.types.forEach(t => {
+    
+    meaningfulTypes.forEach((t: any) => {
+      // ✅ 의미 있는 기능만 필터링
+      const meaningfulFunctions = (t.functions || []).filter((f: any) => {
+        const name = f.name || '';
+        return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+      });
+      
       // 기능이 없으면 누락
-      if (t.functions.length === 0) {
+      if (meaningfulFunctions.length === 0) {
         functionCount += 1;
       }
-      t.functions.forEach(f => {
-        // 기능 이름 체크
+      
+      meaningfulFunctions.forEach((f: any) => {
+        // 기능 이름 체크 (이미 필터링되었지만 이중 체크)
         if (isMissing(f.name)) functionCount++;
+        
+        // ✅ 의미 있는 요구사항만 필터링
+        const meaningfulReqs = (f.requirements || []).filter((r: any) => {
+          const name = r.name || '';
+          return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+        });
+        
         // 요구사항이 없으면 누락
-        if (!f.requirements || f.requirements.length === 0) {
+        if (meaningfulReqs.length === 0) {
           requirementCount += 1;
         }
-        // 요구사항 이름 체크
-        (f.requirements || []).forEach(r => {
+        
+        // 요구사항 이름 체크 (이미 필터링되었지만 이중 체크)
+        meaningfulReqs.forEach((r: any) => {
           if (isMissing(r.name)) requirementCount++;
         });
       });
@@ -97,25 +131,82 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
   // 총 누락 건수 (기존 호환성)
   const missingCount = missingCounts.total;
 
-  // 확정 핸들러
-  const handleConfirm = () => {
+  // ✅ 1L COUNT 계산 (제품 기능, 요구사항) (DFMEA)
+  const functionCount = useMemo(() => {
+    return state.l1.types.reduce((sum, type) => 
+      sum + (type.functions || []).filter((f: any) => f.name && !f.name.includes('클릭')).length, 0);
+  }, [state.l1.types]);
+  
+  const requirementCount = useMemo(() => {
+    return state.l1.types.reduce((sum, type) => 
+      sum + (type.functions || []).reduce((funcSum, func) => 
+        funcSum + (func.requirements || []).filter((r: any) => r.name && !r.name.includes('클릭')).length, 0), 0);
+  }, [state.l1.types]);
+
+  // ✅ L1 기능 데이터 변경 감지용 ref (고장분석 패턴 적용)
+  const l1DataRef = useRef<string>('');
+  
+  // ✅ L1 데이터 변경 시 자동 저장 (확실한 저장 보장)
+  useEffect(() => {
+    const dataKey = JSON.stringify(state.l1.types);
+    if (l1DataRef.current && dataKey !== l1DataRef.current) {
+      console.log('[FunctionL1Tab] l1.types 변경 감지, 자동 저장');
+      saveToLocalStorage?.();
+    }
+    l1DataRef.current = dataKey;
+  }, [state.l1.types, saveToLocalStorage]);
+
+
+  // 확정 핸들러 (고장분석 패턴 적용) - ✅ setStateSynced 사용으로 저장 보장
+  const handleConfirm = useCallback(() => {
+    console.log('[FunctionL1Tab] 확정 버튼 클릭, missingCount:', missingCount);
     if (missingCount > 0) {
       alert(`누락된 항목이 ${missingCount}건 있습니다.\n모든 항목을 입력 후 확정해 주세요.`);
       return;
     }
-    setState((prev: any) => ({ ...prev, l1Confirmed: true }));
+    
+    // ✅ 현재 기능 통계 로그
+    const funcCount = state.l1.types.flatMap(t => t.functions).length;
+    const reqCount = state.l1.types.flatMap(t => t.functions.flatMap(f => f.requirements || [])).length;
+    console.log('[FunctionL1Tab] 확정 시 기능:', funcCount, '개, 요구사항:', reqCount, '개');
+    
+    // ✅ setStateSynced 사용 (stateRef 동기 업데이트)
+    const updateFn = (prev: any) => {
+      const newState = { ...prev, l1Confirmed: true };
+      console.log('[FunctionL1Tab] 확정 상태 업데이트:', newState.l1Confirmed);
+      return newState;
+    };
+    
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     setDirty(true);
-    saveToLocalStorage?.(); // 영구 저장
-    alert('✅ 완제품 기능분석이 확정되었습니다.');
-  };
+    
+    // ✅ 저장 보장 (stateRef가 동기적으로 업데이트되었으므로 즉시 저장 가능)
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        saveToLocalStorage?.();
+        saveAtomicDB?.();  // ✅ DB 저장 추가
+        console.log('[FunctionL1Tab] 확정 후 localStorage + DB 저장 완료');
+      }, 50);
+    });
+    
+    alert('✅ 1L 제품 기능분석이 확정되었습니다. (DFMEA)');
+  }, [missingCount, state.l1.types, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
-  // 수정 핸들러
-  const handleEdit = () => {
-    setState((prev: any) => ({ ...prev, l1Confirmed: false }));
+  // 수정 핸들러 (고장분석 패턴 적용) - ✅ setStateSynced 사용
+  const handleEdit = useCallback(() => {
+    const updateFn = (prev: any) => ({ ...prev, l1Confirmed: false });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     setDirty(true);
-    saveToLocalStorage?.(); // 영구 저장
-    alert('🔓 수정 모드로 전환되었습니다.');
-  };
+    requestAnimationFrame(() => setTimeout(() => saveToLocalStorage?.(), 50));
+  }, [setState, setStateSynced, setDirty, saveToLocalStorage]);
 
   // 인라인 편집 핸들러 - 요구사항 (더블클릭)
   const handleInlineEditRequirement = useCallback((typeId: string, funcId: string, reqId: string, newValue: string) => {
@@ -123,15 +214,15 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
       ...prev,
       l1: {
         ...prev.l1,
-        types: prev.l1.types.map(t => {
+        types: prev.l1.types.map((t: any) => {
           if (t.id !== typeId) return t;
           return {
             ...t,
-            functions: t.functions.map(f => {
+            functions: t.functions.map((f: any) => {
               if (f.id !== funcId) return f;
               return {
                 ...f,
-                requirements: f.requirements.map(r => {
+                requirements: f.requirements.map((r: any) => {
                   if (r.id !== reqId) return r;
                   return { ...r, name: newValue };
                 })
@@ -151,11 +242,11 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
       ...prev,
       l1: {
         ...prev.l1,
-        types: prev.l1.types.map(t => {
+        types: prev.l1.types.map((t: any) => {
           if (t.id !== typeId) return t;
           return {
             ...t,
-            functions: t.functions.map(f => {
+            functions: t.functions.map((f: any) => {
               if (f.id !== funcId) return f;
               return { ...f, name: newValue };
             })
@@ -170,69 +261,159 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
     
+    console.log('[FunctionL1Tab] handleSave 시작', { type: modal.type, id: modal.id, selectedValues });
+    
     setState(prev => {
-      const newState = { ...prev };
+      // ✅ 깊은 복사 (FailureL2Tab 패턴)
+      const newState = JSON.parse(JSON.stringify(prev));
       const { type, id } = modal;
 
-      // [규칙] 새 행은 수동 추가만 허용 - 자동 생성 금지
       if (type === 'l1Type') {
-        const currentTypes = newState.l1.types;
-        // 빈 타입이 있으면 첫 번째 선택값만 할당
-        const emptyType = currentTypes.find(t => !t.name || t.name === '' || t.name.includes('클릭하여'));
+        const currentTypes = [...newState.l1.types];
+        const existingNames = new Set(currentTypes.filter((t: any) => t.name && !t.name.includes('클릭하여')).map((t: any) => t.name));
         
-        if (emptyType && selectedValues.length > 0) {
-          newState.l1.types = currentTypes.map(t => 
-            t.id === emptyType.id 
-              ? { ...t, name: selectedValues[0] }
-              : t
-          );
+        // 빈 타입 찾기
+        const emptyTypeIdx = currentTypes.findIndex(t => !t.name || t.name === '' || t.name.includes('클릭하여'));
+        let startIdx = 0;
+        
+        // 빈 타입이 있으면 첫 번째 선택값 할당
+        if (emptyTypeIdx !== -1 && selectedValues.length > 0 && !existingNames.has(selectedValues[0])) {
+          currentTypes[emptyTypeIdx] = { ...currentTypes[emptyTypeIdx], name: selectedValues[0] };
+          existingNames.add(selectedValues[0]);
+          startIdx = 1;
         }
-        // 빈 타입이 없으면 기존 유지 (새 행 생성 안 함)
+        
+        // ✅ 나머지 선택값들 각각 새 행으로 추가 (중복 제외)
+        for (let i = startIdx; i < selectedValues.length; i++) {
+          const val = selectedValues[i];
+          if (!existingNames.has(val)) {
+            // ✅ 자동연결: 다른 유형에서 동일 유형에 연결된 기능들 찾기
+            const linkedFunctions = findLinkedFunctionsForType(prev, val);
+            const autoLinkedFuncs = linkedFunctions.map(name => ({ id: uid(), name, requirements: [] }));
+            
+            currentTypes.push({ id: uid(), name: val, functions: autoLinkedFuncs });
+            existingNames.add(val);
+            
+            // 자동연결 알림
+            if (autoLinkedFuncs.length > 0) {
+              const message = getAutoLinkMessage(linkedFunctions, '기능');
+              console.log(`[FunctionL1Tab] ${val}: ${message}`);
+            }
+          }
+        }
+        
+        newState.l1.types = currentTypes;
       } 
       else if (type === 'l1Function') {
-        newState.l1.types = newState.l1.types.map(t => {
+        const funcId = (modal as any).funcId;
+        newState.l1.types = newState.l1.types.map((t: any) => {
           if (t.id !== id) return t;
           const currentFuncs = t.functions;
           
-          // 빈 기능이 있으면 첫 번째 선택값만 할당
-          const emptyFunc = currentFuncs.find(f => !f.name || f.name === '' || f.name.includes('클릭하여'));
-          
-          if (emptyFunc && selectedValues.length > 0) {
+          // ✅ funcId가 있으면 해당 기능만 수정
+          if (funcId) {
+            if (selectedValues.length === 0) {
+              // 선택 해제 시 해당 기능 삭제
+              return {
+                ...t,
+                functions: currentFuncs.filter((f: any) => f.id !== funcId)
+              };
+            }
             return {
               ...t,
-              functions: currentFuncs.map(f => 
-                f.id === emptyFunc.id 
-                  ? { ...f, name: selectedValues[0] }
+              functions: currentFuncs.map((f: any) => 
+                f.id === funcId 
+                  ? { ...f, name: selectedValues[0] || f.name }
                   : f
               )
             };
           }
-          // 빈 기능이 없으면 기존 유지 (새 행 생성 안 함)
-          return t;
+          
+          // ✅ 다중 선택: 각각 별도 행으로 추가
+          const updatedFuncs = [...currentFuncs];
+          const existingNames = new Set(currentFuncs.filter((f: any) => f.name && !f.name.includes('클릭하여')).map((f: any) => f.name));
+          
+          // 빈 기능 찾기
+          const emptyFuncIdx = updatedFuncs.findIndex(f => !f.name || f.name === '' || f.name.includes('클릭하여'));
+          let startIdx = 0;
+          
+          // 빈 기능이 있으면 첫 번째 선택값 할당
+          if (emptyFuncIdx !== -1 && selectedValues.length > 0 && !existingNames.has(selectedValues[0])) {
+            updatedFuncs[emptyFuncIdx] = { ...updatedFuncs[emptyFuncIdx], name: selectedValues[0] };
+            existingNames.add(selectedValues[0]);
+            startIdx = 1;
+          }
+          
+          // 나머지 선택값들 각각 새 행으로 추가 (중복 제외)
+          for (let i = startIdx; i < selectedValues.length; i++) {
+            const val = selectedValues[i];
+            if (!existingNames.has(val)) {
+              // ✅ 자동연결: 다른 유형에서 동일 기능에 연결된 요구사항들 찾기
+              const linkedRequirements = findLinkedRequirementsForFunction(prev, val);
+              const autoLinkedReqs = linkedRequirements.map(name => ({ id: uid(), name }));
+              
+              updatedFuncs.push({ id: uid(), name: val, requirements: autoLinkedReqs });
+              existingNames.add(val);
+              
+              // 자동연결 알림
+              if (autoLinkedReqs.length > 0) {
+                const message = getAutoLinkMessage(linkedRequirements, '요구사항');
+                console.log(`[FunctionL1Tab] ${val}: ${message}`);
+              }
+            }
+          }
+          
+          return { ...t, functions: updatedFuncs };
         });
       }
       else if (type === 'l1Requirement') {
-        newState.l1.types = newState.l1.types.map(t => ({
+        const reqId = (modal as any).reqId;
+        newState.l1.types = newState.l1.types.map((t: any) => ({
           ...t,
-          functions: t.functions.map(f => {
+          functions: t.functions.map((f: any) => {
             if (f.id !== id) return f;
             const currentReqs = f.requirements || [];
             
-            // 빈 요구사항이 있으면 첫 번째 선택값만 할당
-            const emptyReq = currentReqs.find(r => !r.name || r.name === '' || r.name.includes('클릭하여'));
-            
-            if (emptyReq && selectedValues.length > 0) {
+            // ✅ reqId가 있고 단일 선택(1개)인 경우만 해당 요구사항 수정
+            if (reqId && selectedValues.length === 1) {
               return {
                 ...f,
-                requirements: currentReqs.map(r => 
-                  r.id === emptyReq.id 
-                    ? { ...r, name: selectedValues[0] }
-                    : r
+                requirements: currentReqs.map((r: any) => 
+                  r.id === reqId ? { ...r, name: selectedValues[0] || r.name } : r
                 )
               };
             }
-            // 빈 요구사항이 없으면 기존 유지 (새 행 생성 안 함)
-            return f;
+            
+            // ✅ reqId가 있고 선택값이 없으면 삭제
+            if (reqId && selectedValues.length === 0) {
+              return { ...f, requirements: currentReqs.filter((r: any) => r.id !== reqId) };
+            }
+            
+            // ✅ 다중 선택: 각각 별도 행으로 추가 (reqId가 있어도 2개 이상 선택 시)
+            const updatedReqs = [...currentReqs];
+            const existingNames = new Set(currentReqs.filter((r: any) => r.name && !r.name.includes('클릭하여')).map((r: any) => r.name));
+            
+            // 빈 요구사항 찾기
+            const emptyReqIdx = updatedReqs.findIndex(r => !r.name || r.name === '' || r.name.includes('클릭하여'));
+            let startIdx = 0;
+            
+            // 빈 요구사항이 있으면 첫 번째 선택값 할당
+            if (emptyReqIdx !== -1 && selectedValues.length > 0 && !existingNames.has(selectedValues[0])) {
+              updatedReqs[emptyReqIdx] = { ...updatedReqs[emptyReqIdx], name: selectedValues[0] };
+              existingNames.add(selectedValues[0]);
+              startIdx = 1;
+            }
+            
+            // 나머지 선택값들 각각 새 행으로 추가 (중복 제외)
+            for (let i = startIdx; i < selectedValues.length; i++) {
+              const val = selectedValues[i];
+              if (!existingNames.has(val)) {
+                updatedReqs.push({ id: uid(), name: val });
+                existingNames.add(val);
+              }
+            }
+            
+            return { ...f, requirements: updatedReqs };
           })
         }));
       }
@@ -243,7 +424,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
     setDirty(true);
     setModal(null);
     saveToLocalStorage?.(); // 영구 저장
-  }, [modal, setState, setDirty, saveToLocalStorage]);
+  }, [modal, state, setState, setDirty, saveToLocalStorage]);
 
   // 워크시트 데이터 삭제 핸들러
   const handleDelete = useCallback((deletedValues: string[]) => {
@@ -270,7 +451,7 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
         console.log('[FunctionL1Tab] l1Type 삭제 후 types:', newState.l1.types.map((t: any) => t.name));
       } 
       else if (type === 'l1Function') {
-        // 완제품 기능 삭제 - 모든 타입에서 삭제 (id가 비어있을 수 있음)
+        // 제품 기능 삭제 - 모든 타입에서 삭제 (id가 비어있을 수 있음) (DFMEA)
         console.log('[FunctionL1Tab] l1Function 삭제');
         newState.l1.types = newState.l1.types.map((t: any) => {
           if (id && t.id !== id) return t;
@@ -301,14 +482,9 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
     
     setDirty(true);
     
-    // 즉시 저장
-    if (saveToLocalStorage) {
-      console.log('[FunctionL1Tab] 100ms 후 저장 예약');
-      setTimeout(() => {
-        console.log('[FunctionL1Tab] 저장 실행');
-        saveToLocalStorage();
-      }, 100);
-    }
+    // ✅ 즉시 저장 (requestAnimationFrame 사용)
+    console.log('[FunctionL1Tab] 저장 실행');
+    requestAnimationFrame(() => saveToLocalStorage?.());
   }, [modal, setState, setDirty, saveToLocalStorage]);
 
   // 총 행 수 계산
@@ -323,46 +499,33 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
   const totalRows = getTotalRows();
 
   return (
-    <div style={containerStyle}>
-      <table style={tableStyle}>
-        {/* 컬럼 너비: 완제품공정명 150px, 구분 90px, 완제품기능 auto, 요구사항 200px */}
+    <div className="p-0 overflow-auto h-full" style={{ paddingBottom: '50px' }} onKeyDown={handleEnterBlur}>
+      <table className="w-full border-collapse table-fixed">
+        {/* 컬럼 너비: 제품명 120px, 구분 95px(구분선택 한줄표시), 제품 기능 auto(넓게+줄바꿈), 요구사항 140px (DFMEA) */}
         <colgroup>
-          <col style={colStyle('150px')} />
-          <col style={colStyle('90px')} />
-          <col />
-          <col style={colStyle('200px')} />
+          <col className="w-[120px]" /><col className="w-[95px]" /><col /><col className="w-[140px]" />
         </colgroup>
         
-        {/* 3행 헤더 구조 */}
-        <thead>
+        {/* 3행 헤더 구조 - 하단 2px 검은색 구분선 */}
+        <thead className="sticky top-0 z-20 bg-white border-b-2 border-black">
           {/* 1행: 단계 구분 */}
           <tr>
-            <th style={headerMainRow('#1976d2', FONT_WEIGHTS.semibold)}>
+            <th className="bg-[#1976d2] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center">
               2단계 구조분석
             </th>
-            <th colSpan={3} style={headerMainRowL1('#1b5e20')}>
-              <div style={headerFlexContainerL1}>
-                <span style={headerFlexSpan}>3단계 : 1L 완제품 공정 기능분석</span>
-                <div style={headerButtonGroupL1}>
-                  <button
-                    type="button"
-                    onClick={handleConfirm}
-                    disabled={isConfirmed}
-                    style={confirmButtonStyleL1('#4caf50', isConfirmed)}
-                  >
-                    {isConfirmed ? '✓ 확정됨' : '확정'}
-                  </button>
-                  <span style={missingBadgeStyleL1(missingCount > 0)}>
-                    누락 {missingCount}건
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleEdit}
-                    disabled={!isConfirmed}
-                    style={confirmButtonStyleL1('#2196f3', !isConfirmed)}
-                  >
-                    수정
-                  </button>
+            <th colSpan={3} className="bg-[#388e3c] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center relative">
+              <div className="flex items-center justify-center">
+                <span className="flex-1 text-center">3단계 : 1L 제품 기능분석 (DFMEA)</span>
+                <div className="flex gap-1 absolute right-2">
+                  {isConfirmed ? (
+                    <span className={badgeConfirmed}>✓ 확정됨({requirementCount})</span>
+                  ) : (
+                    <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
+                  )}
+                  <span className={missingCount > 0 ? badgeMissing : badgeOk}>누락 {missingCount}건</span>
+                  {isConfirmed && (
+                    <button type="button" onClick={handleEdit} className={btnEdit}>수정</button>
+                  )}
                 </div>
               </div>
             </th>
@@ -370,144 +533,197 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
           
           {/* 2행: 항목 그룹 */}
           <tr>
-            <th style={headerSubRow('#1976d2')}>
-              1. 완제품 공정명
+            <th className="bg-[#1976d2] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
+              1. 제품명 (DFMEA)
             </th>
-            <th colSpan={3} style={headerSubRow('#388e3c')}>
-              1. 완제품 공정기능/요구사항
+            <th colSpan={3} className="bg-[#388e3c] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
+              1. 제품 기능/요구사항 (DFMEA)
               {missingCount > 0 && (
-                <span style={missingPillStyle}>
+                <span className="ml-2 bg-orange-500 text-white px-2 py-0.5 rounded-full text-xs">
                   누락 {missingCount}건
                 </span>
               )}
             </th>
           </tr>
           
-          {/* 3행: 세부 컬럼 */}
-          <tr style={headerRowBg}>
-            <th style={colHeaderRowL1('#e3f2fd')}>
-              완제품 공정명
+          {/* 3행: 세부 컬럼 - 1L COUNT 표시 (한 줄) */}
+          <tr className="bg-[#e8f5e9]">
+            <th className="bg-[#e3f2fd] border border-[#ccc] p-1.5 text-xs font-semibold">
+              제품명<span className="text-green-700 font-bold">(1)</span>
             </th>
-            <th style={colHeaderRowL1('#c8e6c9')}>
+            <th className="bg-[#c8e6c9] border border-[#ccc] p-1.5 text-xs font-semibold">
               구분
             </th>
-            <th style={colHeaderRowL1('#c8e6c9')}>
-              완제품기능
-              {missingCounts.functionCount > 0 && (
-                <span style={missingPillInlineStyle}>
-                  {missingCounts.functionCount}
-                </span>
-              )}
+            <th className="bg-[#c8e6c9] border border-[#ccc] p-1.5 text-xs font-semibold">
+              제품 기능<span className={`font-bold ${functionCount > 0 ? 'text-green-700' : 'text-red-500'}`}>({functionCount})</span>
             </th>
-            <th style={colHeaderRowL1('#fff3e0', '#e65100')}>
-              요구사항
-              {missingCounts.requirementCount > 0 && (
-                <span style={missingPillInlineStyle}>
-                  {missingCounts.requirementCount}
-                </span>
-              )}
+            <th className="bg-[#fff3e0] border border-[#ccc] p-1.5 text-xs font-semibold text-[#e65100]">
+              요구사항<span className={`font-bold ${requirementCount > 0 ? 'text-green-700' : 'text-red-500'}`}>({requirementCount})</span>
             </th>
           </tr>
         </thead>
         
         <tbody>
           {state.l1.types.length === 0 ? (
-            <tr style={dataRowStyle('#e8f5e9')}>
-              <td style={dataCellStyle('#e3f2fd', { padding: '10px', textAlign: 'center', fontWeight: FONT_WEIGHTS.semibold })}>
+            (() => {
+              const zebra = getZebraColors(0);
+              return (
+            <tr>
+              <td className="border border-[#ccc] p-2.5 text-center font-semibold" style={{ background: zebra.structure }}>
                 {state.l1.name || '(구조분석에서 입력)'}
               </td>
-              <td style={dataCellStyle('#e8f5e9', { padding: '0' })}>
-                <SelectableCell value="" placeholder="구분 선택" bgColor={'#e8f5e9'} onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
+              <td className="border border-[#ccc] p-0">
+                <SelectableCell value="" placeholder="구분 선택" bgColor={zebra.function} onClick={() => handleCellClick({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
               </td>
-              <td style={dataCellStyle('#e8f5e9', { padding: '0' })}>
-                <SelectableCell value="" placeholder="기능 선택" bgColor={'#e8f5e9'} onClick={() => setModal({ type: 'l1Function', id: '', title: '완제품 기능 선택', itemCode: 'C2' })} />
+              <td className="border border-[#ccc] p-0">
+                <SelectableCell value="" placeholder="기능 선택" bgColor={zebra.function} onClick={() => handleCellClick({ type: 'l1Function', id: '', title: '제품 기능 선택', itemCode: 'C2' })} />
               </td>
-              <td style={dataCellStyle('#e8f5e9', { padding: '0' })}>
-                <SelectableCell value="" placeholder="요구사항 선택" bgColor={'#e8f5e9'} onClick={() => setModal({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
+              <td className="border border-[#ccc] p-0">
+                <SelectableCell value="" placeholder="요구사항 선택" bgColor={zebra.failure} textColor={COLORS.failure.text} onClick={() => handleCellClick({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
               </td>
             </tr>
+              );
+            })()
           ) : (() => {
             let globalRowIdx = 0;
-            return state.l1.types.map((t, tIdx) => {
-              // 각 구분(type)별 행 수 계산
-              const typeRowSpan = t.functions.length === 0 ? 1 : t.functions.reduce((a, f) => a + Math.max(1, f.requirements.length), 0);
+            // ✅ 빈 타입 필터링 (이름이 없거나 "클릭하여" 포함하는 타입 제외)
+            const meaningfulTypes = state.l1.types.filter((t: any) => {
+              const name = t.name || '';
+              return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+            });
+            
+            // 빈 타입이 없으면 첫 번째 빈 행만 표시
+            if (meaningfulTypes.length === 0 && state.l1.types.length > 0) {
+              const firstEmptyType = state.l1.types[0];
+              const zebra = getZebraColors(0);
+              return (
+                <tr key={firstEmptyType.id}>
+                  <td className="border border-[#ccc] p-2.5 text-center font-semibold" style={{ background: zebra.structure }}>
+                    {state.l1.name || '(구조분석에서 입력)'}
+                  </td>
+                  <td className="border border-[#ccc] p-0">
+                    <SelectableCell value="" placeholder="구분 선택" bgColor={zebra.function} onClick={() => handleCellClick({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
+                  </td>
+                  <td className="border border-[#ccc] p-0">
+                    <SelectableCell value="" placeholder="기능 선택" bgColor={zebra.function} onClick={() => handleCellClick({ type: 'l1Function', id: '', title: '제품 기능 선택', itemCode: 'C2' })} />
+                  </td>
+                  <td className="border border-[#ccc] p-0">
+                    <SelectableCell value="" placeholder="요구사항 선택" bgColor={zebra.failure} textColor={COLORS.failure.text} onClick={() => handleCellClick({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
+                  </td>
+                </tr>
+              );
+            }
+            
+            // ✅ 3L기능 스타일: 블록 단위 줄무늬 (제품명=tIdx, 제품 기능=funcCounter) (DFMEA)
+            let funcCounter = 0;
+            return meaningfulTypes.map((t, tIdx) => {
+              // ✅ 제품명(rowSpan): tIdx 기준으로 번갈아
+              const typeZebra = getZebra('structure', tIdx);
+              // ✅ 빈 기능 필터링
+              const meaningfulFunctions = (t.functions || []).filter((f: any) => {
+                const name = f.name || '';
+                return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+              });
               
-              return t.functions.length === 0 ? (
-                (() => {
-                  const bg = globalRowIdx++ % 2 === 1 ? '#c8e6c9' : '#e8f5e9';
+              // 각 구분(type)별 행 수 계산 (의미 있는 기능만)
+              const typeRowSpan = meaningfulFunctions.length === 0 ? 1 : meaningfulFunctions.reduce((a: number, f: any) => {
+                // ✅ 빈 요구사항 필터링
+                const meaningfulReqs = (f.requirements || []).filter((r: any) => {
+                  const name = r.name || '';
+                  return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+                });
+                return a + Math.max(1, meaningfulReqs.length);
+              }, 0);
+              
+              return meaningfulFunctions.length === 0 ? (() => {
+                const rowIdx = globalRowIdx++;
+                const currentFuncIdx = funcCounter++;
+                const funcZebraBg = getZebra('function', currentFuncIdx);
+                const failZebraBg = getZebra('failure', rowIdx);
+                return (
+                  <tr key={t.id} style={{ background: funcZebraBg }}>
+                    {/* 제품명 - tIdx 기준 줄무늬 (DFMEA) */}
+                    <td rowSpan={typeRowSpan} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: typeZebra }}>
+                      {state.l1.name || '(구조분석에서 입력)'}
+                    </td>
+                    <td rowSpan={typeRowSpan} className={`border border-[#ccc] p-1 align-middle text-center font-bold text-xs cursor-pointer hover:bg-opacity-80`} style={{ background: getTypeColor(t.name).light, color: getTypeColor(t.name).text }} onClick={() => handleCellClick({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })}>
+                      {getTypeColor(t.name).short || t.name}
+                    </td>
+                    {/* 제품 기능 - funcCounter 기준 줄무늬 (DFMEA) */}
+                    <td className="border border-[#ccc] p-0" style={{ background: funcZebraBg }}>
+                      <SelectableCell value="" placeholder="기능 선택" bgColor={funcZebraBg} onClick={() => handleCellClick({ type: 'l1Function', id: t.id, title: '제품 기능 선택', itemCode: 'C2' })} />
+                    </td>
+                    <td className="border border-[#ccc] p-0" style={{ background: failZebraBg }}>
+                      <SelectableCell value="" placeholder="요구사항 선택" bgColor={failZebraBg} textColor={COLORS.failure.text} onClick={() => handleCellClick({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
+                    </td>
+                  </tr>
+                );
+              })() : meaningfulFunctions.map((f, fIdx) => {
+                // ✅ 제품 기능(rowSpan): funcCounter 기준 번갈아 (DFMEA)
+                const currentFuncIdx = funcCounter++;
+                const funcBlockZebra = getZebra('function', currentFuncIdx);
+                // ✅ 빈 요구사항 필터링
+                const meaningfulReqs = (f.requirements || []).filter((r: any) => {
+                  const name = r.name || '';
+                  return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+                });
+                
+                const funcRowSpan = Math.max(1, meaningfulReqs.length);
+                
+                return meaningfulReqs.length === 0 ? (() => {
+                  const rowIdx = globalRowIdx++;
+                  const failZebraBg = getZebra('failure', rowIdx);
                   return (
-                    <tr key={t.id} style={dataRowStyle(bg)}>
-                      {/* 완제품 공정명 - 각 구분과 1:1 매칭 */}
-                      <td rowSpan={typeRowSpan} style={dataCellStyle('#e3f2fd', { padding: '10px', textAlign: 'center', fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' })}>
-                        {state.l1.name || '(구조분석에서 입력)'}
+                    <tr key={f.id} style={{ background: funcBlockZebra }}>
+                      {/* 제품명 - tIdx 기준 줄무늬 (DFMEA) */}
+                      {fIdx === 0 && (
+                        <td rowSpan={typeRowSpan} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: typeZebra }}>
+                          {state.l1.name || '(구조분석에서 입력)'}
+                        </td>
+                      )}
+                      {fIdx === 0 && (
+                        <td rowSpan={typeRowSpan} className={`border border-[#ccc] p-0 align-middle`} style={{ background: getTypeColor(t.name).light }}>
+                          <SelectableCell value={getTypeColor(t.name).short} placeholder="구분" bgColor={getTypeColor(t.name).light} textColor={getTypeColor(t.name).text} textAlign="center" onClick={() => handleCellClick({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
+                        </td>
+                      )}
+                      {/* 제품 기능 - funcCounter 기준 줄무늬 (DFMEA) */}
+                      <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle" style={{ background: funcBlockZebra }}>
+                        <SelectableCell value={f.name} placeholder="기능" bgColor={funcBlockZebra} textColor="#000000" onClick={() => handleCellClick({ type: 'l1Function', id: t.id, funcId: f.id, title: '제품 기능 선택', itemCode: 'C2' })} onDoubleClickEdit={(newValue) => handleInlineEditFunction(t.id, f.id, newValue)} />
                       </td>
-                      <td rowSpan={typeRowSpan} style={dataCellStyle(getTypeColor(t.name).light, { padding: '0', verticalAlign: 'middle' })}>
-                        <SelectableCell value={t.name} placeholder="구분" bgColor={getTypeColor(t.name).light} textColor={getTypeColor(t.name).text} textAlign="center" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
-                      </td>
-                      <td style={dataCellStyle(bg, { padding: '0' })}>
-                        <SelectableCell value="" placeholder="기능 선택" bgColor={bg} onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} />
-                      </td>
-                      <td style={dataCellStyle(bg, { padding: '0' })}>
-                        <SelectableCell value="" placeholder="요구사항 선택" bgColor={bg} onClick={() => setModal({ type: 'l1Requirement', id: '', title: '요구사항 선택', itemCode: 'C3', parentFunction: '' })} />
+                      <td className="border border-[#ccc] p-0" style={{ background: failZebraBg }}>
+                        <SelectableCell value="" placeholder="요구사항 선택" bgColor={failZebraBg} textColor={COLORS.failure.text} onClick={() => handleCellClick({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} />
                       </td>
                     </tr>
                   );
-                })()
-              ) : t.functions.map((f, fIdx) => {
-                const funcRowSpan = Math.max(1, f.requirements.length);
-                
-                return f.requirements.length === 0 ? (
-                  (() => {
-                    const bg = globalRowIdx++ % 2 === 1 ? '#c8e6c9' : '#e8f5e9';
-                    return (
-                      <tr key={f.id} style={dataRowStyle(bg)}>
-                        {/* 완제품 공정명 - 각 구분의 첫 행에서만 표시 (1:1 매칭) */}
-                        {fIdx === 0 && (
-                          <td rowSpan={typeRowSpan} style={dataCellStyle('#e3f2fd', { padding: '10px', textAlign: 'center', fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' })}>
-                            {state.l1.name || '(구조분석에서 입력)'}
-                          </td>
-                        )}
-                        {fIdx === 0 && (
-                          <td rowSpan={typeRowSpan} style={dataCellStyle(getTypeColor(t.name).light, { padding: '0', verticalAlign: 'middle' })}>
-                            <SelectableCell value={t.name} placeholder="구분" bgColor={getTypeColor(t.name).light} textColor={getTypeColor(t.name).text} textAlign="center" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
-                          </td>
-                        )}
-                        <td rowSpan={funcRowSpan} style={dataCellStyle(bg, { padding: '0', verticalAlign: 'middle' })}>
-                          <SelectableCell value={f.name} placeholder="기능" bgColor={bg} textColor="#000000" onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} onDoubleClickEdit={(newValue) => handleInlineEditFunction(t.id, f.id, newValue)} />
-                        </td>
-                        <td style={dataCellStyle(bg, { padding: '0' })}>
-                          <SelectableCell value="" placeholder="요구사항 선택" bgColor={bg} textColor={COLORS.function.text} onClick={() => setModal({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} />
-                        </td>
-                      </tr>
-                    );
-                  })()
-                ) : f.requirements.map((r, rIdx) => {
-                  const bg = globalRowIdx++ % 2 === 1 ? '#c8e6c9' : '#e8f5e9';
+                })() : meaningfulReqs.map((r, rIdx) => {
+                  const rowIdx = globalRowIdx++;
+                  const failZebraBg = getZebra('failure', rowIdx);
                   return (
-                    <tr key={r.id} style={dataRowStyle(bg)}>
-                      {/* 완제품 공정명 - 각 구분의 첫 행에서만 표시 (1:1 매칭) */}
+                    <tr key={r.id} style={{ background: funcBlockZebra }}>
+                      {/* 제품명 - tIdx 기준 줄무늬 (DFMEA) */}
                       {fIdx === 0 && rIdx === 0 && (
-                        <td rowSpan={typeRowSpan} style={dataCellStyle('#e3f2fd', { padding: '10px', textAlign: 'center', fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' })}>
+                        <td rowSpan={typeRowSpan} className="border border-[#ccc] p-2.5 text-center font-semibold align-middle" style={{ background: typeZebra }}>
                           {state.l1.name || '(구조분석에서 입력)'}
                         </td>
                       )}
                       {fIdx === 0 && rIdx === 0 && (
-                        <td rowSpan={typeRowSpan} style={dataCellStyle(getTypeColor(t.name).light, { padding: '0', verticalAlign: 'middle' })}>
-                          <SelectableCell value={t.name} placeholder="구분" bgColor={getTypeColor(t.name).light} textColor={getTypeColor(t.name).text} textAlign="center" onClick={() => setModal({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
+                        <td rowSpan={typeRowSpan} className={`border border-[#ccc] p-0 align-middle`} style={{ background: getTypeColor(t.name).light }}>
+                          <SelectableCell value={getTypeColor(t.name).short} placeholder="구분" bgColor={getTypeColor(t.name).light} textColor={getTypeColor(t.name).text} textAlign="center" onClick={() => handleCellClick({ type: 'l1Type', id: state.l1.id, title: '구분 선택', itemCode: 'C1' })} />
                         </td>
                       )}
+                      {/* 제품 기능 - funcCounter 기준 줄무늬 (DFMEA) */}
                       {rIdx === 0 && (
-                        <td rowSpan={funcRowSpan} style={dataCellStyle(bg, { padding: '0', verticalAlign: 'middle' })}>
-                          <SelectableCell value={f.name} placeholder="기능" bgColor={bg} textColor="#000000" onClick={() => setModal({ type: 'l1Function', id: t.id, title: '완제품 기능 선택', itemCode: 'C2' })} onDoubleClickEdit={(newValue) => handleInlineEditFunction(t.id, f.id, newValue)} />
+                        <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle" style={{ background: funcBlockZebra }}>
+                          <SelectableCell value={f.name} placeholder="기능" bgColor={funcBlockZebra} textColor="#000000" onClick={() => handleCellClick({ type: 'l1Function', id: t.id, funcId: f.id, title: '제품 기능 선택', itemCode: 'C2' })} onDoubleClickEdit={(newValue) => handleInlineEditFunction(t.id, f.id, newValue)} />
                         </td>
                       )}
-                      <td style={dataCellStyle(bg, { padding: '0' })}>
+                      <td className="border border-[#ccc] p-0" style={{ background: failZebraBg }}>
                         <SelectableCell 
                           value={r.name} 
                           placeholder="요구사항" 
-                          bgColor={bg} 
-                          textColor={COLORS.function.text} 
-                          onClick={() => setModal({ type: 'l1Requirement', id: f.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} 
+                          bgColor={failZebraBg} 
+                          textColor={COLORS.failure.text} 
+                          onClick={() => handleCellClick({ type: 'l1Requirement', id: f.id, reqId: r.id, title: '요구사항 선택', itemCode: 'C3', parentFunction: f.name, parentCategory: t.name })} 
                           onDoubleClickEdit={(newValue) => handleInlineEditRequirement(t.id, f.id, r.id, newValue)}
                         />
                       </td>
@@ -529,16 +745,16 @@ export default function FunctionL1Tab({ state, setState, setDirty, saveToLocalSt
           title={modal.title}
           itemCode={modal.itemCode}
           singleSelect={false}
-          processName={state.l1.name || '완제품 공정'}
+          processName={state.l1.name || '제품명'}
           parentFunction={modal.parentFunction}
           parentCategory={modal.parentCategory}
           currentValues={(() => {
-            if (modal.type === 'l1Type') return state.l1.types.map(t => t.name);
-            if (modal.type === 'l1Function') return state.l1.types.find(t => t.id === modal.id)?.functions.map(f => f.name) || [];
+            if (modal.type === 'l1Type') return state.l1.types.map((t: any) => t.name);
+            if (modal.type === 'l1Function') return state.l1.types.find(t => t.id === modal.id)?.functions.map((f: any) => f.name) || [];
             if (modal.type === 'l1Requirement') {
               for (const t of state.l1.types) {
                 const f = t.functions.find(f => f.id === modal.id);
-                if (f) return f.requirements.map(r => r.name);
+                if (f) return f.requirements.map((r: any) => r.name);
               }
             }
             return [];

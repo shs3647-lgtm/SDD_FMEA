@@ -3,8 +3,6 @@
 import React from 'react';
 import { COLORS } from '../../constants';
 import { stickyFirstColStyle } from './constants';
-import { stickyCellStyle } from './SectionStyles';
-import { l1CellStyle, structureCellStyle, m4CellStyle, workElementCellStyle } from './SectionStyles';
 import { FlatRow, ModalType } from './types';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 
@@ -40,7 +38,13 @@ export default function L1Section({
           style={{ 
             ...stickyFirstColStyle,
             zIndex: 10,
-            ...structureCellStyle('#e3f2fd', { padding: '4px', textAlign: 'center', fontSize: '12px', fontWeight: 600 }),
+            border: `1px solid #ccc`,
+            padding: '4px', 
+            background: '#e3f2fd',
+            verticalAlign: 'middle',
+            textAlign: 'center',
+            fontSize: '12px',
+            fontWeight: 600,
           }}
         >
           {row.l1Name}
@@ -51,17 +55,24 @@ export default function L1Section({
       {l2Span > 0 && (
         <td 
           rowSpan={l2Span}
-          style={structureCellStyle('#e8f5e9', { padding: '4px', textAlign: 'center', fontSize: '12px' })}
+          style={{ 
+            border: `1px solid #ccc`,
+            padding: '4px', 
+            background: '#e8f5e9',
+            verticalAlign: 'middle',
+            textAlign: 'center',
+            fontSize: '12px',
+          }}
         >
           {row.l2No} {row.l2Name}
         </td>
       )}
 
       {/* 4M & 작업요소 (병합 없음) */}
-      <td style={m4CellStyle}>
+      <td style={{ border: `1px solid #ccc`, textAlign: 'center', fontSize: '9px', background: '#fff8e1' }}>
         {row.m4}
       </td>
-      <td style={workElementCellStyle}>
+      <td style={{ border: `1px solid #ccc`, padding: '4px', fontSize: '12px', background: '#fff3e0' }}>
         {row.l3Name}
       </td>
 
@@ -73,7 +84,11 @@ export default function L1Section({
           rowSpan={l1TypeSpan} 
           style={{ 
             width: '80px',
-            ...structureCellStyle('#c8e6c9', { padding: '0 4px', textAlign: 'center' }),
+            border: `1px solid #ccc`,
+            padding: '0 4px', 
+            background: '#c8e6c9', 
+            verticalAlign: 'middle',
+            textAlign: 'center',
           }}
         >
           <SelectableCell
@@ -89,7 +104,13 @@ export default function L1Section({
       {l1FuncSpan > 0 && (
         <td 
           rowSpan={l1FuncSpan} 
-          style={l1CellStyle('#c8e6c9')}
+          style={{ 
+            border: `1px solid #ccc`,
+            padding: '2px 4px', 
+            background: '#c8e6c9', 
+            verticalAlign: 'middle',
+            wordBreak: 'break-word',
+          }}
         >
           <SelectableCell
             value={row.l1Function}
@@ -102,7 +123,13 @@ export default function L1Section({
       
       {/* L1: 요구사항 (Requirement) */}
       <td 
-        style={l1CellStyle('#c8e6c9')}
+        style={{ 
+          border: `1px solid #ccc`,
+          padding: '2px 4px', 
+          background: '#c8e6c9', 
+          verticalAlign: 'middle',
+          wordBreak: 'break-word',
+        }}
       >
         <SelectableCell
           value={row.l1Requirement}

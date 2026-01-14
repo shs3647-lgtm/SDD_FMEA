@@ -15,11 +15,9 @@ interface FlatRow {
   l1TypeId?: string;
   l1TypeName?: string;
   l2Id: string;
-  l2No: string;
-  l2Name: string;
+  l2Name: string; // DFMEA: l2No 제거됨
   l3Id: string;
-  m4: string;
-  l3Name: string;
+  l3Name: string; // DFMEA: m4 제거됨
 }
 
 interface AllViewTabProps {
@@ -54,25 +52,25 @@ export function AllViewHeader() {
     <>
       {/* 1행: 단계 대분류 */}
       <tr>
-        <th colSpan={4} style={mainH(COLORS.structure.main)}>P-FMEA 구조 분석(2단계)</th>
-        <th colSpan={8} style={mainH(COLORS.function.main)}>P-FMEA 기능 분석(3단계)</th>
-        <th colSpan={6} style={mainH('#f57c00')}>P-FMEA 고장 분석(4단계)</th>
-        <th colSpan={8} style={mainH(COLORS.risk.main)}>P-FMEA 리스크 분석(5단계)</th>
-        <th colSpan={14} style={mainH(COLORS.opt.main)}>P-FMEA 최적화(6단계)</th>
+        <th colSpan={4} style={mainH(COLORS.structure.main)}>D-FMEA 구조 분석(2단계)</th>
+        <th colSpan={8} style={mainH(COLORS.function.main)}>D-FMEA 기능 분석(3단계)</th>
+        <th colSpan={6} style={mainH('#f57c00')}>D-FMEA 고장 분석(4단계)</th>
+        <th colSpan={8} style={mainH(COLORS.risk.main)}>D-FMEA 리스크 분석(5단계)</th>
+        <th colSpan={14} style={mainH(COLORS.opt.main)}>D-FMEA 최적화(6단계)</th>
       </tr>
 
       {/* 2행: 서브그룹 */}
       <tr>
         {/* 구조분석 (3 서브그룹) */}
-        <th colSpan={1} className="p-0.5 h-5 font-bold text-[9px] text-center border border-gray-400 bg-[#1976d2]">1. 완제품 공정명</th>
-        <th colSpan={1} className="p-0.5 h-5 font-bold text-[9px] text-center border border-gray-400 bg-[#1976d2]">2. 메인 공정명</th>
-        <th colSpan={2} className="p-0.5 h-5 font-bold text-[9px] text-center border border-gray-400 bg-[#1976d2]">3. 작업 요소명</th>
-        <th colSpan={3} style={subH(COLORS.function.header)}>1. 완제품 공정기능/요구사항</th>
-        <th colSpan={2} style={subH(COLORS.function.header)}>2. 메인공정기능 및 제품특성</th>
-        <th colSpan={3} style={subH(COLORS.function.header)}>3. 작업요소의 기능 및 공정특성</th>
+        <th colSpan={1} className="p-0.5 h-5 font-bold text-xs text-center border border-[#ccc] bg-[#1976d2]">1. 제품명</th>
+        <th colSpan={1} className="p-0.5 h-5 font-bold text-xs text-center border border-[#ccc] bg-[#1976d2]">2. A'SSY명</th>
+        <th colSpan={2} className="p-0.5 h-5 font-bold text-xs text-center border border-[#ccc] bg-[#1976d2]">3. 작업 요소명</th>
+        <th colSpan={3} style={subH(COLORS.function.header)}>1. 제품 기능/요구사항</th>
+        <th colSpan={2} style={subH(COLORS.function.header)}>2. A'SSY 기능 및 제품 특성</th>
+        <th colSpan={3} style={subH(COLORS.function.header)}>3. 부품 기능 및 부품 특성</th>
         <th colSpan={3} style={subH(COLORS.failure.header)}>1. 자사/고객/사용자 고장영향(FE)</th>
-        <th colSpan={1} style={subH(COLORS.failure.header)}>2. 메인공정 고장형태(FM)</th>
-        <th colSpan={2} style={subH(COLORS.failure.header)}>3. 작업요소 고장원인(FC)</th>
+        <th colSpan={1} style={subH(COLORS.failure.header)}>2. A'SSY 고장형태(FM)</th>
+        <th colSpan={2} style={subH(COLORS.failure.header)}>3. 부품 고장원인(FC)</th>
         <th colSpan={2} style={subH(COLORS.risk.prevention.header)}>현재 예방관리</th>
         <th colSpan={2} style={subH(COLORS.risk.detection.header)}>현재 검출관리</th>
         <th colSpan={4} style={subH(COLORS.risk.evaluation.header)}>리스크 평가</th>
@@ -83,9 +81,9 @@ export function AllViewHeader() {
 
       {/* 3행: 컬럼명 */}
       <tr>
-        {['완제품 공정명','NO+공정명','4M','작업요소'].map(t => <th key={t} style={colH(COLORS.structure.cell)}>{t}</th>)}
-        {['구분','완제품기능','요구사항','공정기능','제품특성','작업요소','작업요소기능','공정특성'].map(t => <th key={t} style={colH(COLORS.function.cell)}>{t}</th>)}
-        {['구분','고장영향(FE)','심각도','고장형태(FM)','작업요소','고장원인(FC)'].map(t => <th key={t} style={colH(COLORS.failure.cell)}>{t}</th>)}
+        {['제품명','A\'SSY명','부품 또는 특성'].map(t => <th key={t} style={colH(COLORS.structure.cell)}>{t}</th>)}
+        {['구분','제품 기능','요구사항','A\'SSY 기능','제품 특성','부품 또는 특성','부품 기능','부품 특성'].map(t => <th key={t} style={colH(COLORS.function.cell)}>{t}</th>)}
+        {['구분','고장영향(FE)','심각도','고장형태(FM)','부품 또는 특성','고장원인(FC)'].map(t => <th key={t} style={colH(COLORS.failure.cell)}>{t}</th>)}
         <th style={colH(COLORS.risk.prevention.cell)}>예방관리(PC)</th>
         <th style={colH(COLORS.risk.prevention.cell)}>발생도</th>
         <th style={colH(COLORS.risk.detection.cell)}>검출관리(DC)</th>
@@ -109,8 +107,8 @@ function AllViewRow({ row, idx, l1Spans, l2Spans, zebraBg = '#fff' }: { row: Fla
     <tr className={`h-[22px] ${zebraBg}`}>
       {/* 구조분석 4열 */}
       {l1Spans[idx] > 0 && <td rowSpan={l1Spans[idx]} style={cellStyle(COLORS.structure.cell)}>{row.l1Name}</td>}
-      {l2Spans[idx] > 0 && <td rowSpan={l2Spans[idx]} style={cellStyle(COLORS.structure.cell)}>{row.l2No} {row.l2Name}</td>}
-      <td className="text-center" style={cellStyle(COLORS.structure.cell)}>{row.m4}</td>
+      {l2Spans[idx] > 0 && <td rowSpan={l2Spans[idx]} style={cellStyle(COLORS.structure.cell)}>{row.l2Name}</td>}
+      {/* DFMEA: m4 제거됨 */}
       <td style={cellStyle(COLORS.structure.cell)}>{row.l3Name}</td>
       {/* 기능분석 8열 */}
       {[...Array(8)].map((_, i) => <td key={`func-${i}`} style={cellStyle(COLORS.function.cell)}></td>)}
@@ -148,7 +146,8 @@ function AllViewRow({ row, idx, l1Spans, l2Spans, zebraBg = '#fff' }: { row: Fla
 export default function AllViewTab({ rows, state, l1Spans, l2Spans }: AllViewTabProps) {
   return (
     <>
-      <thead className="sticky top-0 z-20 bg-white">
+      {/* 헤더 - 하단 2px 검은색 구분선 */}
+      <thead className="sticky top-0 z-20 bg-white border-b-2 border-black">
         <AllViewHeader />
       </thead>
       

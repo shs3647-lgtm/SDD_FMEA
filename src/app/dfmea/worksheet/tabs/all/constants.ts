@@ -81,10 +81,9 @@ export const COL_COUNTS = { 2: 4, 3: 8, 4: 6, 5: 8, 6: 14 };
 
 /** Tailwind 클래스 정의 */
 export const TW_CLASSES = {
-  container: 'w-full',
-  table: 'border-collapse table-fixed',
-  stickyHead: 'sticky top-0 z-10 bg-white',
+  container: '', // ⚠️ 스크롤은 page.tsx에서 처리 - 여기서 overflow 제거
+  table: 'border-collapse', // table-fixed 제거 - min-width가 적용되도록
+  stickyHead: 'sticky top-0 z-20 bg-white border-b-2 border-black', // 헤더 고정, z-index 높임
 };
-
 
 

@@ -23,6 +23,6 @@ export default function FunctionTab(props: FunctionTabProps) {
     return <FunctionL3Tab {...props} />;
   }
   
-  // 기본: L1 완제품 기능분석
+  // 기본: L1 제품 기능분석 (DFMEA)
   return <FunctionL1Tab {...props} />;
 }

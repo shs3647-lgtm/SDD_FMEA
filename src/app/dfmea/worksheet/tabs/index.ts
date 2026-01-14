@@ -7,7 +7,9 @@ export { default as StructureTab, StructureColgroup, StructureHeader, StructureR
 export { default as FunctionTab, FunctionColgroup, FunctionHeader, FunctionRow } from './FunctionTab';
 export { default as FailureTab, FailureColgroup, FailureHeader, FailureRow } from './FailureTab';
 export { default as RiskTab, RiskHeader, RiskRow } from './RiskTab';
+export { default as RiskTabConfirmable } from './RiskTabConfirmable';
 export { default as OptTab, OptHeader, OptRow } from './OptTab';
+export { default as OptTabConfirmable } from './OptTabConfirmable';
 export { default as DocTab, DocHeader, DocRow } from './DocTab';
 export { default as AllViewTab, AllViewHeader } from './AllViewTab';
 

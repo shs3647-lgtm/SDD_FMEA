@@ -34,6 +34,10 @@ interface FailureLinkDiagramProps {
   fmNodeRef: React.RefObject<HTMLDivElement | null>;
   feColRef: React.RefObject<HTMLDivElement | null>;
   fcColRef: React.RefObject<HTMLDivElement | null>;
+  onPrevFM?: () => void;
+  onNextFM?: () => void;
+  hasPrevFM?: boolean;
+  hasNextFM?: boolean;
 }
 
 export default function FailureLinkDiagram({
@@ -44,19 +48,23 @@ export default function FailureLinkDiagram({
   chainAreaRef,
   fmNodeRef,
   feColRef,
-  fcColRef
+  fcColRef,
+  onPrevFM,
+  onNextFM,
+  hasPrevFM = false,
+  hasNextFM = false
 }: FailureLinkDiagramProps) {
   return (
     <div ref={chainAreaRef} style={diagramAreaStyle}>
       {/* SVG 곡선 + 화살표 */}
       <svg style={svgCanvasStyle}>
         <defs>
-          <marker id="arrowhead" markerWidth="5" markerHeight="4" refX="5" refY="2" orient="auto" markerUnits="strokeWidth">
-            <path d="M0,0 L5,2 L0,4" fill="none" stroke="#888" strokeWidth="0.8" />
+          <marker id="arrowhead" markerWidth="4" markerHeight="3" refX="4" refY="1.5" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L4,1.5 L0,3 Z" fill="#555" stroke="none" />
           </marker>
         </defs>
         {svgPaths.map((d, idx) => (
-          <path key={idx} d={d} fill="none" stroke="#888" strokeWidth="1.2" markerEnd="url(#arrowhead)" />
+          <path key={idx} d={d} fill="none" stroke="#555" strokeWidth="2" markerEnd="url(#arrowhead)" />
         ))}
       </svg>
 
@@ -67,53 +75,112 @@ export default function FailureLinkDiagram({
         </div>
       ) : (
         <div style={diagramMainStyle}>
-          {/* 상단 라벨 */}
+          {/* 상단 라벨 - 타입별 색상 + 개수 표시 */}
           <div style={diagramLabelRowStyle}>
-            <div style={diagramLabelStyle}>FE(고장영향)</div>
+            <div style={diagramLabelStyle('FE')}>FE(고장영향:<span style={{color:'#ffd600'}}>{linkedFEs.size}</span>)</div>
             <div></div>
-            <div style={diagramLabelStyle}>FM(고장형태)</div>
+            <div style={diagramLabelStyle('FM')}>FM(고장형태:<span style={{color:'#ffd600'}}>1</span>)</div>
             <div></div>
-            <div style={diagramLabelStyle}>FC(고장원인)</div>
+            <div style={diagramLabelStyle('FC')}>FC(고장원인:<span style={{color:'#ffd600'}}>{linkedFCs.size}</span>)</div>
           </div>
           
           {/* 카드 영역 */}
           <div style={diagramGridStyle}>
-            {/* FE 열 */}
+            {/* FE 열 - 남색 */}
             <div ref={feColRef} style={diagramColumnStyle('flex-start')}>
               {Array.from(linkedFEs.values()).map(fe => (
-                <div key={fe.id} className="fe-card" style={diagramCardStyle('120px')}>
-                  <div style={cardHeaderStyle()}>
+                <div key={fe.id} className="fe-card" style={diagramCardStyle('120px', 'FE')}>
+                  <div style={cardHeaderStyle('FE')}>
                     {fe.feNo} | S:{fe.severity || '-'}
                   </div>
                   <div style={cardBodyStyle()}>{fe.text}</div>
                 </div>
               ))}
-              {linkedFEs.size === 0 && <div className="text-gray-400 text-xs text-center">FE 클릭</div>}
+              {linkedFEs.size === 0 && (
+                <div className="text-center p-2">
+                  <div className="text-blue-600 text-xs font-semibold">← 좌측</div>
+                  <div className="text-blue-600 text-xs font-semibold">FE 선택하여,</div>
+                  <div className="text-blue-600 text-xs font-semibold">연결 필요</div>
+                </div>
+              )}
             </div>
 
             {/* 왼쪽 간격 (화살표 영역) */}
             <div className="flex items-center justify-center"></div>
 
-            {/* FM 열 */}
-            <div style={diagramColumnStyle('center')}>
-              <div ref={fmNodeRef} style={diagramCardStyle('110px')}>
-                <div style={cardHeaderStyle({ borderBottom: '1px solid #ffe0b2' })}>{currentFM.fmNo}</div>
+            {/* FM 열 - 주황색 + 이동 화살표 */}
+            <div style={{ ...diagramColumnStyle('center'), flexDirection: 'column', gap: '4px' }}>
+              {/* 위로 이동 화살표 */}
+              <button
+                onClick={onPrevFM}
+                disabled={!hasPrevFM}
+                style={{
+                  width: '100%',
+                  padding: '4px 8px',
+                  backgroundColor: hasPrevFM ? '#f57c00' : '#e0e0e0',
+                  color: hasPrevFM ? '#fff' : '#999',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: hasPrevFM ? 'pointer' : 'not-allowed',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px'
+                }}
+              >
+                ▲ 이전 FM
+              </button>
+              
+              {/* FM 카드 */}
+              <div ref={fmNodeRef} style={diagramCardStyle('110px', 'FM')}>
+                <div style={cardHeaderStyle('FM')}>{currentFM.fmNo}</div>
                 <div style={cardBodyStyle({ fontWeight: 600 })}>{currentFM.text}</div>
               </div>
+              
+              {/* 아래로 이동 화살표 */}
+              <button
+                onClick={onNextFM}
+                disabled={!hasNextFM}
+                style={{
+                  width: '100%',
+                  padding: '4px 8px',
+                  backgroundColor: hasNextFM ? '#f57c00' : '#e0e0e0',
+                  color: hasNextFM ? '#fff' : '#999',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: hasNextFM ? 'pointer' : 'not-allowed',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px'
+                }}
+              >
+                ▼ 다음 FM
+              </button>
             </div>
 
             {/* 오른쪽 간격 (화살표 영역) */}
             <div className="flex items-center justify-center"></div>
 
-            {/* FC 열 */}
+            {/* FC 열 - 녹색 */}
             <div ref={fcColRef} style={diagramColumnStyle('flex-end')}>
               {Array.from(linkedFCs.values()).map(fc => (
-                <div key={fc.id} className="fc-card" style={diagramCardStyle('110px')}>
-                  <div style={cardHeaderStyle()}>{fc.fcNo}</div>
+                <div key={fc.id} className="fc-card" style={diagramCardStyle('110px', 'FC')}>
+                  <div style={cardHeaderStyle('FC')}>{fc.fcNo}</div>
                   <div style={cardBodyStyle()}>{fc.text}</div>
                 </div>
               ))}
-              {linkedFCs.size === 0 && <div className="text-gray-400 text-xs">FC 클릭</div>}
+              {linkedFCs.size === 0 && (
+                <div className="text-center p-2">
+                  <div className="text-green-700 text-xs font-semibold">좌측</div>
+                  <div className="text-green-700 text-xs font-semibold">FC 선택하여,</div>
+                  <div className="text-green-700 text-xs font-semibold">연결 필요 →</div>
+                </div>
+              )}
             </div>
           </div>
         </div>

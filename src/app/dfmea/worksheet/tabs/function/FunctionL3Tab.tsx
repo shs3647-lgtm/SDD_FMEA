@@ -1,37 +1,39 @@
 /**
  * @file FunctionL3Tab.tsx
- * @description 작업요소(L3) 기능 분석 - 3행 헤더 구조 (L1과 동일한 패턴)
+ * @description 부품 또는 특성(L3) 기능 분석 - 3행 헤더 구조 (L1과 동일한 패턴) (DFMEA)
+ * 
+ * ⚠️⚠️⚠️ 코드프리즈 (CODE FREEZE) ⚠️⚠️⚠️
+ * ============================================
+ * 이 파일은 완전히 프리즈되었습니다.
+ * 
+ * ❌ 절대 수정 금지:
+ * - 코드 변경 금지
+ * - 주석 변경 금지
+ * - 스타일 변경 금지
+ * - 로직 변경 금지
+ * 
+ * ✅ 수정 허용 조건:
+ * 1. 사용자가 명시적으로 수정 요청
+ * 2. 수정 사유와 범위를 명확히 지시
+ * 3. 코드프리즈 경고를 확인하고 진행
+ * 
+ * 📅 프리즈 일자: 2026-01-05
+ * 📌 프리즈 범위: 구조분석부터 3L원인분석까지 전체
+ * ============================================
  */
 
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { FunctionTabProps } from './types';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
+import { findLinkedProcessCharsForFunction, getAutoLinkMessage } from '../../utils/auto-link';
+import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
+import { handleEnterBlur } from '../../utils/keyboard';
+import { getZebraColors } from '@/styles/level-colors';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 import SpecialCharSelectModal, { SPECIAL_CHAR_DATA } from '@/components/modals/SpecialCharSelectModal';
-import {
-  containerStyle,
-  tableStyle,
-  colStyle,
-  headerMainRow,
-  headerFlexContainer,
-  headerButtonGroup,
-  confirmButtonStyle,
-  confirmBadgeStyle,
-  missingBadgeStyle,
-  headerSubRow,
-  missingPillStyle,
-  missingPillInlineStyle,
-  colHeaderRow,
-  headerRowBg,
-  dataRowStyle,
-  dataCellStyle,
-  dataCellStyleL3,
-  specialCharButtonStyle,
-  colHeaderRowL3,
-} from './FunctionTabStyles';
 
 // 스타일 함수
 const BORDER = '1px solid #b0bec5';
@@ -39,33 +41,10 @@ const cellBase: React.CSSProperties = { border: BORDER, padding: '4px 6px', font
 const headerStyle = (bg: string, color = '#fff'): React.CSSProperties => ({ ...cellBase, background: bg, color, fontWeight: FONT_WEIGHTS.bold, textAlign: 'center' });
 const dataCell = (bg: string): React.CSSProperties => ({ ...cellBase, background: bg });
 
-// 특별특성 배지 컴포넌트
-function SpecialCharBadge({ value, onClick }: { value: string; onClick: () => void }) {
-  const charData = SPECIAL_CHAR_DATA.find(d => d.symbol === value);
-  
-  if (!value) {
-    return (
-      <button onClick={onClick} className="w-full py-1 px-2 bg-gray-100 border border-dashed border-gray-400 rounded text-xs text-gray-400 font-semibold cursor-pointer">
-        - 미지정
-      </button>
-    );
-  }
+// 특별특성 배지 - 공통 컴포넌트 사용
+import SpecialCharBadge from '@/components/common/SpecialCharBadge';
 
-  const bgColor = charData?.color || '#e0e0e0';
-  
-  return (
-    <button
-      onClick={onClick}
-      className="py-1 px-1.5 text-white border-none rounded text-xs font-semibold cursor-pointer whitespace-nowrap"
-      style={specialCharButtonStyle(bgColor)}
-      title={charData?.meaning || value}
-    >
-      {value}
-    </button>
-  );
-}
-
-export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalStorage }: FunctionTabProps) {
+export default function FunctionL3Tab({ state, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB }: FunctionTabProps) {
   const [modal, setModal] = useState<{ 
     type: string; 
     procId: string; 
@@ -87,6 +66,21 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
   // 확정 상태 (state.l3Confirmed 사용)
   const isConfirmed = state.l3Confirmed || false;
 
+  // ✅ 셀 클릭 시 확정됨 상태면 자동으로 수정 모드로 전환
+  // ✅ 셀 클릭 시 확정됨 상태면 자동으로 수정 모드로 전환 - setStateSynced 패턴 적용
+  const handleCellClick = useCallback((modalConfig: any) => {
+    if (isConfirmed) {
+      const updateFn = (prev: any) => ({ ...prev, l3Confirmed: false });
+      if (setStateSynced) {
+        setStateSynced(updateFn);
+      } else {
+        setState(updateFn);
+      }
+      setDirty(true);
+    }
+    setModal(modalConfig);
+  }, [isConfirmed, setState, setStateSynced, setDirty]);
+
   // 누락 건수 계산 (플레이스홀더 패턴 모두 체크)
   const isMissing = (name: string | undefined) => {
     if (!name) return true;
@@ -100,25 +94,48 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
     return false;
   };
 
-  // 항목별 누락 건수 분리 계산 (특별특성은 누락건 제외)
+  // ✅ 항목별 누락 건수 분리 계산 (필터링된 데이터만 카운트)
   const missingCounts = React.useMemo(() => {
-    let functionCount = 0;  // 작업요소기능 누락
-    let charCount = 0;      // 공정특성 누락
+    let functionCount = 0;  // 부품 기능 누락 (DFMEA)
+    let charCount = 0;      // 부품 특성 누락 (DFMEA)
     
-    state.l2.forEach(proc => {
-      const l3List = proc.l3 || [];
-      l3List.forEach(we => {
-        // 작업요소 기능 체크
-        const funcs = we.functions || [];
-        if (funcs.length === 0) functionCount++;
-        funcs.forEach(f => {
+    // ✅ 의미 있는 A'SSY만 필터링 (DFMEA)
+    const meaningfulProcs = state.l2.filter((p: any) => {
+      const name = p.name || '';
+      return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+    });
+    
+    meaningfulProcs.forEach(proc => {
+      // ✅ 의미 있는 부품 또는 특성만 필터링 (DFMEA)
+      const meaningfulL3 = (proc.l3 || []).filter((we: any) => {
+        const name = we.name || '';
+        return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('추가') && !name.includes('선택');
+      });
+      
+      meaningfulL3.forEach(we => {
+        // ✅ 의미 있는 기능만 필터링
+        const meaningfulFuncs = (we.functions || []).filter((f: any) => {
+          const name = f.name || '';
+          return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+        });
+        
+        // 부품 기능 체크 (DFMEA)
+        if (meaningfulFuncs.length === 0) functionCount++;
+        meaningfulFuncs.forEach(f => {
           if (isMissing(f.name)) functionCount++;
-          // 공정특성 체크
-          const chars = f.processChars || [];
-          if (chars.length === 0) charCount++;
-          chars.forEach(c => {
-            if (isMissing(c.name)) charCount++;
-          });
+          
+          // ✅ 의미 있는 기능이 있는 경우에만 부품 특성 누락 체크 (DFMEA)
+          if (!isMissing(f.name)) {
+            // ✅ 의미 있는 공정특성만 필터링
+            const meaningfulChars = (f.processChars || []).filter((c: any) => {
+              const name = c.name || '';
+              return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && 
+                     !name.includes('추가') && !name.includes('입력') && !name.includes('필요');
+            });
+            
+            // 부품 특성 체크: 의미 있는 기능이 있는데 부품 특성이 없으면 누락 (DFMEA)
+            if (meaningfulChars.length === 0) charCount++;
+          }
         });
       });
     });
@@ -128,24 +145,78 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
   // 총 누락 건수 (기존 호환성)
   const missingCount = missingCounts.total;
 
-  // 확정 핸들러
+  // ✅ 3L COUNT 계산 (부품 또는 특성, 부품 기능, 부품 특성) (DFMEA)
+  const workElementCount = useMemo(() => state.l2.reduce((sum, proc) => sum + (proc.l3 || []).filter((we: any) => we.name && !we.name.includes('클릭')).length, 0), [state.l2]);
+  const l3FunctionCount = useMemo(() => state.l2.reduce((sum, proc) => sum + (proc.l3 || []).reduce((weSum: number, we: any) => weSum + (we.functions || []).filter((f: any) => f.name && !f.name.includes('클릭')).length, 0), 0), [state.l2]);
+  const processCharCount = useMemo(() => state.l2.reduce((sum, proc) => sum + (proc.l3 || []).reduce((weSum: number, we: any) => weSum + (we.functions || []).reduce((funcSum: number, func: any) => funcSum + (func.processChars || []).filter((c: any) => c.name).length, 0), 0), 0), [state.l2]);
+
+  // ✅ L3 기능 데이터 변경 감지용 ref (고장분석 패턴 적용)
+  const l3FuncDataRef = useRef<string>('');
+  
+  // ✅ L3 기능 데이터 변경 시 자동 저장 (확실한 저장 보장)
+  useEffect(() => {
+    const allFuncs = state.l2.flatMap((p: any) => (p.l3 || []).flatMap((we: any) => we.functions || []));
+    const dataKey = JSON.stringify(allFuncs);
+    if (l3FuncDataRef.current && dataKey !== l3FuncDataRef.current) {
+      console.log('[FunctionL3Tab] l3.functions 변경 감지, 자동 저장');
+      saveToLocalStorage?.();
+    }
+    l3FuncDataRef.current = dataKey;
+  }, [state.l2, saveToLocalStorage]);
+
+
+  // 확정 핸들러 (고장분석 패턴 적용) - ✅ setStateSynced 사용으로 저장 보장
   const handleConfirm = useCallback(() => {
+    console.log('[FunctionL3Tab] 확정 버튼 클릭, missingCount:', missingCount);
     if (missingCount > 0) {
       alert(`누락된 항목이 ${missingCount}건 있습니다.\n먼저 입력을 완료해주세요.`);
       return;
     }
-    setState(prev => ({ ...prev, l3Confirmed: true }));
-    saveToLocalStorage?.();
-    alert('3L 작업요소 기능분석이 확정되었습니다.');
-  }, [missingCount, setState, saveToLocalStorage]);
+    
+    // ✅ 현재 기능 통계 로그
+    const funcCount = state.l2.flatMap((p: any) => (p.l3 || []).flatMap((we: any) => we.functions || [])).length;
+    const charCount = state.l2.flatMap((p: any) => (p.l3 || []).flatMap((we: any) => (we.functions || []).flatMap((f: any) => f.processChars || []))).length;
+    console.log('[FunctionL3Tab] 확정 시 기능:', funcCount, '개, 부품 특성:', charCount, '개');
+    
+    // ✅ setStateSynced 사용 (stateRef 동기 업데이트)
+    const updateFn = (prev: any) => {
+      const newState = { ...prev, l3Confirmed: true };
+      console.log('[FunctionL3Tab] 확정 상태 업데이트:', newState.l3Confirmed);
+      return newState;
+    };
+    
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
+    setDirty(true);
+    
+    // ✅ 저장 보장 (stateRef가 동기적으로 업데이트되었으므로 즉시 저장 가능)
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        saveToLocalStorage?.();
+        saveAtomicDB?.();  // ✅ DB 저장 추가
+        console.log('[FunctionL3Tab] 확정 후 localStorage + DB 저장 완료');
+      }, 50);
+    });
+    
+    alert('✅ 3L 부품 기능분석이 확정되었습니다. (DFMEA)');
+  }, [missingCount, state.l2, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
-  // 수정 핸들러
+  // 수정 핸들러 (고장분석 패턴 적용) - ✅ setStateSynced 사용
   const handleEdit = useCallback(() => {
-    setState(prev => ({ ...prev, l3Confirmed: false }));
-    saveToLocalStorage?.(); // 영구 저장
-  }, [setState, saveToLocalStorage]);
+    const updateFn = (prev: any) => ({ ...prev, l3Confirmed: false });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
+    setDirty(true);
+    requestAnimationFrame(() => setTimeout(() => saveToLocalStorage?.(), 50));
+  }, [setState, setStateSynced, setDirty, saveToLocalStorage]);
 
-  // 작업요소 기능 인라인 편집 핸들러 (더블클릭)
+  // 부품 기능 인라인 편집 핸들러 (더블클릭) (DFMEA)
   const handleInlineEditFunction = useCallback((procId: string, l3Id: string, funcId: string, newValue: string) => {
     setState(prev => ({
       ...prev,
@@ -170,7 +241,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
     saveToLocalStorage?.();
   }, [setState, setDirty, saveToLocalStorage]);
 
-  // 공정특성 인라인 편집 핸들러 (더블클릭)
+  // 부품 특성 인라인 편집 핸들러 (더블클릭) (DFMEA)
   const handleInlineEditProcessChar = useCallback((procId: string, l3Id: string, funcId: string, charId: string, newValue: string) => {
     setState(prev => ({
       ...prev,
@@ -203,13 +274,14 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
 
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
+    const { type, procId, l3Id, funcId } = modal;
+    const isConfirmed = state.l3Confirmed || false;
     
     setState(prev => {
       const newState = JSON.parse(JSON.stringify(prev));
-      const { type, procId, l3Id, funcId } = modal;
 
       if (type === 'l3Function') {
-        // [규칙] 새 행은 수동 추가만 허용 - 자동 생성 금지
+        // 부품 기능 저장 (DFMEA)
         newState.l2 = newState.l2.map((proc: any) => {
           if (proc.id !== procId) return proc;
           return {
@@ -218,8 +290,15 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
               if (we.id !== l3Id) return we;
               const currentFuncs = we.functions || [];
               
-              // funcId가 있으면 해당 기능만 수정
+              // 기존 funcId가 있으면 해당 기능만 수정
               if (funcId) {
+                if (selectedValues.length === 0) {
+                  // 선택 해제 시 해당 기능 삭제
+                  return {
+                    ...we,
+                    functions: currentFuncs.filter((f: any) => f.id !== funcId)
+                  };
+                }
                 return {
                   ...we,
                   functions: currentFuncs.map((f: any) => 
@@ -230,27 +309,53 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                 };
               }
               
-              // 빈 기능 셀 클릭 시: 첫 번째 선택값만 첫 번째 빈 기능에 적용
-              const emptyFunc = currentFuncs.find((f: any) => !f.name || f.name === '' || f.name.includes('클릭하여'));
+              // ✅ 다중 선택: 각각 별도 행으로 추가 (L1/L2 패턴)
+              const updatedFuncs = [...currentFuncs];
+              const existingNames = new Set(currentFuncs.filter((f: any) => f.name && !f.name.includes('클릭')).map((f: any) => f.name));
               
-              if (emptyFunc && selectedValues.length > 0) {
-                return {
-                  ...we,
-                  functions: currentFuncs.map((f: any) => 
-                    f.id === emptyFunc.id 
-                      ? { ...f, name: selectedValues[0] }
-                      : f
-                  )
-                };
+              // 빈 기능 찾기
+              const emptyFuncIdx = updatedFuncs.findIndex((f: any) => !f.name || f.name === '' || f.name.includes('클릭'));
+              let startIdx = 0;
+              
+              // 빈 기능이 있으면 첫 번째 선택값 할당
+              if (emptyFuncIdx !== -1 && selectedValues.length > 0 && !existingNames.has(selectedValues[0])) {
+                updatedFuncs[emptyFuncIdx] = { ...updatedFuncs[emptyFuncIdx], name: selectedValues[0] };
+                existingNames.add(selectedValues[0]);
+                startIdx = 1;
               }
               
-              // 빈 기능이 없으면 기존 유지 (새 행 생성 안 함)
-              return we;
+              // 나머지 선택값들 각각 새 행으로 추가 (중복 제외)
+              for (let i = startIdx; i < selectedValues.length; i++) {
+                const val = selectedValues[i];
+                if (!existingNames.has(val)) {
+                  // ✅ 자동연결: 다른 부품에서 동일 기능에 연결된 부품 특성 찾기 (DFMEA)
+                  const linkedChars = findLinkedProcessCharsForFunction(prev, val);
+                  const autoLinkedChars = linkedChars.map(name => ({ id: uid(), name, specialChar: null }));
+                  
+                  updatedFuncs.push({ id: uid(), name: val, processChars: autoLinkedChars });
+                  existingNames.add(val);
+                  
+                  // 자동연결 알림
+                  if (autoLinkedChars.length > 0) {
+                    const message = getAutoLinkMessage(linkedChars, '부품 특성');
+                    console.log(`[FunctionL3Tab] ${val}: ${message}`);
+                  }
+                }
+              }
+              
+              return { ...we, functions: updatedFuncs };
             })
           };
         });
       } else if (type === 'l3ProcessChar') {
-        // 공정특성 저장 (특정 기능에 연결)
+        // 부품 특성 저장 (특정 기능에 연결) (DFMEA)
+        // ✅ 원칙: 상위(기능)가 없으면 하위(부품 특성) 생성 안됨
+        if (!funcId) {
+          alert('먼저 부품 기능을 선택해주세요.');
+          return;
+        }
+        
+        const charId = (modal as any).charId;
         newState.l2 = newState.l2.map((proc: any) => {
           if (proc.id !== procId) return proc;
           return {
@@ -262,13 +367,45 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                 functions: (we.functions || []).map((f: any) => {
                   if (f.id !== funcId) return f;
                   const currentChars = f.processChars || [];
-                  return {
-                    ...f,
-                    processChars: selectedValues.map(val => {
-                      const existing = currentChars.find((c: any) => c.name === val);
-                      return existing || { id: uid(), name: val };
-                    })
-                  };
+                  
+                  // ✅ charId가 있으면 해당 항목만 수정 (다중선택 개별 수정)
+                  if (charId) {
+                    if (selectedValues.length === 0) {
+                      return { ...f, processChars: currentChars.filter((c: any) => c.id !== charId) };
+                    }
+                    return {
+                      ...f,
+                      processChars: currentChars.map((c: any) => 
+                        c.id === charId ? { ...c, name: selectedValues[0] || c.name } : c
+                      )
+                    };
+                  }
+                  
+                  // ✅ 다중 선택: 각각 별도 행으로 추가 (L1/L2 패턴)
+                  const updatedChars = [...currentChars];
+                  const existingNames = new Set(currentChars.filter((c: any) => c.name && !c.name.includes('클릭')).map((c: any) => c.name));
+                  
+                  // 빈 부품 특성 찾기 (DFMEA)
+                  const emptyCharIdx = updatedChars.findIndex((c: any) => !c.name || c.name === '' || c.name.includes('클릭'));
+                  let startIdx = 0;
+                  
+                  // 빈 부품 특성이 있으면 첫 번째 선택값 할당
+                  if (emptyCharIdx !== -1 && selectedValues.length > 0 && !existingNames.has(selectedValues[0])) {
+                    updatedChars[emptyCharIdx] = { ...updatedChars[emptyCharIdx], name: selectedValues[0] };
+                    existingNames.add(selectedValues[0]);
+                    startIdx = 1;
+                  }
+                  
+                  // 나머지 선택값들 각각 새 행으로 추가 (중복 제외)
+                  for (let i = startIdx; i < selectedValues.length; i++) {
+                    const val = selectedValues[i];
+                    if (!existingNames.has(val)) {
+                      updatedChars.push({ id: uid(), name: val, specialChar: '' });
+                      existingNames.add(val);
+                    }
+                  }
+                  
+                  return { ...f, processChars: updatedChars };
                 })
               };
             })
@@ -282,7 +419,7 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
     setDirty(true);
     setModal(null);
     saveToLocalStorage?.(); // 영구 저장
-  }, [modal, setState, setDirty, saveToLocalStorage]);
+  }, [modal, state.l3Confirmed, setState, setDirty, saveToLocalStorage]);
 
   const handleDelete = useCallback((deletedValues: string[]) => {
     if (!modal) return;
@@ -332,10 +469,11 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
     });
     
     setDirty(true);
-    if (saveToLocalStorage) setTimeout(() => saveToLocalStorage(), 100);
+    setTimeout(() => saveToLocalStorage?.(), 200);
   }, [modal, setState, setDirty, saveToLocalStorage]);
 
   // 특별특성 선택 핸들러
+  // ✅ 특별특성 업데이트 - CRUD Update → 확정 해제 필요
   const handleSpecialCharSelect = useCallback((symbol: string) => {
     if (!specialCharModal) return;
     
@@ -365,82 +503,86 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
           })
         };
       });
-      
+      // ✅ CRUD Update: 확정 상태 해제
+      newState.l3Confirmed = false;
       return newState;
     });
     
     setDirty(true);
     setSpecialCharModal(null);
-    if (saveToLocalStorage) setTimeout(() => saveToLocalStorage(), 100);
+    setTimeout(() => saveToLocalStorage?.(), 200);
   }, [specialCharModal, setState, setDirty, saveToLocalStorage]);
 
-  // 공정의 총 행 수 계산
+  // ✅ 의미 있는 기능인지 체크하는 헬퍼
+  const isMeaningfulFunc = (f: any) => {
+    const name = f.name || '';
+    return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && 
+           !name.includes('추가') && !name.includes('입력') && !name.includes('필요');
+  };
+  
+  // ✅ 의미 있는 부품 특성 필터 + 중복 제거 (DFMEA)
+  const getMeaningfulChars = (chars: any[]) => {
+    return (chars || []).filter((c: any, idx: number, arr: any[]) => {
+      const name = c.name || '';
+      const isMeaningful = name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && 
+             !name.includes('추가') && !name.includes('입력') && !name.includes('필요');
+      // ✅ 중복 제거: 같은 이름의 부품 특성 중 첫 번째만 유지 (DFMEA)
+      const isFirst = arr.findIndex((x: any) => x.name === c.name) === idx;
+      return isMeaningful && isFirst;
+    });
+  };
+
+  // A'SSY의 총 행 수 계산 (DFMEA)
   const getProcRowSpan = (proc: any) => {
     const l3List = proc.l3 || [];
     if (l3List.length === 0) return 1;
     return l3List.reduce((acc: number, we: any) => {
-      const funcs = we.functions || [];
+      const funcs = (we.functions || []).filter(isMeaningfulFunc);
       if (funcs.length === 0) return acc + 1;
-      return acc + funcs.reduce((a: number, f: any) => a + Math.max(1, (f.processChars || []).length), 0);
+      return acc + funcs.reduce((a: number, f: any) => a + Math.max(1, getMeaningfulChars(f.processChars).length), 0);
     }, 0);
   };
 
-  // 작업요소의 총 행 수 계산
+  // 부품 또는 특성의 총 행 수 계산 (DFMEA)
   const getWeRowSpan = (we: any) => {
-    const funcs = we.functions || [];
+    const funcs = (we.functions || []).filter(isMeaningfulFunc);
     if (funcs.length === 0) return 1;
-    return funcs.reduce((a: number, f: any) => a + Math.max(1, (f.processChars || []).length), 0);
+    return funcs.reduce((a: number, f: any) => a + Math.max(1, getMeaningfulChars(f.processChars).length), 0);
   };
 
   const hasAnyL3 = state.l2.some(p => (p.l3 || []).length > 0);
 
   return (
-    <div style={containerStyle}>
-      <table style={tableStyle}>
+    <div className="p-0 overflow-auto h-full" style={{ paddingBottom: '50px' }} onKeyDown={handleEnterBlur}>
+      <table className="w-full border-collapse table-fixed">
         <colgroup>
-          <col style={colStyle('120px')} />
-          <col style={colStyle('50px')} />
-          <col style={colStyle('140px')} />
-          <col style={colStyle('180px')} />
-          <col style={colStyle('180px')} />
-          <col style={colStyle('80px')} />
+          <col className="w-[120px]" />
+          <col className="w-[50px]" />
+          <col className="w-[140px]" />
+          <col className="w-[180px]" />
+          <col className="w-[180px]" />
+          <col className="w-[80px]" />
         </colgroup>
         
-        {/* 3행 헤더 구조 */}
-        <thead>
+        {/* 3행 헤더 구조 - 하단 2px 검은색 구분선 */}
+        <thead className="sticky top-0 z-20 bg-white border-b-2 border-black">
           {/* 1행: 단계 구분 */}
           <tr>
-            <th colSpan={3} style={headerMainRow('#1976d2')}>
+            <th colSpan={3} className="bg-[#1976d2] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center">
               2단계 구조분석
             </th>
-            <th colSpan={3} style={headerMainRow('#388e3c')}>
-              <div style={headerFlexContainer}>
-                <span>3단계 : 3L 작업요소 기능분석</span>
-                <div style={headerButtonGroup}>
+            <th colSpan={3} className="bg-[#388e3c] text-white border border-[#ccc] p-2 text-xs font-extrabold text-center">
+              <div className="flex items-center justify-center gap-5">
+                <span>3단계 : 3L 부품 기능분석 (DFMEA)</span>
+                <div className="flex gap-1.5">
                   {isConfirmed ? (
-                    <span style={confirmBadgeStyle}>
-                      ✓ 확정됨
-                    </span>
+                    <span className={badgeConfirmed}>✓ 확정됨({processCharCount})</span>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={handleConfirm}
-                      style={confirmButtonStyle('#4caf50')}
-                    >
-                      확정
-                    </button>
+                    <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
                   )}
-                  <span style={missingBadgeStyle(missingCount > 0)}>
-                    누락 {missingCount}건
-                  </span>
+                  <span className={missingCount > 0 ? badgeMissing : badgeOk}>누락 {missingCount}건</span>
                   {isConfirmed && (
-                    <button
-                      type="button"
-                      onClick={handleEdit}
-                      style={confirmButtonStyle('#ff9800')}
-                    >
-                      수정
-                    </button>
+                    <button type="button" onClick={handleEdit} className={btnEdit}>수정</button>
                   )}
                 </div>
               </div>
@@ -449,47 +591,37 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
           
           {/* 2행: 항목 그룹 */}
           <tr>
-            <th colSpan={3} style={headerSubRow('#1976d2')}>
-              3. 작업요소 (4M)
+            <th colSpan={3} className="bg-[#1976d2] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
+              3. 부품 또는 특성 (DFMEA: 4M 없음)
             </th>
-            <th colSpan={3} style={headerSubRow('#388e3c')}>
-              3. 작업요소 기능/공정특성/특별특성
+            <th colSpan={3} className="bg-[#388e3c] text-white border border-[#ccc] p-1.5 text-xs font-semibold text-center">
+              3. 부품 기능/부품 특성/특별특성 (DFMEA)
               {missingCount > 0 && (
-                <span style={missingPillStyle}>
+                <span className="ml-2 bg-orange-500 text-white px-2 py-0.5 rounded-full text-xs">
                   누락 {missingCount}건
                 </span>
               )}
             </th>
           </tr>
           
-          {/* 3행: 세부 컬럼 */}
-          <tr style={headerRowBg}>
-            <th style={colHeaderRow('#e3f2fd')}>
-              소속 공정
+          {/* 3행: 세부 컬럼 - COUNT 표시 표준: 항목명(숫자) */}
+          <tr className="bg-[#e8f5e9]">
+            <th className="bg-[#e3f2fd] border border-[#ccc] p-1.5 text-xs font-semibold">
+              메인공정명
             </th>
-            <th style={colHeaderRow('#e3f2fd')}>
-              4M
+            <th className="bg-[#e3f2fd] border border-[#ccc] p-1.5 text-xs font-semibold">
+              {/* DFMEA: 4M 없음 */}
             </th>
-            <th style={colHeaderRow('#e3f2fd')}>
-              작업요소
+            <th className="bg-[#e3f2fd] border border-[#ccc] p-1.5 text-xs font-semibold">
+              부품 또는 특성<span className={`font-bold ${workElementCount > 0 ? 'text-green-700' : 'text-red-500'}`}>({workElementCount})</span>
             </th>
-            <th style={colHeaderRow('#c8e6c9')}>
-              작업요소기능
-              {missingCounts.functionCount > 0 && (
-                <span style={missingPillInlineStyle}>
-                  {missingCounts.functionCount}
-                </span>
-              )}
+            <th className="bg-[#c8e6c9] border border-[#ccc] p-1.5 text-xs font-semibold">
+              부품 기능<span className={`font-bold ${l3FunctionCount > 0 ? 'text-green-700' : 'text-red-500'}`}>({l3FunctionCount})</span>
             </th>
-            <th style={colHeaderRowL3('#c8e6c9', { borderRight: '3px solid #f57c00' })}>
-              공정특성
-              {missingCounts.charCount > 0 && (
-                <span style={missingPillInlineStyle}>
-                  {missingCounts.charCount}
-                </span>
-              )}
+            <th className="bg-[#c8e6c9] border border-[#ccc] border-r-[2px] border-r-orange-500 p-1.5 text-xs font-semibold">
+              부품 특성<span className={`font-bold ${processCharCount > 0 ? 'text-green-700' : 'text-red-500'}`}>({processCharCount})</span>
             </th>
-            <th style={colHeaderRowL3('#f57c00', { borderLeft: 'none', color: 'white', textAlign: 'center' })}>
+            <th className="bg-orange-500 text-white border border-[#ccc] border-l-0 p-1.5 text-xs font-semibold text-center whitespace-nowrap">
               특별특성
             </th>
           </tr>
@@ -497,56 +629,65 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
         
         <tbody>
           {!hasAnyL3 ? (
-            <tr style={dataRowStyle('#e8f5e9')}>
-              <td colSpan={3} style={dataCellStyle('#e3f2fd', { padding: '10px', textAlign: 'center', fontSize: FONT_SIZES.header1, color: '#666' })}>
-                (구조분석에서 작업요소 추가)
+            <tr className="bg-[#e8f5e9]">
+              <td colSpan={3} className="border border-[#ccc] p-2.5 text-center bg-[#e3f2fd] text-xs text-gray-500">
+                (구조분석에서 부품 추가) (DFMEA)
               </td>
-              <td style={dataCellStyle('#e8f5e9', { padding: '0' })}>
-                <SelectableCell value="" placeholder="작업요소기능 선택" bgColor={'#e8f5e9'} onClick={() => {}} />
+              <td className="border border-[#ccc] p-0">
+                <SelectableCell value="" placeholder="부품 기능 선택" bgColor={'#e8f5e9'} onClick={() => {}} />
               </td>
-              <td style={dataCellStyle('#e8f5e9', { padding: '0', borderRight: `3px solid ${'#f57c00'}` })}>
-                <SelectableCell value="" placeholder="공정특성 선택" bgColor={'#e8f5e9'} onClick={() => {}} />
+              <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0">
+                <SelectableCell value="" placeholder="부품 특성 선택" bgColor={'#e8f5e9'} onClick={() => {}} />
               </td>
-              <td style={dataCellStyle('#fff3e0', { padding: '4px', textAlign: 'center', borderLeft: 'none' })}>
+              <td className="border border-[#ccc] border-l-0 p-1 text-center bg-[#fff3e0]">
                 <SpecialCharBadge value="" onClick={() => {}} />
               </td>
             </tr>
           ) : (() => {
             let globalRowIdx = 0;
-            return state.l2.flatMap((proc) => {
+            return state.l2.flatMap((proc, procIdx) => {
               const l3List = proc.l3 || [];
               if (l3List.length === 0) return [];
+              
+              // ✅ 수정: 공정명도 첫 행의 globalRowIdx 기준 (열단위 줄무늬 일관성)
+              const procFirstRowIdx = globalRowIdx; // 공정의 첫 행 인덱스 캡처
               
               const procRowSpan = getProcRowSpan(proc);
               let isFirstProcRow = true;
               
               return l3List.flatMap((we, weIdx) => {
-                const funcs = we.functions || [];
+                // ✅ 의미 있는 기능만 필터링
+                const funcs = (we.functions || []).filter(isMeaningfulFunc);
                 const weRowSpan = getWeRowSpan(we);
                 
-                // 작업요소에 기능이 없는 경우
+                // ✅ 부품 첫 행 인덱스 캡처 (rowSpan 셀에 사용) (DFMEA)
+                const weFirstRowIdx = globalRowIdx;
+                
+                // 부품에 기능이 없는 경우 (DFMEA)
                 if (funcs.length === 0) {
-                  const zebraBg = globalRowIdx++ % 2 === 1 ? '#c8e6c9' : '#e8f5e9';
+                  const rowIdx = globalRowIdx++;
+                  const zebra = getZebraColors(rowIdx); // 표준화된 색상
+                  const procZebra = getZebraColors(procFirstRowIdx); // 공정명 첫 행 색상
                   const row = (
-                    <tr key={we.id} style={dataRowStyle(zebraBg)}>
+                    <tr key={we.id}>
                       {isFirstProcRow && (
-                        <td rowSpan={procRowSpan} style={dataCellStyleL3('#e3f2fd', { padding: '8px', textAlign: 'center', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' })}>
+                        <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: procZebra.structure }}>
                           {proc.no}. {proc.name}
                         </td>
                       )}
-                      <td rowSpan={weRowSpan} style={dataCellStyleL3('#e3f2fd', { padding: '4px', textAlign: 'center', fontSize: FONT_SIZES.cell, fontWeight: 500, verticalAlign: 'middle' })}>
+                      <td rowSpan={weRowSpan} className="border border-[#ccc] p-1 text-center text-xs font-medium align-middle" style={{ background: zebra.structure }}>
                         {we.m4}
                       </td>
-                      <td rowSpan={weRowSpan} style={dataCellStyleL3('#e3f2fd', { padding: '8px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.header1, verticalAlign: 'middle' })}>
+                      <td rowSpan={weRowSpan} className="border border-[#ccc] p-2 font-semibold text-xs align-middle" style={{ background: zebra.structure }}>
                         {we.name}
                       </td>
-                      <td style={dataCellStyleL3(zebraBg, { padding: '0' })}>
-                        <SelectableCell value="" placeholder="작업요소기능 선택" bgColor={zebraBg} onClick={() => setModal({ type: 'l3Function', procId: proc.id, l3Id: we.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} />
+                      <td className={cellP0} style={{ background: zebra.function }}>
+                        <SelectableCell value="" placeholder="부품 기능 선택" bgColor={zebra.function} onClick={() => handleCellClick({ type: 'l3Function', procId: proc.id, l3Id: we.id, title: '부품 기능 선택', itemCode: 'B2', workElementName: we.name })} />
                       </td>
-                      <td style={dataCellStyleL3(zebraBg, { padding: '0', borderRight: `3px solid ${'#f57c00'}` })}>
-                        <SelectableCell value="" placeholder="공정특성 선택" bgColor={zebraBg} onClick={() => {}} />
+                      <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0" style={{ background: zebra.failure }}>
+                        <SelectableCell value="" placeholder="부품 특성 선택" bgColor={zebra.failure} onClick={() => {}} />
                       </td>
-                      <td style={dataCellStyleL3('#fff3e0', { padding: '4px', textAlign: 'center', borderLeft: 'none' })}>
+                      <td className="border border-[#ccc] border-l-0 p-1 text-center" style={{ background: zebra.failure }}>
                         <SpecialCharBadge value="" onClick={() => {}} />
                       </td>
                     </tr>
@@ -557,42 +698,49 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                 
                 // 작업요소에 기능이 있는 경우
                 return funcs.flatMap((f, fIdx) => {
-                  const chars = f.processChars || [];
+                  // ✅ 의미 있는 공정특성만 필터링 + 중복 제거
+                  const chars = getMeaningfulChars(f.processChars);
                   const funcRowSpan = Math.max(1, chars.length);
                   
-                  // 기능에 공정특성이 없는 경우
+                  // ✅ 기능 블록 첫 행 인덱스 캡처 (rowSpan 셀에 사용)
+                  const funcFirstRowIdx = globalRowIdx;
+                  
+                  // 기능에 부품 특성이 없는 경우 (DFMEA)
                   if (chars.length === 0) {
-                    const zebraBg = globalRowIdx++ % 2 === 1 ? '#c8e6c9' : '#e8f5e9';
+                    const rowIdx = globalRowIdx++;
+                    const zebra = getZebraColors(rowIdx); // 표준화된 색상
+                    const procZebra = getZebraColors(procFirstRowIdx); // 공정명 첫 행 색상
+                    const weZebra = getZebraColors(weFirstRowIdx); // 부품 첫 행 색상 (DFMEA)
                     const row = (
-                      <tr key={f.id} style={dataRowStyle(zebraBg)}>
+                      <tr key={f.id}>
                         {isFirstProcRow && (
-                          <td rowSpan={procRowSpan} style={dataCellStyleL3('#e3f2fd', { padding: '8px', textAlign: 'center', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' })}>
+                          <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: procZebra.structure }}>
                             {proc.no}. {proc.name}
                           </td>
                         )}
                         {fIdx === 0 && (
                           <>
-                            <td rowSpan={weRowSpan} style={dataCellStyleL3('#e3f2fd', { padding: '4px', textAlign: 'center', fontSize: FONT_SIZES.cell, fontWeight: 500, verticalAlign: 'middle' })}>
+                            <td rowSpan={weRowSpan} className="border border-[#ccc] p-1 text-center text-xs font-medium align-middle" style={{ background: weZebra.structure }}>
                               {we.m4}
                             </td>
-                            <td rowSpan={weRowSpan} style={dataCellStyleL3('#e3f2fd', { padding: '8px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.header1, verticalAlign: 'middle' })}>
+                            <td rowSpan={weRowSpan} className="border border-[#ccc] p-2 font-semibold text-xs align-middle" style={{ background: weZebra.structure }}>
                               {we.name}
                             </td>
                           </>
                         )}
-                        <td rowSpan={funcRowSpan} style={dataCellStyleL3(zebraBg, { padding: '0', verticalAlign: 'middle' })}>
+                        <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle" style={{ background: zebra.function }}>
                           <SelectableCell 
                             value={f.name} 
-                            placeholder="작업요소기능" 
-                            bgColor={zebraBg} 
-                            onClick={() => setModal({ type: 'l3Function', procId: proc.id, l3Id: we.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} 
+                            placeholder="부품 기능" 
+                            bgColor={zebra.function} 
+                            onClick={() => handleCellClick({ type: 'l3Function', procId: proc.id, l3Id: we.id, funcId: f.id, title: '부품 기능 선택', itemCode: 'B2', workElementName: we.name })} 
                             onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, we.id, f.id, newValue)}
                           />
                         </td>
-                        <td style={dataCellStyleL3(zebraBg, { padding: '0', borderRight: `3px solid ${'#f57c00'}` })}>
-                          <SelectableCell value="" placeholder="공정특성 선택" bgColor={zebraBg} onClick={() => setModal({ type: 'l3ProcessChar', procId: proc.id, l3Id: we.id, funcId: f.id, title: '공정특성 선택', itemCode: 'B3', workElementName: we.name })} />
+                        <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0" style={{ background: zebra.failure }}>
+                          <SelectableCell value="" placeholder="부품 특성 선택" bgColor={zebra.failure} onClick={() => handleCellClick({ type: 'l3ProcessChar', procId: proc.id, l3Id: we.id, funcId: f.id, title: '부품 특성 선택', itemCode: 'B3', workElementName: we.name })} />
                         </td>
-                        <td style={dataCellStyleL3('#fff3e0', { padding: '4px', textAlign: 'center', borderLeft: 'none' })}>
+                        <td className="border border-[#ccc] border-l-0 p-1 text-center" style={{ background: zebra.failure }}>
                           <SpecialCharBadge value="" onClick={() => {}} />
                         </td>
                       </tr>
@@ -601,47 +749,51 @@ export default function FunctionL3Tab({ state, setState, setDirty, saveToLocalSt
                     return [row];
                   }
                   
-                  // 기능에 공정특성이 있는 경우
+                  // 기능에 부품 특성이 있는 경우 (DFMEA)
                   return chars.map((c, cIdx) => {
-                    const zebraBg = globalRowIdx++ % 2 === 1 ? '#c8e6c9' : '#e8f5e9';
+                    const rowIdx = globalRowIdx++;
+                    const zebra = getZebraColors(rowIdx); // 표준화된 색상
+                    const procZebra = getZebraColors(procFirstRowIdx); // 공정명 첫 행 색상
+                    const weZebra = getZebraColors(weFirstRowIdx); // 부품 첫 행 색상 (DFMEA)
+                    const funcZebra = getZebraColors(funcFirstRowIdx); // 기능 첫 행 색상
                     const row = (
-                      <tr key={c.id} style={dataRowStyle(zebraBg)}>
+                      <tr key={c.id}>
                         {isFirstProcRow && (
-                          <td rowSpan={procRowSpan} style={dataCellStyleL3('#e3f2fd', { padding: '8px', textAlign: 'center', fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle' })}>
+                          <td rowSpan={procRowSpan} className="border border-[#ccc] p-2 text-center text-xs font-semibold align-middle" style={{ background: procZebra.structure }}>
                             {proc.no}. {proc.name}
                           </td>
                         )}
                         {fIdx === 0 && cIdx === 0 && (
                           <>
-                            <td rowSpan={weRowSpan} style={dataCellStyleL3('#e3f2fd', { padding: '4px', textAlign: 'center', fontSize: FONT_SIZES.cell, fontWeight: 500, verticalAlign: 'middle' })}>
+                            <td rowSpan={weRowSpan} className="border border-[#ccc] p-1 text-center text-xs font-medium align-middle" style={{ background: weZebra.structure }}>
                               {we.m4}
                             </td>
-                            <td rowSpan={weRowSpan} style={dataCellStyleL3('#e3f2fd', { padding: '8px', fontWeight: FONT_WEIGHTS.semibold, fontSize: FONT_SIZES.header1, verticalAlign: 'middle' })}>
+                            <td rowSpan={weRowSpan} className="border border-[#ccc] p-2 font-semibold text-xs align-middle" style={{ background: weZebra.structure }}>
                               {we.name}
                             </td>
                           </>
                         )}
                         {cIdx === 0 && (
-                          <td rowSpan={funcRowSpan} style={dataCellStyleL3(zebraBg, { padding: '0', verticalAlign: 'middle' })}>
+                          <td rowSpan={funcRowSpan} className="border border-[#ccc] p-0 align-middle" style={{ background: funcZebra.function }}>
                             <SelectableCell 
                               value={f.name} 
-                              placeholder="작업요소기능" 
-                              bgColor={zebraBg} 
-                              onClick={() => setModal({ type: 'l3Function', procId: proc.id, l3Id: we.id, title: '작업요소 기능 선택', itemCode: 'B2', workElementName: we.name })} 
+                              placeholder="부품 기능" 
+                              bgColor={funcZebra.function} 
+                              onClick={() => handleCellClick({ type: 'l3Function', procId: proc.id, l3Id: we.id, funcId: f.id, title: '부품 기능 선택', itemCode: 'B2', workElementName: we.name })} 
                               onDoubleClickEdit={(newValue) => handleInlineEditFunction(proc.id, we.id, f.id, newValue)}
                             />
                           </td>
                         )}
-                        <td style={dataCellStyleL3(zebraBg, { padding: '0', borderRight: `3px solid ${'#f57c00'}` })}>
+                        <td className="border border-[#ccc] border-r-[2px] border-r-orange-500 p-0" style={{ background: zebra.failure }}>
                           <SelectableCell 
                             value={c.name} 
-                            placeholder="공정특성" 
-                            bgColor={zebraBg} 
-                            onClick={() => setModal({ type: 'l3ProcessChar', procId: proc.id, l3Id: we.id, funcId: f.id, title: '공정특성 선택', itemCode: 'B3', workElementName: we.name })} 
+                            placeholder="부품 특성" 
+                            bgColor={zebra.failure} 
+                            onClick={() => handleCellClick({ type: 'l3ProcessChar', procId: proc.id, l3Id: we.id, funcId: f.id, charId: c.id, title: '부품 특성 선택', itemCode: 'B3', workElementName: we.name })} 
                             onDoubleClickEdit={(newValue) => handleInlineEditProcessChar(proc.id, we.id, f.id, c.id, newValue)}
                           />
                         </td>
-                        <td style={dataCellStyleL3('#fff3e0', { padding: '4px', textAlign: 'center', borderLeft: 'none' })}>
+                        <td className="border border-[#ccc] border-l-0 p-1 text-center" style={{ background: zebra.failure }}>
                           <SpecialCharBadge 
                             value={c.specialChar || ''} 
                             onClick={() => setSpecialCharModal({ procId: proc.id, l3Id: we.id, funcId: f.id, charId: c.id })} 

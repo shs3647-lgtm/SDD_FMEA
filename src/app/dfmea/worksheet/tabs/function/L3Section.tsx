@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
+import { COLORS } from '../../constants';
 import { FUNC_COLORS } from './constants';
-import { l3CellStyle } from './SectionStyles';
 import { FlatRow, ModalType } from './types';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 
@@ -19,7 +19,15 @@ export default function L3Section({ row, onOpenModal }: L3SectionProps) {
     <>
       {/* L3: 작업요소 기능 */}
       <td 
-        style={l3CellStyle(FUNC_COLORS.l3Cell)}
+        style={{ 
+          borderTop: `1px solid #ccc`,
+          borderRight: `1px solid #ccc`,
+          borderBottom: `1px solid #ccc`,
+          borderLeft: `1px solid #ccc`,
+          padding: '2px 4px', 
+          background: FUNC_COLORS.l3Cell,
+          wordBreak: 'break-word',
+        }}
       >
         <SelectableCell
           value={row.l3Function}
@@ -31,7 +39,15 @@ export default function L3Section({ row, onOpenModal }: L3SectionProps) {
       
       {/* L3: 공정특성 */}
       <td 
-        style={l3CellStyle(FUNC_COLORS.l3Cell)}
+        style={{ 
+          borderTop: `1px solid #ccc`,
+          borderRight: `1px solid #ccc`,
+          borderBottom: `1px solid #ccc`,
+          borderLeft: `1px solid #ccc`,
+          padding: '2px 4px', 
+          background: FUNC_COLORS.l3Cell,
+          wordBreak: 'break-word',
+        }}
       >
         <SelectableCell
           value={row.l3ProcessChar}
@@ -43,6 +59,8 @@ export default function L3Section({ row, onOpenModal }: L3SectionProps) {
     </>
   );
 }
+
+
 
 
 

@@ -47,19 +47,20 @@ export const modeButtonStyle = (isActive: boolean): CSSProperties => ({
   color: isActive ? '#fff' : '#1976d2',
 });
 
-/** 분석결과 버튼 (유동적 너비) */
+/** 분석결과 버튼 (유동적 너비) - 활성 시 어두운 배경으로 카운트 색상 가시성 확보 */
 export const resultButtonStyle = (isActive: boolean): CSSProperties => ({
-  flex: 1,
-  padding: '4px 8px',
-  fontSize: FONT_SIZES.header2,
+  flex: 2,  // 더 넓게
+  padding: '4px 6px',
+  fontSize: '11px',  // 글자 크기 축소
   fontWeight: FONT_WEIGHTS.semibold,
-  border: '1px solid #1976d2',
+  border: '1px solid #0d47a1',
   borderRadius: '3px',
   cursor: 'pointer',
   whiteSpace: 'nowrap',
-  minWidth: 0,
-  background: isActive ? '#1976d2' : '#fff',
-  color: isActive ? '#fff' : '#1976d2',
+  overflow: 'visible',
+  minWidth: 'fit-content',  // 내용에 맞게 최소 너비
+  background: isActive ? '#0d47a1' : '#fff',
+  color: isActive ? '#fff' : '#0d47a1',
 });
 
 /** FMEA 이름 표시 영역 */
@@ -143,15 +144,25 @@ export const diagramLabelRowStyle: CSSProperties = {
   marginBottom: '8px',
 };
 
-/** 다이어그램 라벨 */
-export const diagramLabelStyle: CSSProperties = {
-  textAlign: 'center',
-  fontWeight: FONT_WEIGHTS.semibold,
-  fontSize: FONT_SIZES.header1,
-  color: COLORS.failure.text,
-  background: COLORS.failure.light,
-  padding: '3px 0',
-  borderRadius: '3px',
+/** FE/FM/FC 색상 정의 (워크시트와 통일) */
+export const CHAIN_COLORS = {
+  FE: { bg: '#1976d2', light: '#bbdefb', text: '#ffffff', border: '#1976d2' }, // 파란색 (1L 고장영향)
+  FM: { bg: '#e65100', light: '#ffe0b2', text: '#ffffff', border: '#e65100' }, // 주황색 (2L 고장형태)
+  FC: { bg: '#388e3c', light: '#c8e6c9', text: '#ffffff', border: '#388e3c' }, // 녹색 (3L 고장원인)
+};
+
+/** 다이어그램 라벨 (타입별 색상) */
+export const diagramLabelStyle = (type?: 'FE' | 'FM' | 'FC'): CSSProperties => {
+  const colors = type ? CHAIN_COLORS[type] : { bg: COLORS.failure.light, text: COLORS.failure.text };
+  return {
+    textAlign: 'center',
+    fontWeight: FONT_WEIGHTS.semibold,
+    fontSize: FONT_SIZES.header1,
+    color: type ? colors.text : colors.text,
+    background: type ? colors.bg : colors.bg,
+    padding: '3px 0',
+    borderRadius: '3px',
+  };
 };
 
 /** 다이어그램 카드 그리드 */
@@ -172,26 +183,32 @@ export const diagramColumnStyle = (align: 'flex-start' | 'center' | 'flex-end'):
   gap: '4px',
 });
 
-/** 다이어그램 카드 아이템 */
-export const diagramCardStyle = (width: string, options?: { border?: string }): CSSProperties => ({
-  background: '#fff',
-  border: options?.border || `2px solid ${COLORS.failure.dark}`,
-  borderRadius: '4px',
-  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-  width,
-  overflow: 'hidden',
-  fontSize: FONT_SIZES.small,
-});
+/** 다이어그램 카드 아이템 (타입별 색상) */
+export const diagramCardStyle = (width: string, type?: 'FE' | 'FM' | 'FC', options?: { border?: string }): CSSProperties => {
+  const colors = type ? CHAIN_COLORS[type] : { border: COLORS.failure.dark };
+  return {
+    background: '#fff',
+    border: options?.border || `2px solid ${colors.border}`,
+    borderRadius: '4px',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+    width,
+    overflow: 'hidden',
+    fontSize: FONT_SIZES.small,
+  };
+};
 
-/** 카드 헤더 */
-export const cardHeaderStyle = (options?: { borderBottom?: string }): CSSProperties => ({
-  padding: '3px 6px',
-  fontWeight: FONT_WEIGHTS.semibold,
-  background: COLORS.failure.light,
-  color: COLORS.failure.text,
-  textAlign: 'center',
-  ...(options?.borderBottom && { borderBottom: options.borderBottom }),
-});
+/** 카드 헤더 (타입별 색상) */
+export const cardHeaderStyle = (type?: 'FE' | 'FM' | 'FC', options?: { borderBottom?: string }): CSSProperties => {
+  const colors = type ? CHAIN_COLORS[type] : { bg: COLORS.failure.light, text: COLORS.failure.text };
+  return {
+    padding: '3px 6px',
+    fontWeight: FONT_WEIGHTS.semibold,
+    background: type ? colors.bg : colors.bg,
+    color: type ? colors.text : colors.text,
+    textAlign: 'center',
+    ...(options?.borderBottom && { borderBottom: options.borderBottom }),
+  };
+};
 
 /** 카드 본문 */
 export const cardBodyStyle = (options?: { fontWeight?: number }): CSSProperties => ({
@@ -252,34 +269,31 @@ export const panelHeaderStyle = (bg: string): CSSProperties => ({
   textAlign: 'center',
 });
 
-export const thStyle = (bg: string, width?: string, options?: { whiteSpace?: string }): CSSProperties => ({
+export const thStyle = (bg: string, width?: string, options?: { whiteSpace?: string; fontWeight?: string; fontSize?: string }): CSSProperties => ({
   width,
   background: bg,
   padding: '4px',
   border: BORDER_GRAY,
   position: 'sticky',
   top: 0,
-  fontWeight: FONT_WEIGHTS.semibold,
+  fontWeight: options?.fontWeight || FONT_WEIGHTS.semibold,
   ...(options?.whiteSpace && { whiteSpace: options.whiteSpace }),
+  ...(options?.fontSize && { fontSize: options.fontSize }),
 });
 
-export const tdStyle = (bg: string, border: string, options?: { fontSize?: string; verticalAlign?: string; color?: string; fontWeight?: number; padding?: string }): CSSProperties => ({
+export const tdStyle = (bg: string, border: string, options?: Record<string, any>): CSSProperties => ({
   padding: options?.padding || '4px',
   border,
   background: bg,
-  ...(options?.fontSize && { fontSize: options.fontSize }),
-  ...(options?.verticalAlign && { verticalAlign: options.verticalAlign }),
-  ...(options?.color && { color: options.color }),
-  ...(options?.fontWeight && { fontWeight: options.fontWeight }),
+  ...options,
 });
 
-export const tdCenterStyle = (bg: string, border: string, color = 'inherit', options?: { fontSize?: string; whiteSpace?: string; verticalAlign?: string; padding?: string }): CSSProperties => ({
+export const tdCenterStyle = (bg: string, border: string, color = 'inherit', options?: Record<string, any>): CSSProperties => ({
   ...tdStyle(bg, border, options),
   textAlign: 'center',
-  fontWeight: FONT_WEIGHTS.semibold,
+  fontWeight: options?.fontWeight || FONT_WEIGHTS.semibold,
   color,
-  ...(options?.whiteSpace && { whiteSpace: options.whiteSpace }),
-  ...(options?.padding && { padding: options.padding }),
+  ...options,
 });
 
 /** Flex 컨테이너 스타일 */

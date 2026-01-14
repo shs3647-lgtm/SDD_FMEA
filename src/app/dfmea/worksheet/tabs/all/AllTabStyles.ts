@@ -36,6 +36,7 @@ export const stickyTheadStyle: CSSProperties = {
   top: 0,
   zIndex: 10,
   background: '#fff',
+  borderBottom: '2px solid black', // 하단 2px 검은색 구분선
 };
 
 // ============ 셀 스타일 ============

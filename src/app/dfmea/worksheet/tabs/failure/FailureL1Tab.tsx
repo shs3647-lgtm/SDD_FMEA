@@ -1,50 +1,62 @@
 /**
  * @file FailureL1Tab.tsx
  * @description 1L 고장영향(FE) 분석 - 기능분석 자동연동
- * 구조: 완제품 공정명 | 구분(자동) | 요구사항 | 고장영향(FE) | 심각도
+ * 구조: 제품명 | 구분(자동) | 요구사항 | 고장영향(FE) | 심각도 (DFMEA)
  * 기능분석에서 입력한 요구사항을 가져와서 고장영향 분석
+ * 
+ * ⚠️⚠️⚠️ 코드프리즈 (CODE FREEZE) ⚠️⚠️⚠️
+ * ============================================
+ * 이 파일은 완전히 프리즈되었습니다.
+ * 
+ * ❌ 절대 수정 금지:
+ * - 코드 변경 금지
+ * - 주석 변경 금지
+ * - 스타일 변경 금지
+ * - 로직 변경 금지
+ * 
+ * ✅ 수정 허용 조건:
+ * 1. 사용자가 명시적으로 수정 요청
+ * 2. 수정 사유와 범위를 명확히 지시
+ * 3. 코드프리즈 경고를 확인하고 진행
+ * 
+ * 📅 프리즈 일자: 2026-01-05
+ * 📌 프리즈 범위: 구조분석부터 3L원인분석까지 전체
+ * ============================================
  */
 
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { FailureTabProps } from './types';
 import SelectableCell from '@/components/worksheet/SelectableCell';
 import DataSelectModal from '@/components/modals/DataSelectModal';
 import SODSelectModal from '@/components/modals/SODSelectModal';
 import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants';
-import {
-  STEP_COLORS,
-  containerStyle,
-  tableStyle,
-  colStyle,
-  headerMainRow,
-  headerSubRow,
-  colHeaderRow,
-  headerFlexContainer,
-  headerButtonGroup,
-  confirmButtonStyle,
-  confirmBadgeStyle,
-  missingBadgeStyle,
-  missingPillStyle,
-  missingPillInlineStyle,
-  headerRowBg,
-  dataRowStyle,
-  dataCellStyle,
-  emptyMessageStyle,
-  warningContainerStyle,
-  warningTextStyle,
-  severitySelectStyle,
-  severityOptionStyle,
-  severityTextStyle,
-} from './FailureTabStyles';
+import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
+import { findLinkedFailureEffectsForRequirement, getAutoLinkMessage } from '../../utils/auto-link';
+import { L1_TYPE_COLORS, getL1TypeColor, getZebraColors, getZebra } from '@/styles/level-colors';
+import { handleEnterBlur } from '../../utils/keyboard';
+
+// 색상 정의
+const STEP_COLORS = {
+  structure: { header1: '#1565c0', header2: '#1976d2', header3: '#e3f2fd', cell: '#f5f9ff' },
+  function: { header1: '#2e7d32', header2: '#388e3c', header3: '#e8f5e9', cell: '#f5fbf6' },
+  failure: { header1: '#1a237e', header2: '#3949ab', header3: '#e8eaf6', cell: '#f5f6fc' },
+  indicator: { bg: '#ffccbc', text: '#bf360c' },
+};
+
+// 스타일 함수
+const BORDER = '1px solid #b0bec5';
+const cellBase: React.CSSProperties = { border: BORDER, padding: '4px 6px', fontSize: FONT_SIZES.cell, verticalAlign: 'middle' };
+const headerStyle = (bg: string, color = '#fff'): React.CSSProperties => ({ ...cellBase, background: bg, color, fontWeight: FONT_WEIGHTS.bold, textAlign: 'center' });
+const dataCell = (bg: string): React.CSSProperties => ({ ...cellBase, background: bg });
 
 // 기능분석에서 가져온 요구사항 데이터
 interface RequirementFromFunction {
   id: string;
   name: string;
   typeName: string; // 구분 (Your Plant / Ship to Plant / User)
-  funcName: string; // 완제품 기능
+  funcName: string; // 제품 기능 (DFMEA)
 }
 
 // 고장영향 데이터
@@ -55,7 +67,19 @@ interface FailureEffect {
   severity?: number; // 심각도
 }
 
-export default function FailureL1Tab({ state, setState, setDirty, saveToLocalStorage }: FailureTabProps) {
+// ✅ 기능분석 탭에서 생성되는 플레이스홀더/빈 요구사항은 고장영향 분석 대상에서 제외
+const isMeaningfulRequirementName = (name: unknown): name is string => {
+  if (typeof name !== 'string') return false;
+  const n = name.trim();
+  if (!n) return false;
+  // Function 탭에서 임시/플레이스홀더로 쓰는 문자열 패턴들
+  if (n.includes('클릭하여')) return false;
+  if (n === '요구사항 선택') return false;
+  if (n.startsWith('(기능분석에서')) return false;
+  return true;
+};
+
+export default function FailureL1Tab({ state, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB }: FailureTabProps) {
   const [modal, setModal] = useState<{ 
     type: string; 
     effectId?: string;
@@ -65,7 +89,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
     // 상위 항목 정보 (모달에 표시)
     parentTypeName?: string;   // 구분 (Your Plant / Ship to Plant / User)
     parentReqName?: string;    // 요구사항
-    parentFuncName?: string;   // 완제품 기능
+    parentFuncName?: string;   // 제품 기능 (DFMEA)
   } | null>(null);
 
   // SOD 모달 상태
@@ -77,10 +101,32 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
 
   // 확정 상태
   const isConfirmed = state.failureL1Confirmed || false;
+  // ✅ 상위 단계(기능분석 1L) 확정 여부 - 미확정이면 FE 입력/확정/표시를 막음
+  const isUpstreamConfirmed = state.l1Confirmed || false;
+
+  // ✅ 셀 클릭 시 확정됨 상태면 자동으로 수정 모드로 전환 - setStateSynced 패턴 적용
+  const handleCellClick = useCallback((modalConfig: any) => {
+    if (!isUpstreamConfirmed) {
+      alert('⚠️ 기능분석(1L)을 먼저 확정해주세요.\n\n기능분석 확정 후 고장영향(FE)을 입력할 수 있습니다.');
+      return;
+    }
+    if (isConfirmed) {
+      const updateFn = (prev: any) => ({ ...prev, failureL1Confirmed: false });
+      if (setStateSynced) {
+        setStateSynced(updateFn);
+      } else {
+        setState(updateFn);
+      }
+      setDirty(true);
+    }
+    setModal(modalConfig);
+  }, [isUpstreamConfirmed, isConfirmed, setState, setStateSynced, setDirty]);
 
   // 누락 건수 계산 (state.l1.failureScopes 사용)
   // 항목별 누락 건수 분리 계산 - 심각도는 선택사항이므로 누락건에서 제외
   const missingCounts = useMemo(() => {
+    // ✅ 상위 단계 미확정이면 누락 계산 자체를 하지 않음 (확정 게이트)
+    if (!isUpstreamConfirmed) return { effectCount: 0, total: 0 };
     let effectCount = 0;    // 고장영향 누락 (필수)
     // 심각도는 필수 아님 - 누락건에서 제외
     
@@ -90,6 +136,8 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
     types.forEach((type: any) => {
       (type.functions || []).forEach((func: any) => {
         (func.requirements || []).forEach((req: any) => {
+          // ✅ 빈/플레이스홀더 요구사항은 고장영향 분석 대상에서 제외
+          if (!isMeaningfulRequirementName(req?.name)) return;
           const effect = effects.find((e: any) => e.reqId === req.id);
           // 고장영향 체크 (필수)
           if (!effect || !effect.effect) effectCount++;
@@ -98,26 +146,85 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
       });
     });
     return { effectCount, total: effectCount };
-  }, [state.l1?.types, state.l1?.failureScopes]);
+  }, [isUpstreamConfirmed, state.l1?.types, state.l1?.failureScopes]);
   
   // 총 누락 건수 (고장영향만 카운트)
   const missingCount = missingCounts.total;
 
-  // 확정 핸들러
+  // ✅ failureScopes 변경 감지용 ref
+  const failureScopesRef = useRef<string>('');
+  
+  // ✅ failureScopes 변경 시 자동 저장 (확실한 저장 보장)
+  useEffect(() => {
+    const allScopes = (state.l1 as any)?.failureScopes || [];
+    const scopesKey = JSON.stringify(allScopes);
+    
+    if (failureScopesRef.current && scopesKey !== failureScopesRef.current) {
+      console.log('[FailureL1Tab] failureScopes 변경 감지, 자동 저장');
+      saveToLocalStorage?.();
+    }
+    failureScopesRef.current = scopesKey;
+  }, [state.l1, saveToLocalStorage]);
+
+
+  // 확정 핸들러 (L2 패턴 적용) - ✅ setStateSynced 패턴 적용
   const handleConfirm = useCallback(() => {
+    if (!isUpstreamConfirmed) {
+      alert('⚠️ 기능분석(1L)을 먼저 확정해주세요.\n\n기능분석 확정 후 고장영향(FE)을 확정할 수 있습니다.');
+      return;
+    }
+    console.log('[FailureL1Tab] 확정 버튼 클릭, missingCount:', missingCount);
     if (missingCount > 0) {
       alert(`누락된 항목이 ${missingCount}건 있습니다.\n먼저 입력을 완료해주세요.`);
       return;
     }
-    setState(prev => ({ ...prev, failureL1Confirmed: true }));
-    saveToLocalStorage?.();
-    alert('1L 고장영향 분석이 확정되었습니다.');
-  }, [missingCount, setState, saveToLocalStorage]);
+    
+    // ✅ 현재 고장영향 통계 로그
+    const allScopes = (state.l1 as any)?.failureScopes || [];
+    console.log('[FailureL1Tab] 확정 시 고장영향:', allScopes.length, '개');
+    
+    // ✅ setStateSynced 사용하여 stateRef 즉시 동기화 (확정 상태 저장 보장)
+    const updateFn = (prev: any) => {
+      const newState = { ...prev, failureL1Confirmed: true };
+      console.log('[FailureL1Tab] 확정 상태 업데이트:', newState.failureL1Confirmed);
+      return newState;
+    };
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+      console.log('[FailureL1Tab] setStateSynced로 확정 상태 동기화');
+    } else {
+      setState(updateFn);
+    }
+    setDirty(true);
+    
+    // ✅ 확정 상태 저장 - setTimeout으로 state 업데이트 대기
+    setTimeout(() => {
+      saveToLocalStorage?.();
+      // ✅ 확정 시 DB 저장 (명시적 호출)
+      if (saveAtomicDB) {
+        try {
+          saveAtomicDB();
+        } catch (e) {
+          console.error('[FailureL1Tab] DB 저장 오류:', e);
+        }
+      }
+      console.log('[FailureL1Tab] 확정 후 localStorage 및 DB 저장 완료');
+    }, 100);
+    
+    alert('1L 고장영향(FE) 분석이 확정되었습니다.');
+  }, [isUpstreamConfirmed, missingCount, state.l1, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
-  // 수정 핸들러
+  // 수정 핸들러 - ✅ setStateSynced 패턴 적용
   const handleEdit = useCallback(() => {
-    setState(prev => ({ ...prev, failureL1Confirmed: false }));
-  }, [setState]);
+    const updateFn = (prev: any) => ({ ...prev, failureL1Confirmed: false });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
+    setDirty(true);
+    setTimeout(() => saveToLocalStorage?.(), 100);
+  }, [setState, setStateSynced, setDirty, saveToLocalStorage]);
 
   // 기능분석 L1에서 요구사항 목록 가져오기 (구분 포함)
   // 요구사항이 없는 구분/기능도 표시
@@ -165,15 +272,23 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
     return reqs;
   }, [state.l1?.types]);
 
+  // ✅ 플레이스홀더/빈 요구사항 필터링 (FE 행 폭증/빈셀 폭증 방지)
+  const meaningfulRequirementsFromFunction = useMemo(() => {
+    // ✅ 상위 단계 미확정이면 FE 표시 자체를 하지 않음
+    if (!isUpstreamConfirmed) return [];
+    return requirementsFromFunction.filter(r => isMeaningfulRequirementName(r?.name));
+  }, [isUpstreamConfirmed, requirementsFromFunction]);
+
   // 고장영향 데이터 (localStorage에서)
   const failureEffects: FailureEffect[] = useMemo(() => {
-    return (state.l1.failureScopes || []).map((s: any) => ({
+    // ✅ 2026-01-12: 옵셔널 체이닝 사용 (state.l1이 없을 수 있음)
+    return ((state.l1 as any)?.failureScopes || []).map((s: any) => ({
       id: s.id,
       reqId: s.reqId || '',
       effect: s.effect || '',
       severity: s.severity
     }));
-  }, [state.l1.failureScopes]);
+  }, [(state.l1 as any)?.failureScopes]);
 
   // 평탄화된 행 데이터 (기능분석 요구사항 기준)
   const flatRows = useMemo(() => {
@@ -181,17 +296,17 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
       reqId: string;
       reqName: string;
       typeName: string; // 구분 (자동)
-      funcName: string; // 완제품 기능
+      funcName: string; // 제품 기능 (DFMEA)
       effects: FailureEffect[];
       totalRowSpan: number;
     }[] = [];
 
-    if (requirementsFromFunction.length === 0) {
+    if (meaningfulRequirementsFromFunction.length === 0) {
       // 기능분석 데이터 없음
       return [];
     }
 
-    requirementsFromFunction.forEach(req => {
+    meaningfulRequirementsFromFunction.forEach(req => {
       const effects = failureEffects.filter(e => e.reqId === req.id);
       rows.push({
         reqId: req.id,
@@ -204,56 +319,169 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
     });
 
     return rows;
-  }, [requirementsFromFunction, failureEffects]);
+  }, [meaningfulRequirementsFromFunction, failureEffects]);
 
   // 총 행 수
   const totalRows = flatRows.reduce((acc, row) => acc + row.totalRowSpan, 0) || 1;
 
 
-  // 고장영향 선택 저장 (각 값을 개별 행으로 추가)
+  /**
+   * [핵심] handleSave - 원자성 저장 (L2 패턴 적용)
+   * - 여러 개 선택 시 각각 별도 레코드로 저장
+   * - ✅ 저장 후 즉시 localStorage에 반영
+   */
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal || !modal.reqId) return;
+    
+    const isConfirmed = state.failureL1Confirmed || false;
+    const effectId = modal.effectId;
+    
+    console.log('[FailureL1Tab] 저장 시작', { reqId: modal.reqId, effectId, selectedCount: selectedValues.length, isConfirmed });
     
     setState(prev => {
       const newState = JSON.parse(JSON.stringify(prev));
       if (!newState.l1.failureScopes) newState.l1.failureScopes = [];
       
-      // 해당 요구사항의 기존 고장영향 제거
-      newState.l1.failureScopes = newState.l1.failureScopes.filter(
-        (s: any) => s.reqId !== modal.reqId
-      );
+      // ✅ effectId가 있으면 해당 항목만 수정 (다중선택 개별 수정)
+      if (effectId) {
+        if (selectedValues.length === 0) {
+          newState.l1.failureScopes = newState.l1.failureScopes.filter((s: any) => s.id !== effectId);
+        } else {
+          newState.l1.failureScopes = newState.l1.failureScopes.map((s: any) => 
+            s.id === effectId ? { ...s, effect: selectedValues[0] || s.effect } : s
+          );
+        }
+        console.log('[FailureL1Tab] 개별 항목 수정 완료');
+        return newState;
+      }
       
-      // 선택된 각 값을 개별 행으로 추가
-      selectedValues.forEach(val => {
-        newState.l1.failureScopes.push({
-          id: uid(),
-          reqId: modal.reqId,
-          effect: val,
-          severity: undefined
+      // ✅ effectId가 없으면 빈 셀 클릭 → 새 항목 추가 (다중선택 지원)
+      // 해당 요구사항의 기존 고장영향 보존하면서 새 항목 추가
+      if (selectedValues.length > 0) {
+        const currentReqName = modal.parentReqName;
+        
+        // ✅ 동일한 요구사항 이름을 가진 모든 reqId 찾기
+        const allRequirements: { reqId: string; reqName: string }[] = [];
+        (newState.l1.types || []).forEach((t: any) => {
+          (t.functions || []).forEach((f: any) => {
+            (f.requirements || []).forEach((r: any) => {
+              allRequirements.push({ reqId: r.id, reqName: r.name });
+            });
+          });
         });
-      });
+        
+        // 동일한 이름의 요구사항들 찾기
+        const sameNameReqIds = allRequirements
+          .filter(r => r.reqName === currentReqName)
+          .map(r => r.reqId);
+        
+        console.log('[FailureL1Tab] 동일 요구사항 자동 선택:', currentReqName, '→', sameNameReqIds.length, '개');
+        
+        // ✅ 다중 선택: 각 선택값에 대해 고장영향 추가
+        let addedCount = 0;
+        selectedValues.forEach(newValue => {
+          sameNameReqIds.forEach(reqId => {
+            const existingEffects = newState.l1.failureScopes
+              .filter((s: any) => s.reqId === reqId)
+              .map((s: any) => s.effect);
+            const existingSet = new Set(existingEffects);
+            
+            if (!existingSet.has(newValue)) {
+              newState.l1.failureScopes.push({
+                id: uid(),
+                reqId: reqId,
+                effect: newValue,
+                severity: undefined
+              });
+              addedCount++;
+            }
+          });
+        });
+        
+        if (addedCount === 0) {
+          alert(`⚠️ 중복 항목: 선택한 항목들이 이미 등록되어 있습니다.`);
+          return prev;
+        }
+        
+        console.log('[FailureL1Tab] 자동 추가 완료:', addedCount, '개');
+      }
       
+      console.log('[FailureL1Tab] 상태 업데이트 완료, 최종 failureScopes:', newState.l1.failureScopes.length, '개');
       return newState;
     });
     
     setDirty(true);
     setModal(null);
-    if (saveToLocalStorage) setTimeout(() => saveToLocalStorage(), 100);
-  }, [modal, setState, setDirty, saveToLocalStorage]);
+    
+    // ✅ 저장 보장 (stateRef 업데이트 대기 후 저장)
+    setTimeout(() => {
+      saveToLocalStorage?.();
+      console.log('[FailureL1Tab] 저장 완료');
+    }, 200);
+  }, [modal, state.failureL1Confirmed, setState, setDirty, saveToLocalStorage]);
 
   // 삭제 핸들러
   const handleDelete = useCallback((deletedValues: string[]) => {
     // 필요시 구현
   }, []);
 
+  // ✅ 더블클릭 인라인 수정 핸들러
+  const handleDoubleClickEdit = useCallback((effectId: string, newValue: string) => {
+    if (!effectId || !newValue.trim()) return;
+    
+    setState(prev => {
+      const newState = JSON.parse(JSON.stringify(prev));
+      if (!newState.l1.failureScopes) newState.l1.failureScopes = [];
+      
+      // 해당 고장영향 항목의 effect 값 업데이트
+      newState.l1.failureScopes = newState.l1.failureScopes.map((s: any) => 
+        s.id === effectId ? { ...s, effect: newValue.trim() } : s
+      );
+      
+      // ✅ CRUD Update: 확정 상태 해제
+      if (newState.failureL1Confirmed) {
+        newState.failureL1Confirmed = false;
+      }
+      
+      return newState;
+    });
+    setDirty(true);
+    setTimeout(() => saveToLocalStorage?.(), 100);
+  }, [setState, setDirty, saveToLocalStorage]);
+
   // 심각도 업데이트
+  // ✅ 심각도 업데이트 - CRUD Update → 확정 해제 필요
+  // ✅ 자동연결: 동일 고장영향에 동일 심각도 적용
   const updateSeverity = useCallback((effectId: string, severity: number | undefined) => {
     setState(prev => {
       const newState = JSON.parse(JSON.stringify(prev));
-      newState.l1.failureScopes = (newState.l1.failureScopes || []).map((s: any) => {
-        if (s.id !== effectId) return s;
-        return { ...s, severity };
+      const allScopes = newState.l1.failureScopes || [];
+      
+      // 현재 수정하는 항목의 고장영향 이름 찾기
+      const currentEffect = allScopes.find((s: any) => s.id === effectId);
+      const effectName = currentEffect?.effect;
+      
+      let autoLinkedCount = 0;
+      
+      newState.l1.failureScopes = allScopes.map((s: any) => {
+        // 현재 항목 업데이트
+        if (s.id === effectId) {
+          return { ...s, severity };
+        }
+        // ✅ 자동연결: 동일한 고장영향명에 동일 심각도 적용
+        if (effectName && s.effect === effectName && s.severity !== severity) {
+          autoLinkedCount++;
+          return { ...s, severity };
+        }
+        return s;
       });
+      
+      if (autoLinkedCount > 0) {
+        console.log(`[FailureL1Tab] 심각도 자동연결: "${effectName}" → ${autoLinkedCount}건에 심각도 ${severity} 적용`);
+      }
+      
+      // ✅ CRUD Update: 확정 상태 해제
+      newState.failureL1Confirmed = false;
       return newState;
     });
     setDirty(true);
@@ -268,7 +496,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
       return newState;
     });
     setDirty(true);
-    if (saveToLocalStorage) setTimeout(() => saveToLocalStorage(), 100);
+    setTimeout(() => saveToLocalStorage?.(), 200);
   }, [setState, setDirty, saveToLocalStorage]);
 
   // 현재 모달의 currentValues (해당 요구사항의 모든 고장영향)
@@ -306,7 +534,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
     return `${prefix}${index + 1}`;
   }, []);
 
-  // 렌더링할 행 데이터 생성 (완제품 공정명은 구분별로 1:1 매칭, 완제품기능은 기능별로 병합)
+  // 렌더링할 행 데이터 생성 (제품명은 구분별로 1:1 매칭, 제품 기능은 기능별로 병합) (DFMEA)
   const renderRows = useMemo(() => {
     const rows: {
       key: string;
@@ -315,9 +543,9 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
       showType: boolean;
       typeRowSpan: number;
       typeName: string;
-      showFunc: boolean; // 완제품기능 표시 여부
-      funcRowSpan: number; // 완제품기능 병합 행 수
-      funcName: string; // 완제품기능 추가
+      showFunc: boolean; // 제품 기능 표시 여부 (DFMEA)
+      funcRowSpan: number; // 제품 기능 병합 행 수 (DFMEA)
+      funcName: string; // 제품 기능 추가 (DFMEA)
       feNo: string; // 번호 추가 (Y1, S1, U1...)
       showReq: boolean;
       reqRowSpan: number;
@@ -363,7 +591,7 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
 
           rows.push({
             key: eff.id || `empty-${reqRow.reqId}-${eIdx}`,
-            // 완제품 공정명: 구분별로 1:1 매칭 (각 구분 그룹의 첫 행에만 표시)
+            // 제품명: 구분별로 1:1 매칭 (각 구분 그룹의 첫 행에만 표시) (DFMEA)
             showProduct: isFirstInType,
             productRowSpan: group.rowSpan, // 해당 구분의 행 수만큼 span
             showType: isFirstInType,
@@ -393,47 +621,51 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
   }, [typeGroups, getFeNo]);
 
   return (
-    <div style={containerStyle}>
+    <div className="p-0 overflow-auto h-full" style={{ paddingBottom: '50px' }} onKeyDown={handleEnterBlur}>
       {/* 안내 메시지 */}
-      {requirementsFromFunction.length === 0 && (
-        <div style={warningContainerStyle}>
-          <span style={warningTextStyle}>
-            ⚠️ 기능분석(L1)에서 요구사항을 먼저 입력해주세요. 입력된 요구사항이 여기에 자동으로 표시됩니다.
+      {meaningfulRequirementsFromFunction.length === 0 && (
+        <div className="p-5 bg-[#fff3e0] border-b border-[#ccc] text-center">
+          <span className="text-xs text-[#e65100] font-semibold">
+            {!isUpstreamConfirmed
+              ? '⚠️ 기능분석(1L)을 먼저 확정해주세요. 확정된 요구사항만 고장영향(FE) 단계에 표시됩니다.'
+              : '⚠️ 기능분석(L1)에서 요구사항을 먼저 입력해주세요. 입력된 요구사항이 여기에 자동으로 표시됩니다.'}
           </span>
         </div>
       )}
 
-      <table style={tableStyle}>
+      <table className="w-full border-collapse table-fixed" style={{ minWidth: '800px', marginBottom: '50px' }}>
+        {/* ✅ 컬럼: 제품명 100px, 구분 55px, 제품 기능 auto, 요구사항 140px, 고장영향 280px, S 30px (DFMEA) */}
         <colgroup>
-          <col style={colStyle('15%')} />
-          <col style={colStyle('10%')} />
-          <col style={colStyle('22%')} />
-          <col style={colStyle('13%')} />
+          <col style={{ width: '100px', minWidth: '100px' }} />
+          <col style={{ width: '55px', minWidth: '55px' }} />
           <col />
-          <col style={colStyle('4%')} />
+          <col style={{ width: '140px', minWidth: '140px' }} />
+          <col style={{ width: '280px', minWidth: '280px' }} />
+          <col style={{ width: '30px', minWidth: '30px' }} />
         </colgroup>
         
-        {/* 3행 헤더 구조 */}
-        <thead>
+        {/* 3행 헤더 구조 - 하단 2px 검은색 구분선 */}
+        <thead className="sticky top-0 z-20 bg-white border-b-2 border-black">
           <tr>
-            <th style={headerMainRow(STEP_COLORS.structure.header1)}>
+            {/* ✅ 구조분석(2단계) 컬럼 복구 */}
+            <th className="bg-[#1976d2] text-white border border-[#ccc] px-0.5 py-1 text-[11px] font-extrabold text-center whitespace-nowrap">
               구조분석(2단계)
             </th>
-            <th colSpan={3} style={headerMainRow(STEP_COLORS.function.header1)}>
+            <th colSpan={3} className="bg-[#388e3c] text-white border border-[#ccc] px-0.5 py-1 text-[11px] font-extrabold text-center whitespace-nowrap">
               기능분석(3단계)
             </th>
-            <th colSpan={2} style={headerMainRow(STEP_COLORS.failure.header1)}>
-              <div style={headerFlexContainer}>
-                <span>고장분석(4단계)</span>
-                <div style={headerButtonGroup}>
+            <th colSpan={2} className="bg-[#e65100] text-white border border-[#ccc] px-1 py-1 text-[11px] font-extrabold text-center" style={{ minWidth: '310px' }}>
+              <div className="flex items-center justify-center gap-1 flex-nowrap whitespace-nowrap">
+                <span className="whitespace-nowrap shrink-0">고장분석(4단계)</span>
+                <div className="flex gap-0.5 flex-nowrap shrink-0">
                   {isConfirmed ? (
-                    <span style={confirmBadgeStyle}>✓ 확정됨</span>
+                    <span className={`${badgeConfirmed} whitespace-nowrap text-[9px] px-1`}>✓ 확정됨({(state.l1?.failureScopes || []).filter((s: any) => s.effect).length})</span>
                   ) : (
-                    <button type="button" onClick={handleConfirm} style={confirmButtonStyle('#4caf50')}>확정</button>
+                    <button type="button" onClick={handleConfirm} className={`${btnConfirm} whitespace-nowrap text-[9px] px-1`}>확정</button>
                   )}
-                  <span style={missingBadgeStyle(missingCount > 0)}>누락 {missingCount}건</span>
+                  <span className={`${missingCount > 0 ? badgeMissing : badgeOk} whitespace-nowrap text-[9px] px-1`}>{missingCount}건</span>
                   {isConfirmed && (
-                    <button type="button" onClick={handleEdit} style={confirmButtonStyle('#ff9800')}>수정</button>
+                    <button type="button" onClick={handleEdit} className={`${btnEdit} whitespace-nowrap text-[9px] px-1`}>수정</button>
                   )}
                 </div>
               </div>
@@ -441,44 +673,41 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
           </tr>
           
           <tr>
-            <th style={headerSubRow(STEP_COLORS.structure.header2)}>
-              1. 완제품 공정명
+            {/* ✅ 완제품 공정명 영역 복구 */}
+            <th className={`${S.h2} whitespace-nowrap text-[10px] px-0.5`}>
+              완제품 공정명
             </th>
-            <th colSpan={3} style={headerSubRow(STEP_COLORS.function.header2)}>
-              1. 완제품 공정기능/요구사항
+            <th colSpan={3} className={`${F.h2} whitespace-nowrap text-[10px] px-0.5`}>
+              제품 기능/요구사항 (DFMEA)
             </th>
-            <th colSpan={2} style={headerSubRow(STEP_COLORS.failure.header2)}>
+            <th colSpan={2} className={`${X.h2} whitespace-nowrap text-[10px] px-0.5`} style={{ minWidth: '310px' }}>
               1. 고장영향(FE) / 심각도(S)
-              {missingCount > 0 && (
-                <span style={missingPillStyle}>
-                  누락 {missingCount}건
-                </span>
-              )}
             </th>
           </tr>
           
           <tr>
-            <th style={colHeaderRow(STEP_COLORS.structure.header3)}>
+            {/* ✅ 완제품 공정명 컬럼 복구 */}
+            <th className={`${S.h3} text-center whitespace-nowrap text-[10px] px-0.5`}>
               완제품 공정명
             </th>
-            <th style={colHeaderRow(STEP_COLORS.function.header3)}>
+            <th className={`${F.h3} text-center whitespace-nowrap text-[10px] px-0.5`}>
               구분
             </th>
-            <th style={colHeaderRow(STEP_COLORS.function.header3)}>
-              완제품기능
+            <th className={`${F.h3} text-center whitespace-nowrap text-[10px] px-0.5`}>
+              제품 기능
             </th>
-            <th style={colHeaderRow(STEP_COLORS.function.header3)}>
+            <th className={`${F.h3} text-center whitespace-nowrap text-[10px] px-0.5`}>
               요구사항
             </th>
-            <th style={colHeaderRow(STEP_COLORS.failure.header3)}>
+            <th className={`${X.h3} text-center whitespace-nowrap text-[10px] px-1`} style={{ minWidth: '250px' }}>
               고장영향(FE)
               {missingCounts.effectCount > 0 && (
-                <span style={missingPillInlineStyle}>
+                <span className="ml-1 bg-white text-orange-500 px-1 py-0.5 rounded text-[9px] font-semibold">
                   {missingCounts.effectCount}
                 </span>
               )}
             </th>
-            <th style={colHeaderRow(STEP_COLORS.failure.header3)}>
+            <th className={`${X.h3} text-center whitespace-nowrap text-[10px] px-0`} style={{ width: '30px', minWidth: '30px', maxWidth: '30px' }}>
               S
             </th>
           </tr>
@@ -487,85 +716,110 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
         <tbody>
           {renderRows.length === 0 ? (
             <tr>
-              <td colSpan={6} style={emptyMessageStyle}>
+              {/* ✅ 컬럼 6개 (제품명) (DFMEA) */}
+              <td colSpan={6} className="border border-[#ccc] p-8 text-center text-gray-400 text-xs">
                 기능분석(L1)에서 요구사항을 입력하면 여기에 자동으로 표시됩니다.
               </td>
             </tr>
           ) : (
-            renderRows.map((row, idx) => {
-              const zebraBg = idx % 2 === 1 ? '#ffe0b2' : '#fff3e0';
-              const structureZebra = idx % 2 === 1 ? '#bbdefb' : '#e3f2fd';
-              const functionZebra = idx % 2 === 1 ? '#c8e6c9' : '#e8f5e9';
-              return (
-              <tr key={row.key} style={dataRowStyle(zebraBg)}>
-                {/* 완제품 공정명 */}
-                {row.showProduct && (
-                  <td
-                    rowSpan={row.productRowSpan}
-                    style={dataCellStyle(structureZebra, { padding: '2px 4px', textAlign: 'center', fontWeight: FONT_WEIGHTS.semibold, verticalAlign: 'middle', fontSize: FONT_SIZES.cell })}
-                  >
-                    {state.l1.name || '(구조분석에서 입력)'}
-                  </td>
-                )}
-
+            (() => {
+              // ✅ 3L기능 스타일: 블록 단위 줄무늬 (완제품공정명=productIdx, 완제품기능=funcIdx)
+              let productIdx = 0;
+              let funcIdx = 0;
+              let reqIdx = 0;
+              // 블록 인덱스 맵 생성
+              const productIdxMap = new Map<string, number>();
+              const funcIdxMap = new Map<string, number>();
+              const reqIdxMap = new Map<string, number>();
+              for (const r of renderRows) {
+                if (r.showProduct) productIdxMap.set(r.key, productIdx++);
+                if (r.showFunc) funcIdxMap.set(r.key, funcIdx++);
+                if (r.showReq) reqIdxMap.set(r.key, reqIdx++);
+              }
+              
+              return renderRows.map((row, idx) => {
+                const zebra = getZebraColors(idx); // 행 기준 (고장영향/심각도용)
+                // ✅ 블록 기준 줄무늬
+                const productZebra = getZebra('structure', productIdxMap.get(row.key) ?? 0);
+                const funcZebra = getZebra('function', funcIdxMap.get(row.key) ?? 0);
+                const reqZebra = getZebra('requirement', reqIdxMap.get(row.key) ?? idx); // ★ 보라색 (고장영향과 구분)
+                return (
+                <tr key={row.key}>
+                  {/* ✅ 완제품 공정명 - productIdx 기준 줄무늬 */}
+                  {row.showProduct && (
+                    <td 
+                      rowSpan={row.productRowSpan} 
+                      className="border border-[#ccc] p-1 text-center text-xs font-medium align-middle"
+                      style={{ background: productZebra }}
+                    >
+                      {state.l1?.name || '(완제품명 없음)'}
+                    </td>
+                  )}
+                
                 {/* 구분 (자동) - 구분별 색상 적용 */}
                 {row.showType && (
-                  <td
-                    rowSpan={row.typeRowSpan}
-                    style={dataCellStyle(functionZebra, {
-                      padding: '2px 4px',
-                      textAlign: 'center',
-                      fontWeight: FONT_WEIGHTS.semibold,
+                  <td 
+                    rowSpan={row.typeRowSpan} 
+                    style={{ 
+                      border: `1px solid #ccc`, 
+                      padding: '2px 4px', 
+                      textAlign: 'center', 
+                      background: getL1TypeColor(row.typeName).light, 
+                      fontWeight: 700, 
                       verticalAlign: 'middle',
-                      fontSize: FONT_SIZES.cell,
-                      color: row.typeName === 'Your Plant' ? COLORS.structure.text : row.typeName === 'Ship to Plant' ? COLORS.failure.text : row.typeName === 'User' ? '#7b1fa2' : COLORS.text
-                    })}
+                      fontSize: '11px',
+                      color: getL1TypeColor(row.typeName).text
+                    }}
                   >
-                    {row.typeName}
+                    {getL1TypeColor(row.typeName).short || row.typeName}
                   </td>
                 )}
                 
-                {/* 완제품기능 (기능분석에서 연결) - 같은 기능 병합 */}
+                {/* 완제품기능 - funcIdx 기준 줄무늬 */}
                 {row.showFunc && (
-                  <td
+                  <td 
                     rowSpan={row.funcRowSpan}
-                    style={dataCellStyle(functionZebra, {
-                      padding: '2px 4px',
-                      textAlign: 'left',
+                    style={{ 
+                      border: `1px solid #ccc`, 
+                      padding: '2px 4px', 
+                      textAlign: 'left', 
+                      background: funcZebra, 
                       fontSize: FONT_SIZES.cell,
                       verticalAlign: 'middle',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis'
-                    })}
+                    }}
                     title={row.funcName}
                   >
                     {row.funcName || '-'}
                   </td>
                 )}
                 
-                {/* 요구사항 (자동) */}
+                {/* 요구사항 - reqIdx 기준 줄무늬 */}
                 {row.showReq && (
-                  <td
-                    rowSpan={row.reqRowSpan}
-                    style={dataCellStyle(functionZebra, {
-                      padding: '2px 4px',
-                      textAlign: 'center',
+                  <td 
+                    rowSpan={row.reqRowSpan} 
+                    style={{ 
+                      border: `1px solid #ccc`, 
+                      padding: '2px 4px', 
+                      background: reqZebra, 
                       verticalAlign: 'middle',
+                      textAlign: 'center',
                       fontSize: FONT_SIZES.cell
-                    })}
+                    }}
                   >
                     {row.reqName}
                   </td>
                 )}
                 
-                {/* 고장영향(FE) */}
-                <td style={dataCellStyle(zebraBg, { padding: '0' })}>
+                {/* 고장영향(FE) - 행 기준 줄무늬 */}
+                <td className={cellP0} style={{ background: zebra.failure }}>
                   <SelectableCell 
                     value={row.effect} 
                     placeholder="고장영향 선택" 
-                    bgColor={zebraBg} 
-                    onClick={() => setModal({ 
+                    bgColor={zebra.failure} 
+                    onClick={() => handleCellClick({ 
                       type: 'effect', 
                       effectId: row.effectId || undefined,
                       reqId: row.reqId,
@@ -576,34 +830,77 @@ export default function FailureL1Tab({ state, setState, setDirty, saveToLocalSto
                       parentReqName: row.reqName,
                       parentFuncName: row.funcName
                     })} 
+                    onDoubleClickEdit={row.effectId ? (newValue: string) => handleDoubleClickEdit(row.effectId, newValue) : undefined}
                   />
                 </td>
                 
                 {/* 심각도 - 클릭하면 SOD 모달 팝업 */}
-                <td
-                  style={dataCellStyle(row.severity && row.severity >= 8 ? '#ffe0b2' : row.severity && row.severity >= 5 ? '#fff9c4' : zebraBg, {
-                    padding: '4px',
-                    textAlign: 'center',
-                    cursor: row.effectId ? 'pointer' : 'default'
-                  })}
-                  onClick={() => row.effectId && setSODModal({ 
-                    effectId: row.effectId, 
-                    currentValue: row.severity,
-                    scope: row.typeName as 'Your Plant' | 'Ship to Plant' | 'User'
-                  })}
+                <td 
+                  style={{ 
+                    border: `1px solid #ccc`, 
+                    padding: '4px', 
+                    textAlign: 'center', 
+                    width: '30px',
+                    minWidth: '30px',
+                    maxWidth: '30px',
+                    background: row.severity && row.severity >= 8 ? '#ffe0b2' : row.severity && row.severity >= 5 ? '#fff9c4' : zebra.failure,
+                    cursor: 'pointer',
+                    position: 'relative',
+                    zIndex: 10
+                  }}
+                  onMouseDown={(e) => {
+                    console.log('🟡 심각도 onMouseDown:', e.target);
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log('🔴 심각도 셀 클릭됨:', { effectId: row.effectId, typeName: row.typeName, effect: row.effect });
+                    if (!row.effectId) {
+                      alert('⚠️ 고장영향(FE)을 먼저 선택해주세요.');
+                      return;
+                    }
+                    if (row.effectId) {
+                      // ✅ scope 값 명시적 확인 및 전달 (약어 'SP', 'YP'도 처리)
+                      const tn = row.typeName?.trim();
+                      let scopeValue: 'Your Plant' | 'Ship to Plant' | 'User' | undefined;
+                      
+                      if (tn === 'Your Plant' || tn === 'YP' || tn?.includes('Your') || tn?.includes('YP')) {
+                        scopeValue = 'Your Plant';
+                      } else if (tn === 'Ship to Plant' || tn === 'SP' || tn?.includes('Ship') || tn?.includes('SP')) {
+                        scopeValue = 'Ship to Plant';
+                      } else if (tn === 'User' || tn === 'EU' || tn?.includes('User') || tn?.includes('End')) {
+                        scopeValue = 'User';
+                      }
+                      
+                      console.log('[FailureL1Tab] 심각도 모달 열기:', { 
+                        effectId: row.effectId, 
+                        typeName: row.typeName, 
+                        normalizedScope: scopeValue 
+                      });
+                      setSODModal({ 
+                        effectId: row.effectId, 
+                        currentValue: row.severity,
+                        scope: scopeValue
+                      });
+                    }
+                  }}
                   title={row.effectId ? '클릭하여 심각도 선택' : ''}
                 >
                   {row.effectId ? (
-                    <span style={severityTextStyle(row.severity)}>
-                      {row.severity}
+                    <span style={{ 
+                      fontWeight: FONT_WEIGHTS.semibold, 
+                      fontSize: FONT_SIZES.pageHeader,
+                      color: row.severity && row.severity >= 8 ? COLORS.failure.text : row.severity && row.severity >= 5 ? '#f57f17' : COLORS.text
+                    }}>
+                      {row.severity || '🔍'}
                     </span>
                   ) : (
-                    <span className="text-gray-400 text-xs">-</span>
+                    <span style={{ color: COLORS.failure.dark, fontSize: FONT_SIZES.cell, fontWeight: FONT_WEIGHTS.semibold }}>-</span>
                   )}
                 </td>
               </tr>
               );
-            })
+              });
+            })()
           )}
         </tbody>
       </table>

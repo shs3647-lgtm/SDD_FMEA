@@ -61,15 +61,15 @@ export default function AllTabBasic({
         <thead style={stickyTheadStyle}>
           {/* 1행: 단계 대분류 */}
           <tr>
-            {visibleSteps.includes(2) && <th colSpan={4} style={headerCellStyle(COLORS.structure.main)}>D-FMEA 구조 분석(2단계)</th>}
-            {visibleSteps.includes(3) && <th colSpan={8} style={headerCellStyle(COLORS.function.main)}>D-FMEA 기능 분석(3단계)</th>}
-            {visibleSteps.includes(4) && <th colSpan={6} style={headerCellStyle('#f57c00')}>D-FMEA 고장 분석(4단계)</th>}
-            {visibleSteps.includes(5) && <th colSpan={8} style={headerCellStyle(COLORS.risk.main)}>D-FMEA 리스크 분석(5단계)</th>}
-            {visibleSteps.includes(6) && <th colSpan={14} style={headerCellStyle(COLORS.opt.main)}>D-FMEA 최적화(6단계)</th>}
+            {visibleSteps.includes(2) && <th colSpan={4} style={headerCellStyle(COLORS.structure.main)}>P-FMEA 구조 분석(2단계)</th>}
+            {visibleSteps.includes(3) && <th colSpan={8} style={headerCellStyle(COLORS.function.main)}>P-FMEA 기능 분석(3단계)</th>}
+            {visibleSteps.includes(4) && <th colSpan={6} style={headerCellStyle('#f57c00')}>P-FMEA 고장 분석(4단계)</th>}
+            {visibleSteps.includes(5) && <th colSpan={8} style={headerCellStyle(COLORS.risk.main)}>P-FMEA 리스크 분석(5단계)</th>}
+            {visibleSteps.includes(6) && <th colSpan={14} style={headerCellStyle(COLORS.opt.main)}>P-FMEA 최적화(6단계)</th>}
           </tr>
           {/* 2행: 서브그룹 */}
           <tr>
-            {visibleSteps.includes(2) && <><th style={subHeaderCellStyle(COLORS.structure.header)}>1. 완제품 공정명</th><th style={subHeaderCellStyle(COLORS.structure.header)}>2. 메인 공정명</th><th colSpan={2} style={subHeaderCellStyle(COLORS.structure.header)}>3. 작업 요소명</th></>}
+            {visibleSteps.includes(2) && <><th style={subHeaderCellStyle(COLORS.structure.header)}>1. 제품명</th><th style={subHeaderCellStyle(COLORS.structure.header)}>2. A'SSY명</th><th style={subHeaderCellStyle(COLORS.structure.header)}>3. 부품 또는 특성</th></>}
             {visibleSteps.includes(3) && <><th colSpan={3} style={subHeaderCellStyle(COLORS.function.header)}>1. 다음상위수준 기능</th><th colSpan={2} style={subHeaderCellStyle(COLORS.function.header)}>2. 초점요소 기능</th><th colSpan={3} style={subHeaderCellStyle(COLORS.function.header)}>3. 다음하위수준/특성유형</th></>}
             {visibleSteps.includes(4) && <><th colSpan={3} style={subHeaderCellStyle(COLORS.failure.header)}>1. 고장영향(FE)</th><th style={subHeaderCellStyle(COLORS.failure.header)}>2. 고장형태(FM)</th><th colSpan={2} style={subHeaderCellStyle(COLORS.failure.header)}>3. 고장원인(FC)</th></>}
             {visibleSteps.includes(5) && <><th colSpan={2} style={subHeaderCellStyle(COLORS.risk.prevention.header)}>현재 예방관리</th><th colSpan={2} style={subHeaderCellStyle(COLORS.risk.detection.header)}>현재 검출관리</th><th colSpan={4} style={subHeaderCellStyle(COLORS.risk.evaluation.header)}>리스크 평가</th></>}
@@ -77,7 +77,7 @@ export default function AllTabBasic({
           </tr>
           {/* 3행: 컬럼명 */}
           <tr>
-            {visibleSteps.includes(2) && <><th style={subHeaderCellStyle(COLORS.structure.cell)}>완제품공정명</th><th style={subHeaderCellStyle(COLORS.structure.cell)}>NO+공정명</th><th style={subHeaderCellStyle(COLORS.structure.cell)}>I/F</th><th style={subHeaderCellStyle(COLORS.structure.cell)}>부품</th></>}
+            {visibleSteps.includes(2) && <><th style={subHeaderCellStyle(COLORS.structure.cell)}>제품명</th><th style={subHeaderCellStyle(COLORS.structure.cell)}>A'SSY명</th><th style={subHeaderCellStyle(COLORS.structure.cell)}>부품 또는 특성</th></>}
             {visibleSteps.includes(3) && <><th style={subHeaderCellStyle(COLORS.function.cell)}>구분</th><th style={subHeaderCellStyle(COLORS.function.cell)}>제품 기능</th><th style={subHeaderCellStyle(COLORS.function.cell)}>요구사항</th><th style={subHeaderCellStyle(COLORS.function.cell)}>초점요소 기능</th><th style={subHeaderCellStyle(COLORS.function.cell)}>제품특성</th><th style={subHeaderCellStyle(COLORS.function.cell)}>부품</th><th style={subHeaderCellStyle(COLORS.function.cell)}>부품 기능</th><th style={subHeaderCellStyle(COLORS.function.cell)}>설계특성</th></>}
             {visibleSteps.includes(4) && <><th style={subHeaderCellStyle(COLORS.failure.cell)}>구분</th><th style={subHeaderCellStyle(COLORS.failure.cell)}>고장영향(FE)</th><th style={subHeaderCellStyle(COLORS.failure.cell)}>심각도</th><th style={subHeaderCellStyle(COLORS.failure.cell)}>고장형태(FM)</th><th style={subHeaderCellStyle(COLORS.failure.cell)}>부품</th><th style={subHeaderCellStyle(COLORS.failure.cell)}>고장원인(FC)</th></>}
             {visibleSteps.includes(5) && <><th style={subHeaderCellStyle(COLORS.risk.prevention.cell)}>예방관리(PC)</th><th style={subHeaderCellStyle(COLORS.risk.prevention.cell)}>발생도</th><th style={subHeaderCellStyle(COLORS.risk.detection.cell)}>검출관리(DC)</th><th style={subHeaderCellStyle(COLORS.risk.detection.cell)}>검출도</th><th onClick={onAPClick} style={subHeaderCellStyle(COLORS.risk.evaluation.cell, { cursor: 'pointer' })}>AP 📊</th><th style={subHeaderCellStyle(COLORS.risk.evaluation.cell)}>RPN</th><th style={subHeaderCellStyle(COLORS.risk.evaluation.cell)}>특별특성</th><th style={subHeaderCellStyle(COLORS.risk.evaluation.cell)}>습득교훈</th></>}
@@ -95,8 +95,8 @@ export default function AllTabBasic({
               <tr key={`eval-${row.l1Id}-${row.l2Id}-${row.l3Id}-${idx}`} style={evalRowStyle(zebraBg)}>
                 {visibleSteps.includes(2) && <>
                   {l1Spans[idx] > 0 && <td rowSpan={l1Spans[idx]} style={structureCellStyle(COLORS.structure.cell, idx, zebraBg)}>{row.l1Name}</td>}
-                  {l2Spans[idx] > 0 && <td rowSpan={l2Spans[idx]} style={structureCellStyle(COLORS.structure.cell, idx, zebraBg)}>{row.l2No} {row.l2Name}</td>}
-                  <td style={structureCellStyle(COLORS.structure.cell, idx, zebraBg, { textAlign: 'center' })}>{row.m4}</td>
+                  {l2Spans[idx] > 0 && <td rowSpan={l2Spans[idx]} style={structureCellStyle(COLORS.structure.cell, idx, zebraBg)}>{row.l2Name}</td>}
+                  {/* DFMEA: m4 제거됨 */}
                   <td style={structureCellStyle(COLORS.structure.cell, idx, zebraBg)}>{row.l3Name}</td>
                 </>}
                 {visibleSteps.includes(3) && <>
@@ -105,7 +105,7 @@ export default function AllTabBasic({
                   <td style={functionCellStyle(COLORS.function.cell, idx, zebraBg, true)}>{row.l1Requirement || ''}</td>
                   <td style={functionCellStyle(COLORS.function.cell, idx, zebraBg, true)}>{row.l2Functions?.map((f: any) => f.name).join(', ') || ''}</td>
                   <td style={functionCellStyle(COLORS.function.cell, idx, zebraBg, true)}>{row.l2ProductChars?.map((c: any) => c.name).join(', ') || ''}</td>
-                  <td style={functionCellStyle(COLORS.function.cell, idx, zebraBg, true)}>{row.m4 || ''}</td>
+                  {/* DFMEA: m4 제거됨 */}
                   <td style={functionCellStyle(COLORS.function.cell, idx, zebraBg, true)}>{row.l3Functions?.map((f: any) => f.name).join(', ') || ''}</td>
                   <td style={functionCellStyle(COLORS.function.cell, idx, zebraBg, true)}>{row.l3ProcessChars?.map((c: any) => c.name).join(', ') || ''}</td>
                 </>}
@@ -120,7 +120,7 @@ export default function AllTabBasic({
                     {row.l1Severity || ''}
                   </td>
                   <td style={failureCellStyle(COLORS.failure.cell, idx, zebraBg)}>{row.l2FailureMode || ''}</td>
-                  <td style={failureCellStyle(COLORS.failure.cell, idx, zebraBg)}>{row.m4 || ''}</td>
+                  {/* DFMEA: m4 제거됨 */}
                   <td style={failureCellStyle(COLORS.failure.cell, idx, zebraBg)}>{row.l3FailureCause || ''}</td>
                 </>}
                 {visibleSteps.includes(5) && <>
@@ -181,7 +181,7 @@ export default function AllTabBasic({
         onClose={closeSodModal}
         onSelect={handleSODSelect}
         category={sodModal.category}
-        fmeaType="D-FMEA"
+        fmeaType="P-FMEA"
         currentValue={sodModal.currentValue}
         scope={sodModal.scope}
       />
@@ -221,5 +221,4 @@ export default function AllTabBasic({
     </>
   );
 }
-
 

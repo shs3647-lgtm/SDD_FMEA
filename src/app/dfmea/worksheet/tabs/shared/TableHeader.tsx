@@ -8,12 +8,13 @@
 
 import React from 'react';
 import { ColumnDef, SubGroup, StepGroup, STEP_GROUPS, SUB_GROUPS, getColumnsByStep } from './columnConfig';
-import { mainGroupHeaderStyle, subGroupHeaderStyle, columnHeaderStyle } from './TableHeaderStyles';
 
 interface TableHeaderProps {
   visibleSteps: number[];
   onAPClick?: () => void;
 }
+
+const BORDER = '1px solid #b0bec5';
 
 export function TableHeader({ visibleSteps, onAPClick }: TableHeaderProps) {
   // 필터링된 그룹/컬럼
@@ -29,7 +30,17 @@ export function TableHeader({ visibleSteps, onAPClick }: TableHeaderProps) {
           <th
             key={group.step}
             colSpan={group.count}
-            style={mainGroupHeaderStyle(group.bg)}
+            style={{
+              background: group.bg,
+              color: '#fff',
+              border: BORDER,
+              padding: '4px 6px',
+              height: '28px',
+              fontWeight: 900,
+              fontSize: '12px',
+              textAlign: 'center',
+              whiteSpace: 'nowrap',
+            }}
           >
             {group.name}
           </th>
@@ -44,7 +55,16 @@ export function TableHeader({ visibleSteps, onAPClick }: TableHeaderProps) {
             <th
               key={`${sg.step}-${idx}`}
               colSpan={sg.cols}
-              style={subGroupHeaderStyle(stepGroup?.headerBg || '#f5f5f5')}
+              style={{
+                background: stepGroup?.headerBg || '#f5f5f5',
+                border: BORDER,
+                padding: '3px 4px',
+                height: '24px',
+                fontWeight: 700,
+                fontSize: '12px',
+                textAlign: 'center',
+                whiteSpace: 'nowrap',
+              }}
             >
               {sg.label}
             </th>
@@ -62,7 +82,18 @@ export function TableHeader({ visibleSteps, onAPClick }: TableHeaderProps) {
             <th
               key={col.id}
               onClick={isAPColumn ? onAPClick : undefined}
-              style={columnHeaderStyle(stepGroup?.cellBg || '#fafafa', col.width, isAPColumn ? 'pointer' : 'default')}
+              style={{
+                background: stepGroup?.cellBg || '#fafafa',
+                border: BORDER,
+                padding: '2px 3px',
+                height: '22px',
+                fontWeight: 600,
+                fontSize: '9px',
+                textAlign: 'center',
+                whiteSpace: 'nowrap',
+                minWidth: col.width,
+                cursor: isAPColumn ? 'pointer' : 'default',
+              }}
               title={isAPColumn ? 'AP 기준표 보기' : col.label}
             >
               {col.label}
@@ -94,7 +125,16 @@ export function SingleStepHeader({ step, title, onAPClick }: SingleStepHeaderPro
       <tr>
         <th
           colSpan={stepGroup.count}
-          style={mainGroupHeaderStyle(stepGroup.bg)}
+          style={{
+            background: stepGroup.bg,
+            color: '#fff',
+            border: BORDER,
+            padding: '4px 6px',
+            height: '28px',
+            fontWeight: 900,
+            fontSize: '12px',
+            textAlign: 'center',
+          }}
         >
           {title}
         </th>
@@ -106,7 +146,16 @@ export function SingleStepHeader({ step, title, onAPClick }: SingleStepHeaderPro
           <th
             key={idx}
             colSpan={sg.cols}
-            style={subGroupHeaderStyle(stepGroup.headerBg)}
+            style={{
+              background: stepGroup.headerBg,
+              border: BORDER,
+              padding: '3px 4px',
+              height: '24px',
+              fontWeight: 700,
+              fontSize: '12px',
+              textAlign: 'center',
+              whiteSpace: 'nowrap',
+            }}
           >
             {sg.label}
           </th>
@@ -121,7 +170,17 @@ export function SingleStepHeader({ step, title, onAPClick }: SingleStepHeaderPro
             <th
               key={col.id}
               onClick={isAPColumn ? onAPClick : undefined}
-              style={columnHeaderStyle(stepGroup.cellBg, col.width, isAPColumn ? 'pointer' : 'default')}
+              style={{
+                background: stepGroup.cellBg,
+                border: BORDER,
+                padding: '2px 3px',
+                height: '22px',
+                fontWeight: 600,
+                fontSize: '9px',
+                textAlign: 'center',
+                minWidth: col.width,
+                cursor: isAPColumn ? 'pointer' : 'default',
+              }}
             >
               {col.label}
             </th>

@@ -38,15 +38,16 @@ export default function FailureLinkResult({ savedLinks, fmData }: FailureLinkRes
     const result: { 
       fmId: string; fmText: string; fmProcess: string; fmNo: string;
       fes: { id: string; scope: string; text: string; severity: number; feNo: string }[];
-      fcs: { id: string; processName: string; m4: string; workElem: string; text: string; fcNo: string }[];
+      fcs: { id: string; processName: string; workElem: string; text: string; fcNo: string }[]; // DFMEA: m4 제거됨
     }[] = [];
     
     fmGroupsMap.forEach((group, fmId) => {
       const fm = fmData.find(f => f.id === fmId);
+      // ★ FM 텍스트/A'SSY명은 fmData에서 최신 값 가져오기 (savedLinks의 오래된 값 사용 방지) (DFMEA)
       result.push({
         fmId: group.fmId,
-        fmText: group.fmText,
-        fmProcess: group.fmProcess,
+        fmText: fm?.text || group.fmText,           // ★ 최신 텍스트 우선
+        fmProcess: fm?.processName || group.fmProcess, // ★ 최신 A'SSY명 우선 (DFMEA)
         fmNo: fm?.fmNo || group.fmNo || '',
         fes: group.fes.map(fe => ({
           id: fe.id,
@@ -58,7 +59,7 @@ export default function FailureLinkResult({ savedLinks, fmData }: FailureLinkRes
         fcs: group.fcs.map(fc => ({
           id: fc.id,
           processName: fc.process,
-          m4: fc.m4,
+          // DFMEA: m4 제거됨
           workElem: fc.workElem,
           text: fc.text,
           fcNo: fc.no
@@ -75,7 +76,7 @@ export default function FailureLinkResult({ savedLinks, fmData }: FailureLinkRes
       fmId: string; rowIdx: number; totalRows: number;
       fe?: { id: string; scope: string; text: string; severity: number; feNo: string }; feRowSpan: number; showFe: boolean;
       fm: { text: string; no: string; process: string }; showFm: boolean;
-      fc?: { id: string; processName: string; m4: string; workElem: string; text: string; fcNo: string }; fcRowSpan: number; showFc: boolean;
+      fc?: { id: string; processName: string; workElem: string; text: string; fcNo: string }; fcRowSpan: number; showFc: boolean; // DFMEA: m4 제거됨
     }[] = [];
 
     groups.forEach(group => {
@@ -130,8 +131,8 @@ export default function FailureLinkResult({ savedLinks, fmData }: FailureLinkRes
             <th className="w-[18%] bg-[#e3f2fd] p-1 border border-gray-300 font-semibold">고장영향</th>
             <th className="w-[5%] bg-[#e3f2fd] p-1 border border-gray-300 font-semibold">S</th>
             <th className="w-[6%] bg-[#e8f5e9] p-1 border border-gray-300 font-semibold">No</th>
-            <th className="w-[10%] bg-[#e8f5e9] p-1 border border-gray-300 font-semibold">공정명</th>
-            <th className="w-[12%] bg-[#e8f5e9] p-1 border border-gray-300 font-semibold">작업요소</th>
+            <th className="w-[10%] bg-[#e8f5e9] p-1 border border-gray-300 font-semibold">A'SSY명</th>
+            <th className="w-[12%] bg-[#e8f5e9] p-1 border border-gray-300 font-semibold">부품 또는 특성</th>
             <th className="bg-[#e8f5e9] p-1 border border-gray-300 font-semibold">고장원인</th>
           </tr>
         </thead>
@@ -187,5 +188,4 @@ export default function FailureLinkResult({ savedLinks, fmData }: FailureLinkRes
     </div>
   );
 }
-
 

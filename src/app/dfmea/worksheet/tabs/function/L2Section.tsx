@@ -5,7 +5,6 @@ import { COLORS } from '../../constants';
 import { FUNC_COLORS } from './constants';
 import { FlatRow, ModalType } from './types';
 import SelectableCell from '@/components/worksheet/SelectableCell';
-import { l2CellStyle } from './SectionStyles';
 
 interface L2SectionProps {
   row: FlatRow;
@@ -24,7 +23,16 @@ export default function L2Section({ row, l2Span, onOpenModal }: L2SectionProps) 
       {/* L2: 공정 기능 */}
       <td 
         rowSpan={l2Span} 
-        style={l2CellStyle(FUNC_COLORS.l2Cell)}
+        style={{ 
+          borderTop: `1px solid #ccc`,
+          borderRight: `1px solid #ccc`,
+          borderBottom: `1px solid #ccc`,
+          borderLeft: `1px solid #ccc`,
+          padding: '2px 4px', 
+          background: FUNC_COLORS.l2Cell, 
+          verticalAlign: 'middle',
+          wordBreak: 'break-word',
+        }}
       >
         <SelectableCell
           value={row.l2Function}
@@ -37,7 +45,16 @@ export default function L2Section({ row, l2Span, onOpenModal }: L2SectionProps) 
       {/* L2: 제품특성 */}
       <td 
         rowSpan={l2Span} 
-        style={l2CellStyle(FUNC_COLORS.l2Cell)}
+        style={{ 
+          borderTop: `1px solid #ccc`,
+          borderRight: `1px solid #ccc`,
+          borderBottom: `1px solid #ccc`,
+          borderLeft: `1px solid #ccc`,
+          padding: '2px 4px', 
+          background: FUNC_COLORS.l2Cell, 
+          verticalAlign: 'middle',
+          wordBreak: 'break-word',
+        }}
       >
         <SelectableCell
           value={row.l2ProductChar}
@@ -49,6 +66,8 @@ export default function L2Section({ row, l2Span, onOpenModal }: L2SectionProps) 
     </>
   );
 }
+
+
 
 
 

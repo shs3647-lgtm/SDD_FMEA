@@ -11,6 +11,7 @@ const BORDER = '1px solid #ccc';
 /** 평가 테이블 스타일 */
 export const evalTableStyle: CSSProperties = {
   width: '100%',
+  minWidth: '2400px', // 구조분석~기능분석 최적화: 2400px (한 화면에 다 보이게)
   borderCollapse: 'collapse',
   fontSize: FONT_SIZES.cell,
 };
