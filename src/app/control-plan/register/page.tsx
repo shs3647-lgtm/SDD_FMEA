@@ -644,6 +644,15 @@ function CPRegisterPageContent() {
                 {saveStatus === 'saving' ? '⏳ 불러오는 중...' : '🔄 불러오기'}
               </button>
             )}
+            {(isEditMode || cpId) && saveStatus === 'saved' && (
+              <button 
+                onClick={() => router.push(`/control-plan/worksheet?cpNo=${cpId}`)}
+                className="px-3 py-1.5 bg-blue-100 border border-blue-400 text-blue-700 text-xs rounded hover:bg-blue-200 font-semibold"
+                title="CP 작성화면으로 이동"
+              >
+                ✏️ 작성화면
+              </button>
+            )}
             <button onClick={handleNewRegister} className="px-3 py-1.5 bg-green-100 border border-green-400 text-green-700 text-xs rounded hover:bg-green-200 font-semibold">➕ 새로 등록</button>
             <button 
               onClick={handleSave} 

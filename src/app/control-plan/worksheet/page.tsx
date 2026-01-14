@@ -49,6 +49,9 @@ function CPWorksheetContent() {
   const [activeTab, setActiveTab] = useState('all');
   const [inputMode, setInputMode] = useState<CPInputMode>('manual');
   
+  // CP 목록 상태 (드롭다운용)
+  const [cpList, setCpList] = useState<Array<{ id: string; cpNo: string; subject?: string }>>([]);
+  
   // 자동 모드용 입력 모달 상태
   const [autoModal, setAutoModal] = useState<AutoModalState>({
     visible: false,
@@ -181,6 +184,31 @@ function CPWorksheetContent() {
     }
   }, [cpNoParam]);
   
+  // CP 목록 로드 (드롭다운용)
+  useEffect(() => {
+    const loadCpList = async () => {
+      try {
+        const res = await fetch('/api/control-plan');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.data) {
+            const cps = data.data.map((cp: any) => ({
+              id: cp.cpNo,
+              cpNo: cp.cpNo,
+              subject: cp.subject || '',
+            }));
+            setCpList(cps);
+            console.log('✅ CP 목록 로드:', cps.length, '개');
+          }
+        }
+      } catch (error) {
+        console.error('CP 목록 로드 실패:', error);
+      }
+    };
+    
+    loadCpList();
+  }, []);
+  
   // 초기 데이터 로드
   useEffect(() => {
     const loadData = async () => {
@@ -197,8 +225,8 @@ function CPWorksheetContent() {
                 cpNo: cpData.data.cpNo,
                 fmeaId: cpData.data.fmeaId || fmeaIdParam,
                 fmeaNo: cpData.data.fmeaNo || '',
-                partName: cpData.data.partName || '',
-                customer: cpData.data.customer || '',
+                partName: cpData.data.partName || cpData.data.subject || '',
+                customer: cpData.data.customer || cpData.data.customerName || '',
                 items: cpData.data.items || [],
               }));
             }
@@ -435,7 +463,6 @@ function CPWorksheetContent() {
     );
   }
   
-  const cpList: any[] = [];
   
   return (
     <>
@@ -451,12 +478,17 @@ function CPWorksheetContent() {
         onCpChange={(id) => {
           if (id === '__NEW__') {
             setState(prev => ({ ...prev, cpNo: '', items: [], dirty: false }));
+            router.push('/control-plan/worksheet');
+          } else {
+            // CP 선택 시 해당 CP로 이동
+            setState(prev => ({ ...prev, cpNo: id, dirty: false }));
+            router.push(`/control-plan/worksheet?cpNo=${id}`);
           }
         }}
         onSave={handleSave}
         onSync={() => state.fmeaId && syncFromFmea(state.fmeaId)}
         onExport={() => {}}
-        onImportClick={() => {}}
+        onImportClick={() => router.push(`/control-plan/import?id=${state.cpNo}`)}
         onAddRow={handleAddRow}
       />
       
@@ -662,7 +694,6 @@ function CPWorksheetContent() {
         existingProcessNames={state.items
           .filter(item => item.processName && !item.processName.startsWith('_'))
           .map(item => item.processName)}
-        existingProcessesInfo={[]}
       />
       
       {/* 공정설명 입력 모달 */}
