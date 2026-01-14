@@ -116,6 +116,12 @@
 | `src/app/globals.css` | **codefreeze-20260113-cp-scrollbar** ⚠️ 스타일 절대 변경 금지 |
 | `src/app/layout.tsx` | **codefreeze-20260113-cp-layout-padding** ⚠️ 레이아웃 절대 변경 금지 |
 | `src/components/layout/StatusBar.tsx` | **codefreeze-20260113-cp-statusbar** ⚠️ UI 절대 변경 금지 |
+| `src/app/control-plan/import/page.tsx` | **codefreeze-20260114-cp-import-modularization**<br/>**codefreeze-20260114-cp-import-layout** ⚠️ 모듈화 구조 절대 변경 금지 |
+| `src/app/control-plan/import/components/PreviewTable.tsx` | **codefreeze-20260114-cp-import-modularization** ⚠️ 컴포넌트 구조 절대 변경 금지 |
+| `src/app/control-plan/import/components/PreviewTabs.tsx` | **codefreeze-20260114-cp-import-modularization** ⚠️ 컴포넌트 구조 절대 변경 금지 |
+| `src/app/control-plan/import/components/ImportStatusBar.tsx` | **codefreeze-20260114-cp-import-modularization** ⚠️ 컴포넌트 구조 절대 변경 금지 |
+| `src/app/control-plan/import/components/ImportMenuBar.tsx` | **codefreeze-20260114-cp-import-modularization** ⚠️ 컴포넌트 구조 절대 변경 금지 |
+| `src/app/control-plan/import/hooks/useEditHandlers.ts` | **codefreeze-20260114-cp-import-modularization** ⚠️ 훅 구조 절대 변경 금지 |
 
 **⚠️ 중요: CP 화면 레이아웃 절대 변경 금지**
 - 사이드바 간격: 5px (53px 위치)

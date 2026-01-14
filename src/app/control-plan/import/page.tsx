@@ -7,14 +7,18 @@
 
 'use client';
 
-import { useState, useRef, useEffect, Suspense } from 'react';
+import { useState, useRef, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { CheckCircle, Pencil, Trash2, Save, X } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import CPTopNav from '@/components/layout/CPTopNav';
 import { CPProject, ImportedData } from './types';
-import { PREVIEW_COLUMNS, GROUP_SHEET_OPTIONS, INDIVIDUAL_SHEET_OPTIONS, GROUP_HEADERS, tw } from './constants';
-import { useImportHandlers } from './hooks';
+import { tw } from './constants';
+import { useImportHandlers, useEditHandlers } from './hooks';
+import { saveMasterDataset, loadActiveMasterDataset } from './utils/cp-master-api';
+import PreviewTable from './components/PreviewTable';
+import PreviewTabs from './components/PreviewTabs';
+import ImportStatusBar from './components/ImportStatusBar';
+import ImportMenuBar from './components/ImportMenuBar';
 
 type PreviewTab = 'full' | 'group' | 'individual';
 
@@ -41,8 +45,10 @@ function CPImportPageContent() {
   const [selectedSheet, setSelectedSheet] = useState('processInfo');
   const [selectedItem, setSelectedItem] = useState('processName');
   const [activeTab, setActiveTab] = useState<PreviewTab>('individual');  // 개별항목 기본
-  const [editingRowId, setEditingRowId] = useState<string | null>(null);
-  const [editValues, setEditValues] = useState<Record<string, string>>({});
+  
+  // 마스터 데이터셋 상태 (DB 저장용)
+  const [masterDatasetId, setMasterDatasetId] = useState<string | null>(null);
+  const [masterDatasetName, setMasterDatasetName] = useState<string>('MASTER');
   
   // ===== 3개 데이터 저장소 =====
   const [fullData, setFullData] = useState<ImportedData[]>([]);
@@ -72,6 +78,24 @@ function CPImportPageContent() {
   const [isItemImporting, setIsItemImporting] = useState(false);
   const [itemImportSuccess, setItemImportSuccess] = useState(false);
   const itemFileInputRef = useRef<HTMLInputElement>(null);
+
+  // 편집 핸들러 훅
+  const {
+    editingRowId,
+    editValues,
+    handleEditStart,
+    handleEditSave,
+    handleEditCancel,
+    handleDelete,
+    handleCellChange,
+  } = useEditHandlers({
+    fullData,
+    groupData,
+    itemData,
+    setFullData,
+    setGroupData,
+    setItemData,
+  });
 
   // 핸들러 훅
   const {
@@ -440,47 +464,41 @@ function CPImportPageContent() {
     }, 300);
   };
 
-  // ===== 행별 수정/삭제/저장 =====
-  const handleEditRow = (processNo: string, data: ImportedData[]) => {
-    setEditingRowId(processNo);
-    const row = data.filter(d => d.processNo === processNo);
-    const values: Record<string, string> = {};
-    row.forEach(r => { values[r.itemCode] = r.value; });
-    setEditValues(values);
-  };
-  
-  const handleCancelEdit = () => {
-    setEditingRowId(null);
-    setEditValues({});
-  };
-  
-  const handleSaveRow = (processNo: string, tab: PreviewTab) => {
-    const setData = tab === 'full' ? setFullData : tab === 'group' ? setGroupData : setItemData;
-    
-    setData(prev => prev.map(d => {
-      if (d.processNo === processNo && editValues[d.itemCode] !== undefined) {
-        return { ...d, value: editValues[d.itemCode] };
-      }
-      return d;
-    }));
-    
-    setEditingRowId(null);
-    setEditValues({});
-  };
-  
-  const handleDeleteRow = (processNo: string, tab: PreviewTab) => {
-    if (!confirm(`공정번호 "${processNo}" 행을 삭제하시겠습니까?`)) return;
-    if (tab === 'full') setFullData(prev => prev.filter(d => d.processNo !== processNo));
-    else if (tab === 'group') setGroupData(prev => prev.filter(d => d.processNo !== processNo));
-    else setItemData(prev => prev.filter(d => d.processNo !== processNo));
-  };
-
   // ===== 전체 저장 =====
   const handleSaveAll = async () => {
     setIsSaving(true);
     try {
+      // 1. localStorage 저장 (기존 방식 유지)
       const key = `cp-import-data-${selectedCpId}`;
       localStorage.setItem(key, JSON.stringify({ full: fullData, group: groupData, item: itemData }));
+      
+      // 2. DB 저장 (모든 데이터를 flat 형식으로 변환)
+      const allData = [...fullData, ...groupData, ...itemData];
+      const flatData = allData.map(d => ({
+        id: d.id,
+        processNo: d.processNo,
+        category: d.category,
+        itemCode: d.itemCode,
+        value: d.value,
+        createdAt: d.createdAt,
+      }));
+      
+      const res = await saveMasterDataset({
+        datasetId: masterDatasetId,
+        name: masterDatasetName || 'MASTER',
+        setActive: true,
+        replace: true,
+        flatData,
+      });
+      
+      if (!res.ok) {
+        console.warn('[CP Import] DB master save failed (localStorage kept)');
+        alert('⚠️ DB 저장 실패! 로컬에만 저장되었습니다.');
+      } else {
+        if (res.datasetId) setMasterDatasetId(res.datasetId);
+        console.log('✅ CP DB 저장 완료:', flatData.length, '건');
+      }
+      
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
     } catch (error) {
@@ -498,120 +516,10 @@ function CPImportPageContent() {
     item: [...new Set(itemData.map(d => d.processNo))].length,
   };
 
-  // 미리보기 테이블 렌더링
-  const renderPreviewTable = (data: ImportedData[], tab: PreviewTab) => {
-    const processNos = [...new Set(data.map(d => d.processNo))];
-    
-    return (
-      <table className="border-collapse border-spacing-0 w-[1540px] min-w-[1540px] max-w-[1540px] table-fixed m-0 p-0 border-0">
-        {/* colgroup: table-layout: fixed에서 컬럼 폭을 결정하는 핵심 요소 */}
-        <colgroup>
-          {/* 관리 컬럼 3개 */}
-          <col className="w-[20px]" />
-          <col className="w-[30px]" />
-          <col className="w-[30px]" />
-          {/* PREVIEW_COLUMNS 컬럼들 */}
-          {PREVIEW_COLUMNS.map(col => {
-            return <col key={col.key} className={col.width} />;
-          })}
-        </colgroup>
-        <thead className="sticky top-0 z-[10]">
-          <tr className="h-[18px]">
-            <th colSpan={3} className="bg-gray-600 text-white text-[10px] font-medium text-center border border-gray-400 antialiased sticky top-0">관리</th>
-            {GROUP_HEADERS.map(grp => (
-              <th key={grp.key} colSpan={grp.colSpan} className={`${grp.color} text-white text-[10px] font-medium text-center border border-gray-400 antialiased sticky top-0`}>
-                {grp.label}
-              </th>
-            ))}
-          </tr>
-          <tr className="h-[22px]">
-            <th className={`${tw.headerCell} w-[20px] bg-[#0d9488] sticky top-[18px]`}>
-              <input type="checkbox" className="w-3 h-3" onChange={(e) => {
-                if (e.target.checked) setSelectedRows(new Set(data.map(d => d.processNo)));
-                else setSelectedRows(new Set());
-              }} />
-            </th>
-            <th className={`${tw.headerCell} w-[30px] bg-[#0d9488] sticky top-[18px]`}>No</th>
-            <th className={`${tw.headerCell} w-[30px] bg-[#0d9488] sticky top-[18px]`}>작업</th>
-            {PREVIEW_COLUMNS.map(col => {
-              const groupColor = { processInfo: 'bg-teal-500', detector: 'bg-purple-500', controlItem: 'bg-blue-500', controlMethod: 'bg-green-500', reactionPlan: 'bg-orange-400' }[col.group || 'processInfo'];
-              return (
-                <th key={col.key} 
-                  className={`${groupColor} text-white px-0.5 py-0.5 border border-gray-400 text-[10px] font-medium text-center cursor-pointer whitespace-nowrap antialiased sticky top-[18px] ${selectedColumn === col.key ? 'ring-2 ring-yellow-400' : ''}`}
-                  onClick={() => handleColumnClick(col.key)}>
-                  {col.label}
-                </th>
-              );
-            })}
-          </tr>
-        </thead>
-        <tbody>
-          {processNos.length === 0 ? (
-            Array.from({ length: 20 }).map((_, i) => (
-              <tr key={`empty-${i}`} className={`h-5 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                <td className={tw.cellCenter}></td>
-                <td className={tw.cellCenter}>{i + 1}</td>
-                <td className={tw.cellCenter}></td>
-                {PREVIEW_COLUMNS.map(col => <td key={col.key} className={tw.cell}></td>)}
-              </tr>
-            ))
-          ) : (
-            processNos.map((processNo, i) => {
-              const row = data.filter(d => d.processNo === processNo);
-              const getValue = (key: string) => row.find(r => r.itemCode === key)?.value || '';
-              const isEditing = editingRowId === processNo;
-              
-              return (
-                <tr key={`row-${processNo}-${i}`} className={`h-5 ${selectedRows.has(processNo) ? 'bg-blue-50' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                  <td className={tw.cellCenter}>
-                    <input type="checkbox" className="w-2.5 h-2.5" checked={selectedRows.has(processNo)} onChange={() => handleRowSelect(processNo)} />
-                  </td>
-                  <td className={tw.cellCenter}>{i + 1}</td>
-                  <td className={tw.cellCenter}>
-                    <div className="flex items-center justify-center gap-0.5">
-                      {isEditing ? (
-                        <>
-                          <button onClick={() => handleSaveRow(processNo, tab)} className="p-0.5 bg-green-500 text-white rounded hover:bg-green-600" title="저장">
-                            <Save size={9} />
-                          </button>
-                          <button onClick={handleCancelEdit} className="p-0.5 bg-gray-400 text-white rounded hover:bg-gray-500" title="취소">
-                            <X size={9} />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button onClick={() => handleEditRow(processNo, data)} className="p-0.5 bg-blue-500 text-white rounded hover:bg-blue-600" title="수정">
-                            <Pencil size={9} />
-                          </button>
-                          <button onClick={() => handleDeleteRow(processNo, tab)} className="p-0.5 bg-red-500 text-white rounded hover:bg-red-600" title="삭제">
-                            <Trash2 size={9} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                  {PREVIEW_COLUMNS.map(col => (
-                    <td key={col.key} className={`${tw.cell} ${selectedColumn === col.key ? 'bg-yellow-100' : ''}`}>
-                      {isEditing ? (
-                        <input 
-                          type="text" 
-                          value={editValues[col.key] ?? getValue(col.key)} 
-                          onChange={(e) => setEditValues(prev => ({ ...prev, [col.key]: e.target.value }))}
-                          className="w-full px-0.5 py-0 border border-blue-400 rounded text-[10px] bg-white focus:outline-none font-normal antialiased" 
-                        />
-                      ) : (
-                        <span className="antialiased font-normal">{getValue(col.key)}</span>
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              );
-            })
-          )}
-        </tbody>
-      </table>
-    );
-  };
+  // 전체 선택 핸들러
+  const handleSelectAll = useCallback((processNos: string[]) => {
+    setSelectedRows(processNos.length > 0 ? new Set(processNos) : new Set());
+  }, [setSelectedRows]);
 
   return (
     <>
@@ -634,161 +542,116 @@ function CPImportPageContent() {
           </div>
         </div>
 
-        {/* 3행 입력 영역 - 고정 크기 */}
-        <div className={`${tw.tableWrapper} p-3 w-[1414px] min-w-[1414px] max-w-[1414px] flex-shrink-0`}>
-          <table className="border-collapse w-[1390px] min-w-[1390px] max-w-[1390px] table-fixed">
-            <tbody>
-              {/* 1행: 전체 */}
-              <tr className="h-7">
-                <td className={`${tw.rowHeader} w-[55px]`}>CP 선택</td>
-                <td className={`${tw.cell} w-[80px]`}>
-                  <select value={selectedCpId} onChange={(e) => setSelectedCpId(e.target.value)} className={tw.select}>
-                    <option value="">선택</option>
-                    {cpList.map((cp, idx) => <option key={`${cp.id}-${idx}`} value={cp.id}>{cp.id}</option>)}
-                  </select>
-                </td>
-                <td className={`${tw.rowHeader} w-[55px]`}>전체 다운</td>
-                <td className={`${tw.cell} w-[100px]`}>
-                  <div className="flex items-center gap-1">
-                    <button onClick={downloadFullTemplate} className={tw.btnPrimary}>📥양식</button>
-                    <button onClick={downloadFullSampleTemplate} className={tw.btnBlue}>📥샘플</button>
-                  </div>
-                </td>
-                <td className={`${tw.rowHeader} w-[45px]`}>Import</td>
-                <td className={`${tw.cell} w-[130px]`}>
-                  <div className="flex items-center gap-1">
-                    <input type="file" ref={fullFileInputRef} accept=".xlsx,.xls" onChange={handleFullFileSelect} className="hidden" />
-                    <button onClick={() => fullFileInputRef.current?.click()} className={tw.btnBrowse}>{fullFileName || '파일 선택'}</button>
-                    <button onClick={handleFullImport} disabled={fullPendingData.length === 0 || isFullImporting} className={fullPendingData.length === 0 ? tw.btnSuccessDisabled : tw.btnBlue}>
-                      {isFullImporting ? '...' : '적용'}
-                    </button>
-                  </div>
-                </td>
-                <td className={`${tw.cellCenter} w-[50px]`}>
-                  {isFullParsing && <span className="text-blue-500 text-[10px]">파싱중...</span>}
-                  {!isFullParsing && (
-                    fullImportSuccess || fullData.length > 0 ? (
-                      <span className="text-green-500 text-[10px] flex items-center gap-1">
-                        <CheckCircle size={12} />
-                        <span>{fullData.length}건</span>
-                      </span>
-                    ) : (
-                      <span className="text-gray-400 text-[10px]">{fullPendingData.length > 0 ? `${fullPendingData.length}건` : '대기'}</span>
-                    )
-                  )}
-                </td>
-              </tr>
-              {/* 2행: 그룹 시트 */}
-              <tr className="h-7">
-                <td className={`${tw.rowHeader}`}>그룹 시트</td>
-                <td className={`${tw.cell}`}>
-                  <select value={selectedSheet} onChange={(e) => setSelectedSheet(e.target.value)} className={tw.select}>
-                    {GROUP_SHEET_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                  </select>
-                </td>
-                <td className={`${tw.rowHeader}`}>그룹 다운</td>
-                <td className={`${tw.cell}`}>
-                  <div className="flex items-center gap-1">
-                    <button onClick={downloadGroupSheetTemplate} className={tw.btnPrimary}>📥양식</button>
-                    <button onClick={downloadGroupSheetSampleTemplate} className={tw.btnBlue}>📥샘플</button>
-                  </div>
-                </td>
-                <td className={`${tw.rowHeader}`}>Import</td>
-                <td className={`${tw.cell} w-[130px]`}>
-                  <div className="flex items-center gap-1">
-                    <input type="file" ref={groupFileInputRef} accept=".xlsx,.xls" onChange={handleGroupFileSelect} className="hidden" />
-                    <button onClick={() => groupFileInputRef.current?.click()} className={tw.btnBrowse}>{groupFileName || '파일 선택'}</button>
-                    <button onClick={handleGroupImport} disabled={groupPendingData.length === 0 || isGroupImporting} className={groupPendingData.length === 0 ? tw.btnSuccessDisabled : tw.btnBlue}>
-                      {isGroupImporting ? '...' : '적용'}
-                    </button>
-                  </div>
-                </td>
-                <td className={`${tw.cellCenter} w-[50px]`}>
-                  {isGroupParsing && <span className="text-blue-500 text-[10px]">파싱중...</span>}
-                  {!isGroupParsing && (
-                    groupImportSuccess || groupData.length > 0 ? (
-                      <span className="text-green-500 text-[10px] flex items-center gap-1">
-                        <CheckCircle size={12} />
-                        <span>{groupData.length}건</span>
-                      </span>
-                    ) : (
-                      <span className="text-gray-400 text-[10px]">{groupPendingData.length > 0 ? `${groupPendingData.length}건` : '대기'}</span>
-                    )
-                  )}
-                </td>
-              </tr>
-              {/* 3행: 개별 항목 */}
-              <tr className="h-7">
-                <td className={`${tw.rowHeader}`}>개별 항목</td>
-                <td className={`${tw.cell}`}>
-                  <select value={selectedItem} onChange={(e) => setSelectedItem(e.target.value)} className={tw.select}>
-                    {INDIVIDUAL_SHEET_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                  </select>
-                </td>
-                <td className={`${tw.rowHeader}`}>개별 다운</td>
-                <td className={`${tw.cell}`}>
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => downloadItemTemplate(selectedItem)} className={tw.btnOrange}>📥양식</button>
-                    <button onClick={() => downloadItemSampleTemplate(selectedItem)} className="px-2 py-0.5 bg-orange-600 text-white border-none rounded cursor-pointer text-[10px] font-bold">📥샘플</button>
-                  </div>
-                </td>
-                <td className={`${tw.rowHeader}`}>Import</td>
-                <td className={`${tw.cell} w-[130px]`}>
-                  <div className="flex items-center gap-1">
-                    <input type="file" ref={itemFileInputRef} accept=".xlsx,.xls" onChange={handleItemFileSelect} className="hidden" />
-                    <button onClick={() => itemFileInputRef.current?.click()} className={tw.btnBrowse}>{itemFileName || '파일 선택'}</button>
-                    <button onClick={handleItemImport} disabled={itemPendingData.length === 0 || isItemImporting} className={itemPendingData.length === 0 ? tw.btnSuccessDisabled : tw.btnOrange}>
-                      {isItemImporting ? '...' : '적용'}
-                    </button>
-                  </div>
-                </td>
-                <td className={`${tw.cellCenter} w-[50px]`}>
-                  {isItemParsing && <span className="text-orange-500 text-[10px]">파싱중...</span>}
-                  {!isItemParsing && (
-                    itemImportSuccess || itemData.length > 0 ? (
-                      <span className="text-green-500 text-[10px] flex items-center gap-1">
-                        <CheckCircle size={12} />
-                        <span>{itemData.length}건</span>
-                      </span>
-                    ) : (
-                      <span className="text-gray-400 text-[10px]">{itemPendingData.length > 0 ? `${itemPendingData.length}건` : '대기'}</span>
-                    )
-                  )}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        {/* 3행 입력 영역 */}
+        <ImportMenuBar
+          selectedCpId={selectedCpId}
+          cpList={cpList}
+          onCpChange={setSelectedCpId}
+          downloadFullTemplate={downloadFullTemplate}
+          downloadFullSampleTemplate={downloadFullSampleTemplate}
+          fullFileInputRef={fullFileInputRef}
+          fullFileName={fullFileName}
+          onFullFileSelect={handleFullFileSelect}
+          onFullImport={handleFullImport}
+          fullPendingCount={fullPendingData.length}
+          isFullParsing={isFullParsing}
+          isFullImporting={isFullImporting}
+          fullImportSuccess={fullImportSuccess}
+          fullDataCount={fullData.length}
+          selectedSheet={selectedSheet}
+          onSheetChange={setSelectedSheet}
+          downloadGroupSheetTemplate={downloadGroupSheetTemplate}
+          downloadGroupSheetSampleTemplate={downloadGroupSheetSampleTemplate}
+          groupFileInputRef={groupFileInputRef}
+          groupFileName={groupFileName}
+          onGroupFileSelect={handleGroupFileSelect}
+          onGroupImport={handleGroupImport}
+          groupPendingCount={groupPendingData.length}
+          isGroupParsing={isGroupParsing}
+          isGroupImporting={isGroupImporting}
+          groupImportSuccess={groupImportSuccess}
+          groupDataCount={groupData.length}
+          selectedItem={selectedItem}
+          onItemChange={setSelectedItem}
+          downloadItemTemplate={downloadItemTemplate}
+          downloadItemSampleTemplate={downloadItemSampleTemplate}
+          itemFileInputRef={itemFileInputRef}
+          itemFileName={itemFileName}
+          onItemFileSelect={handleItemFileSelect}
+          onItemImport={handleItemImport}
+          itemPendingCount={itemPendingData.length}
+          isItemParsing={isItemParsing}
+          isItemImporting={isItemImporting}
+          itemImportSuccess={itemImportSuccess}
+          itemDataCount={itemData.length}
+        />
 
-        {/* 미리보기 탭 - 반응형 */}
-        <div className="flex items-center gap-1 mt-2 mb-1 flex-shrink-0">
-          <span className="text-xs text-gray-600 font-semibold mr-2">📋 미리보기:</span>
-          <button onClick={() => setActiveTab('full')} className={`px-3 py-1 text-[11px] font-bold rounded-t border border-b-0 ${activeTab === 'full' ? 'bg-teal-500 text-white border-teal-500' : 'bg-gray-100 text-gray-600 border-gray-300'}`}>
-            전체 Import ({stats.full}건)
-          </button>
-          <button onClick={() => setActiveTab('group')} className={`px-3 py-1 text-[11px] font-bold rounded-t border border-b-0 ${activeTab === 'group' ? 'bg-blue-500 text-white border-blue-500' : 'bg-gray-100 text-gray-600 border-gray-300'}`}>
-            그룹 시트 ({stats.group}건)
-          </button>
-          <button onClick={() => setActiveTab('individual')} className={`px-3 py-1 text-[11px] font-bold rounded-t border border-b-0 ${activeTab === 'individual' ? 'bg-orange-500 text-white border-orange-500' : 'bg-gray-100 text-gray-600 border-gray-300'}`}>
-            개별 항목 ({stats.item}건)
-          </button>
-        </div>
+        {/* 미리보기 탭 */}
+        <PreviewTabs activeTab={activeTab} onTabChange={setActiveTab} stats={stats} />
 
         {/* 미리보기 테이블 */}
         <div 
           id="cp-import-scroll-container" 
           className={`bg-white border-2 overflow-x-auto overflow-y-auto relative w-full flex-1 ${activeTab === 'full' ? 'border-teal-500' : activeTab === 'group' ? 'border-blue-500' : 'border-orange-500'}`}
         >
-          {activeTab === 'full' && renderPreviewTable(fullData, 'full')}
-          {activeTab === 'group' && renderPreviewTable(groupData, 'group')}
-          {activeTab === 'individual' && renderPreviewTable(itemData, 'individual')}
+          {activeTab === 'full' && (
+            <PreviewTable
+              data={fullData}
+              tab="full"
+              selectedRows={selectedRows}
+              selectedColumn={selectedColumn}
+              editingRowId={editingRowId}
+              editValues={editValues}
+              onRowSelect={handleRowSelect}
+              onColumnClick={handleColumnClick}
+              onEditStart={handleEditStart}
+              onEditSave={handleEditSave}
+              onEditCancel={handleEditCancel}
+              onDelete={handleDelete}
+              onCellChange={handleCellChange}
+              onSelectAll={handleSelectAll}
+            />
+          )}
+          {activeTab === 'group' && (
+            <PreviewTable
+              data={groupData}
+              tab="group"
+              selectedRows={selectedRows}
+              selectedColumn={selectedColumn}
+              editingRowId={editingRowId}
+              editValues={editValues}
+              onRowSelect={handleRowSelect}
+              onColumnClick={handleColumnClick}
+              onEditStart={handleEditStart}
+              onEditSave={handleEditSave}
+              onEditCancel={handleEditCancel}
+              onDelete={handleDelete}
+              onCellChange={handleCellChange}
+              onSelectAll={handleSelectAll}
+            />
+          )}
+          {activeTab === 'individual' && (
+            <PreviewTable
+              data={itemData}
+              tab="individual"
+              selectedRows={selectedRows}
+              selectedColumn={selectedColumn}
+              editingRowId={editingRowId}
+              editValues={editValues}
+              onRowSelect={handleRowSelect}
+              onColumnClick={handleColumnClick}
+              onEditStart={handleEditStart}
+              onEditSave={handleEditSave}
+              onEditCancel={handleEditCancel}
+              onDelete={handleDelete}
+              onCellChange={handleCellChange}
+              onSelectAll={handleSelectAll}
+            />
+          )}
         </div>
 
-        {/* 하단 상태바 - 반응형 */}
-        <div className="mt-2 flex items-center justify-between text-[10px] text-gray-500 bg-white px-2 py-1 rounded border border-gray-300 w-full flex-shrink-0">
-          <span>전체: {stats.full}개 | 그룹: {stats.group}개 | 개별: {stats.item}개</span>
-          <span>버전: Control Plan Import v2.4</span>
-        </div>
+        {/* 하단 상태바 */}
+        <ImportStatusBar stats={stats} />
       </div>
     </>
   );

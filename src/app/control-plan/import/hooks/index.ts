@@ -4,6 +4,4 @@
  */
 
 export * from './useImportHandlers';
-
-
-
+export { useEditHandlers, type UseEditHandlersProps, type UseEditHandlersReturn } from './useEditHandlers';
