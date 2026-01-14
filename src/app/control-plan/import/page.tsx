@@ -473,15 +473,43 @@ function CPImportPageContent() {
       localStorage.setItem(key, JSON.stringify({ full: fullData, group: groupData, item: itemData }));
       
       // 2. DB 저장 (모든 데이터를 flat 형식으로 변환)
+      // ★ itemCode 표준화: processNo → A1, processName → A2 (PFMEA 벤치마킹)
+      const itemCodeMap: Record<string, string> = {
+        'processNo': 'A1',      // 공정번호
+        'processName': 'A2',    // 공정명
+        'level': 'A3',          // 레벨
+        'processDesc': 'A4',    // 공정설명
+        'equipment': 'A5',      // 설비
+        'ep': 'A6',             // EP
+        'autoDetector': 'A7',   // 자동검출
+        'productChar': 'B1',    // 제품특성
+        'processChar': 'B2',    // 공정특성
+        'specialChar': 'B3',    // 특별특성
+        'spec': 'B4',           // 규격
+        'evalMethod': 'B5',     // 평가방법
+        'sampleSize': 'B6',     // 샘플크기
+        'frequency': 'B7',      // 빈도
+        'owner1': 'B8',         // 책임자1
+        'owner2': 'B9',         // 책임자2
+        'reactionPlan': 'B10',  // 대응계획
+      };
+      
       const allData = [...fullData, ...groupData, ...itemData];
       const flatData = allData.map(d => ({
         id: d.id,
         processNo: d.processNo,
         category: d.category,
-        itemCode: d.itemCode,
+        // itemCode 표준화: 기존 itemCode가 매핑에 있으면 변환, 없으면 그대로 사용
+        itemCode: itemCodeMap[d.itemCode] || d.itemCode,
         value: d.value,
         createdAt: d.createdAt,
       }));
+      
+      console.log('📤 CP DB 저장:', {
+        totalItems: flatData.length,
+        processCount: new Set(flatData.filter(d => d.itemCode === 'A1').map(d => d.processNo)).size,
+        processNameCount: flatData.filter(d => d.itemCode === 'A2').length,
+      });
       
       const res = await saveMasterDataset({
         datasetId: masterDatasetId,
