@@ -299,12 +299,13 @@ function CPImportPageContent() {
             }
             
             // 모든 컬럼 데이터 추가 (빈 값도 포함하여 모든 데이터 추출)
+            // ★ itemCode는 이미 표준화됨 (A1, A2 등)
             parsedData.push({
               id: `full-${sheetIdx}-${rowNumber}-${colIdx}`,
               processNo,
-              processName: itemCode === 'processName' ? value : processName || '',
+              processName: itemCode === 'A2' ? value : processName || '', // A2 = 공정명
               category: mapping.category,
-              itemCode,
+              itemCode, // 표준화된 itemCode (A1, A2, A3 등)
               value,
               createdAt: new Date(),
             });
