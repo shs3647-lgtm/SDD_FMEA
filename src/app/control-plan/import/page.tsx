@@ -273,18 +273,131 @@ function CPImportPageContent() {
     }
   };
   
-  const handleGroupFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 그룹 시트 파일 선택 - 선택된 시트의 모든 행과 열 데이터 파싱
+  const handleGroupFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
     setGroupFileName(file.name);
     setIsGroupParsing(true);
-    setTimeout(() => {
-      const sampleData: ImportedData[] = [
-        { id: 'g1', processNo: '10', category: selectedSheet, itemCode: 'processNo', value: '10', createdAt: new Date() },
-      ];
-      setGroupPendingData(sampleData);
+    
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(arrayBuffer);
+      
+      const parsedData: ImportedData[] = [];
+      
+      // 선택된 시트의 매핑 정보
+      const sheetMapping: Record<string, { category: string; headers: string[]; itemCodes: string[] }> = {
+        'processInfo': {
+          category: 'processInfo',
+          headers: ['공정번호', '공정명', '레벨', '공정설명', '설비/금형/지그'],
+          itemCodes: ['processNo', 'processName', 'level', 'processDesc', 'equipment'],
+        },
+        'detector': {
+          category: 'detector',
+          headers: ['공정번호', '공정명', 'EP', '자동검사장치'],
+          itemCodes: ['processNo', 'processName', 'ep', 'autoDetector'],
+        },
+        'controlItem': {
+          category: 'controlItem',
+          headers: ['공정번호', '공정명', '제품특성', '공정특성', '특별특성', '스펙/공차'],
+          itemCodes: ['processNo', 'processName', 'productChar', 'processChar', 'specialChar', 'spec'],
+        },
+        'controlMethod': {
+          category: 'controlMethod',
+          headers: ['공정번호', '공정명', '평가방법', '샘플크기', '주기', '책임1', '책임2'],
+          itemCodes: ['processNo', 'processName', 'evalMethod', 'sampleSize', 'frequency', 'owner1', 'owner2'],
+        },
+        'reactionPlan': {
+          category: 'reactionPlan',
+          headers: ['공정번호', '공정명', '제품특성', '공정특성', '대응계획'],
+          itemCodes: ['processNo', 'processName', 'productChar', 'processChar', 'reactionPlan'],
+        },
+      };
+      
+      // 시트명 매핑 (selectedSheet 값 → 실제 시트명)
+      const sheetNameMap: Record<string, string> = {
+        'processInfo': '공정현황',
+        'detector': '검출장치',
+        'controlItem': '관리항목',
+        'controlMethod': '관리방법',
+        'reactionPlan': '대응계획',
+      };
+      
+      const targetSheetName = sheetNameMap[selectedSheet];
+      const mapping = sheetMapping[selectedSheet];
+      
+      if (!targetSheetName || !mapping) {
+        alert(`알 수 없는 시트: ${selectedSheet}`);
+        setIsGroupParsing(false);
+        return;
+      }
+      
+      // 해당 시트 찾기
+      const worksheet = workbook.worksheets.find(ws => ws.name === targetSheetName);
+      
+      if (!worksheet) {
+        alert(`시트 "${targetSheetName}"를 찾을 수 없습니다.`);
+        setIsGroupParsing(false);
+        return;
+      }
+      
+      console.log(`📋 시트 "${targetSheetName}" 파싱 시작...`);
+      let rowCount = 0;
+      
+      // 3행부터 데이터 읽기 (1행: 헤더, 2행: 안내)
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber <= 2) return; // 헤더/안내 행 스킵
+        
+        // 공정번호와 공정명 추출 (첫 번째, 두 번째 컬럼)
+        const processNo = String(row.getCell(1).value || '').trim();
+        const processName = String(row.getCell(2).value || '').trim();
+        
+        // 공정번호가 없으면 스킵
+        if (!processNo) return;
+        
+        rowCount++;
+        
+        // 모든 컬럼 데이터 추출 (빈 값도 포함)
+        mapping.headers.forEach((header, colIdx) => {
+          const itemCode = mapping.itemCodes[colIdx];
+          const cell = row.getCell(colIdx + 1);
+          let value = '';
+          
+          // 셀 값 추출 (다양한 타입 처리)
+          if (cell.value !== null && cell.value !== undefined) {
+            if (typeof cell.value === 'object' && 'text' in cell.value) {
+              value = String(cell.value.text || '').trim();
+            } else if (typeof cell.value === 'object' && 'result' in cell.value) {
+              value = String(cell.value.result || '').trim();
+            } else {
+              value = String(cell.value || '').trim();
+            }
+          }
+          
+          // 모든 컬럼 데이터 추가 (빈 값도 포함하여 모든 데이터 추출)
+          parsedData.push({
+            id: `group-${selectedSheet}-${rowNumber}-${colIdx}`,
+            processNo,
+            processName: itemCode === 'processName' ? value : processName || '',
+            category: mapping.category,
+            itemCode,
+            value,
+            createdAt: new Date(),
+          });
+        });
+      });
+      
+      setGroupPendingData(parsedData);
+      console.log(`✅ 그룹 시트 "${targetSheetName}" 파싱 완료: ${rowCount}개 행, ${parsedData.length}건`);
+    } catch (error) {
+      console.error('❌ Excel 파싱 실패:', error);
+      alert('Excel 파일을 읽는데 실패했습니다.');
+    } finally {
       setIsGroupParsing(false);
-    }, 500);
+    }
   };
   
   // ===== Import 실행 =====
@@ -390,7 +503,18 @@ function CPImportPageContent() {
     const processNos = [...new Set(data.map(d => d.processNo))];
     
     return (
-      <table className="w-full border-collapse min-w-[1050px] border-spacing-0">
+      <table className="border-collapse border-spacing-0 w-[1540px] min-w-[1540px] max-w-[1540px] table-fixed m-0 p-0 border-0">
+        {/* colgroup: table-layout: fixed에서 컬럼 폭을 결정하는 핵심 요소 */}
+        <colgroup>
+          {/* 관리 컬럼 3개 */}
+          <col className="w-[20px]" />
+          <col className="w-[30px]" />
+          <col className="w-[30px]" />
+          {/* PREVIEW_COLUMNS 컬럼들 */}
+          {PREVIEW_COLUMNS.map(col => {
+            return <col key={col.key} className={col.width} />;
+          })}
+        </colgroup>
         <thead className="sticky top-0 z-[10]">
           <tr className="h-[18px]">
             <th colSpan={3} className="bg-gray-600 text-white text-[10px] font-medium text-center border border-gray-400 antialiased sticky top-0">관리</th>
@@ -401,18 +525,19 @@ function CPImportPageContent() {
             ))}
           </tr>
           <tr className="h-[22px]">
-            <th className={`${tw.headerCell} w-[22px] bg-[#0d9488] sticky top-[18px]`}>
+            <th className={`${tw.headerCell} w-[20px] bg-[#0d9488] sticky top-[18px]`}>
               <input type="checkbox" className="w-3 h-3" onChange={(e) => {
                 if (e.target.checked) setSelectedRows(new Set(data.map(d => d.processNo)));
                 else setSelectedRows(new Set());
               }} />
             </th>
-            <th className={`${tw.headerCell} w-[25px] bg-[#0d9488] sticky top-[18px]`}>No</th>
-            <th className={`${tw.headerCell} w-[45px] bg-[#0d9488] sticky top-[18px]`}>작업</th>
+            <th className={`${tw.headerCell} w-[30px] bg-[#0d9488] sticky top-[18px]`}>No</th>
+            <th className={`${tw.headerCell} w-[30px] bg-[#0d9488] sticky top-[18px]`}>작업</th>
             {PREVIEW_COLUMNS.map(col => {
               const groupColor = { processInfo: 'bg-teal-500', detector: 'bg-purple-500', controlItem: 'bg-blue-500', controlMethod: 'bg-green-500', reactionPlan: 'bg-orange-400' }[col.group || 'processInfo'];
               return (
-                <th key={col.key} className={`${groupColor} text-white px-0.5 py-0.5 border border-gray-400 text-[10px] font-medium text-center ${col.width} cursor-pointer whitespace-nowrap antialiased sticky top-[18px] ${selectedColumn === col.key ? 'ring-2 ring-yellow-400' : ''}`}
+                <th key={col.key} 
+                  className={`${groupColor} text-white px-0.5 py-0.5 border border-gray-400 text-[10px] font-medium text-center cursor-pointer whitespace-nowrap antialiased sticky top-[18px] ${selectedColumn === col.key ? 'ring-2 ring-yellow-400' : ''}`}
                   onClick={() => handleColumnClick(col.key)}>
                   {col.label}
                 </th>
@@ -492,9 +617,9 @@ function CPImportPageContent() {
     <>
       <CPTopNav selectedCpId={selectedCpId} />
       
-      <div className="h-screen overflow-hidden bg-[#f5f7fa] px-2 py-2 pt-9 font-[Malgun_Gothic] flex flex-col">
-        {/* 헤더 */}
-        <div className="flex items-center justify-between mb-2 bg-white px-2 py-1 rounded border border-gray-300">
+      <div className="h-screen overflow-hidden bg-[#f5f7fa] px-4 py-2 pt-9 font-[Malgun_Gothic] flex flex-col">
+        {/* 헤더 - 고정 크기 */}
+        <div className="flex items-center justify-between mb-2 bg-white px-2 py-1 rounded border border-gray-300 w-[1414px] min-w-[1414px] max-w-[1414px] flex-shrink-0">
           <div className="flex items-center gap-2">
             <span className="text-base">📥</span>
             <h1 className="text-sm font-bold text-gray-800">Control Plan 기초정보 Import</h1>
@@ -509,28 +634,28 @@ function CPImportPageContent() {
           </div>
         </div>
 
-        {/* 3행 입력 영역 */}
-        <div className={tw.tableWrapper}>
-          <table className="w-full border-collapse">
+        {/* 3행 입력 영역 - 고정 크기 */}
+        <div className={`${tw.tableWrapper} p-3 w-[1414px] min-w-[1414px] max-w-[1414px] flex-shrink-0`}>
+          <table className="border-collapse w-[1390px] min-w-[1390px] max-w-[1390px] table-fixed">
             <tbody>
               {/* 1행: 전체 */}
               <tr className="h-7">
-                <td className={`${tw.rowHeader} w-[70px]`}>CP 선택</td>
-                <td className={`${tw.cell} w-[100px]`}>
+                <td className={`${tw.rowHeader} w-[55px]`}>CP 선택</td>
+                <td className={`${tw.cell} w-[80px]`}>
                   <select value={selectedCpId} onChange={(e) => setSelectedCpId(e.target.value)} className={tw.select}>
                     <option value="">선택</option>
                     {cpList.map((cp, idx) => <option key={`${cp.id}-${idx}`} value={cp.id}>{cp.id}</option>)}
                   </select>
                 </td>
-                <td className={`${tw.rowHeader} w-[70px]`}>전체 다운</td>
-                <td className={`${tw.cell} w-[130px]`}>
+                <td className={`${tw.rowHeader} w-[55px]`}>전체 다운</td>
+                <td className={`${tw.cell} w-[100px]`}>
                   <div className="flex items-center gap-1">
                     <button onClick={downloadFullTemplate} className={tw.btnPrimary}>📥양식</button>
                     <button onClick={downloadFullSampleTemplate} className={tw.btnBlue}>📥샘플</button>
                   </div>
                 </td>
-                <td className={`${tw.rowHeader} w-[50px]`}>Import</td>
-                <td className={`${tw.cell} w-[180px]`}>
+                <td className={`${tw.rowHeader} w-[45px]`}>Import</td>
+                <td className={`${tw.cell} w-[130px]`}>
                   <div className="flex items-center gap-1">
                     <input type="file" ref={fullFileInputRef} accept=".xlsx,.xls" onChange={handleFullFileSelect} className="hidden" />
                     <button onClick={() => fullFileInputRef.current?.click()} className={tw.btnBrowse}>{fullFileName || '파일 선택'}</button>
@@ -539,10 +664,18 @@ function CPImportPageContent() {
                     </button>
                   </div>
                 </td>
-                <td className={`${tw.cellCenter} w-[60px]`}>
+                <td className={`${tw.cellCenter} w-[50px]`}>
                   {isFullParsing && <span className="text-blue-500 text-[10px]">파싱중...</span>}
-                  {fullImportSuccess && <span className="text-green-500 text-[10px]"><CheckCircle size={12} /></span>}
-                  {!isFullParsing && !fullImportSuccess && <span className="text-gray-400 text-[10px]">{fullPendingData.length > 0 ? `${fullPendingData.length}건` : '대기'}</span>}
+                  {!isFullParsing && (
+                    fullImportSuccess || fullData.length > 0 ? (
+                      <span className="text-green-500 text-[10px] flex items-center gap-1">
+                        <CheckCircle size={12} />
+                        <span>{fullData.length}건</span>
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-[10px]">{fullPendingData.length > 0 ? `${fullPendingData.length}건` : '대기'}</span>
+                    )
+                  )}
                 </td>
               </tr>
               {/* 2행: 그룹 시트 */}
@@ -561,7 +694,7 @@ function CPImportPageContent() {
                   </div>
                 </td>
                 <td className={`${tw.rowHeader}`}>Import</td>
-                <td className={`${tw.cell}`}>
+                <td className={`${tw.cell} w-[130px]`}>
                   <div className="flex items-center gap-1">
                     <input type="file" ref={groupFileInputRef} accept=".xlsx,.xls" onChange={handleGroupFileSelect} className="hidden" />
                     <button onClick={() => groupFileInputRef.current?.click()} className={tw.btnBrowse}>{groupFileName || '파일 선택'}</button>
@@ -570,10 +703,18 @@ function CPImportPageContent() {
                     </button>
                   </div>
                 </td>
-                <td className={`${tw.cellCenter}`}>
+                <td className={`${tw.cellCenter} w-[50px]`}>
                   {isGroupParsing && <span className="text-blue-500 text-[10px]">파싱중...</span>}
-                  {groupImportSuccess && <span className="text-green-500 text-[10px]"><CheckCircle size={12} /></span>}
-                  {!isGroupParsing && !groupImportSuccess && <span className="text-gray-400 text-[10px]">{groupPendingData.length > 0 ? `${groupPendingData.length}건` : '대기'}</span>}
+                  {!isGroupParsing && (
+                    groupImportSuccess || groupData.length > 0 ? (
+                      <span className="text-green-500 text-[10px] flex items-center gap-1">
+                        <CheckCircle size={12} />
+                        <span>{groupData.length}건</span>
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-[10px]">{groupPendingData.length > 0 ? `${groupPendingData.length}건` : '대기'}</span>
+                    )
+                  )}
                 </td>
               </tr>
               {/* 3행: 개별 항목 */}
@@ -592,7 +733,7 @@ function CPImportPageContent() {
                   </div>
                 </td>
                 <td className={`${tw.rowHeader}`}>Import</td>
-                <td className={`${tw.cell}`}>
+                <td className={`${tw.cell} w-[130px]`}>
                   <div className="flex items-center gap-1">
                     <input type="file" ref={itemFileInputRef} accept=".xlsx,.xls" onChange={handleItemFileSelect} className="hidden" />
                     <button onClick={() => itemFileInputRef.current?.click()} className={tw.btnBrowse}>{itemFileName || '파일 선택'}</button>
@@ -601,18 +742,26 @@ function CPImportPageContent() {
                     </button>
                   </div>
                 </td>
-                <td className={`${tw.cellCenter}`}>
+                <td className={`${tw.cellCenter} w-[50px]`}>
                   {isItemParsing && <span className="text-orange-500 text-[10px]">파싱중...</span>}
-                  {itemImportSuccess && <span className="text-green-500 text-[10px]"><CheckCircle size={12} /></span>}
-                  {!isItemParsing && !itemImportSuccess && <span className="text-gray-400 text-[10px]">{itemPendingData.length > 0 ? `${itemPendingData.length}건` : '대기'}</span>}
+                  {!isItemParsing && (
+                    itemImportSuccess || itemData.length > 0 ? (
+                      <span className="text-green-500 text-[10px] flex items-center gap-1">
+                        <CheckCircle size={12} />
+                        <span>{itemData.length}건</span>
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-[10px]">{itemPendingData.length > 0 ? `${itemPendingData.length}건` : '대기'}</span>
+                    )
+                  )}
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        {/* 미리보기 탭 */}
-        <div className="flex items-center gap-1 mt-2 mb-1">
+        {/* 미리보기 탭 - 반응형 */}
+        <div className="flex items-center gap-1 mt-2 mb-1 flex-shrink-0">
           <span className="text-xs text-gray-600 font-semibold mr-2">📋 미리보기:</span>
           <button onClick={() => setActiveTab('full')} className={`px-3 py-1 text-[11px] font-bold rounded-t border border-b-0 ${activeTab === 'full' ? 'bg-teal-500 text-white border-teal-500' : 'bg-gray-100 text-gray-600 border-gray-300'}`}>
             전체 Import ({stats.full}건)
@@ -626,14 +775,17 @@ function CPImportPageContent() {
         </div>
 
         {/* 미리보기 테이블 */}
-        <div id="cp-import-scroll-container" className={`flex-1 overflow-x-auto overflow-y-auto bg-white border-2 ${activeTab === 'full' ? 'border-teal-500' : activeTab === 'group' ? 'border-blue-500' : 'border-orange-500'}`}>
+        <div 
+          id="cp-import-scroll-container" 
+          className={`bg-white border-2 overflow-x-auto overflow-y-auto relative w-full flex-1 ${activeTab === 'full' ? 'border-teal-500' : activeTab === 'group' ? 'border-blue-500' : 'border-orange-500'}`}
+        >
           {activeTab === 'full' && renderPreviewTable(fullData, 'full')}
           {activeTab === 'group' && renderPreviewTable(groupData, 'group')}
           {activeTab === 'individual' && renderPreviewTable(itemData, 'individual')}
         </div>
 
-        {/* 하단 상태바 */}
-        <div className="mt-2 flex items-center justify-between text-[10px] text-gray-500 bg-white px-2 py-1 rounded border border-gray-300">
+        {/* 하단 상태바 - 반응형 */}
+        <div className="mt-2 flex items-center justify-between text-[10px] text-gray-500 bg-white px-2 py-1 rounded border border-gray-300 w-full flex-shrink-0">
           <span>전체: {stats.full}개 | 그룹: {stats.group}개 | 개별: {stats.item}개</span>
           <span>버전: Control Plan Import v2.4</span>
         </div>

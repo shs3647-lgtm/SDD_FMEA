@@ -10,6 +10,7 @@
 
 import { cn } from '@/lib/utils';
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 
 interface StatusBarProps {
   /** 현재 상태 */
@@ -45,6 +46,7 @@ export function StatusBar({
   userName = 'Admin',
   scrollContainerId = 'worksheet-scroll-container',
 }: StatusBarProps) {
+  const pathname = usePathname();
   const [scrollPercent, setScrollPercent] = useState(0);
   const [canScroll, setCanScroll] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -60,15 +62,30 @@ export function StatusBar({
 
   const currentStatus = statusConfig[status];
 
-  // 스크롤 컨테이너 가져오기
+  // 스크롤 컨테이너 가져오기 (현재 페이지에 맞는 컨테이너 우선 선택)
   const getScrollContainer = useCallback(() => {
-    // CP Import 스크롤 컨테이너 확인 (우선순위 1)
-    let container = document.getElementById('cp-import-scroll-container');
+    // 현재 경로에 따라 적절한 컨테이너 우선 선택
+    const isCPImport = pathname?.includes('/control-plan/import');
+    const isCPWorksheet = pathname?.includes('/control-plan/worksheet');
+    
+    if (isCPImport) {
+      // CP Import 페이지: cp-import-scroll-container 우선
+      const container = document.getElementById('cp-import-scroll-container');
+      if (container) return container;
+    } else if (isCPWorksheet) {
+      // CP 워크시트 페이지: cp-worksheet-scroll-container 우선
+      const container = document.getElementById('cp-worksheet-scroll-container');
+      if (container) return container;
+    }
+    
+    // 경로 기반 매칭 실패 시, 모든 컨테이너 확인 (우선순위 순)
+    // CP 워크시트 스크롤 컨테이너 확인 (우선순위 1)
+    let container = document.getElementById('cp-worksheet-scroll-container');
     if (container) {
       return container;
     }
-    // CP 워크시트 스크롤 컨테이너 확인 (우선순위 2)
-    container = document.getElementById('cp-worksheet-scroll-container');
+    // CP Import 스크롤 컨테이너 확인 (우선순위 2)
+    container = document.getElementById('cp-import-scroll-container');
     if (container) {
       return container;
     }
@@ -80,19 +97,72 @@ export function StatusBar({
     // 기본 worksheet-scroll-container 확인 (우선순위 4)
     container = document.getElementById(scrollContainerId);
     return container;
-  }, [scrollContainerId]);
+  }, [scrollContainerId, pathname]);
 
   // 스크롤 위치 업데이트
   const updateScrollPosition = useCallback(() => {
     const container = getScrollContainer();
     if (container) {
-      const maxScroll = container.scrollWidth - container.clientWidth;
-      setCanScroll(maxScroll > 0);
-      if (maxScroll > 0) {
-        setScrollPercent((container.scrollLeft / maxScroll) * 100);
+      // 스크롤 가능 여부 확인 (수평 스크롤)
+      // 약간의 여유를 두고 비교 (1px 이상 차이)
+      // 테이블 요소가 있으면 테이블의 실제 너비도 확인
+      const tableElement = container.querySelector('table');
+      const tableWidth = tableElement ? tableElement.scrollWidth : 0;
+      const containerWidth = container.clientWidth;
+      const containerScrollWidth = container.scrollWidth;
+      
+      // 테이블이 있으면 테이블 너비와 컨테이너 너비를 비교
+      // 디버깅: 항상 로그 출력
+      console.log('StatusBar updateScrollPosition:', {
+        tableWidth,
+        containerWidth,
+        containerScrollWidth,
+        hasTable: !!tableElement,
+        pathname,
+      });
+      const hasHorizontalScroll = tableWidth > 0 
+        ? tableWidth > containerWidth + 1
+        : containerScrollWidth > containerWidth + 1;
+      const maxScroll = hasHorizontalScroll 
+        ? (tableWidth > 0 ? tableWidth : containerScrollWidth) - containerWidth
+        : 0;
+      
+      setCanScroll(hasHorizontalScroll);
+      if (hasHorizontalScroll && maxScroll > 0) {
+        const percent = Math.max(0, Math.min(100, (container.scrollLeft / maxScroll) * 100));
+        setScrollPercent(percent);
       } else {
         setScrollPercent(0);
       }
+      
+      // 디버깅 로그 (항상 출력하여 문제 확인)
+      console.log('StatusBar 스크롤 상태:', {
+        containerId: container.id,
+        pathname,
+        containerScrollWidth: container.scrollWidth,
+        containerClientWidth: container.clientWidth,
+        tableWidth: tableWidth,
+        tableElement: tableElement ? {
+          offsetWidth: tableElement.offsetWidth,
+          scrollWidth: tableElement.scrollWidth,
+          computedWidth: window.getComputedStyle(tableElement).width,
+          computedMinWidth: window.getComputedStyle(tableElement).minWidth,
+        } : null,
+        difference: tableWidth > 0 ? tableWidth - containerWidth : containerScrollWidth - containerWidth,
+        canScroll: hasHorizontalScroll,
+        scrollLeft: container.scrollLeft,
+        scrollPercent: hasHorizontalScroll && maxScroll > 0 ? Math.round((container.scrollLeft / maxScroll) * 100) : 0,
+      });
+    } else {
+      setCanScroll(false);
+      setScrollPercent(0);
+      console.log('StatusBar: 스크롤 컨테이너를 찾을 수 없습니다.', {
+        scrollContainerId,
+        cpImport: !!document.getElementById('cp-import-scroll-container'),
+        cpWorksheet: !!document.getElementById('cp-worksheet-scroll-container'),
+        allTab: !!document.getElementById('all-tab-scroll-wrapper'),
+        default: !!document.getElementById(scrollContainerId),
+      });
     }
   }, [getScrollContainer]);
 
@@ -167,12 +237,17 @@ export function StatusBar({
     // 초기 로드 시 약간의 지연 후 확인 (테이블 렌더링 대기)
     const initialTimeout = setTimeout(() => {
       updateScrollPosition();
-    }, 100);
+    }, 200);
+    
+    // 추가 지연 후 재확인 (테이블 완전 렌더링 대기)
+    const secondTimeout = setTimeout(() => {
+      updateScrollPosition();
+    }, 500);
     
     // 주기적으로 컨테이너 확인 (탭 전환 대응)
     const interval = setInterval(() => {
       updateScrollPosition();
-    }, 500);
+    }, 1000);
 
     // 모든 잠재적 스크롤 컨테이너에 리스너 추가
     const cpImportContainer = document.getElementById('cp-import-scroll-container');
@@ -185,16 +260,28 @@ export function StatusBar({
     allTabContainer?.addEventListener('scroll', handleScroll);
     defaultContainer?.addEventListener('scroll', handleScroll);
     
+    // ResizeObserver로 컨테이너 크기 변경 감지
+    const resizeObserver = new ResizeObserver(() => {
+      updateScrollPosition();
+    });
+    
+    if (cpImportContainer) resizeObserver.observe(cpImportContainer);
+    if (cpContainer) resizeObserver.observe(cpContainer);
+    if (allTabContainer) resizeObserver.observe(allTabContainer);
+    if (defaultContainer) resizeObserver.observe(defaultContainer);
+    
     // 초기 위치 설정
     updateScrollPosition();
 
     return () => {
       clearTimeout(initialTimeout);
+      clearTimeout(secondTimeout);
       clearInterval(interval);
       cpImportContainer?.removeEventListener('scroll', handleScroll);
       cpContainer?.removeEventListener('scroll', handleScroll);
       allTabContainer?.removeEventListener('scroll', handleScroll);
       defaultContainer?.removeEventListener('scroll', handleScroll);
+      resizeObserver.disconnect();
     };
   }, [scrollContainerId, updateScrollPosition]);
 

@@ -23,9 +23,13 @@ import {
   downloadProcessInfoTemplate,
   downloadProcessInfoSampleTemplate,
   downloadControlItemTemplate,
+  downloadControlItemSampleTemplate,
   downloadControlMethodTemplate,
+  downloadControlMethodSampleTemplate,
   downloadReactionPlanTemplate,
+  downloadReactionPlanSampleTemplate,
   downloadDetectorTemplate,
+  downloadDetectorSampleTemplate,
   downloadIndividualTemplate,
   downloadIndividualSampleTemplate,
 } from '../excel-template';
@@ -101,10 +105,24 @@ export function useImportHandlers({
   }, [selectedSheet]);
 
   const downloadGroupSheetSampleTemplate = useCallback(() => {
-    if (selectedSheet === 'processInfo') {
-      downloadProcessInfoSampleTemplate();
-    } else {
-      downloadCPSampleTemplate();
+    switch (selectedSheet) {
+      case 'processInfo':
+        downloadProcessInfoSampleTemplate();
+        break;
+      case 'detector':
+        downloadDetectorSampleTemplate();
+        break;
+      case 'controlItem':
+        downloadControlItemSampleTemplate();
+        break;
+      case 'controlMethod':
+        downloadControlMethodSampleTemplate();
+        break;
+      case 'reactionPlan':
+        downloadReactionPlanSampleTemplate();
+        break;
+      default:
+        downloadCPSampleTemplate();
     }
   }, [selectedSheet]);
 

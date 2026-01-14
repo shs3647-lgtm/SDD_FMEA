@@ -146,7 +146,7 @@ export async function downloadCPEmptyTemplate() {
   });
 
   // 파일 다운로드
-  await downloadWorkbook(workbook, 'CP_기초정보_빈템플릿');
+  await downloadWorkbook(workbook, generateFileName('기초정보', 'empty'));
 }
 
 /** 샘플 데이터 */
@@ -255,7 +255,7 @@ export async function downloadCPSampleTemplate() {
   });
 
   // 파일 다운로드
-  await downloadWorkbook(workbook, 'CP_기초정보_샘플');
+  await downloadWorkbook(workbook, generateFileName('기초정보', 'sample'));
 }
 
 // =====================================================
@@ -289,12 +289,12 @@ export async function downloadProcessInfoTemplate() {
   }
   
   sheet.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];
-  await downloadWorkbook(workbook, 'CP_공정현황_템플릿');
+  await downloadWorkbook(workbook, generateFileName(def.name, 'template'));
 }
 
 /** 공정현황 샘플 템플릿 */
 export async function downloadProcessInfoSampleTemplate() {
-  const def = CP_SHEET_DEFINITIONS[0];
+  const def = CP_SHEET_DEFINITIONS[0]; // 공정현황
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet(def.name, {
     properties: { tabColor: { argb: def.color } },
@@ -320,7 +320,7 @@ export async function downloadProcessInfoSampleTemplate() {
   });
   
   sheet.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];
-  await downloadWorkbook(workbook, 'CP_공정현황_샘플');
+  await downloadWorkbook(workbook, generateFileName(def.name, 'sample'));
 }
 
 /** 관리항목 빈 템플릿 */
@@ -350,12 +350,43 @@ export async function downloadControlItemTemplate() {
   }
   
   sheet.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];
-  await downloadWorkbook(workbook, 'CP_관리항목_템플릿');
+  await downloadWorkbook(workbook, generateFileName(def.name, 'template'));
+}
+
+/** 관리항목 샘플 템플릿 */
+export async function downloadControlItemSampleTemplate() {
+  const def = CP_SHEET_DEFINITIONS[2]; // 관리항목
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet(def.name, {
+    properties: { tabColor: { argb: def.color } },
+  });
+  
+  sheet.columns = def.headers.map((header, i) => ({
+    header,
+    key: `col${i}`,
+    width: def.widths[i],
+  }));
+  
+  const headerRow = sheet.getRow(1);
+  headerRow.height = 25;
+  headerRow.eachCell((cell) => applyHeaderStyle(cell, def.color));
+  
+  const guideRow = sheet.addRow(def.required.map(r => r ? '(필수)' : '(선택)'));
+  guideRow.eachCell((cell) => applyGuideStyle(cell));
+  
+  const sampleRows = CP_SAMPLE_DATA[def.name] || [];
+  sampleRows.forEach((data, idx) => {
+    const row = sheet.addRow(data);
+    row.eachCell((cell) => applyDataStyle(cell, idx % 2 === 0 ? 'FFFFFF' : 'F5F5F5'));
+  });
+  
+  sheet.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];
+  await downloadWorkbook(workbook, generateFileName(def.name, 'sample'));
 }
 
 /** 관리방법 빈 템플릿 */
 export async function downloadControlMethodTemplate() {
-  const def = CP_SHEET_DEFINITIONS[3]; // 관리방법 (인덱스 변경: 2→3)
+  const def = CP_SHEET_DEFINITIONS[3]; // 관리방법
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet(def.name, {
     properties: { tabColor: { argb: def.color } },
@@ -380,12 +411,43 @@ export async function downloadControlMethodTemplate() {
   }
   
   sheet.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];
-  await downloadWorkbook(workbook, 'CP_관리방법_템플릿');
+  await downloadWorkbook(workbook, generateFileName(def.name, 'template'));
+}
+
+/** 관리방법 샘플 템플릿 */
+export async function downloadControlMethodSampleTemplate() {
+  const def = CP_SHEET_DEFINITIONS[3]; // 관리방법
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet(def.name, {
+    properties: { tabColor: { argb: def.color } },
+  });
+  
+  sheet.columns = def.headers.map((header, i) => ({
+    header,
+    key: `col${i}`,
+    width: def.widths[i],
+  }));
+  
+  const headerRow = sheet.getRow(1);
+  headerRow.height = 25;
+  headerRow.eachCell((cell) => applyHeaderStyle(cell, def.color));
+  
+  const guideRow = sheet.addRow(def.required.map(r => r ? '(필수)' : '(선택)'));
+  guideRow.eachCell((cell) => applyGuideStyle(cell));
+  
+  const sampleRows = CP_SAMPLE_DATA[def.name] || [];
+  sampleRows.forEach((data, idx) => {
+    const row = sheet.addRow(data);
+    row.eachCell((cell) => applyDataStyle(cell, idx % 2 === 0 ? 'FFFFFF' : 'F5F5F5'));
+  });
+  
+  sheet.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];
+  await downloadWorkbook(workbook, generateFileName(def.name, 'sample'));
 }
 
 /** 대응계획 빈 템플릿 */
 export async function downloadReactionPlanTemplate() {
-  const def = CP_SHEET_DEFINITIONS[4]; // 대응계획 (인덱스 변경: 3→4)
+  const def = CP_SHEET_DEFINITIONS[4]; // 대응계획
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet(def.name, {
     properties: { tabColor: { argb: def.color } },
@@ -410,12 +472,43 @@ export async function downloadReactionPlanTemplate() {
   }
   
   sheet.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];
-  await downloadWorkbook(workbook, 'CP_대응계획_템플릿');
+  await downloadWorkbook(workbook, generateFileName(def.name, 'template'));
+}
+
+/** 대응계획 샘플 템플릿 */
+export async function downloadReactionPlanSampleTemplate() {
+  const def = CP_SHEET_DEFINITIONS[4]; // 대응계획
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet(def.name, {
+    properties: { tabColor: { argb: def.color } },
+  });
+  
+  sheet.columns = def.headers.map((header, i) => ({
+    header,
+    key: `col${i}`,
+    width: def.widths[i],
+  }));
+  
+  const headerRow = sheet.getRow(1);
+  headerRow.height = 25;
+  headerRow.eachCell((cell) => applyHeaderStyle(cell, def.color));
+  
+  const guideRow = sheet.addRow(def.required.map(r => r ? '(필수)' : '(선택)'));
+  guideRow.eachCell((cell) => applyGuideStyle(cell));
+  
+  const sampleRows = CP_SAMPLE_DATA[def.name] || [];
+  sampleRows.forEach((data, idx) => {
+    const row = sheet.addRow(data);
+    row.eachCell((cell) => applyDataStyle(cell, idx % 2 === 0 ? 'FFFFFF' : 'F5F5F5'));
+  });
+  
+  sheet.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];
+  await downloadWorkbook(workbook, generateFileName(def.name, 'sample'));
 }
 
 /** 검출장치 빈 템플릿 */
 export async function downloadDetectorTemplate() {
-  const def = CP_SHEET_DEFINITIONS[1]; // 검출장치 (인덱스 변경: 4→1)
+  const def = CP_SHEET_DEFINITIONS[1]; // 검출장치
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet(def.name, {
     properties: { tabColor: { argb: def.color } },
@@ -440,7 +533,72 @@ export async function downloadDetectorTemplate() {
   }
   
   sheet.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];
-  await downloadWorkbook(workbook, 'CP_검출장치_템플릿');
+  await downloadWorkbook(workbook, generateFileName(def.name, 'template'));
+}
+
+/** 검출장치 샘플 템플릿 */
+export async function downloadDetectorSampleTemplate() {
+  const def = CP_SHEET_DEFINITIONS[1]; // 검출장치
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet(def.name, {
+    properties: { tabColor: { argb: def.color } },
+  });
+  
+  sheet.columns = def.headers.map((header, i) => ({
+    header,
+    key: `col${i}`,
+    width: def.widths[i],
+  }));
+  
+  const headerRow = sheet.getRow(1);
+  headerRow.height = 25;
+  headerRow.eachCell((cell) => applyHeaderStyle(cell, def.color));
+  
+  const guideRow = sheet.addRow(def.required.map(r => r ? '(필수)' : '(선택)'));
+  guideRow.eachCell((cell) => applyGuideStyle(cell));
+  
+  const sampleRows = CP_SAMPLE_DATA[def.name] || [];
+  sampleRows.forEach((data, idx) => {
+    const row = sheet.addRow(data);
+    row.eachCell((cell) => applyDataStyle(cell, idx % 2 === 0 ? 'FFFFFF' : 'F5F5F5'));
+  });
+  
+  sheet.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];
+  await downloadWorkbook(workbook, generateFileName(def.name, 'sample'));
+}
+
+/** 파일명 생성 헬퍼 - cpid_파일명(n) 형식 (n은 날짜 기준 다운로드 횟수) */
+function generateFileName(sheetName: string, type: 'template' | 'sample' | 'empty' = 'template'): string {
+  const year = new Date().getFullYear().toString().slice(-2); // 26
+  const sequence = '001'; // 시퀀스 번호 (고정값, 향후 동적 생성 가능)
+  const cpId = `cp${year}-m${sequence}`;
+  
+  // 날짜별 다운로드 횟수 추적 (YYYY-MM-DD 형식)
+  const today = new Date().toISOString().slice(0, 10); // 2026-01-14
+  const storageKey = `cp-download-count-${today}-${sheetName}-${type}`;
+  
+  // localStorage에서 오늘 날짜의 다운로드 횟수 가져오기
+  let count = 1;
+  try {
+    const stored = localStorage.getItem(storageKey);
+    if (stored) {
+      count = parseInt(stored, 10) + 1;
+    }
+    // 오늘 날짜의 다운로드 횟수 저장
+    localStorage.setItem(storageKey, count.toString());
+  } catch (error) {
+    console.warn('localStorage 접근 실패, 기본값 사용:', error);
+  }
+  
+  // 파일명 형식: cpid_파일명(n)
+  let fileName = sheetName;
+  if (type === 'empty') {
+    fileName = `${sheetName}_빈템플릿`;
+  } else if (type === 'sample') {
+    fileName = `${sheetName}_샘플`;
+  }
+  
+  return `${cpId}_${fileName}(${count}).xlsx`;
 }
 
 /** 공통 다운로드 헬퍼 */
@@ -450,7 +608,7 @@ async function downloadWorkbook(workbook: ExcelJS.Workbook, fileName: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${fileName}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  a.download = fileName;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -575,7 +733,7 @@ async function createIndividualEmptyTemplate(defKey: string) {
   }
   
   sheet.views = [{ state: 'frozen', xSplit: 1, ySplit: 2 }];
-  await downloadWorkbook(workbook, `CP_${def.name}_빈템플릿`);
+  await downloadWorkbook(workbook, generateFileName(def.name, 'empty'));
 }
 
 /** 개별 항목 샘플 템플릿 생성 헬퍼 */
@@ -608,7 +766,7 @@ async function createIndividualSampleTemplate(defKey: string) {
   });
   
   sheet.views = [{ state: 'frozen', xSplit: 1, ySplit: 2 }];
-  await downloadWorkbook(workbook, `CP_${def.name}_샘플`);
+  await downloadWorkbook(workbook, generateFileName(def.name, 'sample'));
 }
 
 // =====================================================

@@ -284,14 +284,16 @@ function CPWorksheetContent() {
         <div className="flex-1 flex flex-col min-w-0 bg-white overflow-hidden">
           <div 
             id="cp-worksheet-scroll-container" 
-            className="overflow-x-auto overflow-y-scroll bg-white border-t border-gray-300 flex-1"
+            className="bg-white border-t border-gray-300 flex-1"
             style={{
-              scrollbarWidth: 'thin',
-              scrollbarColor: '#c1c1c1 #f1f1f1',
-              maxHeight: '100%',
+              flex: 1,
+              overflowX: 'scroll',
+              overflowY: 'auto',
+              background: '#fff',
+              position: 'relative',
             }}
           >
-            <table className={`border-separate w-full table-auto min-w-[${totalWidth}px]`} style={{ borderSpacing: 0 }}>
+            <table className="border-separate table-auto" style={{ borderSpacing: 0, width: '100%', minWidth: `${totalWidth}px`, tableLayout: 'fixed' }}>
             <thead style={{ background: '#ffffff' }}>
               {/* 1행: 그룹 헤더 */}
               <tr>

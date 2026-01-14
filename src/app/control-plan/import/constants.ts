@@ -60,30 +60,30 @@ export const PREVIEW_OPTIONS: PreviewOption[] = [
   { value: 'reactionPlan', label: '대응계획', sheetName: '대응계획' },
 ];
 
-// ★ 미리보기 테이블 컬럼 정의 (순서 변경: 공정현황 → 검출장치 → 관리항목 → 관리방법 → 대응계획)
+// ★ 미리보기 테이블 컬럼 정의 (컨테이너 크기에 맞게 최적화된 폭)
 export const PREVIEW_COLUMNS: PreviewColumn[] = [
-  // 공정현황 (5컬럼) - Teal
+  // 공정현황 (5컬럼)
   { key: 'processNo', label: '공정번호', width: 'w-[50px]', group: 'processInfo' },
-  { key: 'processName', label: '공정명', width: 'w-[60px]', group: 'processInfo' },
-  { key: 'level', label: '레벨', width: 'w-[40px]', group: 'processInfo' },
-  { key: 'processDesc', label: '공정설명', width: 'w-[90px]', group: 'processInfo' },
-  { key: 'equipment', label: '설비/금형', width: 'w-[60px]', group: 'processInfo' },
-  // 검출장치 (2컬럼) - Purple (공정현황 바로 뒤)
-  { key: 'ep', label: 'EP', width: 'w-[55px]', group: 'detector' },
-  { key: 'autoDetector', label: '자동검사', width: 'w-[60px]', group: 'detector' },
-  // 관리항목 (4컬럼) - Blue
-  { key: 'productChar', label: '제품특성', width: 'w-[60px]', group: 'controlItem' },
-  { key: 'processChar', label: '공정특성', width: 'w-[60px]', group: 'controlItem' },
-  { key: 'specialChar', label: '특별', width: 'w-[35px]', group: 'controlItem' },
-  { key: 'spec', label: '스펙/공차', width: 'w-[60px]', group: 'controlItem' },
-  // 관리방법 (5컬럼) - Green
-  { key: 'evalMethod', label: '평가방법', width: 'w-[60px]', group: 'controlMethod' },
-  { key: 'sampleSize', label: '샘플', width: 'w-[40px]', group: 'controlMethod' },
-  { key: 'frequency', label: '주기', width: 'w-[40px]', group: 'controlMethod' },
+  { key: 'processName', label: '공정명', width: 'w-[50px]', group: 'processInfo' },
+  { key: 'level', label: '레벨', width: 'w-[35px]', group: 'processInfo' },
+  { key: 'processDesc', label: '공정설명', width: 'w-[300px]', group: 'processInfo' },
+  { key: 'equipment', label: '설비/금형', width: 'w-[120px]', group: 'processInfo' },
+  // 검출장치 (2컬럼)
+  { key: 'ep', label: 'EP', width: 'w-[30px]', group: 'detector' },
+  { key: 'autoDetector', label: '자동검사', width: 'w-[30px]', group: 'detector' },
+  // 관리항목 (4컬럼)
+  { key: 'productChar', label: '제품특성', width: 'w-[100px]', group: 'controlItem' },
+  { key: 'processChar', label: '공정특성', width: 'w-[100px]', group: 'controlItem' },
+  { key: 'specialChar', label: '특별특성', width: 'w-[50px]', group: 'controlItem' },
+  { key: 'spec', label: '스펙/공차', width: 'w-[150px]', group: 'controlItem' },
+  // 관리방법 (5컬럼)
+  { key: 'evalMethod', label: '평가방법', width: 'w-[150px]', group: 'controlMethod' },
+  { key: 'sampleSize', label: '샘플', width: 'w-[30px]', group: 'controlMethod' },
+  { key: 'frequency', label: '주기', width: 'w-[35px]', group: 'controlMethod' },
   { key: 'owner1', label: '책임1', width: 'w-[40px]', group: 'controlMethod' },
   { key: 'owner2', label: '책임2', width: 'w-[40px]', group: 'controlMethod' },
-  // 대응계획 (1컬럼) - Orange
-  { key: 'reactionPlan', label: '조치방법', width: 'w-[90px]', group: 'reactionPlan' },
+  // 대응계획 (1컬럼)
+  { key: 'reactionPlan', label: '조치방법', width: 'w-[150px]', group: 'reactionPlan' },
 ];
 
 // 그룹별 색상
