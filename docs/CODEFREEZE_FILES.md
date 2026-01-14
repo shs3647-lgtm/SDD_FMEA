@@ -42,6 +42,44 @@
 
 ## 🚫 절대 수정 금지 파일 (전체 목록)
 
+### 0. DFMEA 모듈 재작성 (2026-01-14)
+| 파일 | 코드프리즈 태그 |
+|------|----------------|
+| `src/app/dfmea/worksheet/tabs/StructureTab.tsx` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/function/FunctionTab.tsx` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/function/FunctionL1Tab.tsx` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/function/FunctionL2Tab.tsx` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/function/FunctionL3Tab.tsx` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/failure/FailureTab.tsx` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/failure/FailureL1Tab.tsx` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/failure/FailureL2Tab.tsx` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/failure/FailureL3Tab.tsx` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/failure/FailureLinkTab.tsx` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/failure/FailureLinkTables.tsx` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/failure/FailureLinkResult.tsx` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/RiskTab.tsx` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/OptTab.tsx` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/DocTab.tsx` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/AllViewTab.tsx` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/all/allTabConstants.ts` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/all/processFailureLinks.ts` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/all/AllTabRenderer.tsx` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/all/AllTabBasic.tsx` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/all/AllTabAtomic.tsx` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/all/StructureCellRenderer.tsx` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/tabs/all/FunctionCellRenderer.tsx` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/columns.ts` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/constants.ts` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/schema.ts` | codefreeze-20260114-dfmea-rewrite-complete |
+| `src/app/dfmea/worksheet/terminology.ts` | codefreeze-20260114-dfmea-rewrite-complete |
+
+**⚠️ 중요: DFMEA 용어 및 구조 절대 변경 금지**
+- "제품명", "A'SSY", "부품 또는 특성", "부품 특성" 등 DFMEA 전용 용어
+- 4M 관련 코드 완전 제거 (재추가 금지)
+- 공정번호 관련 필드 완전 제거 (재추가 금지)
+- 컬럼 수: 34개 (4M 제거)
+- 상세 내용: `docs/CODEFREEZE_DFMEA_REWRITE_20260114.md` 참조
+
 ### 1. PFMEA 화면
 | 파일 | 코드프리즈 태그 |
 |------|----------------|
@@ -260,4 +298,21 @@ codefreeze-20260111-pre-fmea-new-write  (FMEA 새로 작성 전 전체 시스템
 
 ---
 
-## 📅 마지막 업데이트: 2026-01-13
+## ✅ 최근 코드프리즈 내역 (2026-01-14)
+
+### 9. DFMEA 모듈 재작성 완료
+- **태그**: `codefreeze-20260114-dfmea-rewrite-complete`
+- **날짜**: 2026-01-14
+- **내용**:
+  - Phase 1-5 완료: PFMEA 구조 복사, 컬럼 정의, 탭 재작성, 인라인 스타일 제거, 검증
+  - 모든 PFMEA 용어를 DFMEA 용어로 변경 (제품명, A'SSY, 부품 또는 특성 등)
+  - 4M 및 공정번호 관련 코드 완전 제거
+  - 컬럼 수: 35개 → 34개 (4M 제거)
+  - P-FMEA → D-FMEA 텍스트 변경
+  - 인라인 스타일 제거 (고정 스타일만 Tailwind CSS로 변환)
+- **파일**: DFMEA 워크시트 탭 파일 전체 (27개 파일)
+- **문서**: `docs/CODEFREEZE_DFMEA_REWRITE_20260114.md`, `docs/DFMEA_REWRITE_COMPLETION_REPORT.md`
+
+---
+
+## 📅 마지막 업데이트: 2026-01-14
