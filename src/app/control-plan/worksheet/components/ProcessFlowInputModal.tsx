@@ -15,57 +15,73 @@ interface ProcessItem {
   name: string;
 }
 
-interface ProcessWithL3Info {
-  name: string;
-  l3Count: number;
-}
-
 interface ProcessFlowInputModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (selectedProcesses: ProcessItem[]) => void;
   onDelete?: (processIds: string[]) => void;
   existingProcessNames?: string[];
-  existingProcessesInfo?: ProcessWithL3Info[];
   // 연속입력 모드: 저장 시 워크시트에 즉시 반영 + 새 행 추가
   onContinuousAdd?: (process: ProcessItem, addNewRow: boolean) => void;
+  // 현재 행 인덱스 (자동 입력 모드용)
+  currentRowIdx?: number;
 }
 
-// DB에서 마스터 FMEA 공정 로드
+// DB에서 CP 마스터 공정 로드 (우선순위 1)
 const loadMasterProcessesFromDB = async (): Promise<ProcessItem[]> => {
   try {
-    // 마스터 FMEA (pfm26-M001) 공정 데이터 조회
-    const res = await fetch('/api/fmea/master-processes');
+    // CP 마스터 데이터셋 조회 (기초정보)
+    const res = await fetch('/api/control-plan/master?includeItems=true');
     if (res.ok) {
       const data = await res.json();
-      if (data.processes && data.processes.length > 0) {
-        console.log('✅ DB에서 마스터 공정 로드:', data.processes.length, '개');
-        return data.processes;
+      if (data.active && data.active.flatItems && data.active.flatItems.length > 0) {
+        // 공정명(itemCode='A2')만 필터링
+        const processSet = new Map<string, ProcessItem>();
+        
+        data.active.flatItems.forEach((item: any) => {
+          if (item.itemCode === 'A2' && item.value && item.value.trim()) {
+            const processName = item.value.trim();
+            if (!processSet.has(processName)) {
+              const no = item.processNo || String((processSet.size + 1) * 10);
+              processSet.set(processName, {
+                id: `cp_proc_${item.id || Date.now()}_${processSet.size}`,
+                no,
+                name: processName
+              });
+            }
+          }
+        });
+        
+        if (processSet.size > 0) {
+          console.log('✅ DB에서 CP 마스터 공정 로드:', processSet.size, '개');
+          return Array.from(processSet.values());
+        }
       }
     }
   } catch (e) {
-    console.error('마스터 공정 로드 실패:', e);
+    console.error('CP 마스터 공정 로드 실패:', e);
   }
   return [];
 };
 
-// 기초정보에서 공정명 로드 (localStorage 폴백)
+// 기초정보에서 공정명 로드 (localStorage 폴백, 우선순위 2)
 const loadProcessesFromBasicInfo = (): ProcessItem[] => {
   if (typeof window === 'undefined') return [];
   
   try {
-    const savedData = localStorage.getItem('pfmea_master_data');
-    if (savedData) {
-      const flatData = JSON.parse(savedData);
+    // CP 마스터 데이터 (우선)
+    const cpMasterData = localStorage.getItem('cp_master_data');
+    if (cpMasterData) {
+      const flatData = JSON.parse(cpMasterData);
       const processSet = new Map<string, ProcessItem>();
       
       flatData.forEach((item: any, idx: number) => {
-        if (item.code === 'A2' && item.value) {
-          const processName = item.value;
+        if (item.itemCode === 'A2' && item.value) {
+          const processName = item.value.trim();
           if (!processSet.has(processName)) {
-            const no = String((processSet.size + 1) * 10);
+            const no = item.processNo || String((processSet.size + 1) * 10);
             processSet.set(processName, {
-              id: `proc_${idx}_${Date.now()}`,
+              id: `cp_proc_${idx}_${Date.now()}`,
               no,
               name: processName
             });
@@ -73,7 +89,36 @@ const loadProcessesFromBasicInfo = (): ProcessItem[] => {
         }
       });
       
-      if (processSet.size > 0) return Array.from(processSet.values());
+      if (processSet.size > 0) {
+        console.log('✅ localStorage에서 CP 마스터 공정 로드:', processSet.size, '개');
+        return Array.from(processSet.values());
+      }
+    }
+    
+    // FMEA 마스터 데이터 (폴백)
+    const savedData = localStorage.getItem('pfmea_master_data');
+    if (savedData) {
+      const flatData = JSON.parse(savedData);
+      const processSet = new Map<string, ProcessItem>();
+      
+      flatData.forEach((item: any, idx: number) => {
+        if (item.code === 'A2' && item.value) {
+          const processName = item.value.trim();
+          if (!processSet.has(processName)) {
+            const no = String((processSet.size + 1) * 10);
+            processSet.set(processName, {
+              id: `fmea_proc_${idx}_${Date.now()}`,
+              no,
+              name: processName
+            });
+          }
+        }
+      });
+      
+      if (processSet.size > 0) {
+        console.log('⚠️ localStorage에서 FMEA 마스터 공정 로드 (폴백):', processSet.size, '개');
+        return Array.from(processSet.values());
+      }
     }
     
     return [];
@@ -89,8 +134,8 @@ export default function ProcessFlowInputModal({
   onSave,
   onDelete,
   existingProcessNames = [],
-  existingProcessesInfo = [],
   onContinuousAdd,
+  currentRowIdx,
 }: ProcessFlowInputModalProps) {
   const [processes, setProcesses] = useState<ProcessItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -167,8 +212,8 @@ export default function ProcessFlowInputModal({
         let loaded = await loadMasterProcessesFromDB();
         
         if (loaded.length > 0) {
-          setDataSource('Master FMEA (DB)');
-          console.log('✅ 마스터 공정 사용:', loaded.length, '개');
+          setDataSource('CP Master (DB)');
+          console.log('✅ CP 마스터 공정 사용:', loaded.length, '개');
         } else {
           // DB에 없으면 localStorage에서 로드
           loaded = loadProcessesFromBasicInfo();
@@ -216,9 +261,9 @@ export default function ProcessFlowInputModal({
     
     // 공정 번호 기준 숫자 정렬 (10, 20, 30 순서)
     return [...result].sort((a, b) => {
-      const numA = parseInt(a.no.replace(/\D/g, '')) || 0; // 숫자만 추출
+      const numA = parseInt(a.no.replace(/\D/g, '')) || 0;
       const numB = parseInt(b.no.replace(/\D/g, '')) || 0;
-      return numA - numB; // 오름차순 정렬
+      return numA - numB;
     });
   }, [processes, search]);
   
@@ -235,30 +280,8 @@ export default function ProcessFlowInputModal({
   const selectAll = () => setSelectedIds(new Set(filteredProcesses.map(p => p.id)));
   const deselectAll = () => setSelectedIds(new Set());
   
-  const clearAndSave = () => {
-    const totalL3Count = existingProcessesInfo.reduce((sum, p) => sum + p.l3Count, 0);
-    const message = `⚠️ 모든 데이터를 삭제하시겠습니까?\n\n` +
-      `• 공정: ${existingProcessNames.length}개\n` +
-      `• 하위 작업요소: ${totalL3Count}개`;
-    
-    if (!window.confirm(message)) return;
-    onSave([]);
-    onClose();
-  };
-
   const handleSave = () => {
     const selected = processes.filter(p => selectedIds.has(p.id));
-    const selectedNames = new Set(selected.map(p => p.name));
-    
-    const removedWithL3 = existingProcessesInfo.filter(p => 
-      !selectedNames.has(p.name) && p.l3Count > 0
-    );
-    
-    if (removedWithL3.length > 0) {
-      const details = removedWithL3.map(p => `• ${p.name}: ${p.l3Count}개 작업요소`).join('\n');
-      if (!window.confirm(`⚠️ 하위 작업요소가 있는 공정이 해제됩니다.\n\n${details}\n\n삭제하시겠습니까?`)) return;
-    }
-    
     onSave(selected);
     onClose();
   };
@@ -276,24 +299,6 @@ export default function ProcessFlowInputModal({
       ));
     }
     setEditingId(null);
-  };
-
-  const handleDeleteSingle = (proc: ProcessItem, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const procInfo = existingProcessesInfo.find(p => p.name === proc.name);
-    const l3Count = procInfo?.l3Count || 0;
-    
-    const message = l3Count > 0
-      ? `"${proc.name}" 공정과 하위 ${l3Count}개 작업요소를 삭제하시겠습니까?`
-      : `"${proc.name}" 공정을 삭제하시겠습니까?`;
-    
-    if (!window.confirm(message)) return;
-    
-    const newSelectedIds = new Set(selectedIds);
-    newSelectedIds.delete(proc.id);
-    const selected = processes.filter(p => newSelectedIds.has(p.id));
-    onSave(selected);
-    onClose();
   };
 
   const isCurrentlySelected = (name: string) => existingProcessNames.includes(name);
@@ -314,29 +319,30 @@ export default function ProcessFlowInputModal({
       name: newName.trim(),
     };
     
-    setProcesses(prev => [newProc, ...prev]);  // 최상단에 추가
+    setProcesses(prev => [newProc, ...prev]);
     setSelectedIds(prev => new Set([...prev, newProc.id]));
     
-    // localStorage에도 저장
+    // localStorage에도 저장 (CP 마스터 데이터)
     try {
-      const savedData = localStorage.getItem('pfmea_master_data') || '[]';
+      const savedData = localStorage.getItem('cp_master_data') || '[]';
       const masterData = JSON.parse(savedData);
       masterData.push({
         id: newProc.id,
-        code: 'A2',
+        itemCode: 'A2',
         value: newProc.name,
         processNo: procNo,
+        category: '공정현황',
         createdAt: new Date().toISOString()
       });
-      localStorage.setItem('pfmea_master_data', JSON.stringify(masterData));
-      console.log('✅ 신규 공정 저장:', newProc.name);
+      localStorage.setItem('cp_master_data', JSON.stringify(masterData));
+      console.log('✅ 신규 공정 저장 (CP 마스터):', newProc.name);
     } catch (e) {
       console.error('저장 오류:', e);
     }
     
     // ✅ 연속입력 모드: 워크시트에 즉시 반영 + 새 행 추가
     if (continuousMode && onContinuousAdd) {
-      onContinuousAdd(newProc, true); // 새 행 추가 요청
+      onContinuousAdd(newProc, true);
       setAddedCount(prev => prev + 1);
       console.log(`[연속입력] "${newProc.name}" 추가 완료 (총 ${addedCount + 1}개)`);
     }
@@ -373,9 +379,9 @@ export default function ProcessFlowInputModal({
           <button onClick={onClose} className="text-[10px] px-2 py-0.5 bg-white/20 hover:bg-white/30 rounded">닫기</button>
         </div>
 
-        {/* ===== 하위항목 라벨 + 데이터 소스 + 연속입력 토글 ===== */}
+        {/* 데이터 소스 + 연속입력 토글 */}
         <div className="px-3 py-1 border-b bg-gradient-to-r from-green-50 to-emerald-50 flex items-center justify-between">
-          <span className="text-[10px] font-bold text-green-700">▼ 하위항목: 공정명</span>
+          <span className="text-[10px] font-bold text-green-700">공정명</span>
           <div className="flex items-center gap-2">
             <span className={`text-[9px] px-2 py-0.5 rounded ${dataSource.includes('Master') ? 'bg-blue-100 text-blue-700' : dataSource.includes('local') ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>
               {loading ? '로딩중...' : `📂 ${dataSource} (${processes.length}개)`}
@@ -401,7 +407,7 @@ export default function ProcessFlowInputModal({
           </div>
         </div>
 
-        {/* ===== 신규 공정 추가 ===== */}
+        {/* 신규 공정 추가 */}
         <div className={`px-3 py-1.5 border-b flex items-center gap-1 ${continuousMode ? 'bg-purple-50' : 'bg-green-50'}`}>
           <span className={`text-[10px] font-bold shrink-0 ${continuousMode ? 'text-purple-700' : 'text-green-700'}`}>+</span>
           <input
@@ -435,7 +441,7 @@ export default function ProcessFlowInputModal({
           </button>
         </div>
 
-        {/* 검색 + 버튼: [전체][해제][적용][삭제] */}
+        {/* 검색 + 버튼 */}
         <div className="px-2 py-1.5 border-b bg-gray-50">
           {/* 첫 줄: 검색 */}
           <div className="mb-1">
@@ -447,12 +453,11 @@ export default function ProcessFlowInputModal({
               className="w-full px-2 py-0.5 text-[9px] border rounded focus:ring-1 focus:ring-blue-500 outline-none"
             />
           </div>
-          {/* 두 번째 줄: 버튼들 (표준화: 가로 배치) */}
+          {/* 두 번째 줄: 버튼들 */}
           <div className="flex items-center gap-2">
             <button onClick={selectAll} className="px-4 py-1.5 text-[13px] font-bold bg-blue-500 text-white rounded hover:bg-blue-600">전체</button>
             <button onClick={deselectAll} className="px-4 py-1.5 text-[13px] font-bold bg-gray-300 text-gray-700 rounded hover:bg-gray-400">해제</button>
             <button onClick={handleSave} className="px-4 py-1.5 text-[13px] font-bold bg-green-600 text-white rounded hover:bg-green-700">적용</button>
-            <button onClick={clearAndSave} className="px-4 py-1.5 text-[13px] font-bold bg-red-500 text-white rounded hover:bg-red-600">삭제</button>
           </div>
         </div>
 
@@ -531,17 +536,6 @@ export default function ProcessFlowInputModal({
                         </span>
                       )}
                     </div>
-
-                    {/* 삭제 버튼 */}
-                    {isCurrent && (
-                      <button
-                        onClick={(e) => handleDeleteSingle(proc, e)}
-                        className="text-red-400 hover:text-red-600 text-xs shrink-0"
-                        title="삭제"
-                      >
-                        ✕
-                      </button>
-                    )}
                   </div>
                 );
               })}
@@ -568,3 +562,4 @@ export default function ProcessFlowInputModal({
     </div>
   );
 }
+
