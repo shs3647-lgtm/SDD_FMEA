@@ -27,35 +27,16 @@ interface ProcessFlowInputModalProps {
   currentRowIdx?: number;
 }
 
-// DB에서 CP 마스터 공정 로드 (우선순위 1)
+// DB에서 CP 마스터 공정 로드 (우선순위 1 - PUBLIC DB)
 const loadMasterProcessesFromDB = async (): Promise<ProcessItem[]> => {
   try {
-    // CP 마스터 데이터셋 조회 (기초정보)
-    const res = await fetch('/api/control-plan/master?includeItems=true');
+    // CP 마스터 공정 데이터 조회 (PFMEA와 동일한 구조)
+    const res = await fetch('/api/control-plan/master-processes');
     if (res.ok) {
       const data = await res.json();
-      if (data.active && data.active.flatItems && data.active.flatItems.length > 0) {
-        // 공정명(itemCode='A2')만 필터링
-        const processSet = new Map<string, ProcessItem>();
-        
-        data.active.flatItems.forEach((item: any) => {
-          if (item.itemCode === 'A2' && item.value && item.value.trim()) {
-            const processName = item.value.trim();
-            if (!processSet.has(processName)) {
-              const no = item.processNo || String((processSet.size + 1) * 10);
-              processSet.set(processName, {
-                id: `cp_proc_${item.id || Date.now()}_${processSet.size}`,
-                no,
-                name: processName
-              });
-            }
-          }
-        });
-        
-        if (processSet.size > 0) {
-          console.log('✅ DB에서 CP 마스터 공정 로드:', processSet.size, '개');
-          return Array.from(processSet.values());
-        }
+      if (data.processes && data.processes.length > 0) {
+        console.log('✅ DB에서 CP 마스터 공정 로드:', data.processes.length, '개');
+        return data.processes;
       }
     }
   } catch (e) {
@@ -64,12 +45,12 @@ const loadMasterProcessesFromDB = async (): Promise<ProcessItem[]> => {
   return [];
 };
 
-// 기초정보에서 공정명 로드 (localStorage 폴백, 우선순위 2)
+// 기초정보에서 공정명 로드 (localStorage 폴백, 우선순위 2 - 임시 백업용)
 const loadProcessesFromBasicInfo = (): ProcessItem[] => {
   if (typeof window === 'undefined') return [];
   
   try {
-    // CP 마스터 데이터 (우선)
+    // CP 마스터 데이터 (임시 백업용)
     const cpMasterData = localStorage.getItem('cp_master_data');
     if (cpMasterData) {
       const flatData = JSON.parse(cpMasterData);
@@ -90,33 +71,7 @@ const loadProcessesFromBasicInfo = (): ProcessItem[] => {
       });
       
       if (processSet.size > 0) {
-        console.log('✅ localStorage에서 CP 마스터 공정 로드:', processSet.size, '개');
-        return Array.from(processSet.values());
-      }
-    }
-    
-    // FMEA 마스터 데이터 (폴백)
-    const savedData = localStorage.getItem('pfmea_master_data');
-    if (savedData) {
-      const flatData = JSON.parse(savedData);
-      const processSet = new Map<string, ProcessItem>();
-      
-      flatData.forEach((item: any, idx: number) => {
-        if (item.code === 'A2' && item.value) {
-          const processName = item.value.trim();
-          if (!processSet.has(processName)) {
-            const no = String((processSet.size + 1) * 10);
-            processSet.set(processName, {
-              id: `fmea_proc_${idx}_${Date.now()}`,
-              no,
-              name: processName
-            });
-          }
-        }
-      });
-      
-      if (processSet.size > 0) {
-        console.log('⚠️ localStorage에서 FMEA 마스터 공정 로드 (폴백):', processSet.size, '개');
+        console.log('⚠️ localStorage에서 CP 마스터 공정 로드 (임시 백업):', processSet.size, '개');
         return Array.from(processSet.values());
       }
     }
@@ -205,21 +160,21 @@ export default function ProcessFlowInputModal({
       setLoading(true);
       setDataSource('');
       
-      // DB에서 마스터 공정 로드 (우선), 없으면 localStorage 폴백
+      // DB에서 마스터 공정 로드 (우선순위 1: PUBLIC DB), 없으면 localStorage 폴백 (임시 백업용)
       const loadData = async () => {
-        console.log('🔄 CP 공정 데이터 로드 시작...');
+        console.log('🔄 CP 공정 데이터 로드 시작... (PUBLIC DB 우선)');
         
         let loaded = await loadMasterProcessesFromDB();
         
         if (loaded.length > 0) {
-          setDataSource('CP Master (DB)');
-          console.log('✅ CP 마스터 공정 사용:', loaded.length, '개');
+          setDataSource('CP Master (PUBLIC DB)');
+          console.log('✅ CP 마스터 공정 사용 (PUBLIC DB):', loaded.length, '개');
         } else {
-          // DB에 없으면 localStorage에서 로드
+          // DB에 없으면 localStorage에서 로드 (임시 백업용)
           loaded = loadProcessesFromBasicInfo();
           if (loaded.length > 0) {
-            setDataSource('localStorage');
-            console.log('⚠️ localStorage 폴백:', loaded.length, '개');
+            setDataSource('localStorage (임시 백업)');
+            console.log('⚠️ localStorage 폴백 (임시 백업):', loaded.length, '개');
           } else {
             setDataSource('없음 - 직접 입력 필요');
             console.log('❌ 공정 데이터 없음');
