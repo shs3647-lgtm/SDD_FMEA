@@ -156,10 +156,12 @@ export function renderCell({
     if (!spanInfo?.isFirst) {
       return null; // 병합된 행은 렌더링 안함
     }
+    // 고유값(언더스코어로 시작하는 값)인 경우 빈 값처럼 표시
+    const displayValue = (value && typeof value === 'string' && value.startsWith('_')) ? '' : (value || '');
     return (
       <td key={col.id} style={{ ...cellStyle, verticalAlign: 'middle' }} rowSpan={spanInfo.span}>
         <select
-          value={value || ''}
+          value={displayValue}
           onChange={(e) => onCellChange(item.id, col.key, e.target.value)}
           className="w-full bg-transparent text-center text-[11px] outline-none"
         >
@@ -247,6 +249,8 @@ export function renderCell({
     if (!spanInfo?.isFirst) {
       return null; // 병합된 행은 렌더링 안함
     }
+    // 고유값(언더스코어로 시작하는 값)인 경우 빈 값처럼 표시
+    const displayValue = (value && typeof value === 'string' && value.startsWith('_')) ? '' : (value || '');
     return (
       <td 
         key={col.id} 
@@ -278,7 +282,7 @@ export function renderCell({
             className="w-full bg-transparent outline-none text-[11px] text-left min-h-[18px] flex items-center"
             onClick={(e) => inputMode === 'auto' && e.stopPropagation()}
           >
-            {value || ''}
+            {displayValue}
           </div>
         </div>
       </td>
