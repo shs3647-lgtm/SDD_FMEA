@@ -20,7 +20,7 @@ interface RenderCellProps {
   inputMode: CPInputMode;
   onCellChange: (itemId: string, key: string, value: any) => void;
   onContextMenu: (e: React.MouseEvent, rowIdx: number, type: ContextMenuType, colKey?: string) => void;
-  onAutoModeClick: (rowIdx: number, type: ContextMenuType) => void;
+  onAutoModeClick: (rowIdx: number, type: ContextMenuType, colKey?: string) => void;
   onEnterKey?: (rowIdx: number, type: ContextMenuType, colKey?: string) => void;
 }
 
@@ -51,7 +51,9 @@ export function renderCell({
     textAlign: col.align,
     border: '1px solid #ccc',
     borderBottom: '1px solid #ccc', // 행 구분선 (1px)
-    minHeight: HEIGHTS.body,
+    height: HEIGHTS.body, // 명시적 높이 설정
+    width: col.width, // PRD 고유 폭 적용
+    minWidth: col.width,
     verticalAlign: 'middle',
   };
   
@@ -86,7 +88,7 @@ export function renderCell({
           cursor: 'default',
         }}
       >
-        <span className="font-semibold text-gray-800 text-[9px]">{rowIdx + 1}</span>
+        <span className="font-semibold text-gray-800 text-[11px]">{rowIdx + 1}</span>
       </td>
     );
   }
@@ -108,19 +110,20 @@ export function renderCell({
           verticalAlign: 'middle',
           cursor: isProcessName && inputMode === 'auto' ? 'pointer' : 'context-menu',
           background: isProcessName && inputMode === 'auto' ? '#e3f2fd' : cellStyle.background, // 자동모드 시 강조
+          padding: '1px', // 내부여백 1PX
         }}
         rowSpan={spanInfo.span}
         onContextMenu={(e) => onContextMenu(e, rowIdx, 'process', col.key)}
         onClick={isProcessName && inputMode === 'auto' ? () => onAutoModeClick(rowIdx, 'process', col.key) : undefined}
       >
-        <div className="flex items-center gap-1 justify-center">
+        <div className="flex items-center gap-1 justify-center h-full">
           {isProcessName && inputMode === 'auto' && <span className="text-blue-500 text-[8px]">➕</span>}
           <input
             type="text"
             value={displayValue}
             onChange={(e) => onCellChange(item.id, col.key, e.target.value)}
             onKeyDown={handleKeyDown}
-            className="w-full bg-transparent outline-none text-center text-[9px]"
+            className="w-full bg-transparent outline-none text-center text-[11px] p-0 h-full"
             onClick={(e) => isProcessName && inputMode === 'auto' && e.stopPropagation()}
           />
         </div>
@@ -142,7 +145,7 @@ export function renderCell({
     }
     return (
       <td key={col.id} style={cellStyle}>
-        <span className="font-bold text-gray-700 text-[9px]">{charIndex}</span>
+        <span className="font-bold text-gray-700 text-[11px]">{charIndex}</span>
       </td>
     );
   }
@@ -158,7 +161,7 @@ export function renderCell({
         <select
           value={value || ''}
           onChange={(e) => onCellChange(item.id, col.key, e.target.value)}
-          className="w-full bg-transparent text-center text-[9px] outline-none"
+          className="w-full bg-transparent text-center text-[11px] outline-none"
         >
           <option value="">-</option>
           {LEVEL_OPTIONS.map(opt => (
@@ -191,7 +194,7 @@ export function renderCell({
         <select
           value={value || ''}
           onChange={(e) => onCellChange(item.id, col.key, e.target.value)}
-          className="w-full bg-transparent text-center text-[9px] font-bold outline-none"
+          className="w-full bg-transparent text-center text-[11px] font-bold outline-none"
           style={{ color }}
         >
           {SPECIAL_CHAR_OPTIONS.map(opt => (
@@ -209,7 +212,7 @@ export function renderCell({
         <select
           value={value || ''}
           onChange={(e) => onCellChange(item.id, col.key, e.target.value)}
-          className="w-full bg-transparent text-center text-[9px] outline-none"
+          className="w-full bg-transparent text-center text-[11px] outline-none"
         >
           <option value="">-</option>
           {FREQUENCY_OPTIONS.map(opt => (
@@ -227,7 +230,7 @@ export function renderCell({
         <select
           value={value || ''}
           onChange={(e) => onCellChange(item.id, col.key, e.target.value)}
-          className="w-full bg-transparent text-center text-[9px] outline-none"
+          className="w-full bg-transparent text-center text-[11px] outline-none"
         >
           <option value="">-</option>
           {OWNER_OPTIONS.map(opt => (
@@ -250,23 +253,33 @@ export function renderCell({
         style={{ 
           ...cellStyle, 
           cursor: 'context-menu', 
-          verticalAlign: 'middle',
+          verticalAlign: 'middle', // 세로 중앙 정렬 적용
           background: inputMode === 'auto' ? '#e3f2fd' : bgColor, // 자동모드 시 강조
+          padding: '1px', // 내부여백 좌우상하 1PX로 통일
+          whiteSpace: 'pre-wrap', // 줄바꿈 처리
+          wordBreak: 'break-all',
         }}
         rowSpan={spanInfo.span}
         onContextMenu={(e) => onContextMenu(e, rowIdx, 'process', col.key)}
         onClick={inputMode === 'auto' ? () => onAutoModeClick(rowIdx, 'process', col.key) : undefined}
       >
-        <div className="flex items-center gap-1">
-          {inputMode === 'auto' && <span className="text-blue-500 text-[8px]">➕</span>}
-          <input
-            type="text"
-            value={value || ''}
-            onChange={(e) => onCellChange(item.id, col.key, e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="w-full bg-transparent outline-none text-[9px] text-left"
+        <div className="flex items-center gap-1 h-full min-h-[20px]">
+          {inputMode === 'auto' && <span className="text-blue-500 text-[8px] mt-1">➕</span>}
+          <div 
+            contentEditable={inputMode === 'manual'}
+            suppressContentEditableWarning
+            onBlur={(e) => onCellChange(item.id, col.key, e.currentTarget.innerText)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleKeyDown(e as any);
+              }
+            }}
+            className="w-full bg-transparent outline-none text-[11px] text-left min-h-[18px] flex items-center"
             onClick={(e) => inputMode === 'auto' && e.stopPropagation()}
-          />
+          >
+            {value || ''}
+          </div>
         </div>
       </td>
     );
@@ -298,7 +311,7 @@ export function renderCell({
             value={value || ''}
             onChange={(e) => onCellChange(item.id, col.key, e.target.value)}
             onKeyDown={handleKeyDown}
-            className="w-full bg-transparent outline-none text-center text-[9px]"
+            className="w-full bg-transparent outline-none text-center text-[11px]"
             onClick={(e) => inputMode === 'auto' && e.stopPropagation()}
           />
         </div>
@@ -312,28 +325,36 @@ export function renderCell({
     if (!spanInfo?.isFirst) {
       return null; // 병합된 행은 렌더링 안함
     }
+    const handleProductCharClick = () => {
+      console.log('🔥 productChar 클릭됨, inputMode:', inputMode);
+      if (inputMode === 'auto') {
+        onAutoModeClick(rowIdx, 'char', col.key);
+      }
+    };
     return (
       <td 
-        key={col.id} 
+        key={col.id}
+        data-column={col.key}
         style={{ 
           ...cellStyle, 
           verticalAlign: 'middle',
-          cursor: 'context-menu',
+          cursor: inputMode === 'auto' ? 'pointer' : 'context-menu',
           background: inputMode === 'auto' ? '#fff3e0' : bgColor, // 자동모드 시 강조
+          padding: '1px',
         }}
         rowSpan={spanInfo.span}
         onContextMenu={(e) => onContextMenu(e, rowIdx, 'char', col.key)}
-        onClick={inputMode === 'auto' ? () => onAutoModeClick(rowIdx, 'char') : undefined}
+        onClick={handleProductCharClick}
       >
-        <div className="flex items-center gap-1 justify-center">
+        <div className="flex items-center gap-1 justify-center h-full">
           {inputMode === 'auto' && <span className="text-orange-500 text-[8px]">➕</span>}
           <input
             type="text"
             value={value || ''}
             onChange={(e) => onCellChange(item.id, col.key, e.target.value)}
             onKeyDown={handleKeyDown}
-            className="w-full bg-transparent outline-none text-center text-[9px]"
-            onClick={(e) => inputMode === 'auto' && e.stopPropagation()}
+            className="w-full bg-transparent outline-none text-center text-[11px] p-0 h-full"
+            onClick={(e) => e.stopPropagation()}
           />
         </div>
       </td>
@@ -341,22 +362,42 @@ export function renderCell({
   }
   
   // 기본 텍스트 입력 (중앙정렬) - 나머지 열에도 컨텍스트 메뉴 추가 (자동모드에서도 활성화)
+  // 드롭다운/체크박스 제외한 텍스트 컬럼은 자동모드에서 클릭 시 모달 열기
+  const isTextInputColumn = !['processLevel', 'specialChar', 'sampleFreq', 'owner1', 'owner2', 'detectorEp', 'detectorAuto', 'charNo', 'rowNo'].includes(col.key);
+  const showClickableHighlight = inputMode === 'auto' && isTextInputColumn;
+  
+  const handleTextCellClick = () => {
+    console.log(`🔥 ${col.key} 클릭됨, inputMode:`, inputMode);
+    if (inputMode === 'auto' && isTextInputColumn) {
+      onAutoModeClick(rowIdx, 'general', col.key);
+    }
+  };
+  
   return (
     <td 
-      key={col.id} 
+      key={col.id}
+      data-column={col.key}
       style={{ 
         ...cellStyle, 
-        cursor: 'context-menu',
+        cursor: showClickableHighlight ? 'pointer' : 'context-menu',
+        padding: '1px', // 내부여백 1PX
+        verticalAlign: 'middle',
+        background: showClickableHighlight ? '#fff8e1' : bgColor, // 자동모드 시 강조
       }}
       onContextMenu={(e) => onContextMenu(e, rowIdx, 'general', col.key)}
+      onClick={handleTextCellClick}
     >
-      <input
-        type="text"
-        value={value || ''}
-        onChange={(e) => onCellChange(item.id, col.key, e.target.value)}
-        onKeyDown={handleKeyDown}
-        className="w-full bg-transparent outline-none text-center text-[9px]"
-      />
+      <div className="flex items-center gap-1 justify-center h-full">
+        {showClickableHighlight && <span className="text-amber-500 text-[8px]">➕</span>}
+        <input
+          type="text"
+          value={value || ''}
+          onChange={(e) => onCellChange(item.id, col.key, e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="w-full bg-transparent outline-none text-center text-[11px] p-0 h-full"
+          onClick={(e) => e.stopPropagation()}
+        />
+      </div>
     </td>
   );
 }

@@ -31,18 +31,75 @@ interface ProcessDescInputModalProps {
 
 // FMEA에서 작업요소(공정설명) 로드
 const loadWorkElementsFromFmea = async (processNo: string, processName: string): Promise<ProcessDescItem[]> => {
+  if (typeof window === 'undefined') return [];
+
   try {
-    // TODO: FMEA API에서 작업요소 조회
-    // 현재는 샘플 데이터 반환
-    const sampleData: ProcessDescItem[] = [
-      { id: 'desc1', name: '원료투입', processNo, processName },
-      { id: 'desc2', name: '성형', processNo, processName },
-      { id: 'desc3', name: '검사', processNo, processName },
-      { id: 'desc4', name: '포장', processNo, processName },
-    ];
-    return sampleData;
+    console.log(`🔄 [CP 공정설명] 데이터 로드 시도: processNo=${processNo}, processName=${processName}`);
+    
+    // 1. CP 마스터 데이터 (Import된 데이터)
+    const cpMasterData = localStorage.getItem('cp_master_data');
+    if (cpMasterData) {
+      const flatData = JSON.parse(cpMasterData);
+      const descSet = new Map<string, ProcessDescItem>();
+      
+      flatData.forEach((item: any, idx: number) => {
+        // 현재 공정번호와 일치하는 항목 중 공정설명(A4) 추출
+        const isMatch = String(item.processNo).trim() === String(processNo).trim();
+        const isDesc = item.itemCode === 'A4' || item.code === 'A4';
+        
+        if (isMatch && isDesc && item.value && item.value.trim()) {
+          const descValue = item.value.trim();
+          if (!descSet.has(descValue)) {
+            descSet.set(descValue, {
+              id: `cp_desc_${idx}_${Date.now()}`,
+              name: descValue,
+              processNo,
+              processName
+            });
+          }
+        }
+      });
+      
+      if (descSet.size > 0) {
+        console.log(`✅ [CP 공정설명] CP 마스터에서 ${descSet.size}개 로드 성공`);
+        return Array.from(descSet.values());
+      }
+    }
+
+    // 2. PFMEA 마스터 데이터 폴백
+    const pfmeaMasterData = localStorage.getItem('pfmea_master_data');
+    if (pfmeaMasterData) {
+      const flatData = JSON.parse(pfmeaMasterData);
+      const descSet = new Map<string, ProcessDescItem>();
+      
+      flatData.forEach((item: any, idx: number) => {
+        const isMatch = String(item.processNo).trim() === String(processNo).trim();
+        const isDesc = item.itemCode === 'A4' || item.code === 'A4';
+        
+        if (isMatch && isDesc && item.value && item.value.trim()) {
+          const descValue = item.value.trim();
+          if (!descSet.has(descValue)) {
+            descSet.set(descValue, {
+              id: `fmea_desc_${idx}_${Date.now()}`,
+              name: descValue,
+              processNo,
+              processName
+            });
+          }
+        }
+      });
+      
+      if (descSet.size > 0) {
+        console.log(`✅ [CP 공정설명] PFMEA 마스터에서 ${descSet.size}개 로드 성공`);
+        return Array.from(descSet.values());
+      }
+    }
+
+    // 데이터가 전혀 없을 경우 빈 목록 반환 (하드코딩 샘플 제거)
+    console.warn('⚠️ [CP 공정설명] 일치하는 데이터를 찾을 수 없습니다.');
+    return [];
   } catch (e) {
-    console.error('작업요소 로드 실패:', e);
+    console.error('❌ [CP 공정설명] 로드 실패:', e);
     return [];
   }
 };

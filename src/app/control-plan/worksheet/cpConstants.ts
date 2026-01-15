@@ -55,8 +55,8 @@ export const HEIGHTS = {
 
 // ============ 셀 스타일 ============
 export const CELL_STYLE = {
-  padding: '1px 2px',
-  fontSize: '10px',
+  padding: '1px',
+  fontSize: '11px',
   lineHeight: 1.2,
 };
 
@@ -90,7 +90,7 @@ export const CP_COLUMNS: CPColumnDef[] = [
     headerColor: COLORS.control.headerLight, cellColor: COLORS.control.cell, cellAltColor: COLORS.control.cellAlt, align: 'center', pfmeaSync: true },
   { id: 3, group: '공정현황', name: '레벨', key: 'processLevel', width: 45,
     headerColor: COLORS.process.headerLight, cellColor: COLORS.process.cell, cellAltColor: COLORS.process.cellAlt, align: 'center', type: 'select' },
-  { id: 4, group: '공정현황', name: '공정설명', key: 'processDesc', width: 150,
+  { id: 4, group: '공정현황', name: '공정설명', key: 'processDesc', width: 200,
     headerColor: COLORS.process.headerLight, cellColor: COLORS.process.cell, cellAltColor: COLORS.process.cellAlt, align: 'left', pfmeaSync: true },
   { id: 5, group: '공정현황', name: '설비/금형/JIG', key: 'workElement', width: 80,
     headerColor: COLORS.process.headerLight, cellColor: COLORS.process.cell, cellAltColor: COLORS.process.cellAlt, align: 'center' },

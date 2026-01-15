@@ -76,7 +76,7 @@ export default function PreviewTable({
   const processNos = [...new Set(data.map(d => d.processNo))];
   
   return (
-    <table className="border-collapse border-spacing-0 w-[1540px] min-w-[1540px] max-w-[1540px] table-fixed m-0 p-0 border-0">
+    <table className="border-collapse border-spacing-0 w-[1580px] min-w-[1580px] max-w-[1580px] table-fixed m-0 p-0 border-0">
       {/* colgroup: table-layout: fixed에서 컬럼 폭을 결정하는 핵심 요소 */}
       <colgroup>
         {/* 관리 컬럼 3개 */}
@@ -121,7 +121,7 @@ export default function PreviewTable({
       <tbody>
         {processNos.length === 0 ? (
           Array.from({ length: 20 }).map((_, i) => (
-            <tr key={`empty-${i}`} className={`h-5 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+            <tr key={`empty-${i}`} className={`min-h-5 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
               <td className={tw.cellCenter}></td>
               <td className={tw.cellCenter}>{i + 1}</td>
               <td className={tw.cellCenter}></td>
@@ -140,7 +140,7 @@ export default function PreviewTable({
             const isEditing = editingRowId === processNo;
             
             return (
-              <tr key={`row-${processNo}-${i}`} className={`h-5 ${selectedRows.has(processNo) ? 'bg-blue-50' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+              <tr key={`row-${processNo}-${i}`} className={`min-h-5 ${selectedRows.has(processNo) ? 'bg-blue-50' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                 <td className={tw.cellCenter}>
                   <input type="checkbox" className="w-2.5 h-2.5" checked={selectedRows.has(processNo)} onChange={() => onRowSelect(processNo)} />
                 </td>
@@ -169,16 +169,16 @@ export default function PreviewTable({
                   </div>
                 </td>
                 {PREVIEW_COLUMNS.map(col => (
-                  <td key={col.key} className={`${tw.cell} ${selectedColumn === col.key ? 'bg-yellow-100' : ''}`}>
+                  <td key={col.key} className={`${tw.cell} align-top ${selectedColumn === col.key ? 'bg-yellow-100' : ''}`}>
                     {isEditing ? (
-                      <input 
-                        type="text" 
+                      <textarea 
                         value={editValues[col.key] ?? getValue(col.key)} 
                         onChange={(e) => onCellChange(col.key, e.target.value)}
-                        className="w-full px-0.5 py-0 border border-blue-400 rounded text-[10px] bg-white focus:outline-none font-normal antialiased" 
+                        className="w-full px-0.5 py-0 border border-blue-400 rounded text-[10px] bg-white focus:outline-none font-normal antialiased resize-none min-h-[18px]"
+                        rows={1}
                       />
                     ) : (
-                      <span className="antialiased font-normal">{getValue(col.key)}</span>
+                      <span className="antialiased font-normal whitespace-pre-wrap">{getValue(col.key)}</span>
                     )}
                   </td>
                 ))}

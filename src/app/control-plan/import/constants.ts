@@ -60,31 +60,33 @@ export const PREVIEW_OPTIONS: PreviewOption[] = [
   { value: 'reactionPlan', label: '대응계획', sheetName: '대응계획' },
 ];
 
-// ★ 미리보기 테이블 컬럼 정의 (컨테이너 크기에 맞게 최적화된 폭)
+// ★ 미리보기 테이블 컬럼 정의 (표준화된 폭)
+// 표준 너비: 40px(소) | 60px(중소) | 100px(중) | 120px(중대) | 150px(대) | 200px(특대)
 export const PREVIEW_COLUMNS: PreviewColumn[] = [
-  // 공정현황 (5컬럼)
-  { key: 'processNo', label: '공정번호', width: 'w-[50px]', group: 'processInfo' },
-  { key: 'processName', label: '공정명', width: 'w-[50px]', group: 'processInfo' },
-  { key: 'level', label: '레벨', width: 'w-[35px]', group: 'processInfo' },
-  { key: 'processDesc', label: '공정설명', width: 'w-[300px]', group: 'processInfo' },
+  // 공정현황 (5컬럼) - 합계: 480px
+  { key: 'processNo', label: '공정번호', width: 'w-[60px]', group: 'processInfo' },
+  { key: 'processName', label: '공정명', width: 'w-[60px]', group: 'processInfo' },
+  { key: 'level', label: '레벨', width: 'w-[40px]', group: 'processInfo' },
+  { key: 'processDesc', label: '공정설명', width: 'w-[200px]', group: 'processInfo' },
   { key: 'equipment', label: '설비/금형', width: 'w-[120px]', group: 'processInfo' },
-  // 검출장치 (2컬럼)
-  { key: 'ep', label: 'EP', width: 'w-[30px]', group: 'detector' },
-  { key: 'autoDetector', label: '자동검사', width: 'w-[30px]', group: 'detector' },
-  // 관리항목 (4컬럼)
+  // 검출장치 (2컬럼) - 합계: 200px
+  { key: 'ep', label: 'EP', width: 'w-[100px]', group: 'detector' },
+  { key: 'autoDetector', label: '자동검사', width: 'w-[100px]', group: 'detector' },
+  // 관리항목 (4컬럼) - 합계: 360px
   { key: 'productChar', label: '제품특성', width: 'w-[100px]', group: 'controlItem' },
   { key: 'processChar', label: '공정특성', width: 'w-[100px]', group: 'controlItem' },
-  { key: 'specialChar', label: '특별특성', width: 'w-[50px]', group: 'controlItem' },
-  { key: 'spec', label: '스펙/공차', width: 'w-[150px]', group: 'controlItem' },
-  // 관리방법 (5컬럼)
+  { key: 'specialChar', label: '특별특성', width: 'w-[60px]', group: 'controlItem' },
+  { key: 'spec', label: '스펙/공차', width: 'w-[100px]', group: 'controlItem' },
+  // 관리방법 (5컬럼) - 합계: 310px
   { key: 'evalMethod', label: '평가방법', width: 'w-[150px]', group: 'controlMethod' },
-  { key: 'sampleSize', label: '샘플', width: 'w-[30px]', group: 'controlMethod' },
-  { key: 'frequency', label: '주기', width: 'w-[35px]', group: 'controlMethod' },
+  { key: 'sampleSize', label: '샘플', width: 'w-[40px]', group: 'controlMethod' },
+  { key: 'frequency', label: '주기', width: 'w-[40px]', group: 'controlMethod' },
   { key: 'owner1', label: '책임1', width: 'w-[40px]', group: 'controlMethod' },
   { key: 'owner2', label: '책임2', width: 'w-[40px]', group: 'controlMethod' },
-  // 대응계획 (1컬럼)
+  // 대응계획 (1컬럼) - 합계: 150px
   { key: 'reactionPlan', label: '조치방법', width: 'w-[150px]', group: 'reactionPlan' },
 ];
+// 총 컬럼 너비: 480 + 200 + 360 + 310 + 150 = 1500px (+ 관리컬럼 80px = 1580px)
 
 // 그룹별 색상
 export const GROUP_COLORS: Record<string, { bg: string; text: string; header: string }> = {
@@ -111,9 +113,9 @@ export const tw = {
   headerCellSm: "bg-[#0d9488] text-white px-0.5 py-0.5 border border-gray-400 text-[10px] font-medium text-center whitespace-nowrap antialiased",
   rowHeader: "bg-teal-100 text-[#00587a] px-1 py-0.5 border border-gray-300 text-[10px] font-medium text-center whitespace-nowrap antialiased",
   rowHeaderSm: "bg-teal-50 text-[#00587a] px-1 py-0.5 border border-gray-300 text-[10px] font-normal text-center whitespace-nowrap antialiased",
-  cell: "border border-gray-300 px-0.5 py-0.5 text-[10px] text-gray-800 truncate font-normal antialiased",
-  cellPad: "border border-gray-300 px-0.5 py-0.5 text-[10px] text-center font-normal antialiased",
-  cellCenter: "border border-gray-300 px-0.5 py-0.5 text-[10px] text-center font-normal antialiased",
+  cell: "border border-gray-300 px-0.5 py-0.5 text-[10px] text-gray-800 whitespace-pre-wrap break-words font-normal antialiased",
+  cellPad: "border border-gray-300 px-0.5 py-0.5 text-[10px] text-center whitespace-pre-wrap break-words font-normal antialiased",
+  cellCenter: "border border-gray-300 px-0.5 py-0.5 text-[10px] text-center whitespace-pre-wrap break-words font-normal antialiased",
   btnPrimary: "px-1.5 py-0.5 bg-teal-500 text-white border-none rounded cursor-pointer text-[10px] font-medium whitespace-nowrap antialiased",
   btnBlue: "px-1.5 py-0.5 bg-blue-500 text-white border-none rounded cursor-pointer text-[10px] font-medium whitespace-nowrap antialiased",
   btnGreen: "px-1.5 py-0.5 bg-green-500 text-white border-none rounded cursor-pointer text-[10px] font-medium whitespace-nowrap antialiased",
