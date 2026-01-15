@@ -11,6 +11,27 @@ import { Pencil, Trash2, Save, X } from 'lucide-react';
 import type { ImportedData } from '../types';
 import { PREVIEW_COLUMNS, GROUP_HEADERS, tw } from '../constants';
 
+// key를 itemCode로 매핑 (PREVIEW_COLUMNS의 key → 실제 itemCode)
+const KEY_TO_ITEM_CODE_MAP: Record<string, string> = {
+  'processNo': 'A1',
+  'processName': 'A2',
+  'level': 'A3',
+  'processDesc': 'A4',
+  'equipment': 'A5',
+  'ep': 'A6',
+  'autoDetector': 'A7',
+  'productChar': 'B1',
+  'processChar': 'B2',
+  'specialChar': 'B3',
+  'spec': 'B4',
+  'evalMethod': 'B5',
+  'sampleSize': 'B6',
+  'frequency': 'B7',
+  'owner1': 'B8',
+  'owner2': 'B9',
+  'reactionPlan': 'B10',
+};
+
 type PreviewTab = 'full' | 'group' | 'individual';
 
 export interface PreviewTableProps {
@@ -110,7 +131,12 @@ export default function PreviewTable({
         ) : (
           processNos.map((processNo, i) => {
             const row = data.filter(d => d.processNo === processNo);
-            const getValue = (key: string) => row.find(r => r.itemCode === key)?.value || '';
+            
+            const getValue = (key: string) => {
+              const itemCode = KEY_TO_ITEM_CODE_MAP[key] || key;
+              return row.find(r => r.itemCode === itemCode)?.value || '';
+            };
+            
             const isEditing = editingRowId === processNo;
             
             return (

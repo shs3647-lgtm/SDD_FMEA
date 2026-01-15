@@ -84,14 +84,14 @@ const MODULE_TABLES: Record<string, { label: string; value: string; description:
   ],
   'CP': [
     // CP 프로젝트별 데이터
-    { label: 'CP 등록정보', value: 'cp_registrations', description: 'CP 프로젝트 등록 (cpNo별)' },
-    { label: 'CP CFT 멤버', value: 'cp_cft_members', description: 'CP CFT 팀 구성원 (cpNo별)' },
-    { label: 'CP 개정이력', value: 'cp_revisions', description: 'CP 개정관리 이력 (cpNo별)' },
-    { label: 'CP 공정현황', value: 'cp_processes', description: 'CP 공정현황 (cpNo별)' },
-    { label: 'CP 검출장치', value: 'cp_detectors', description: 'CP 검출장치 (cpNo별)' },
-    { label: 'CP 관리항목', value: 'cp_control_items', description: 'CP 관리항목 (cpNo별)' },
-    { label: 'CP 관리방법', value: 'cp_control_methods', description: 'CP 관리방법 (cpNo별)' },
-    { label: 'CP 대응계획', value: 'cp_reaction_plans', description: 'CP 대응계획 (cpNo별)' },
+    { label: 'CP 등록정보', value: 'cp_registrations', description: 'CP 프로젝트 등록 (cpNo별)', hasCpNo: true },
+    { label: 'CP CFT 멤버', value: 'cp_cft_members', description: 'CP CFT 팀 구성원 (cpNo별)', hasCpNo: true },
+    { label: 'CP 개정이력', value: 'cp_revisions', description: 'CP 개정관리 이력 (cpNo별)', hasCpNo: true },
+    { label: 'CP 공정현황', value: 'cp_processes', description: 'CP 공정현황 (cpNo별)', hasCpNo: true },
+    { label: 'CP 검출장치', value: 'cp_detectors', description: 'CP 검출장치 (cpNo별)', hasCpNo: true },
+    { label: 'CP 관리항목', value: 'cp_control_items', description: 'CP 관리항목 (cpNo별)', hasCpNo: true },
+    { label: 'CP 관리방법', value: 'cp_control_methods', description: 'CP 관리방법 (cpNo별)', hasCpNo: true },
+    { label: 'CP 대응계획', value: 'cp_reaction_plans', description: 'CP 대응계획 (cpNo별)', hasCpNo: true },
     // CP 마스터 데이터
     { label: 'CP 공정현황 마스터', value: 'cp_master_processes', description: 'CP 공정현황 기초정보' },
     { label: 'CP 검출장치 마스터', value: 'cp_master_detectors', description: 'CP 검출장치 기초정보' },
@@ -244,17 +244,74 @@ export default function DBViewerPage() {
       if (result.success) {
         // 프로젝트 ID 필터링이 필요하면 클라이언트에서 필터링
         if (projectId && result.result?.data) {
+          console.log('🔍 [DB Viewer] 필터링 시작:', {
+            tableName,
+            projectId,
+            totalRows: result.result.data.length,
+            sampleRow: result.result.data[0] ? {
+              keys: Object.keys(result.result.data[0]),
+              cpNo: result.result.data[0].cpNo || result.result.data[0].cp_no,
+              fmeaId: result.result.data[0].fmeaId || result.result.data[0].fmea_id,
+            } : null,
+          });
+          
           const filteredData = result.result.data.filter((row: Record<string, unknown>) => {
-            // 다양한 ID 필드 검사
+            // 다양한 ID 필드 검사 (대소문자 구분 없이 비교)
             const rowId = row.fmeaId || row.fmea_id || row.apqpNo || row.apqp_no || 
                           row.cpNo || row.cp_no || row.pfdId || row.wsId || row.pmId;
-            return rowId === projectId;
+            
+            // cpNo 필드가 있는 경우 대소문자 구분 없이 비교
+            if (row.cpNo || row.cp_no) {
+              const rowCpNo = String(row.cpNo || row.cp_no || '').trim();
+              const projectCpNo = String(projectId).trim();
+              const matches = rowCpNo.toLowerCase() === projectCpNo.toLowerCase();
+              if (!matches && rowCpNo) {
+                console.log('❌ [DB Viewer] cpNo 불일치:', {
+                  rowCpNo,
+                  projectCpNo,
+                  rowKeys: Object.keys(row),
+                });
+              }
+              return matches;
+            }
+            
+            // 다른 ID 필드는 정확히 일치해야 함
+            const matches = String(rowId || '').trim() === String(projectId).trim();
+            if (!matches && rowId) {
+              console.log('❌ [DB Viewer] ID 불일치:', {
+                rowId,
+                projectId,
+                rowKeys: Object.keys(row),
+              });
+            }
+            return matches;
           });
+          
+          console.log('✅ [DB Viewer] 필터링 완료:', {
+            tableName,
+            projectId,
+            before: result.result.data.length,
+            after: filteredData.length,
+            sampleFiltered: filteredData[0] ? {
+              cpNo: filteredData[0].cpNo || filteredData[0].cp_no,
+            } : null,
+          });
+          
           setTableData({
             ...result.result,
             data: filteredData
           });
         } else {
+          console.log('⚠️ [DB Viewer] 필터링 없음:', {
+            tableName,
+            projectId,
+            hasData: !!result.result?.data,
+            dataCount: result.result?.data?.length || 0,
+            sampleRow: result.result?.data?.[0] ? {
+              keys: Object.keys(result.result.data[0]),
+              cpNo: result.result.data[0].cpNo || result.result.data[0].cp_no,
+            } : null,
+          });
           setTableData(result.result);
         }
       } else {
@@ -307,85 +364,23 @@ export default function DBViewerPage() {
       const countResult = await countRes.json();
       const allDbTables = countResult.tables || [];
 
-      // 각 테이블별로 컬럼 수 및 누락 건수 조회
-      const results = await Promise.all(
-        tables.map(async (t) => {
-          try {
-            // 컬럼 정보 조회 (limit=1로 빠르게)
-            const res = await fetch(`/api/admin/db/data?schema=public&table=${t.value}&limit=1`);
-            const result = await res.json();
-            const tableInfo = allDbTables.find((tb: { table: string; rows: number }) => tb.table === t.value);
-            
-            if (result.success) {
-              const columns = result.result?.columns?.length || 0;
-              const rows = tableInfo?.rows || 0;
-              
-              // 누락 건수 계산 (데이터가 있을 때만)
-              let missingCount = 0;
-              if (rows > 0 && columns > 0) {
-                try {
-                  // 전체 데이터 로드 (최대 1000건)
-                  const dataRes = await fetch(`/api/admin/db/data?schema=public&table=${t.value}&limit=1000`);
-                  const dataResult = await dataRes.json();
-                  
-                  if (dataResult.success && dataResult.result?.data && dataResult.result?.columns) {
-                    const data = dataResult.result.data;
-                    const dataColumns = dataResult.result.columns;
-                    
-                    // 각 행의 각 컬럼에서 누락 개수 계산
-                    data.forEach((row: Record<string, unknown>) => {
-                      dataColumns.forEach((col: string) => {
-                        const value = row[col];
-                        if (value === null || value === undefined || value === '' || 
-                            (typeof value === 'string' && value.trim() === '')) {
-                          missingCount++;
-                        }
-                      });
-                    });
-                  }
-                } catch (err) {
-                  // 누락 개수 계산 실패 시 무시 (콘솔에만 로그)
-                  console.warn(`누락 개수 계산 실패 (${t.value}):`, err);
-                }
-              }
-              
-              return {
-                table: t.value,
-                label: t.label,
-                category: t.category || module,
-                columns,
-                rows,
-                missingCount,
-                status: 'success' as const,
-              };
-            } else {
-              return {
-                table: t.value,
-                label: t.label,
-                category: t.category || module,
-                columns: 0,
-                rows: 0,
-                missingCount: 0,
-                status: 'error' as const,
-              };
-            }
-          } catch {
-            return {
-              table: t.value,
-              label: t.label,
-              category: t.category || module,
-              columns: 0,
-              rows: 0,
-              missingCount: 0,
-              status: 'error' as const,
-            };
-          }
-        })
-      );
+      // 각 테이블별로 요약 정보 생성 (컬럼 수/누락 건수는 나중에 개별 로드 시 표시)
+      const results: TableSummary[] = tables.map((t) => {
+        const tableInfo = allDbTables.find((tb: { table: string; rows: number }) => tb.table === t.value);
+        return {
+          table: t.table || t.value,
+          label: t.label,
+          category: t.category || module,
+          columns: 0, // 나중에 로드
+          rows: tableInfo?.rows || 0,
+          status: 'success' as const,
+        };
+      });
       
       setTableSummaries(results);
-    } catch {
-      setError('테이블 목록 조회 실패');
+    } catch (err: any) {
+      console.error('테이블 목록 조회 실패:', err);
+      setError('테이블 목록 조회 실패: ' + err.message);
     } finally {
       setSummaryLoading(false);
     }
@@ -412,7 +407,16 @@ export default function DBViewerPage() {
     setSelectedTable(tableName);
     // 프로젝트 ID 필터링이 필요하면 적용
     const tableInfo = Object.values(MODULE_TABLES).flat().find(t => t.value === tableName);
-    if ((tableInfo?.hasFmeaId || tableInfo?.hasApqpNo || tableInfo?.hasCpNo) && selectedProjectId) {
+    const needsFilter = (tableInfo?.hasFmeaId || tableInfo?.hasApqpNo || tableInfo?.hasCpNo) && selectedProjectId;
+    
+    console.log('🔍 [DB Viewer] 테이블 선택:', {
+      tableName,
+      tableInfo: tableInfo ? { hasFmeaId: tableInfo.hasFmeaId, hasApqpNo: tableInfo.hasApqpNo, hasCpNo: tableInfo.hasCpNo } : null,
+      selectedProjectId,
+      needsFilter,
+    });
+    
+    if (needsFilter) {
       loadTableData(tableName, selectedProjectId);
     } else {
       loadTableData(tableName);

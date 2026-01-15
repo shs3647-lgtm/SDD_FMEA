@@ -27,15 +27,15 @@ interface ProcessFlowInputModalProps {
   currentRowIdx?: number;
 }
 
-// DB에서 CP 마스터 공정 로드 (우선순위 1 - PUBLIC DB)
+// DB에서 마스터 FMEA 공정 로드 (우선순위 1 - PFMEA 마스터)
 const loadMasterProcessesFromDB = async (): Promise<ProcessItem[]> => {
   try {
-    console.log('🔄 [CP 모달] API 호출 시작: /api/control-plan/master-processes');
-    const res = await fetch('/api/control-plan/master-processes');
+    console.log('🔄 [CP 모달] API 호출 시작: /api/fmea/master-processes (PFMEA 마스터)');
+    const res = await fetch('/api/fmea/master-processes');
     console.log('📡 [CP 모달] API 응답 상태:', res.status, res.statusText);
     
     if (!res.ok) {
-      console.error('❌ [CP 모달] API 응답 실패:', res.status, res.statusText);
+      console.error('❌ [CP 모달] PFMEA 마스터 API 응답 실패:', res.status, res.statusText);
       const errorText = await res.text();
       console.error('❌ [CP 모달] 에러 내용:', errorText);
       return [];
@@ -51,29 +51,56 @@ const loadMasterProcessesFromDB = async (): Promise<ProcessItem[]> => {
     });
     
     if (data.success && data.processes && data.processes.length > 0) {
-      console.log('✅ [CP 모달] DB에서 CP 마스터 공정 로드:', data.processes.length, '개');
+      console.log('✅ [CP 모달] DB에서 PFMEA 마스터 공정 로드:', data.processes.length, '개');
       console.log('📋 [CP 모달] 공정 목록:', data.processes.map((p: any) => `${p.no}:${p.name}`).join(', '));
       return data.processes;
     } else {
-      console.warn('⚠️ [CP 모달] 공정 데이터 없음:', {
+      console.warn('⚠️ [CP 모달] PFMEA 마스터 공정 데이터 없음:', {
         success: data.success,
         processesCount: data.processes?.length || 0,
         message: data.message || '알 수 없는 이유',
       });
     }
   } catch (e: any) {
-    console.error('❌ [CP 모달] CP 마스터 공정 로드 실패:', e);
+    console.error('❌ [CP 모달] PFMEA 마스터 공정 로드 실패:', e);
     console.error('❌ [CP 모달] 에러 상세:', e.message, e.stack);
   }
   return [];
 };
 
-// 기초정보에서 공정명 로드 (localStorage 폴백, 우선순위 2 - 임시 백업용)
+// 기초정보에서 공정명 로드 (localStorage 폴백, 우선순위 2 - PFMEA 마스터 데이터)
 const loadProcessesFromBasicInfo = (): ProcessItem[] => {
   if (typeof window === 'undefined') return [];
   
   try {
-    // CP 마스터 데이터 (임시 백업용)
+    // PFMEA 마스터 데이터 (우선순위 2)
+    const pfmeaMasterData = localStorage.getItem('pfmea_master_data');
+    if (pfmeaMasterData) {
+      const flatData = JSON.parse(pfmeaMasterData);
+      const processSet = new Map<string, ProcessItem>();
+      
+      flatData.forEach((item: any, idx: number) => {
+        // A2 또는 code === 'A2' = 공정명
+        if ((item.code === 'A2' || item.itemCode === 'A2') && item.value) {
+          const processName = item.value.trim();
+          if (!processSet.has(processName)) {
+            const no = item.processNo || String((processSet.size + 1) * 10);
+            processSet.set(processName, {
+              id: `proc_${idx}_${Date.now()}`,
+              no,
+              name: processName
+            });
+          }
+        }
+      });
+      
+      if (processSet.size > 0) {
+        console.log('⚠️ [CP 모달] localStorage에서 PFMEA 마스터 공정 로드 (폴백):', processSet.size, '개');
+        return Array.from(processSet.values());
+      }
+    }
+    
+    // CP 마스터 데이터 (최후 폴백)
     const cpMasterData = localStorage.getItem('cp_master_data');
     if (cpMasterData) {
       const flatData = JSON.parse(cpMasterData);
@@ -94,14 +121,14 @@ const loadProcessesFromBasicInfo = (): ProcessItem[] => {
       });
       
       if (processSet.size > 0) {
-        console.log('⚠️ localStorage에서 CP 마스터 공정 로드 (임시 백업):', processSet.size, '개');
+        console.log('⚠️ [CP 모달] localStorage에서 CP 마스터 공정 로드 (최후 폴백):', processSet.size, '개');
         return Array.from(processSet.values());
       }
     }
     
     return [];
   } catch (e) {
-    console.error('Failed to load processes:', e);
+    console.error('❌ [CP 모달] 공정 로드 실패:', e);
     return [];
   }
 };
@@ -183,24 +210,38 @@ export default function ProcessFlowInputModal({
       setLoading(true);
       setDataSource('');
       
-      // DB에서 마스터 공정 로드 (우선순위 1: PUBLIC DB), 없으면 localStorage 폴백 (임시 백업용)
+      // DB에서 마스터 공정 로드 (우선순위 1: PFMEA 마스터), 없으면 localStorage 폴백
       const loadData = async () => {
-        console.log('🔄 CP 공정 데이터 로드 시작... (PUBLIC DB 우선)');
+        console.log('🔄 [CP 모달] 공정 데이터 로드 시작... (PFMEA 마스터 우선)');
         
         let loaded = await loadMasterProcessesFromDB();
+        let dataSourceLabel = '';
         
         if (loaded.length > 0) {
-          setDataSource('CP Master (PUBLIC DB)');
-          console.log('✅ CP 마스터 공정 사용 (PUBLIC DB):', loaded.length, '개');
+          dataSourceLabel = 'PFMEA Master (PUBLIC DB)';
+          setDataSource(dataSourceLabel);
+          console.log('✅ [CP 모달] PFMEA 마스터 공정 사용 (PUBLIC DB):', loaded.length, '개');
         } else {
-          // DB에 없으면 localStorage에서 로드 (임시 백업용)
+          // DB에 없으면 localStorage에서 로드 (PFMEA 마스터 데이터 폴백)
           loaded = loadProcessesFromBasicInfo();
           if (loaded.length > 0) {
-            setDataSource('localStorage (임시 백업)');
-            console.log('⚠️ localStorage 폴백 (임시 백업):', loaded.length, '개');
+            // localStorage에서 로드된 데이터의 소스 확인
+            const pfmeaData = localStorage.getItem('pfmea_master_data');
+            const cpData = localStorage.getItem('cp_master_data');
+            
+            if (pfmeaData) {
+              dataSourceLabel = 'PFMEA Master (localStorage)';
+            } else if (cpData) {
+              dataSourceLabel = 'CP Master (localStorage)';
+            } else {
+              dataSourceLabel = 'localStorage (폴백)';
+            }
+            
+            setDataSource(dataSourceLabel);
+            console.log('⚠️ [CP 모달] localStorage 폴백:', loaded.length, '개');
           } else {
             setDataSource('없음 - 직접 입력 필요');
-            console.log('❌ 공정 데이터 없음');
+            console.log('❌ [CP 모달] 공정 데이터 없음');
           }
         }
         
@@ -300,22 +341,39 @@ export default function ProcessFlowInputModal({
     setProcesses(prev => [newProc, ...prev]);
     setSelectedIds(prev => new Set([...prev, newProc.id]));
     
-    // localStorage에도 저장 (CP 마스터 데이터)
+    // localStorage에도 저장 (PFMEA 마스터 데이터 우선, 없으면 CP 마스터)
     try {
-      const savedData = localStorage.getItem('cp_master_data') || '[]';
-      const masterData = JSON.parse(savedData);
-      masterData.push({
-        id: newProc.id,
-        itemCode: 'A2',
-        value: newProc.name,
-        processNo: procNo,
-        category: '공정현황',
-        createdAt: new Date().toISOString()
-      });
-      localStorage.setItem('cp_master_data', JSON.stringify(masterData));
-      console.log('✅ 신규 공정 저장 (CP 마스터):', newProc.name);
+      // PFMEA 마스터 데이터에 저장 시도
+      const pfmeaData = localStorage.getItem('pfmea_master_data');
+      if (pfmeaData) {
+        const masterData = JSON.parse(pfmeaData);
+        masterData.push({
+          id: newProc.id,
+          code: 'A2',
+          value: newProc.name,
+          processNo: procNo,
+          category: '공정현황',
+          createdAt: new Date().toISOString()
+        });
+        localStorage.setItem('pfmea_master_data', JSON.stringify(masterData));
+        console.log('✅ [CP 모달] 신규 공정 저장 (PFMEA 마스터):', newProc.name);
+      } else {
+        // PFMEA 마스터 데이터가 없으면 CP 마스터 데이터에 저장
+        const savedData = localStorage.getItem('cp_master_data') || '[]';
+        const masterData = JSON.parse(savedData);
+        masterData.push({
+          id: newProc.id,
+          itemCode: 'A2',
+          value: newProc.name,
+          processNo: procNo,
+          category: '공정현황',
+          createdAt: new Date().toISOString()
+        });
+        localStorage.setItem('cp_master_data', JSON.stringify(masterData));
+        console.log('✅ [CP 모달] 신규 공정 저장 (CP 마스터):', newProc.name);
+      }
     } catch (e) {
-      console.error('저장 오류:', e);
+      console.error('❌ [CP 모달] 저장 오류:', e);
     }
     
     // ✅ 연속입력 모드: 워크시트에 즉시 반영 + 새 행 추가

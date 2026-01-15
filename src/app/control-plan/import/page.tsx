@@ -454,12 +454,36 @@ function CPImportPageContent() {
     }
   };
   
+  // 중복 데이터 제거 함수 (processNo + itemCode 기준)
+  const removeDuplicates = (data: ImportedData[]): ImportedData[] => {
+    const seen = new Set<string>();
+    const result: ImportedData[] = [];
+    
+    data.forEach(item => {
+      const key = `${item.processNo}|${item.itemCode}|${item.category}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        result.push(item);
+      } else {
+        console.log(`⚠️ 중복 데이터 제거: processNo=${item.processNo}, itemCode=${item.itemCode}, category=${item.category}`);
+      }
+    });
+    
+    return result;
+  };
+
   // ===== Import 실행 =====
   const handleFullImport = () => {
     if (fullPendingData.length === 0) return;
     setIsFullImporting(true);
     setTimeout(() => {
-      setFullData(prev => [...prev, ...fullPendingData]);
+      // 중복 제거 후 추가
+      const uniqueData = removeDuplicates(fullPendingData);
+      setFullData(prev => {
+        // 기존 데이터와 합치고 중복 제거
+        const merged = [...prev, ...uniqueData];
+        return removeDuplicates(merged);
+      });
       setFullPendingData([]);
       setIsFullImporting(false);
       setFullImportSuccess(true);
@@ -472,7 +496,13 @@ function CPImportPageContent() {
     if (groupPendingData.length === 0) return;
     setIsGroupImporting(true);
     setTimeout(() => {
-      setGroupData(prev => [...prev, ...groupPendingData]);
+      // 중복 제거 후 추가
+      const uniqueData = removeDuplicates(groupPendingData);
+      setGroupData(prev => {
+        // 기존 데이터와 합치고 중복 제거
+        const merged = [...prev, ...uniqueData];
+        return removeDuplicates(merged);
+      });
       setGroupPendingData([]);
       setIsGroupImporting(false);
       setGroupImportSuccess(true);
@@ -485,7 +515,13 @@ function CPImportPageContent() {
     if (itemPendingData.length === 0) return;
     setIsItemImporting(true);
     setTimeout(() => {
-      setItemData(prev => [...prev, ...itemPendingData]);
+      // 중복 제거 후 추가
+      const uniqueData = removeDuplicates(itemPendingData);
+      setItemData(prev => {
+        // 기존 데이터와 합치고 중복 제거
+        const merged = [...prev, ...uniqueData];
+        return removeDuplicates(merged);
+      });
       setItemPendingData([]);
       setIsItemImporting(false);
       setItemImportSuccess(true);
@@ -496,30 +532,56 @@ function CPImportPageContent() {
 
   // ===== 전체 저장 =====
   const handleSaveAll = async () => {
+    // CP 선택 확인
+    if (!selectedCpId || selectedCpId.trim() === '') {
+      alert('⚠️ CP를 선택해주세요. 상단에서 CP를 선택한 후 저장해주세요.');
+      return;
+    }
+
     setIsSaving(true);
     try {
-      // 1. localStorage 저장 (기존 방식 유지)
-      const key = `cp-import-data-${selectedCpId}`;
-      localStorage.setItem(key, JSON.stringify({ full: fullData, group: groupData, item: itemData }));
-      
-      // 2. DB 저장 (모든 데이터를 flat 형식으로 변환)
+      // 모든 데이터를 flat 형식으로 변환
       // ★ itemCode는 이미 파싱 단계에서 표준화되었으므로 그대로 사용
       const allData = [...fullData, ...groupData, ...itemData];
+      
+      if (allData.length === 0) {
+        alert('⚠️ 저장할 데이터가 없습니다. 먼저 Excel 파일을 Import해주세요.');
+        setIsSaving(false);
+        return;
+      }
+
       const flatData = allData.map(d => ({
         id: d.id,
-        processNo: d.processNo,
+        processNo: d.processNo || '',
+        processName: d.processName || '',
         category: d.category,
         itemCode: d.itemCode, // 이미 표준화됨 (A1, A2, A3 등)
-        value: d.value,
+        value: d.value || '',
         createdAt: d.createdAt,
-      }));
+      })).filter(d => d.processNo && d.itemCode); // 빈 값 필터링
       
-      console.log('📤 CP DB 저장:', {
+      console.log('📤 [CP Import] 저장 시작:', {
+        selectedCpId,
         totalItems: flatData.length,
         processCount: new Set(flatData.filter(d => d.itemCode === 'A1').map(d => d.processNo)).size,
         processNameCount: flatData.filter(d => d.itemCode === 'A2').length,
+        categories: [...new Set(flatData.map(d => d.category))],
       });
       
+      // 1. localStorage 저장 - cp_master_data (공정명 모달에서 사용)
+      try {
+        localStorage.setItem('cp_master_data', JSON.stringify(flatData));
+        localStorage.setItem('cp_master_saved_at', new Date().toISOString());
+        console.log('✅ [CP Import] cp_master_data localStorage 저장:', flatData.length, '건');
+      } catch (e) {
+        console.error('❌ [CP Import] localStorage 저장 실패:', e);
+      }
+      
+      // 2. localStorage 저장 (기존 방식 유지 - Import 페이지 복원용)
+      const key = `cp-import-data-${selectedCpId}`;
+      localStorage.setItem(key, JSON.stringify({ full: fullData, group: groupData, item: itemData }));
+      
+      // 3. DB 저장 (마스터 데이터셋)
       const res = await saveMasterDataset({
         datasetId: masterDatasetId,
         name: masterDatasetName || 'MASTER',
@@ -530,17 +592,107 @@ function CPImportPageContent() {
       
       if (!res.ok) {
         console.warn('[CP Import] DB master save failed (localStorage kept)');
-        alert('⚠️ DB 저장 실패! 로컬에만 저장되었습니다.');
+        alert('⚠️ 마스터 DB 저장 실패! 로컬에만 저장되었습니다.');
+        setIsSaving(false);
+        return;
+      }
+      
+      if (res.datasetId) setMasterDatasetId(res.datasetId);
+      console.log('✅ [CP Import] 마스터 DB 저장 완료:', flatData.length, '건');
+      
+      // 4. 워크시트 테이블에도 저장 (cp_processes, cp_detectors 등)
+      console.log('📤 [CP Import] 워크시트 테이블 저장 시작:', {
+        cpNo: selectedCpId,
+        flatDataCount: flatData.length,
+        flatDataSample: flatData.slice(0, 3).map(d => ({
+          processNo: d.processNo,
+          category: d.category,
+          itemCode: d.itemCode,
+          value: d.value?.substring(0, 20),
+        })),
+      });
+      
+      // ★ 중요: API 호출 전 데이터 검증
+      const filteredFlatData = flatData
+        .filter(d => d.processNo && d.processNo.trim() && d.itemCode && d.itemCode.trim())
+        .map(d => ({
+          processNo: d.processNo.trim(),
+          category: d.category,
+          itemCode: d.itemCode.trim(),
+          value: (d.value || '').trim(),
+        }));
+      
+      console.log('📤 [CP Import] API 호출 전 데이터 검증:', {
+        originalCount: flatData.length,
+        filteredCount: filteredFlatData.length,
+        processInfoCount: filteredFlatData.filter(d => d.category === 'processInfo').length,
+        a1Count: filteredFlatData.filter(d => d.itemCode === 'A1').length,
+        a2Count: filteredFlatData.filter(d => d.itemCode === 'A2').length,
+        sample: filteredFlatData.slice(0, 5),
+      });
+      
+      if (filteredFlatData.length === 0) {
+        console.error('❌ [CP Import] 필터링 후 데이터가 없습니다.');
+        alert('⚠️ 저장할 데이터가 없습니다. Excel 파일을 다시 Import해주세요.');
+        setIsSaving(false);
+        return;
+      }
+      
+      console.log('📤 [CP Import] API 호출 직전 최종 확인:', {
+        cpNo: selectedCpId.trim(),
+        filteredDataCount: filteredFlatData.length,
+        sampleData: filteredFlatData.slice(0, 3),
+        processInfoCount: filteredFlatData.filter(d => d.category === 'processInfo').length,
+        a1Count: filteredFlatData.filter(d => d.itemCode === 'A1').length,
+        a2Count: filteredFlatData.filter(d => d.itemCode === 'A2').length,
+      });
+      
+      const worksheetRes = await fetch('/api/control-plan/master-to-worksheet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cpNo: selectedCpId.trim(),
+          flatData: filteredFlatData,
+        }),
+      });
+      
+      const worksheetJson = await worksheetRes.json();
+      
+      console.log('📥 [CP Import] 워크시트 테이블 저장 응답:', {
+        status: worksheetRes.status,
+        ok: worksheetJson.ok,
+        error: worksheetJson.error,
+        counts: worksheetJson.counts,
+        debug: worksheetJson.debug,
+        fullResponse: worksheetJson,
+      });
+      
+      // ★ 중요: 저장 실패 시 상세 에러 표시
+      if (!worksheetRes.ok || !worksheetJson.ok) {
+        const errorMsg = worksheetJson.error || '알 수 없는 오류';
+        console.error('❌ [CP Import] 워크시트 테이블 저장 실패:', {
+          status: worksheetRes.status,
+          error: errorMsg,
+          debug: worksheetJson.debug,
+        });
+        alert(`⚠️ 워크시트 테이블 저장 실패!\n\n${errorMsg}\n\n브라우저 콘솔(F12)을 확인해주세요.`);
+        setIsSaving(false);
+        return;
+      }
+      
+      // ★ 중요: 저장 성공 시 카운트 확인
+      if (worksheetJson.counts && worksheetJson.counts.processes > 0) {
+        console.log('✅ [CP Import] 워크시트 테이블 저장 성공:', worksheetJson.counts);
       } else {
-        if (res.datasetId) setMasterDatasetId(res.datasetId);
-        console.log('✅ CP DB 저장 완료:', flatData.length, '건');
+        console.warn('⚠️ [CP Import] 워크시트 테이블 저장 응답은 성공이지만 데이터가 없습니다:', worksheetJson);
+        alert('⚠️ 저장은 완료되었지만 데이터가 저장되지 않았습니다.\n\n브라우저 콘솔(F12)을 확인해주세요.');
       }
       
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
-    } catch (error) {
-      console.error('저장 실패:', error);
-      alert('저장에 실패했습니다.');
+    } catch (error: any) {
+      console.error('❌ [CP Import] 저장 실패:', error);
+      alert(`저장에 실패했습니다: ${error.message || error}`);
     } finally {
       setIsSaving(false);
     }

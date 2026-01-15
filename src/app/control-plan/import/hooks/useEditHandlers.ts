@@ -10,6 +10,27 @@ import type { ImportedData } from '../types';
 
 type PreviewTab = 'full' | 'group' | 'individual';
 
+// key를 itemCode로 매핑 (PREVIEW_COLUMNS의 key → 실제 itemCode)
+const KEY_TO_ITEM_CODE_MAP: Record<string, string> = {
+  'processNo': 'A1',
+  'processName': 'A2',
+  'level': 'A3',
+  'processDesc': 'A4',
+  'equipment': 'A5',
+  'ep': 'A6',
+  'autoDetector': 'A7',
+  'productChar': 'B1',
+  'processChar': 'B2',
+  'specialChar': 'B3',
+  'spec': 'B4',
+  'evalMethod': 'B5',
+  'sampleSize': 'B6',
+  'frequency': 'B7',
+  'owner1': 'B8',
+  'owner2': 'B9',
+  'reactionPlan': 'B10',
+};
+
 export interface UseEditHandlersProps {
   fullData: ImportedData[];
   groupData: ImportedData[];
@@ -51,7 +72,11 @@ export function useEditHandlers({
     setEditingRowId(processNo);
     const row = data.filter(d => d.processNo === processNo);
     const values: Record<string, string> = {};
-    row.forEach(r => { values[r.itemCode] = r.value; });
+    // itemCode를 key로 변환하여 저장 (편집 시 key로 접근)
+    row.forEach(r => {
+      const key = Object.keys(KEY_TO_ITEM_CODE_MAP).find(k => KEY_TO_ITEM_CODE_MAP[k] === r.itemCode) || r.itemCode;
+      values[key] = r.value;
+    });
     setEditValues(values);
   }, []);
 
@@ -66,8 +91,12 @@ export function useEditHandlers({
     const setData = tab === 'full' ? setFullData : tab === 'group' ? setGroupData : setItemData;
     
     setData(prev => prev.map(d => {
-      if (d.processNo === processNo && editValues[d.itemCode] !== undefined) {
-        return { ...d, value: editValues[d.itemCode] };
+      if (d.processNo === processNo) {
+        // key를 itemCode로 변환하여 찾기
+        const key = Object.keys(KEY_TO_ITEM_CODE_MAP).find(k => KEY_TO_ITEM_CODE_MAP[k] === d.itemCode);
+        if (key && editValues[key] !== undefined) {
+          return { ...d, value: editValues[key] };
+        }
       }
       return d;
     }));
