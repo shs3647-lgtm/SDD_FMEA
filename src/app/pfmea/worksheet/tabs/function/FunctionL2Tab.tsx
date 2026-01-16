@@ -135,6 +135,16 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
     
     let cleaned = false;
     const newL2 = state.l2.map((proc: any) => {
+      // ✅ [정합성 보강] 제품특성 중복 정리 시, 고장형태(FM)가 참조하는 productCharId도 함께 리매핑
+      // - 제품특성 중복 제거(이름 기준) 과정에서 일부 productChar.id가 드롭되면
+      //   FM.productCharId가 “사라진 id”를 참조하게 되어 2L 고장형태 표시/연결이 깨질 수 있음
+      const oldCharIdToName = new Map<string, string>();
+      (proc.functions || []).forEach((f: any) => {
+        (f.productChars || []).forEach((c: any) => {
+          if (c?.id && c?.name) oldCharIdToName.set(String(c.id), String(c.name).trim());
+        });
+      });
+
       const funcs = proc.functions || [];
       
       // 1. 기능 중복 제거 (같은 이름의 기능은 첫 번째만 유지, 나머지는 합침)
@@ -169,7 +179,33 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
         return { ...f, productChars: uniqueChars };
       });
       
-      return { ...proc, functions: uniqueFuncs };
+      // ✅ 리매핑 대상(유효) 제품특성 id 집합 생성 (이름→유지된 id)
+      const canonicalIdByCharName = new Map<string, string>();
+      uniqueFuncs.forEach((f: any) => {
+        (f.productChars || []).forEach((c: any) => {
+          const name = String(c?.name || '').trim();
+          const id = String(c?.id || '');
+          if (!name || !id) return;
+          if (!canonicalIdByCharName.has(name)) canonicalIdByCharName.set(name, id);
+        });
+      });
+
+      // ✅ FM.productCharId 리매핑 (사라진/변경된 id → 동일 이름의 canonical id)
+      const currentModes = proc.failureModes || [];
+      const remappedModes = currentModes.map((fm: any) => {
+        const oldId = fm?.productCharId;
+        if (!oldId) return fm;
+        const oldName = oldCharIdToName.get(String(oldId));
+        if (!oldName) return fm;
+        const canonicalId = canonicalIdByCharName.get(oldName);
+        if (canonicalId && canonicalId !== String(oldId)) {
+          cleaned = true;
+          return { ...fm, productCharId: canonicalId };
+        }
+        return fm;
+      });
+
+      return { ...proc, functions: uniqueFuncs, failureModes: remappedModes };
     });
     
     if (cleaned) {

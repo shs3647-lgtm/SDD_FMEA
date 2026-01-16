@@ -545,6 +545,9 @@ export async function POST(request: NextRequest) {
       }
 
       // 10. FailureLinks 저장 (기존 링크 삭제 후 재생성)
+      // ★★★ validLinks를 블록 바깥에서 정의 (failureAnalyses에서 참조해야 함) ★★★
+      let savedLinkIds: string[] = [];
+      
       if (db.failureLinks.length > 0) {
         // ✅ 강력한 원자성 보장:
         // - failure_links는 fmId/feId/fcId 모두 유효 FK여야만 저장 가능
@@ -553,6 +556,17 @@ export async function POST(request: NextRequest) {
         const fmIdSet = validFmIdSet;
         const feIdSet = validFeIdSet;
         const fcIdSet = validFcIdSet;
+        
+        // ★★★ 디버그 로그: ID Set 크기 및 샘플 ★★★
+        console.log('[API] 📊 failureLinks 검증용 ID Sets:', {
+          fmIdSetSize: fmIdSet.size,
+          feIdSetSize: feIdSet.size,
+          fcIdSetSize: fcIdSet.size,
+          sampleFmIds: Array.from(fmIdSet).slice(0, 3),
+          sampleFeIds: Array.from(feIdSet).slice(0, 3),
+          sampleFcIds: Array.from(fcIdSet).slice(0, 3),
+          sampleLinkFcIds: db.failureLinks.slice(0, 3).map(l => l.fcId),
+        });
 
         const validLinks = db.failureLinks.filter(link =>
           !!link.fmId && !!link.feId && !!link.fcId &&
@@ -560,6 +574,9 @@ export async function POST(request: NextRequest) {
           feIdSet.has(link.feId) &&
           fcIdSet.has(link.fcId)
         );
+        
+        // ★★★ 실제 저장된 링크 ID 저장 (failureAnalyses에서 참조) ★★★
+        savedLinkIds = validLinks.map(l => l.id);
 
         const dropped = db.failureLinks.length - validLinks.length;
         if (dropped > 0) {
@@ -575,37 +592,45 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        await tx.failureLink.createMany({
-          data: validLinks.map(link => ({
-            id: link.id,
-            fmeaId: db.fmeaId,
-            fmId: link.fmId,
-            feId: link.feId,
-            fcId: link.fcId,
-            // ★★★ 하이브리드 ID 시스템 필드 ★★★
-            fmSeq: link.fmSeq || null,
-            feSeq: link.feSeq || null,
-            fcSeq: link.fcSeq || null,
-            fmPath: link.fmPath || null,
-            fePath: link.fePath || null,
-            fcPath: link.fcPath || null,
-            parentId: link.parentId || null,
-            mergeGroupId: link.mergeGroupId || null,
-            rowSpan: link.rowSpan || 1,
-            colSpan: link.colSpan || 1,
-          })),
-          skipDuplicates: true,
-        });
+        if (validLinks.length > 0) {
+          await tx.failureLink.createMany({
+            data: validLinks.map(link => ({
+              id: link.id,
+              fmeaId: db.fmeaId,
+              fmId: link.fmId,
+              feId: link.feId,
+              fcId: link.fcId,
+              // ★★★ 하이브리드 ID 시스템 필드 ★★★
+              fmSeq: link.fmSeq || null,
+              feSeq: link.feSeq || null,
+              fcSeq: link.fcSeq || null,
+              fmPath: link.fmPath || null,
+              fePath: link.fePath || null,
+              fcPath: link.fcPath || null,
+              parentId: link.parentId || null,
+              mergeGroupId: link.mergeGroupId || null,
+              rowSpan: link.rowSpan || 1,
+              colSpan: link.colSpan || 1,
+            })),
+            skipDuplicates: true,
+          });
+        }
       }
 
       // 11. FailureAnalyses 저장 (고장분석 통합 데이터 - All 화면 렌더링용)
       // 고장연결 확정 시 자동 생성된 고장분석 통합 데이터 저장
-      if (db.failureAnalyses && db.failureAnalyses.length > 0) {
+      // ★★★ 핵심: 실제 저장된 validLinks의 linkId만 참조할 수 있음 - FK 위반 방지 ★★★
+      const savedLinkIdSet = new Set(savedLinkIds);
+      const validAnalyses = (db.failureAnalyses || []).filter(fa => 
+        savedLinkIdSet.has(fa.linkId) // linkId가 실제 저장된 failureLink를 참조하는지 확인
+      );
+      
+      if (validAnalyses.length > 0) {
         // 기존 고장분석 데이터 삭제 (고장연결 재확정 시 재생성)
         await tx.failureAnalysis.deleteMany({ where: { fmeaId: db.fmeaId } });
         
         await tx.failureAnalysis.createMany({
-          data: db.failureAnalyses.map(fa => ({
+          data: validAnalyses.map(fa => ({
             id: fa.id,
             fmeaId: db.fmeaId,
             linkId: fa.linkId,
@@ -863,12 +888,22 @@ export async function POST(request: NextRequest) {
       }
       
       // ★★★ 15. FmeaWorksheetData 저장 (워크시트 데이터 백업) ★★★
-      // FmeaLegacyData와 함께 워크시트 데이터를 별도로 저장
-      if (legacyData) {
-        try {
-          // ✅ "(자동생성)" 플레이스홀더 제거된 데이터 사용
+      // ⚠️ 주의: FmeaWorksheetData는 FmeaProject(fmeaId) FK를 갖는데,
+      // 프로젝트별 스키마에는 FmeaProject가 없어서 FK 에러가 발생할 수 있음.
+      // → 트랜잭션(프로젝트 스키마) 내부 저장은 하지 않고, 아래에서 public 스키마에 best-effort로 저장한다.
+    }, {
+      timeout: TRANSACTION_TIMEOUT,
+    });
+
+    // ✅ FmeaWorksheetData는 public 스키마에 best-effort 저장 (FK: public.FmeaProject.fmeaId)
+    // - 워크시트 화면의 단일 진실 소스는 FmeaLegacyData(프로젝트 스키마)이며,
+    //   FmeaWorksheetData는 "백업/관리" 용도로만 유지한다.
+    if (legacyData) {
+      try {
+        const publicPrisma = getPrisma();
+        if (publicPrisma) {
           const cleanedForWorksheet = cleanAutoGeneratedData(legacyData);
-          await tx.fmeaWorksheetData.upsert({
+          await publicPrisma.fmeaWorksheetData.upsert({
             where: { fmeaId: db.fmeaId },
             create: {
               fmeaId: db.fmeaId,
@@ -888,21 +923,17 @@ export async function POST(request: NextRequest) {
               version: LEGACY_DATA_VERSION,
             },
           });
-          console.log('[API] ✅ FmeaWorksheetData 저장 완료', {
+          console.log('[API] ✅ FmeaWorksheetData(public) 저장 완료', {
             l1Name: (cleanedForWorksheet.l1 as any)?.name,
             l2Count: (cleanedForWorksheet.l2 as any[])?.length || 0,
             failureLinksCount: (cleanedForWorksheet.failureLinks as any[])?.length || 0,
           });
-        } catch (e: any) {
-          // 테이블이 없으면 스킵 (마이그레이션 전)
-          if (e?.code !== 'P2021') {
-            console.warn('[API] FmeaWorksheetData 저장 오류 (무시):', e.message);
-          }
         }
+      } catch (e: any) {
+        // best-effort: 저장 실패해도 워크시트 동작에는 영향 없도록 로그만 남김
+        console.warn('[API] FmeaWorksheetData(public) 저장 오류 (무시):', e?.message || e);
       }
-    }, {
-      timeout: TRANSACTION_TIMEOUT,
-    });
+    }
 
     return NextResponse.json({
       success: true,
@@ -1048,6 +1079,101 @@ export async function GET(request: NextRequest) {
       
       // ✅ "(자동생성)" 플레이스홀더 데이터 제거 후 반환
       const cleanedLegacyData = cleanAutoGeneratedData(legacyDataRecord.data);
+
+      // ✅✅ 3L 고장원인(FC) FK 백필: legacy.failureCauses[].processCharId가 비어있으면 atomic.l3FuncId로 1회 복구
+      // - 과거 방어/복구 코드 또는 응답 누락으로 processCharId가 ""로 저장된 데이터가 존재할 수 있음
+      // - FailureL3Tab은 processCharId로 공정특성과 연결해 렌더링하므로, 빈값이면 새로고침 후 “사라짐”처럼 보인다
+      try {
+        const legacyL2 = Array.isArray((cleanedLegacyData as any)?.l2) ? (cleanedLegacyData as any).l2 : [];
+        const needsBackfill = legacyL2.some((proc: any) =>
+          Array.isArray(proc?.failureCauses) &&
+          proc.failureCauses.some((fc: any) => fc && fc.id && (!fc.processCharId || String(fc.processCharId).trim() === ''))
+        );
+
+        if (needsBackfill) {
+          const atomicFcs = await prisma.failureCause.findMany({
+            where: { fmeaId },
+            select: { id: true, l3FuncId: true, processCharId: true },
+          });
+          const byId = new Map<string, any>(atomicFcs.map((fc: any) => [String(fc.id), fc]));
+
+          let patchedCount = 0;
+          const patchedLegacy = JSON.parse(JSON.stringify(cleanedLegacyData));
+          patchedLegacy.l2 = legacyL2.map((proc: any) => {
+            if (!Array.isArray(proc?.failureCauses) || proc.failureCauses.length === 0) return proc;
+            const newFcs = proc.failureCauses.map((fc: any) => {
+              if (!fc || !fc.id) return fc;
+              const cur = String(fc.processCharId || '').trim();
+              if (cur) return fc;
+              const atomic = byId.get(String(fc.id));
+              const fallback = atomic?.processCharId || atomic?.l3FuncId || '';
+              if (fallback) {
+                patchedCount++;
+                return { ...fc, processCharId: String(fallback) };
+              }
+              return fc;
+            });
+            return { ...proc, failureCauses: newFcs };
+          });
+
+          if (patchedCount > 0) {
+            await prisma.fmeaLegacyData.upsert({
+              where: { fmeaId },
+              create: { fmeaId, data: patchedLegacy, version: legacyDataRecord.version || LEGACY_DATA_VERSION },
+              update: { data: patchedLegacy, version: legacyDataRecord.version || LEGACY_DATA_VERSION },
+            });
+            // next response uses patched legacy
+            (cleanedLegacyData as any).l2 = patchedLegacy.l2;
+            console.log('[API] ✅ legacy failureCauses.processCharId 백필 완료:', patchedCount, '건');
+          }
+        }
+
+        // ✅✅ legacy 누락 복구: 원자성 DB에만 존재하는 고장원인을 legacy에 보강
+        // - 과거 저장/복구 이슈로 legacy에서 일부 FC가 누락될 수 있음
+        // - atomic DB를 기준으로 “누락분만” 보강 (이미 있는 항목은 유지)
+        const legacyL2ForMerge = Array.isArray((cleanedLegacyData as any)?.l2) ? (cleanedLegacyData as any).l2 : [];
+        const atomicFcsForMerge = await prisma.failureCause.findMany({
+          where: { fmeaId },
+          select: { id: true, l2StructId: true, l3FuncId: true, processCharId: true, cause: true, occurrence: true },
+        });
+        let mergedCount = 0;
+        if (atomicFcsForMerge.length > 0 && legacyL2ForMerge.length > 0) {
+          const patchedLegacy = JSON.parse(JSON.stringify(cleanedLegacyData));
+          patchedLegacy.l2 = legacyL2ForMerge.map((proc: any) => {
+            if (!proc || proc.id === undefined) return proc;
+            const currentCauses = Array.isArray(proc.failureCauses) ? proc.failureCauses : [];
+            const existingKeys = new Set<string>(
+              currentCauses.map((fc: any) => `${String(fc.processCharId || '').trim()}__${String(fc.name || '').trim()}`)
+            );
+            const existingIds = new Set<string>(currentCauses.map((fc: any) => String(fc.id || '')));
+            const toAdd = atomicFcsForMerge
+              .filter((fc: any) => String(fc.l2StructId) === String(proc.id))
+              .map((fc: any) => {
+                const pcId = String(fc.processCharId || fc.l3FuncId || '').trim();
+                const name = String(fc.cause || '').trim();
+                if (!pcId || !name) return null;
+                const key = `${pcId}__${name}`;
+                if (existingKeys.has(key) || existingIds.has(String(fc.id))) return null;
+                mergedCount++;
+                return { id: fc.id, name, occurrence: fc.occurrence, processCharId: pcId };
+              })
+              .filter((fc: any) => fc !== null);
+            if (toAdd.length === 0) return proc;
+            return { ...proc, failureCauses: [...currentCauses, ...toAdd] };
+          });
+          if (mergedCount > 0) {
+            await prisma.fmeaLegacyData.upsert({
+              where: { fmeaId },
+              create: { fmeaId, data: patchedLegacy, version: legacyDataRecord.version || LEGACY_DATA_VERSION },
+              update: { data: patchedLegacy, version: legacyDataRecord.version || LEGACY_DATA_VERSION },
+            });
+            (cleanedLegacyData as any).l2 = patchedLegacy.l2;
+            console.log('[API] ✅ legacy failureCauses 누락 보강 완료:', mergedCount, '건');
+          }
+        }
+      } catch (e: any) {
+        console.warn('[API] legacy failureCauses.processCharId 백필 실패 (무시):', e?.message || e);
+      }
       
       // 확정 상태도 함께 로드
       const confirmedState = await prisma.fmeaConfirmedState.findUnique({
@@ -1228,6 +1354,8 @@ export async function GET(request: NextRequest) {
         l3FuncId: fc.l3FuncId,
         l3StructId: fc.l3StructId,
         l2StructId: fc.l2StructId,
+        // ✅ 누락 버그 수정: processCharId도 atomic 응답에 포함 (legacy 역변환/연동에 필요)
+        processCharId: fc.processCharId || undefined,
         cause: fc.cause,
         occurrence: fc.occurrence || undefined,
         createdAt: fc.createdAt.toISOString(),

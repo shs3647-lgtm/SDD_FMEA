@@ -166,6 +166,18 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
     
     let cleaned = false;
     const newL2 = state.l2.map((proc: any) => {
+      // ✅ [근본 해결] 공정특성 중복 정리 시, 고장원인(FC)이 참조하는 processCharId도 함께 리매핑해야 함
+      // - 공정특성 중복 제거(이름 기준) 과정에서 일부 processChar.id가 드롭되면
+      //   FC.processCharId가 “사라진 id”를 참조하게 되어 3L 고장원인이 새로고침 후 화면에서 사라진 것처럼 보임
+      const oldCharIdToName = new Map<string, string>();
+      (proc.l3 || []).forEach((we: any) => {
+        (we.functions || []).forEach((f: any) => {
+          (f.processChars || []).forEach((c: any) => {
+            if (c?.id && c?.name) oldCharIdToName.set(String(c.id), String(c.name).trim());
+          });
+        });
+      });
+
       const newL3 = (proc.l3 || []).map((we: any) => {
         const funcs = we.functions || [];
         
@@ -204,7 +216,35 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
         return { ...we, functions: uniqueFuncs };
       });
       
-      return { ...proc, l3: newL3 };
+      // ✅ 리매핑 대상(유효) 공정특성 id 집합 생성 (이름→유지된 id)
+      const canonicalIdByCharName = new Map<string, string>();
+      newL3.forEach((we: any) => {
+        (we.functions || []).forEach((f: any) => {
+          (f.processChars || []).forEach((c: any) => {
+            const name = String(c?.name || '').trim();
+            const id = String(c?.id || '');
+            if (!name || !id) return;
+            if (!canonicalIdByCharName.has(name)) canonicalIdByCharName.set(name, id);
+          });
+        });
+      });
+
+      // ✅ FC.processCharId 리매핑 (사라진/변경된 id → 동일 이름의 canonical id)
+      const currentCauses = proc.failureCauses || [];
+      const remappedCauses = currentCauses.map((fc: any) => {
+        const oldId = fc?.processCharId;
+        if (!oldId) return fc;
+        const oldName = oldCharIdToName.get(String(oldId));
+        if (!oldName) return fc;
+        const canonicalId = canonicalIdByCharName.get(oldName);
+        if (canonicalId && canonicalId !== String(oldId)) {
+          cleaned = true;
+          return { ...fc, processCharId: canonicalId };
+        }
+        return fc;
+      });
+
+      return { ...proc, l3: newL3, failureCauses: remappedCauses };
     });
     
     if (cleaned) {

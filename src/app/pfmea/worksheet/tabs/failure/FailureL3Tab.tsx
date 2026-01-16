@@ -115,6 +115,20 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
     
     meaningfulProcs.forEach(proc => {
       const allCauses = proc.failureCauses || [];  // 공정 레벨 고장원인
+
+      // ✅ 공정 내 공정특성 이름별 id 그룹 (동일 이름 중복 처리)
+      const charIdsByName = new Map<string, Set<string>>();
+      (proc.l3 || []).forEach((we: any) => {
+        (we.functions || []).forEach((f: any) => {
+          (f.processChars || []).forEach((pc: any) => {
+            const n = String(pc?.name || '').trim();
+            const id = String(pc?.id || '').trim();
+            if (!n || !id) return;
+            if (!charIdsByName.has(n)) charIdsByName.set(n, new Set<string>());
+            charIdsByName.get(n)!.add(id);
+          });
+        });
+      });
       
       // ✅ 공정별 중복 공정특성 추적 (이름 기준)
       const countedCharsInProc = new Set<string>();
@@ -149,7 +163,8 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
             countedCharsInProc.add(charName);
             
             // 이 공정특성에 연결된 고장원인들
-            const linkedCauses = allCauses.filter((c: any) => c.processCharId === pc.id);
+            const ids = charIdsByName.get(charName) || new Set<string>([String(pc.id)]);
+            const linkedCauses = allCauses.filter((c: any) => ids.has(String(c.processCharId || '').trim()));
             if (linkedCauses.length === 0) {
               failureCauseCount++;  // 공정특성에 고장원인 없음
             } else {
@@ -178,14 +193,44 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
     if (lastCleanedHash.current === currentHash) return;
     
     // 중복 고장원인 검사 및 정리
+    // ✅ 추가 정리: 공정 내 동일 공정특성명 중복(id가 여러 개) → failureCauses.processCharId를 대표 id로 정규화
     let hasDuplicates = false;
     const cleanedL2 = state.l2.map((proc: any) => {
       const currentCauses = proc.failureCauses || [];
       if (currentCauses.length === 0) return proc;
+
+      // 공정 내 공정특성 id→name, name→대표 id(사전순) 매핑
+      const charNameById = new Map<string, string>();
+      const canonicalIdByName = new Map<string, string>();
+      (proc.l3 || []).forEach((we: any) => {
+        (we.functions || []).forEach((f: any) => {
+          (f.processChars || []).forEach((pc: any) => {
+            const n = String(pc?.name || '').trim();
+            const id = String(pc?.id || '').trim();
+            if (!n || !id) return;
+            charNameById.set(id, n);
+            const prev = canonicalIdByName.get(n);
+            if (!prev || id.localeCompare(prev) < 0) canonicalIdByName.set(n, id);
+          });
+        });
+      });
+
+      const normalizedCauses = currentCauses.map((c: any) => {
+        const oldId = String(c?.processCharId || '').trim();
+        if (!oldId) return c;
+        const n = charNameById.get(oldId);
+        if (!n) return c;
+        const canonicalId = canonicalIdByName.get(n);
+        if (canonicalId && canonicalId !== oldId) {
+          hasDuplicates = true;
+          return { ...c, processCharId: canonicalId };
+        }
+        return c;
+      });
       
       // processCharId + name 조합으로 중복 제거
       const seen = new Set<string>();
-      const uniqueCauses = currentCauses.filter((c: any) => {
+      const uniqueCauses = normalizedCauses.filter((c: any) => {
         const key = `${c.processCharId || ''}_${c.name || ''}`;
         if (seen.has(key)) {
           hasDuplicates = true;
@@ -196,7 +241,7 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
         return true;
       });
       
-      if (uniqueCauses.length !== currentCauses.length) {
+      if (uniqueCauses.length !== currentCauses.length || normalizedCauses.some((c: any, idx: number) => c?.processCharId !== currentCauses[idx]?.processCharId)) {
         return { ...proc, failureCauses: uniqueCauses };
       }
       return proc;
@@ -382,6 +427,17 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
           if (proc.id !== processId) return proc;
           
           const currentCauses = proc.failureCauses || [];
+
+          // ✅ 동일 공정특성명 그룹(현재 공정) → 대표 id로 정규화하여 “표시/저장/삭제”를 일치시킴
+          const currentCharName = String(modal.processCharName || '').trim();
+          const allChars = (proc.l3 || []).flatMap((we: any) =>
+            (we.functions || []).flatMap((f: any) => f.processChars || [])
+          );
+          const matchingChars = currentCharName ? allChars.filter((c: any) => String(c?.name || '').trim() === currentCharName) : [];
+          const matchingIds = new Set<string>(matchingChars.map((c: any) => String(c?.id || '').trim()).filter(Boolean));
+          const canonicalCharId = matchingIds.size > 0
+            ? Array.from(matchingIds).sort((a: string, b: string) => a.localeCompare(b))[0]
+            : String(processCharId || '').trim();
           
           // ✅ 2026-01-16: causeId가 있고 단일 선택인 경우
           if (causeId && selectedValues.length <= 1) {
@@ -399,8 +455,13 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
           }
           
           // ✅ 다중 선택: 선택된 항목 전체 반영 (기존 + 신규)
-          // 1. 다른 processCharId의 고장원인은 보존
-          const otherCauses = currentCauses.filter((c: any) => c.processCharId !== processCharId);
+          // 1. 다른 공정특성명 그룹의 고장원인은 보존
+          const otherCauses = currentCauses.filter((c: any) => {
+            const pid = String(c?.processCharId || '').trim();
+            if (!pid) return true;
+            if (matchingIds.size === 0) return pid !== String(processCharId || '').trim();
+            return !matchingIds.has(pid);
+          });
           
           // 2. 선택된 값들 각각 별도 레코드로 생성
           // ✅ 특별특성 마스터에서 공정특성 기준 SC 자동 지정
@@ -414,7 +475,7 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
           
           const newCauses = selectedValues.map(val => {
             const existing = currentCauses.find((c: any) => 
-              c.processCharId === processCharId && c.name === val
+              String(c.processCharId || '').trim() === canonicalCharId && c.name === val
             );
             
             return existing || { 
@@ -422,7 +483,7 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
               name: val, 
               occurrence: undefined,
               sc: autoSC,  // ✅ 마스터 기준 SC 자동 지정
-              processCharId: processCharId  // ✅ CASCADE 연결
+              processCharId: canonicalCharId  // ✅ CASCADE 연결 (대표 id)
             };
           });
           
@@ -435,7 +496,7 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
         });
         
         // ✅ 자동연결: 동일한 공정특성 이름을 가진 다른 공정에도 동일한 고장원인 추가
-        const currentCharName = modal.processCharName;  // ✅ processCharName으로 통일
+        const currentCharName = String(modal.processCharName || '').trim();  // ✅ processCharName으로 통일
         if (currentCharName && selectedValues.length > 0) {
           let autoLinkedCount = 0;
           
@@ -447,31 +508,31 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
             const allChars = (proc.l3 || []).flatMap((we: any) => 
               (we.functions || []).flatMap((f: any) => f.processChars || [])
             );
-            const matchingChars = allChars.filter((c: any) => c.name === currentCharName);
+            const matchingChars = allChars.filter((c: any) => String(c?.name || '').trim() === currentCharName);
             
             if (matchingChars.length === 0) return proc;
+
+            const ids = matchingChars.map((c: any) => String(c?.id || '').trim()).filter(Boolean);
+            const canonicalId = ids.sort((a: string, b: string) => a.localeCompare(b))[0];
             
             const currentCauses = proc.failureCauses || [];
             const updatedCauses = [...currentCauses];
             
-            matchingChars.forEach((charItem: any) => {
-              selectedValues.forEach(val => {
-                const exists = updatedCauses.some((c: any) => 
-                  c.processCharId === charItem.id && c.name === val
-                );
-                if (!exists) {
-                  // ✅ 특별특성 마스터에서 SC 자동 지정
-                  const scFromMaster = autoSetSCForFailureCause(charItem.name || currentCharName);
-                  updatedCauses.push({
-                    id: uid(),
-                    name: val,
-                    occurrence: undefined,
-                    sc: scFromMaster,  // ✅ 마스터 기준 SC 자동 지정
-                    processCharId: charItem.id
-                  });
-                  autoLinkedCount++;
-                }
-              });
+            selectedValues.forEach(val => {
+              const exists = updatedCauses.some((c: any) =>
+                String(c.processCharId || '').trim() === canonicalId && c.name === val
+              );
+              if (!exists) {
+                const scFromMaster = autoSetSCForFailureCause(currentCharName);
+                updatedCauses.push({
+                  id: uid(),
+                  name: val,
+                  occurrence: undefined,
+                  sc: scFromMaster,
+                  processCharId: canonicalId,
+                });
+                autoLinkedCount++;
+              }
             });
             
             return { ...proc, failureCauses: updatedCauses };
@@ -526,13 +587,22 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
       const newState = JSON.parse(JSON.stringify(prev));
       
       if (type === 'l3FailureCause') {
-        // ✅ 공정 레벨에서 삭제 (processCharId 기준)
+        // ✅ 공정 레벨에서 삭제 (공정특성명 그룹 기준 - 대표 id로 정규화된 데이터 포함)
         newState.l2 = newState.l2.map((proc: any) => {
           if (processId && proc.id !== processId) return proc;
+          const currentCharName = String((modal as any).processCharName || '').trim();
+          const allChars = (proc.l3 || []).flatMap((we: any) =>
+            (we.functions || []).flatMap((f: any) => f.processChars || [])
+          );
+          const matchingIds = new Set<string>(
+            currentCharName
+              ? allChars.filter((c: any) => String(c?.name || '').trim() === currentCharName).map((c: any) => String(c?.id || '').trim()).filter(Boolean)
+              : [String(processCharId || '').trim()]
+          );
           return {
             ...proc,
             failureCauses: (proc.failureCauses || []).filter((c: any) => 
-              !(c.processCharId === processCharId && deletedSet.has(c.name))
+              !(matchingIds.has(String(c.processCharId || '').trim()) && deletedSet.has(c.name))
             )
           };
         });
@@ -618,6 +688,23 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
     processes.forEach(proc => {
       const workElements = (proc.l3 || []).filter((we: any) => we.name && !we.name.includes('클릭'));
       const allCauses = proc.failureCauses || [];  // 공정 레벨에 저장된 고장원인
+
+      // ✅ 공정 내 공정특성 이름별 id 그룹/대표 id(사전순) - “표시 1개 + FK 안정화”를 위한 기준
+      const charIdsByName = new Map<string, Set<string>>();
+      const canonicalIdByName = new Map<string, string>();
+      (proc.l3 || []).forEach((we: any) => {
+        (we.functions || []).forEach((f: any) => {
+          (f.processChars || []).forEach((pc: any) => {
+            const n = String(pc?.name || '').trim();
+            const id = String(pc?.id || '').trim();
+            if (!n || !id) return;
+            if (!charIdsByName.has(n)) charIdsByName.set(n, new Set<string>());
+            charIdsByName.get(n)!.add(id);
+            const prev = canonicalIdByName.get(n);
+            if (!prev || id.localeCompare(prev) < 0) canonicalIdByName.set(n, id);
+          });
+        });
+      });
       
       // 이 공정에서 이미 표시된 공정특성 이름 Set
       if (!displayedCharsByProc.has(proc.id)) {
@@ -660,7 +747,10 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
             }
             displayedCharsInProc.add(charName);
             
-            allProcessChars.push({ ...c, funcId: f.id, funcName: f.name });
+            const canonicalId = canonicalIdByName.get(charName) || String(c.id || '').trim();
+            const ids = Array.from(charIdsByName.get(charName) || new Set<string>([canonicalId])).filter(Boolean);
+            // ✅ 표시 행은 대표 id로 고정하고, 연결은 name-group ids 전체로 처리
+            allProcessChars.push({ ...c, id: canonicalId, processCharIds: ids, funcId: f.id, funcName: f.name });
           });
         });
         
@@ -679,7 +769,19 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
           // 각 공정특성별로 행 생성
           allProcessChars.forEach((pc: any, pcIdx: number) => {
             // 이 공정특성에 연결된 고장원인들
-            const linkedCauses = allCauses.filter((c: any) => c.processCharId === pc.id);
+            const ids: string[] = Array.isArray(pc.processCharIds) && pc.processCharIds.length > 0
+              ? pc.processCharIds
+              : [String(pc.id || '').trim()];
+            const linkedCausesRaw = allCauses.filter((c: any) => ids.includes(String(c.processCharId || '').trim()));
+            // ✅ 동일 공정특성명 중복 id로 인해 같은 고장원인이 중복 생성된 경우, name 기준 1번만 표시
+            const seenCauseNames = new Set<string>();
+            const linkedCauses = linkedCausesRaw.filter((c: any) => {
+              const n = String(c?.name || '').trim();
+              if (!n) return true;
+              if (seenCauseNames.has(n)) return false;
+              seenCauseNames.add(n);
+              return true;
+            });
             const charFirstRowIdx = rows.length;
             
             if (linkedCauses.length === 0) {
