@@ -250,11 +250,12 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       const currentState = stateRef.current;
       
       // 현재 state를 원자성 DB로 마이그레이션
+      const normalizedFailureLinks = normalizeFailureLinks((currentState as any).failureLinks || [], currentState);
       const legacyData = {
         fmeaId: targetFmeaId,  // ✅ atomicDB 없어도 fmeaId 사용
         l1: currentState.l1, // ✅ stateRef.current 사용
         l2: currentState.l2, // ✅ stateRef.current 사용
-        failureLinks: (currentState as any).failureLinks || [],
+        failureLinks: normalizedFailureLinks,
         structureConfirmed: (currentState as any).structureConfirmed || false,
         l1Confirmed: (currentState as any).l1Confirmed || false,
         l2Confirmed: (currentState as any).l2Confirmed || false,
@@ -381,6 +382,70 @@ export function useWorksheetState(): UseWorksheetStateReturn {
    * - 고장연결처럼 잦은 클릭이 발생하는 화면에서 매번 PostgreSQL 저장하면 반응속도가 급격히 느려짐
    * - 임시 편집 중에는 localStorage에만 저장하고, "전체확정"에서만 DB 저장하도록 분리
    */
+  const normalizeFailureLinks = useCallback((links: any[], stateSnapshot: WorksheetState) => {
+    if (!links || links.length === 0) return links || [];
+    const fmTextToId = new Map<string, string>();
+    const fmIdToText = new Map<string, string>();
+    const fmIdToProcess = new Map<string, string>();
+    const feTextToId = new Map<string, string>();
+    const feIdToText = new Map<string, string>();
+    const fcTextToId = new Map<string, string>();
+    const fcIdToText = new Map<string, string>();
+
+    (stateSnapshot.l2 || []).forEach((proc: any) => {
+      (proc.failureModes || []).forEach((fm: any) => {
+        const text = fm.mode || fm.name || '';
+        if (fm.id) {
+          fmIdToText.set(fm.id, text);
+          fmIdToProcess.set(fm.id, proc.name || '');
+        }
+        if (text && fm.id && !fmTextToId.has(text)) {
+          fmTextToId.set(text, fm.id);
+        }
+      });
+      (proc.failureCauses || []).forEach((fc: any) => {
+        const text = fc.cause || fc.name || '';
+        if (fc.id) {
+          fcIdToText.set(fc.id, text);
+        }
+        if (text && fc.id && !fcTextToId.has(text)) {
+          fcTextToId.set(text, fc.id);
+        }
+      });
+    });
+
+    ((stateSnapshot.l1 as any)?.failureScopes || []).forEach((fe: any) => {
+      const text = fe.effect || fe.name || '';
+      if (fe.id) {
+        feIdToText.set(fe.id, text);
+      }
+      if (text && fe.id && !feTextToId.has(text)) {
+        feTextToId.set(text, fe.id);
+      }
+    });
+
+    return links.map((link: any) => {
+      const fmText = link.fmText || link.cache?.fmText || '';
+      const feText = link.feText || link.cache?.feText || '';
+      const fcText = link.fcText || link.cache?.fcText || '';
+
+      const fmId = link.fmId || fmTextToId.get(fmText) || '';
+      const feId = link.feId || feTextToId.get(feText) || '';
+      const fcId = link.fcId || fcTextToId.get(fcText) || '';
+
+      return {
+        ...link,
+        fmId,
+        fmText: fmText || fmIdToText.get(fmId) || '',
+        fmProcess: link.fmProcess || fmIdToProcess.get(fmId) || '',
+        feId,
+        feText: feText || feIdToText.get(feId) || '',
+        fcId,
+        fcText: fcText || fcIdToText.get(fcId) || '',
+      };
+    });
+  }, []);
+
   const saveToLocalStorageOnly = useCallback(() => {
     const targetId = selectedFmeaId || currentFmea?.id;
     if (!targetId) {
@@ -414,6 +479,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           ? { ...currentState.l1, name: preservedL1Name }
           : currentState.l1;
 
+      const normalizedFailureLinks = normalizeFailureLinks((currentState as any).failureLinks || [], currentState);
       const worksheetData = {
         fmeaId: targetId,
         l1: l1ToSave,
@@ -427,7 +493,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         failureL2Confirmed: (currentState as any).failureL2Confirmed || false,
         failureL3Confirmed: (currentState as any).failureL3Confirmed || false,
         failureLinkConfirmed: (currentState as any).failureLinkConfirmed || false,
-        failureLinks: (currentState as any).failureLinks || [],
+        failureLinks: normalizedFailureLinks,
         riskData: currentState.riskData || {},
         savedAt: new Date().toISOString(),
       };
@@ -441,7 +507,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     } finally {
       setIsSaving(false);
     }
-  }, [selectedFmeaId, currentFmea?.id]);
+  }, [selectedFmeaId, currentFmea?.id, normalizeFailureLinks]);
 
   // 기존 호환 저장 함수 (레거시 + 원자성 동시 저장) - ✅ stateRef 사용으로 항상 최신 상태 저장
   const saveToLocalStorage = useCallback(() => {
@@ -483,6 +549,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           ? { ...currentState.l1, name: preservedL1Name }
           : currentState.l1;
 
+      const normalizedFailureLinks = normalizeFailureLinks((currentState as any).failureLinks || [], currentState);
       const worksheetData = {
         fmeaId: targetId,
         l1: l1ToSave,
@@ -496,7 +563,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         failureL2Confirmed: (currentState as any).failureL2Confirmed || false,
         failureL3Confirmed: (currentState as any).failureL3Confirmed || false,
         failureLinkConfirmed: (currentState as any).failureLinkConfirmed || false,  // ✅ 고장연결 확정 상태
-        failureLinks: (currentState as any).failureLinks || [],
+        failureLinks: normalizedFailureLinks,
         riskData: currentState.riskData || {},  // ✅ 최신 riskData 저장
         savedAt: new Date().toISOString(),
       };
@@ -601,7 +668,7 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     } finally { 
       setIsSaving(false); 
     }
-  }, [selectedFmeaId, currentFmea?.id]);  // ✅ state 제거, stateRef 사용
+  }, [selectedFmeaId, currentFmea?.id, normalizeFailureLinks]);  // ✅ state 제거, stateRef 사용
 
   // ★★★ 2026-01-12: DB 저장도 함께 트리거 (setDirty 호출 시 자동 저장) ★★★
   const triggerAutoSave = useCallback(() => {
@@ -978,6 +1045,10 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           _inheritedFrom: baseId,
           _inheritedAt: new Date().toISOString(),
         };
+        worksheetData.failureLinks = normalizeFailureLinks(
+          worksheetData.failureLinks || [],
+          worksheetData as any
+        );
         localStorage.setItem(`pfmea_worksheet_${selectedFmeaId}`, JSON.stringify(worksheetData));
         
         // 5. URL에서 상속 파라미터 제거 (새로고침 시 중복 상속 방지)
@@ -1692,6 +1763,10 @@ export function useWorksheetState(): UseWorksheetStateReturn {
             });
             
             // 3. 초기화된 데이터 저장
+            parsed.failureLinks = normalizeFailureLinks(
+              parsed.failureLinks || [],
+              parsed as any
+            );
             localStorage.setItem(`pfmea_worksheet_${selectedFmeaId}`, JSON.stringify(parsed));
             console.log('[초기화 완료] 고장형태 데이터가 삭제되었습니다.');
             

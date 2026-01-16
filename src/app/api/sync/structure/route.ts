@@ -9,6 +9,77 @@ import { getPrisma, getPrismaForSchema, getBaseDatabaseUrl } from '@/lib/prisma'
 import { getProjectSchemaName, ensureProjectSchemaReady } from '@/lib/project-schema';
 
 // ============================================================================
+// 4M 정규화 유틸리티
+// ============================================================================
+
+/**
+ * 4M 값 정규화 함수
+ * - 다양한 소스(DB, 레거시, PFD 등)에서 오는 4M 값을 표준 형식으로 변환
+ * - 표준 값: 'MN' (Man), 'MC' (Machine), 'IM' (In-Material), 'EN' (Environment)
+ */
+function normalize4M(value: any): 'MN' | 'MC' | 'IM' | 'EN' | '' {
+  if (!value) return '';
+  const v = String(value).trim().toUpperCase();
+  
+  // 이미 표준 형식인 경우
+  if (['MN', 'MC', 'IM', 'EN'].includes(v)) {
+    return v as 'MN' | 'MC' | 'IM' | 'EN';
+  }
+  
+  // PFD/레거시 형식 변환
+  switch (v) {
+    case 'MAN':
+    case 'WORKER':
+    case '작업자':
+      return 'MN';
+    case 'MACHINE':
+    case 'EQUIPMENT':
+    case '설비':
+    case '기계':
+      return 'MC';
+    case 'MATERIAL':
+    case 'IN-MATERIAL':
+    case 'INMATERIAL':
+    case '자재':
+    case '부자재':
+    case 'MT': // 일부 레거시에서 MT 사용
+      return 'IM';
+    case 'METHOD':
+    case 'ENVIRONMENT':
+    case 'ENV':
+    case '환경':
+    case 'ME': // Method/Environment
+      return 'EN';
+    default:
+      return '';
+  }
+}
+
+/**
+ * L3 객체에서 4M 값 추출 (m4, fourM, 4m 등 다양한 필드명 지원)
+ */
+function get4MFromL3(l3: any): 'MN' | 'MC' | 'IM' | 'EN' | '' {
+  // 다양한 필드명에서 값 추출 시도
+  const rawValue = l3?.m4 || l3?.fourM || l3?.['4m'] || l3?.category4M || l3?.category || '';
+  return normalize4M(rawValue);
+}
+
+/**
+ * 설비/금형/지그 여부 확인 (MC, IM, EN만 해당)
+ */
+function isEquipment4M(m4: string): boolean {
+  const normalized = normalize4M(m4);
+  return ['MC', 'IM', 'EN'].includes(normalized);
+}
+
+/**
+ * Man(작업자) 여부 확인
+ */
+function isMan4M(m4: string): boolean {
+  return normalize4M(m4) === 'MN';
+}
+
+// ============================================================================
 // 타입 정의
 // ============================================================================
 
@@ -70,7 +141,10 @@ export async function GET(req: NextRequest) {
         l3Structures: l2.l3Structures?.map(l3 => ({
           id: l3.id,
           name: l3.name,
-          m4: l3.m4,
+          m4Raw: l3.m4, // 원본 DB 값
+          m4Normalized: get4MFromL3(l3), // 정규화된 값
+          isEquipment: isEquipment4M(l3.m4 || ''), // 설비 여부
+          isMan: isMan4M(l3.m4 || ''), // Man 여부
           l3FunctionCount: l3.l3Functions?.length || 0,
           l3Functions: l3.l3Functions?.map(fn => ({
             processChar: fn.processChar,
@@ -212,24 +286,102 @@ async function syncFmeaToCp(
             name: l2.name || '',
             order: idx,
             // L3 작업요소
-            l3Structures: (l2.l3 || []).map((l3: any, l3Idx: number) => ({
-              id: l3.id || `legacy-l3-${idx}-${l3Idx}`,
-              name: l3.name || '',
-              m4: l3.m4 || '',
-              order: l3Idx,
-              // L3 Functions (공정특성)
-              l3Functions: (l3.functions || []).map((fn: any) => ({
-                id: fn.id || `legacy-fn-${idx}-${l3Idx}`,
-                processChar: fn.processChars?.[0]?.name || '',
-                specialChar: fn.processChars?.[0]?.specialChar || '',
-              })),
-            })),
-            // L2 Functions (제품특성)
-            l2Functions: (l2.functions || []).map((fn: any) => ({
-              id: fn.id || `legacy-l2fn-${idx}`,
-              productChar: fn.productChars?.[0]?.name || '',
-              specialChar: fn.productChars?.[0]?.specialChar || '',
-            })),
+            l3Structures: (l2.l3 || []).map((l3: any, l3Idx: number) => {
+              // ★ L3 Functions (공정특성) 추출 - 비정규화 제거: 모든 공정특성 보존
+              const l3Functions: any[] = [];
+              let seq = 0;
+              
+              // 방법 1: l3.functions 배열이 있는 경우 (함수별 공정특성 전체 저장)
+              if (l3.functions && Array.isArray(l3.functions)) {
+                l3.functions.forEach((fn: any, fnIdx: number) => {
+                  if (fn.processChars && Array.isArray(fn.processChars) && fn.processChars.length > 0) {
+                    fn.processChars.forEach((pc: any, pcIdx: number) => {
+                      const name = String(pc?.name || pc?.processChar || '').trim();
+                      if (!name) return;
+                      l3Functions.push({
+                        id: pc?.id || fn?.id || `legacy-fn-${idx}-${l3Idx}-${fnIdx}-${pcIdx}`,
+                        processChar: name,
+                        specialChar: pc?.specialChar || fn?.specialChar || '',
+                      });
+                      seq++;
+                    });
+                  }
+                  const singlePc = String(fn?.processChar || '').trim();
+                  if (singlePc) {
+                    l3Functions.push({
+                      id: fn?.id || `legacy-fn-${idx}-${l3Idx}-${fnIdx}-single`,
+                      processChar: singlePc,
+                      specialChar: fn?.specialChar || '',
+                    });
+                    seq++;
+                  }
+                });
+              }
+              
+              // 방법 2: l3.processChars 배열이 직접 있는 경우 (직접 저장된 공정특성 전체 보존)
+              if (l3.processChars && Array.isArray(l3.processChars)) {
+                l3.processChars.forEach((pc: any, pcIdx: number) => {
+                  const name = String(pc?.name || pc?.processChar || '').trim();
+                  if (!name) return;
+                  l3Functions.push({
+                    id: pc?.id || `legacy-fn-${idx}-${l3Idx}-pc-${pcIdx}`,
+                    processChar: name,
+                    specialChar: pc?.specialChar || '',
+                  });
+                  seq++;
+                });
+              }
+              
+              // 방법 3: l3.l3Functions (이미 원자성 형식)
+              if (l3.l3Functions && Array.isArray(l3.l3Functions)) {
+                l3.l3Functions.forEach((fn: any, fnIdx: number) => {
+                  const name = String(fn?.processChar || '').trim();
+                  if (!name) return;
+                  l3Functions.push({
+                    ...fn,
+                    id: fn?.id || `legacy-fn-${idx}-${l3Idx}-atomic-${fnIdx}`,
+                    processChar: name,
+                    specialChar: fn?.specialChar || '',
+                  });
+                  seq++;
+                });
+              }
+              
+              return {
+                id: l3.id || `legacy-l3-${idx}-${l3Idx}`,
+                name: l3.name || '',
+                // ★ 4M 정규화: m4, fourM, 4m, category4M 등 다양한 필드명 지원
+                m4: get4MFromL3(l3),
+                order: l3Idx,
+                l3Functions,
+                // 원본 레거시 참고용 (디버깅)
+                _legacyProcessCharCount: seq,
+              };
+            }),
+            // L2 Functions (제품특성) - 비정규화 제거: 모든 제품특성 보존
+            l2Functions: (l2.functions || []).flatMap((fn: any, fnIdx: number) => {
+              const entries: any[] = [];
+              if (fn.productChars && Array.isArray(fn.productChars) && fn.productChars.length > 0) {
+                fn.productChars.forEach((pc: any, pcIdx: number) => {
+                  const name = String(pc?.name || pc?.productChar || '').trim();
+                  if (!name) return;
+                  entries.push({
+                    id: pc?.id || fn?.id || `legacy-l2fn-${idx}-${fnIdx}-${pcIdx}`,
+                    productChar: name,
+                    specialChar: pc?.specialChar || fn?.specialChar || '',
+                  });
+                });
+              }
+              const singlePc = String(fn?.productChar || '').trim();
+              if (singlePc) {
+                entries.push({
+                  id: fn?.id || `legacy-l2fn-${idx}-${fnIdx}-single`,
+                  productChar: singlePc,
+                  specialChar: fn?.specialChar || '',
+                });
+              }
+              return entries;
+            }),
           }));
         }
       } catch (e: any) {
@@ -275,39 +427,95 @@ async function syncFmeaToCp(
       // L2Function에서 제품특성 추출 (각각 별도 행)
       const l2Functions = l2.l2Functions || [];
       const productCharList = l2Functions
-        .filter((f: any) => f.productChar)
         .map((f: any) => ({
-          name: f.productChar,
+          name: typeof f.productChar === 'string' ? f.productChar.trim() : '',
           specialChar: f.specialChar || ''
-        }));
+        }))
+        .filter((f: any) => f.name);
       
       // L3Structure + L3Function에서 공정특성 추출 (각각 별도 행)
       const l3Structures = l2.l3Structures || [];
       
-      // 설비/금형/지그 연동: MC, IM, EN만 (MN 제외)
-      const equipmentL3s = l3Structures.filter((l3: any) => 
-        l3.m4 && ['MC', 'IM', 'EN'].includes(l3.m4)
-      );
-      const equipmentNames = equipmentL3s.map((l3: any) => l3.name).filter(Boolean);
+      // ★ 설비/금형/지그 연동: MN(Man) 제외, 나머지 모두 포함
+      // ★ 빈 4M 값도 설비로 포함 (4M이 설정되지 않은 경우도 설비일 수 있음)
+      const equipmentL3s = l3Structures.filter((l3: any) => {
+        const m4 = get4MFromL3(l3);
+        const isMan = (m4 === 'MN');
+        // 디버깅 로그
+        console.log(`[SYNC-4M] L2=${l2.name}, L3=${l3.name}, rawM4=${l3.m4||l3.fourM||''}, normalized=${m4}, isMan=${isMan}, included=${!isMan}`);
+        return !isMan; // MN(Man)만 제외, 나머지 모두 포함 (MC, IM, EN, 빈값)
+      });
+      const equipmentNames = equipmentL3s
+        .map((l3: any) => (typeof l3.name === 'string' ? l3.name.trim() : ''))
+        .filter(Boolean);
       
-      // 공정특성 추출 (L3Function에서)
+      console.log(`[SYNC-EQUIP] L2=${l2.name}, 설비 목록: [${equipmentNames.join(', ')}]`);
+      
+      // ★ 공정특성 추출 - 다양한 데이터 소스 지원
+      // ★ MN(Man) 분류는 공정특성 연동에서 제외
       const processCharList: { name: string; specialChar: string }[] = [];
+      const excludedProcessChars = new Set(['작업숙련도']);
+      const addedProcessChars = new Set<string>(); // 중복 방지
+      
       for (const l3 of l3Structures) {
-        if (l3.l3Functions) {
+        const m4 = get4MFromL3(l3);
+        if (m4 === 'MN') {
+          console.log(`[SYNC-PROC] L3=${l3.name} (m4=MN) 공정특성 제외`);
+          continue;
+        }
+        // ★ 소스 1: l3.l3Functions (원자성 DB 또는 변환된 데이터)
+        if (l3.l3Functions && Array.isArray(l3.l3Functions)) {
           for (const func of l3.l3Functions) {
-            if (func.processChar) {
-              processCharList.push({
-                name: func.processChar,
-                specialChar: func.specialChar || ''
-              });
+            const processChar = typeof func.processChar === 'string' ? func.processChar.trim() : '';
+            if (processChar && !excludedProcessChars.has(processChar) && !addedProcessChars.has(processChar)) {
+              processCharList.push({ name: processChar, specialChar: func.specialChar || '' });
+              addedProcessChars.add(processChar);
+              console.log(`[SYNC-PROC-1] L3=${l3.name} (m4=${m4}), 공정특성: ${processChar} (from l3Functions)`);
+            }
+          }
+        }
+        
+        // ★ 소스 2: l3.processChars (레거시 데이터 - 직접 저장된 공정특성)
+        if (l3.processChars && Array.isArray(l3.processChars)) {
+          for (const pc of l3.processChars) {
+            const processChar = typeof pc === 'string' ? pc.trim() : (pc?.name || pc?.processChar || '').trim();
+            if (processChar && !excludedProcessChars.has(processChar) && !addedProcessChars.has(processChar)) {
+              processCharList.push({ name: processChar, specialChar: pc?.specialChar || '' });
+              addedProcessChars.add(processChar);
+              console.log(`[SYNC-PROC-2] L3=${l3.name} (m4=${m4}), 공정특성: ${processChar} (from processChars)`);
+            }
+          }
+        }
+        
+        // ★ 소스 3: l3.functions[].processChars (레거시 - 함수 내 공정특성)
+        if (l3.functions && Array.isArray(l3.functions)) {
+          for (const func of l3.functions) {
+            if (func.processChars && Array.isArray(func.processChars)) {
+              for (const pc of func.processChars) {
+                const processChar = typeof pc === 'string' ? pc.trim() : (pc?.name || '').trim();
+                if (processChar && !excludedProcessChars.has(processChar) && !addedProcessChars.has(processChar)) {
+                  processCharList.push({ name: processChar, specialChar: pc?.specialChar || '' });
+                  addedProcessChars.add(processChar);
+                  console.log(`[SYNC-PROC-3] L3=${l3.name} (m4=${m4}), 공정특성: ${processChar} (from functions.processChars)`);
+                }
+              }
+            }
+            // 단일 processChar 필드
+            const singlePc = typeof func.processChar === 'string' ? func.processChar.trim() : '';
+            if (singlePc && !excludedProcessChars.has(singlePc) && !addedProcessChars.has(singlePc)) {
+              processCharList.push({ name: singlePc, specialChar: func.specialChar || '' });
+              addedProcessChars.add(singlePc);
+              console.log(`[SYNC-PROC-4] L3=${l3.name} (m4=${m4}), 공정특성: ${singlePc} (from functions.processChar)`);
             }
           }
         }
       }
+      console.log(`[SYNC-PROC] L2=${l2.name}, 공정특성 총 ${processCharList.length}개: [${processCharList.map(p=>p.name).join(', ')}]`);
       
-      // 작업요소명 (첫 번째 L3)
+      // 공정설명은 첫 번째 L3 사용, 설비/금형/JIG는 비-MN L3 기반 목록 사용
       const firstL3 = l3Structures[0];
-      const workElement = firstL3?.name || '';
+      const processDesc = typeof firstL3?.name === 'string' ? firstL3.name.trim() : '';
+      const workElement = equipmentNames.join(', ');
       
       // ★ 원자성: 제품특성 각각 별도 행으로 생성
       let charIndex = 0;
@@ -317,7 +525,7 @@ async function syncFmeaToCp(
           processNo: l2.no || '',
           processName: l2.name || '',
           processLevel: 'Main',
-          processDesc: workElement,
+          processDesc: processDesc,
           workElement: workElement,
           equipment: equipmentNames.join(', '),
           // ★ 한 셀에 하나의 제품특성만
@@ -344,7 +552,7 @@ async function syncFmeaToCp(
           processNo: l2.no || '',
           processName: l2.name || '',
           processLevel: 'Main',
-          processDesc: workElement,
+          processDesc: processDesc,
           workElement: workElement,
           equipment: equipmentNames.join(', '),
           productChar: '',
@@ -371,7 +579,7 @@ async function syncFmeaToCp(
           processNo: l2.no || '',
           processName: l2.name || '',
           processLevel: 'Main',
-          processDesc: workElement,
+          processDesc: processDesc,
           workElement: workElement,
           equipment: equipmentNames.join(', '),
           productChar: '',

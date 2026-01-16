@@ -9,6 +9,77 @@ import { getBaseDatabaseUrl, getPrisma, getPrismaForSchema } from '@/lib/prisma'
 import { ensureProjectSchemaReady, getProjectSchemaName } from '@/lib/project-schema';
 
 // ============================================================================
+// 4M 정규화 유틸리티
+// ============================================================================
+
+/**
+ * 4M 값 정규화 함수
+ * - 다양한 소스(DB, 레거시, PFD 등)에서 오는 4M 값을 표준 형식으로 변환
+ * - 표준 값: 'MN' (Man), 'MC' (Machine), 'IM' (In-Material), 'EN' (Environment)
+ */
+function normalize4M(value: any): 'MN' | 'MC' | 'IM' | 'EN' | '' {
+  if (!value) return '';
+  const v = String(value).trim().toUpperCase();
+  
+  // 이미 표준 형식인 경우
+  if (['MN', 'MC', 'IM', 'EN'].includes(v)) {
+    return v as 'MN' | 'MC' | 'IM' | 'EN';
+  }
+  
+  // PFD/레거시 형식 변환
+  switch (v) {
+    case 'MAN':
+    case 'WORKER':
+    case '작업자':
+      return 'MN';
+    case 'MACHINE':
+    case 'EQUIPMENT':
+    case '설비':
+    case '기계':
+      return 'MC';
+    case 'MATERIAL':
+    case 'IN-MATERIAL':
+    case 'INMATERIAL':
+    case '자재':
+    case '부자재':
+    case 'MT': // 일부 레거시에서 MT 사용
+      return 'IM';
+    case 'METHOD':
+    case 'ENVIRONMENT':
+    case 'ENV':
+    case '환경':
+    case 'ME': // Method/Environment
+      return 'EN';
+    default:
+      return '';
+  }
+}
+
+/**
+ * L3 객체에서 4M 값 추출 (m4, fourM, 4m 등 다양한 필드명 지원)
+ */
+function get4MFromL3(l3: any): 'MN' | 'MC' | 'IM' | 'EN' | '' {
+  // 다양한 필드명에서 값 추출 시도
+  const rawValue = l3?.m4 || l3?.fourM || l3?.['4m'] || l3?.category4M || l3?.category || '';
+  return normalize4M(rawValue);
+}
+
+/**
+ * 설비/금형/지그 여부 확인 (MC, IM, EN만 해당)
+ */
+function isEquipment4M(m4: string): boolean {
+  const normalized = normalize4M(m4);
+  return ['MC', 'IM', 'EN'].includes(normalized);
+}
+
+/**
+ * Man(작업자) 여부 확인
+ */
+function isMan4M(m4: string): boolean {
+  return normalize4M(m4) === 'MN';
+}
+
+// ============================================================================
 // 타입 정의
 // ============================================================================
 
@@ -126,28 +197,75 @@ export async function POST(req: NextRequest) {
     l2Structures.forEach((l2: any) => {
       const l3Structures = l2.l3Structures || [];
       const firstL3 = l3Structures[0];
-      const equipmentL3s = l3Structures.filter((l3: any) =>
-        l3.m4 && ['MC', 'IM', 'EN'].includes(l3.m4)
-      );
-      const equipmentNames = equipmentL3s.map((l3: any) => l3.name).filter(Boolean);
+      
+      // ★ 설비/금형/지그 연동: MN(Man) 제외, 나머지 모두 포함
+      // ★ 빈 4M 값도 설비로 포함 (4M이 설정되지 않은 경우도 설비일 수 있음)
+      const equipmentL3s = l3Structures.filter((l3: any) => {
+        const m4 = get4MFromL3(l3);
+        return m4 !== 'MN'; // MN(Man)만 제외, 나머지 모두 포함
+      });
+      const equipmentNames = equipmentL3s
+        .map((l3: any) => (typeof l3.name === 'string' ? l3.name.trim() : ''))
+        .filter(Boolean);
 
       const productChars = (l2.l2Functions || [])
-        .filter((f: any) => f.productChar)
         .map((f: any) => ({
-          name: f.productChar,
+          name: typeof f.productChar === 'string' ? f.productChar.trim() : '',
           specialChar: f.specialChar || '',
-        }));
+        }))
+        .filter((f: any) => f.name);
 
+      // ★ 공정특성 추출 - 다양한 데이터 소스 지원
+      // ★ MN(Man) 분류는 공정특성 연동에서 제외
       const processChars: Array<{ name: string; specialChar: string }> = [];
+      const excludedProcessChars = new Set(['작업숙련도']);
+      const addedProcessChars = new Set<string>(); // 중복 방지
+      
       l3Structures.forEach((l3: any) => {
-        (l3.l3Functions || []).forEach((fn: any) => {
-          if (fn.processChar) {
-            processChars.push({
-              name: fn.processChar,
-              specialChar: fn.specialChar || '',
-            });
-          }
-        });
+        const m4 = get4MFromL3(l3);
+        if (m4 === 'MN') return;
+        // ★ 소스 1: l3.l3Functions (원자성 DB 또는 변환된 데이터)
+        if (l3.l3Functions && Array.isArray(l3.l3Functions)) {
+          l3.l3Functions.forEach((fn: any) => {
+            const processChar = typeof fn.processChar === 'string' ? fn.processChar.trim() : '';
+            if (processChar && !excludedProcessChars.has(processChar) && !addedProcessChars.has(processChar)) {
+              processChars.push({ name: processChar, specialChar: fn.specialChar || '' });
+              addedProcessChars.add(processChar);
+            }
+          });
+        }
+        
+        // ★ 소스 2: l3.processChars (레거시 데이터 - 직접 저장된 공정특성)
+        if (l3.processChars && Array.isArray(l3.processChars)) {
+          l3.processChars.forEach((pc: any) => {
+            const processChar = typeof pc === 'string' ? pc.trim() : (pc?.name || pc?.processChar || '').trim();
+            if (processChar && !excludedProcessChars.has(processChar) && !addedProcessChars.has(processChar)) {
+              processChars.push({ name: processChar, specialChar: pc?.specialChar || '' });
+              addedProcessChars.add(processChar);
+            }
+          });
+        }
+        
+        // ★ 소스 3: l3.functions[].processChars (레거시 - 함수 내 공정특성)
+        if (l3.functions && Array.isArray(l3.functions)) {
+          l3.functions.forEach((func: any) => {
+            if (func.processChars && Array.isArray(func.processChars)) {
+              func.processChars.forEach((pc: any) => {
+                const processChar = typeof pc === 'string' ? pc.trim() : (pc?.name || '').trim();
+                if (processChar && !excludedProcessChars.has(processChar) && !addedProcessChars.has(processChar)) {
+                  processChars.push({ name: processChar, specialChar: pc?.specialChar || '' });
+                  addedProcessChars.add(processChar);
+                }
+              });
+            }
+            // 단일 processChar 필드
+            const singlePc = typeof func.processChar === 'string' ? func.processChar.trim() : '';
+            if (singlePc && !excludedProcessChars.has(singlePc) && !addedProcessChars.has(singlePc)) {
+              processChars.push({ name: singlePc, specialChar: func.specialChar || '' });
+              addedProcessChars.add(singlePc);
+            }
+          });
+        }
       });
 
       const combinedChars = [
@@ -159,8 +277,9 @@ export async function POST(req: NextRequest) {
         id: l2.id,
         processNo: l2.no || '',
         processName: l2.name || '',
-        processDesc: firstL3?.name || '',
-        workElement: firstL3?.name || '',
+        processDesc: typeof firstL3?.name === 'string' ? firstL3.name.trim() : '',
+        // CP E열(설비/금형/JIG)은 비-MN L3 기반 설비 목록 사용
+        workElement: equipmentNames.join(', '),
         equipment: equipmentNames.join(', '),
         productChars,
         processChars,
