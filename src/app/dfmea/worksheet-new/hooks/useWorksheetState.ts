@@ -331,60 +331,129 @@ export function useWorksheetState(): UseWorksheetStateReturn {
    */
   const normalizeFailureLinks = useCallback((links: any[], stateSnapshot: WorksheetState) => {
     if (!links || links.length === 0) return links || [];
+
+    const normalizeKey = (value: string) => value.trim().replace(/\s+/g, ' ').toLowerCase();
+
     const fmTextToId = new Map<string, string>();
+    const fmTextProcessToId = new Map<string, string>();
     const fmIdToText = new Map<string, string>();
     const fmIdToProcess = new Map<string, string>();
+
     const feTextToId = new Map<string, string>();
+    const feScopeTextToId = new Map<string, string>();
     const feIdToText = new Map<string, string>();
+
     const fcTextToId = new Map<string, string>();
+    const fcTextProcessToId = new Map<string, string>();
     const fcIdToText = new Map<string, string>();
 
     (stateSnapshot.l2 || []).forEach((proc: any) => {
+      const procName = String(proc?.name || '').trim();
+      const procKey = normalizeKey(procName);
+
       (proc.failureModes || []).forEach((fm: any) => {
-        const text = fm.mode || fm.name || '';
+        const text = String(fm.mode || fm.name || '').trim();
         if (fm.id) {
           fmIdToText.set(fm.id, text);
-          fmIdToProcess.set(fm.id, proc.name || '');
+          fmIdToProcess.set(fm.id, procName);
         }
-        if (text && fm.id && !fmTextToId.has(text)) {
-          fmTextToId.set(text, fm.id);
+        if (text && fm.id) {
+          const textKey = normalizeKey(text);
+          if (!fmTextToId.has(textKey)) {
+            fmTextToId.set(textKey, fm.id);
+          }
+          if (procKey) {
+            const scopedKey = `${procKey}||${textKey}`;
+            if (!fmTextProcessToId.has(scopedKey)) {
+              fmTextProcessToId.set(scopedKey, fm.id);
+            }
+          }
         }
       });
+
       (proc.failureCauses || []).forEach((fc: any) => {
-        const text = fc.cause || fc.name || '';
+        const text = String(fc.cause || fc.name || '').trim();
         if (fc.id) {
           fcIdToText.set(fc.id, text);
         }
-        if (text && fc.id && !fcTextToId.has(text)) {
-          fcTextToId.set(text, fc.id);
+        if (text && fc.id) {
+          const textKey = normalizeKey(text);
+          if (!fcTextToId.has(textKey)) {
+            fcTextToId.set(textKey, fc.id);
+          }
+          if (procKey) {
+            const scopedKey = `${procKey}||${textKey}`;
+            if (!fcTextProcessToId.has(scopedKey)) {
+              fcTextProcessToId.set(scopedKey, fc.id);
+            }
+          }
         }
       });
     });
 
     ((stateSnapshot.l1 as any)?.failureScopes || []).forEach((fe: any) => {
-      const text = fe.effect || fe.name || '';
+      const text = String(fe.effect || fe.name || '').trim();
+      const scope = String(fe.scope || fe.category || '').trim();
       if (fe.id) {
         feIdToText.set(fe.id, text);
       }
-      if (text && fe.id && !feTextToId.has(text)) {
-        feTextToId.set(text, fe.id);
+      if (text && fe.id) {
+        const textKey = normalizeKey(text);
+        if (!feTextToId.has(textKey)) {
+          feTextToId.set(textKey, fe.id);
+        }
+        if (scope) {
+          const scopedKey = `${normalizeKey(scope)}||${textKey}`;
+          if (!feScopeTextToId.has(scopedKey)) {
+            feScopeTextToId.set(scopedKey, fe.id);
+          }
+        }
       }
     });
 
     return links.map((link: any) => {
-      const fmText = link.fmText || link.cache?.fmText || '';
-      const feText = link.feText || link.cache?.feText || '';
-      const fcText = link.fcText || link.cache?.fcText || '';
+      const fmText = String(link.fmText || link.cache?.fmText || '').trim();
+      const feText = String(link.feText || link.cache?.feText || '').trim();
+      const fcText = String(link.fcText || link.cache?.fcText || '').trim();
+      const fmProcess = String(link.fmProcess || '').trim();
+      const feScope = String(link.feScope || link.cache?.feCategory || '').trim();
+      const fcProcess = String(link.fcProcess || '').trim();
 
-      const fmId = link.fmId || fmTextToId.get(fmText) || '';
-      const feId = link.feId || feTextToId.get(feText) || '';
-      const fcId = link.fcId || fcTextToId.get(fcText) || '';
+      const fmTextKey = normalizeKey(fmText);
+      const feTextKey = normalizeKey(feText);
+      const fcTextKey = normalizeKey(fcText);
+      const fmScopedKey = fmProcess ? `${normalizeKey(fmProcess)}||${fmTextKey}` : '';
+      const feScopedKey = feScope ? `${normalizeKey(feScope)}||${feTextKey}` : '';
+      const fcScopedKey = fcProcess ? `${normalizeKey(fcProcess)}||${fcTextKey}` : '';
+
+      const hasFmId = link.fmId && fmIdToText.has(link.fmId);
+      const hasFeId = link.feId && feIdToText.has(link.feId);
+      const hasFcId = link.fcId && fcIdToText.has(link.fcId);
+
+      const fmId =
+        (hasFmId ? link.fmId : '') ||
+        (fmScopedKey ? fmTextProcessToId.get(fmScopedKey) : '') ||
+        (fmTextKey ? fmTextToId.get(fmTextKey) : '') ||
+        link.fmId ||
+        '';
+      const feId =
+        (hasFeId ? link.feId : '') ||
+        (feScopedKey ? feScopeTextToId.get(feScopedKey) : '') ||
+        (feTextKey ? feTextToId.get(feTextKey) : '') ||
+        link.feId ||
+        '';
+      const fcId =
+        (hasFcId ? link.fcId : '') ||
+        (fcScopedKey ? fcTextProcessToId.get(fcScopedKey) : '') ||
+        (fcTextKey ? fcTextToId.get(fcTextKey) : '') ||
+        link.fcId ||
+        '';
 
       return {
         ...link,
         fmId,
         fmText: fmText || fmIdToText.get(fmId) || '',
-        fmProcess: link.fmProcess || fmIdToProcess.get(fmId) || '',
+        fmProcess: fmProcess || fmIdToProcess.get(fmId) || '',
         feId,
         feText: feText || feIdToText.get(feId) || '',
         fcId,
