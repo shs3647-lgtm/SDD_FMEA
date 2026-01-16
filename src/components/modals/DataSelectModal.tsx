@@ -213,8 +213,14 @@ export default function DataSelectModal({
     });
     setSelectedIds(newSelectedIds);
     setInitialized(true);
-    console.log('[DataSelectModal] 선택 상태 초기화 완료', { currentValues, selectedCount: newSelectedIds.size });
-  }, [items, currentValues, initialized]);
+    console.log('📊 [DataSelectModal 초기화]', { 
+      title, 
+      itemCode,
+      itemsCount: items.length, 
+      currentValues, 
+      selectedCount: newSelectedIds.size 
+    });
+  }, [items, currentValues, initialized, title, itemCode]);
 
   // 필터링
   const filteredItems = useMemo(() => {
@@ -314,9 +320,13 @@ export default function DataSelectModal({
 
   const handleApply = () => {
     const selectedValues = items.filter(item => selectedIds.has(item.id)).map(item => item.value);
-    console.log('[DataSelectModal] handleApply 호출', { 
+    console.log('✅ [DataSelectModal] handleApply 호출', { 
+      title,
+      itemCode,
+      currentValues,
       selectedIds: Array.from(selectedIds), 
       selectedValues,
+      itemsCount: items.length,
       singleSelect 
     });
     onSave(selectedValues);
@@ -328,7 +338,7 @@ export default function DataSelectModal({
     if (onDelete) {
       onDelete(currentValues);
     }
-    onClose();
+    // 삭제 후 모달 유지 (onClose 제거)
   };
 
   const handleAddSave = () => {

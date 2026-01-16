@@ -119,10 +119,8 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
           return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
         });
         
-        // 작업요소 기능 체크
-        if (meaningfulFuncs.length === 0) functionCount++;
+        // 의미 있는 기능만 누락 체크
         meaningfulFuncs.forEach(f => {
-          if (isMissing(f.name)) functionCount++;
           
           // ✅ 의미 있는 기능이 있는 경우에만 공정특성 누락 체크
           if (!isMissing(f.name)) {
@@ -133,8 +131,8 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
                      !name.includes('추가') && !name.includes('입력') && !name.includes('필요');
             });
             
-            // 공정특성 체크: 의미 있는 기능이 있는데 공정특성이 없으면 누락
-            if (meaningfulChars.length === 0) charCount++;
+            // ✅ 2026-01-16: 공정특성 체크 제외 (사용자 요청: 특성은 필수항목 아님)
+            // if (meaningfulChars.length === 0) charCount++;
           }
         });
       });
@@ -164,6 +162,19 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
     l3FuncDataRef.current = dataKey;
   }, [state.l2, saveToLocalStorage]);
 
+  // ✅ 누락 발생 시 자동 수정 모드 전환
+  useEffect(() => {
+    if (isConfirmed && missingCount > 0) {
+      console.log('[FunctionL3Tab] 누락 발생 감지 → 자동 수정 모드 전환, missingCount:', missingCount);
+      const updateFn = (prev: any) => ({ ...prev, l3Confirmed: false });
+      if (setStateSynced) {
+        setStateSynced(updateFn);
+      } else {
+        setState(updateFn);
+      }
+      setDirty(true);
+    }
+  }, [isConfirmed, missingCount, setState, setStateSynced, setDirty]);
 
   // 확정 핸들러 (고장분석 패턴 적용) - ✅ setStateSynced 사용으로 저장 보장
   const handleConfirm = useCallback(() => {
@@ -290,8 +301,8 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
               if (we.id !== l3Id) return we;
               const currentFuncs = we.functions || [];
               
-              // 기존 funcId가 있으면 해당 기능만 수정
-              if (funcId) {
+              // ✅ 2026-01-16: funcId가 있어도 selectedValues가 여러 개면 다중 모드
+              if (funcId && selectedValues.length === 1) {
                 if (selectedValues.length === 0) {
                   // 선택 해제 시 해당 기능 삭제
                   return {
@@ -309,7 +320,7 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
                 };
               }
               
-              // ✅ 다중 선택: 각각 별도 행으로 추가 (L1/L2 패턴)
+              // ✅ 다중 선택: 선택된 항목 전체 반영 (기존 + 신규)
               const updatedFuncs = [...currentFuncs];
               const existingNames = new Set(currentFuncs.filter((f: any) => f.name && !f.name.includes('클릭')).map((f: any) => f.name));
               
@@ -368,8 +379,8 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
                   if (f.id !== funcId) return f;
                   const currentChars = f.processChars || [];
                   
-                  // ✅ charId가 있으면 해당 항목만 수정 (다중선택 개별 수정)
-                  if (charId) {
+                  // ✅ 2026-01-16: charId가 있어도 selectedValues가 여러 개면 다중 모드
+                  if (charId && selectedValues.length === 1) {
                     if (selectedValues.length === 0) {
                       return { ...f, processChars: currentChars.filter((c: any) => c.id !== charId) };
                     }
@@ -381,7 +392,7 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
                     };
                   }
                   
-                  // ✅ 다중 선택: 각각 별도 행으로 추가 (L1/L2 패턴)
+                  // ✅ 다중 선택: 선택된 항목 전체 반영 (기존 + 신규)
                   const updatedChars = [...currentChars];
                   const existingNames = new Set(currentChars.filter((c: any) => c.name && !c.name.includes('클릭')).map((c: any) => c.name));
                   
@@ -513,19 +524,21 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
     setTimeout(() => saveToLocalStorage?.(), 200);
   }, [specialCharModal, setState, setDirty, saveToLocalStorage]);
 
-  // ✅ 의미 있는 기능인지 체크하는 헬퍼
+  // ✅ 의미 있는 기능인지 체크하는 헬퍼 (자동생성 플레이스홀더 제외)
   const isMeaningfulFunc = (f: any) => {
     const name = f.name || '';
     return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && 
-           !name.includes('추가') && !name.includes('입력') && !name.includes('필요');
+           !name.includes('추가') && !name.includes('입력') && !name.includes('필요') &&
+           !name.includes('자동생성');  // ✅ "(자동생성)" 필터링 추가
   };
   
-  // ✅ 의미 있는 공정특성 필터 + 중복 제거
+  // ✅ 의미 있는 공정특성 필터 + 중복 제거 (자동생성 플레이스홀더 제외)
   const getMeaningfulChars = (chars: any[]) => {
     return (chars || []).filter((c: any, idx: number, arr: any[]) => {
       const name = c.name || '';
       const isMeaningful = name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && 
-             !name.includes('추가') && !name.includes('입력') && !name.includes('필요');
+             !name.includes('추가') && !name.includes('입력') && !name.includes('필요') &&
+             !name.includes('자동생성');  // ✅ "(자동생성)" 필터링 추가
       // ✅ 중복 제거: 같은 이름의 공정특성 중 첫 번째만 유지
       const isFirst = arr.findIndex((x: any) => x.name === c.name) === idx;
       return isMeaningful && isFirst;

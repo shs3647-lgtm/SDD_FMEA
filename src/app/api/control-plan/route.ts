@@ -183,6 +183,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const cpNo = searchParams.get('cpNo')?.toLowerCase();
     const id = searchParams.get('id');
+    const fmeaId = searchParams.get('fmeaId')?.toLowerCase();  // ★ fmeaId 필터 추가
 
     // 개별 조회 (전체 데이터 포함)
     if (cpNo || id) {
@@ -216,8 +217,15 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 목록 조회
+    // 목록 조회 (fmeaId 필터 지원)
+    const whereClause: any = {};
+    if (fmeaId) {
+      whereClause.fmeaId = fmeaId;
+      console.log(`🔍 fmeaId 필터 적용: ${fmeaId}`);
+    }
+
     const cps = await prisma.cpRegistration.findMany({
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,

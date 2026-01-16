@@ -17,10 +17,12 @@ interface TopMenuBarProps {
   fmeaList: any[];
   currentFmea: any;
   selectedFmeaId: string | null;
+  cpNo?: string | null;
   dirty: boolean;
   isSaving: boolean;
   lastSaved: string;
   currentTab: string;
+  syncStatus?: 'idle' | 'syncing' | 'success' | 'error';
   importMessage: { type: 'success' | 'error'; text: string } | null;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   state: WorksheetState;
@@ -36,6 +38,8 @@ interface TopMenuBarProps {
   onOpen5AP: () => void;
   onOpen6AP: () => void;
   onOpenRPN?: () => void;
+  onCpStructureSync?: () => void;
+  onCpDataSync?: () => void;
 }
 
 /** 공통 버튼 스타일 - 반응형 */
@@ -47,11 +51,25 @@ const menuBtn = `
 `;
 
 export default function TopMenuBar({ 
-  fmeaList, selectedFmeaId, dirty, isSaving, importMessage, fileInputRef, state,
-  onFmeaChange, onSave, onNavigateToList, onExport, onImportFile, onDownloadTemplate, onOpenSpecialChar, onOpenSOD, onOpen5AP, onOpen6AP, onOpenRPN
+  fmeaList, selectedFmeaId, cpNo, dirty, isSaving, syncStatus = 'idle', importMessage, fileInputRef, state,
+  onFmeaChange, onSave, onNavigateToList, onExport, onImportFile, onDownloadTemplate, onOpenSpecialChar, onOpenSOD, onOpen5AP, onOpen6AP, onOpenRPN,
+  onCpStructureSync, onCpDataSync
 }: TopMenuBarProps) {
   const router = useRouter();
   const [showImportMenu, setShowImportMenu] = React.useState(false);
+  const [showSyncMenu, setShowSyncMenu] = React.useState(false);
+  const [syncMenuPos, setSyncMenuPos] = React.useState({ top: 0, left: 0 });
+  const cpSyncBtnRef = React.useRef<HTMLButtonElement>(null);
+  const isSyncing = syncStatus === 'syncing';
+  
+  // CP 연동 버튼 클릭 시 드롭다운 위치 계산
+  const handleCpSyncClick = () => {
+    if (cpSyncBtnRef.current) {
+      const rect = cpSyncBtnRef.current.getBoundingClientRect();
+      setSyncMenuPos({ top: rect.bottom + 2, left: rect.left });
+    }
+    setShowSyncMenu(true);
+  };
 
   return (
     <div 
@@ -150,6 +168,65 @@ export default function TopMenuBar({
 
       <div className="hidden md:block w-px h-5 bg-white/30 shrink-0" />
 
+      {/* CP 동기화 드롭다운 */}
+      <div className="flex items-center gap-1 shrink-0">
+        <button 
+          ref={cpSyncBtnRef}
+          onClick={handleCpSyncClick}
+          disabled={isSyncing}
+          className={`${menuBtn} bg-teal-600/50`}
+          data-testid="cp-sync-button"
+        >
+          {isSyncing ? '⏳' : '🔗'}<span className="hidden lg:inline">CP 연동</span>▾
+        </button>
+      </div>
+      
+      {/* CP 연동 드롭다운 - Fixed 포지션으로 overflow 문제 해결 */}
+      {showSyncMenu && (
+        <div 
+          className="fixed bg-white rounded shadow-xl border-2 border-teal-300 min-w-[180px]"
+          style={{ 
+            top: syncMenuPos.top, 
+            left: syncMenuPos.left,
+            zIndex: 9999 
+          }}
+          onMouseLeave={() => setShowSyncMenu(false)}
+        >
+          <button
+            onClick={() => { 
+              if (onCpStructureSync) {
+                onCpStructureSync(); 
+              } else {
+                alert('CP 구조연동 함수가 연결되지 않았습니다.');
+              }
+              setShowSyncMenu(false); 
+            }}
+            disabled={isSyncing}
+            className="w-full text-left px-4 py-3 text-[12px] hover:bg-teal-100 border-b text-gray-800 disabled:opacity-50 font-medium"
+          >
+            🔗 CP 구조연동
+            <span className="block text-[10px] text-gray-500 mt-0.5">FMEA 구조를 CP에 생성</span>
+          </button>
+          <button
+            onClick={() => { 
+              if (onCpDataSync) {
+                onCpDataSync(); 
+              } else {
+                alert('데이터 동기화 함수가 연결되지 않았습니다.');
+              }
+              setShowSyncMenu(false); 
+            }}
+            disabled={isSyncing}
+            className="w-full text-left px-4 py-3 text-[12px] hover:bg-teal-100 text-gray-800 disabled:opacity-50 font-medium"
+          >
+            🔄 데이터 동기화
+            <span className="block text-[10px] text-gray-500 mt-0.5">공통 필드 양방향 업데이트</span>
+          </button>
+        </div>
+      )}
+
+      <div className="hidden md:block w-px h-5 bg-white/30 shrink-0" />
+
       {/* 4판/CP/LLD - 큰 화면에서만 */}
       <div className="hidden md:flex items-center gap-1 shrink-0">
         <button 
@@ -170,7 +247,7 @@ export default function TopMenuBar({
           onClick={() => router.push('/control-plan')} 
           className="px-2 py-1 rounded border border-white/30 bg-teal-700/50 text-white text-[10px] lg:text-xs font-medium hover:bg-teal-600 transition-all whitespace-nowrap"
         >
-          📝 CP
+          📝 CP 이동
         </button>
         <button 
           className="px-2 py-1 rounded border border-white/30 bg-indigo-700/50 text-white text-[10px] lg:text-xs font-medium hover:bg-indigo-600 transition-all whitespace-nowrap"

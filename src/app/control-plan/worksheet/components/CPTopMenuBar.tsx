@@ -19,9 +19,11 @@ interface CPTopMenuBarProps {
   dirty: boolean;
   isSaving: boolean;
   itemCount: number;
+  syncStatus?: 'idle' | 'syncing' | 'success' | 'error';
   onCpChange: (id: string) => void;
   onSave: () => void;
-  onSync: () => void;
+  onStructureSync: () => void;
+  onDataSync: () => void;
   onExport: () => void;
   onImportClick: () => void;
   onAddRow: () => void;
@@ -42,15 +44,19 @@ export default function CPTopMenuBar({
   dirty,
   isSaving,
   itemCount,
+  syncStatus = 'idle',
   onCpChange,
   onSave,
-  onSync,
+  onStructureSync,
+  onDataSync,
   onExport,
   onImportClick,
   onAddRow,
 }: CPTopMenuBarProps) {
   const router = useRouter();
   const [showImportMenu, setShowImportMenu] = React.useState(false);
+  const [showSyncMenu, setShowSyncMenu] = React.useState(false);
+  const isSyncing = syncStatus === 'syncing';
 
   return (
     <div 
@@ -135,13 +141,40 @@ export default function CPTopMenuBar({
         <button onClick={onAddRow} className={`${menuBtn} bg-green-600/50`}>
           ➕<span className="hidden lg:inline">행 추가</span>
         </button>
-        <button 
-          onClick={onSync} 
-          disabled={!fmeaId}
-          className={`${menuBtn} ${fmeaId ? 'bg-blue-600/50' : 'opacity-50 cursor-not-allowed'}`}
-        >
-          🔄<span className="hidden lg:inline">FMEA 동기화</span>
-        </button>
+        
+        {/* 동기화 드롭다운 */}
+        <div className="relative">
+          <button 
+            onClick={() => setShowSyncMenu(!showSyncMenu)}
+            disabled={!fmeaId || isSyncing}
+            className={`${menuBtn} ${fmeaId ? 'bg-blue-600/50' : 'opacity-50 cursor-not-allowed'}`}
+          >
+            {isSyncing ? '⏳' : '🔗'}<span className="hidden lg:inline">FMEA 연동</span>▾
+          </button>
+          {showSyncMenu && fmeaId && (
+            <div 
+              className="absolute top-full left-0 mt-1 bg-white rounded shadow-lg border z-50 min-w-[160px]"
+              onMouseLeave={() => setShowSyncMenu(false)}
+            >
+              <button
+                onClick={() => { onStructureSync(); setShowSyncMenu(false); }}
+                disabled={isSyncing}
+                className="w-full text-left px-3 py-2 text-[11px] hover:bg-blue-50 border-b text-gray-800 disabled:opacity-50"
+              >
+                🔗 FMEA 구조연동
+                <span className="block text-[9px] text-gray-500">FMEA 구조를 CP에 생성</span>
+              </button>
+              <button
+                onClick={() => { onDataSync(); setShowSyncMenu(false); }}
+                disabled={isSyncing}
+                className="w-full text-left px-3 py-2 text-[11px] hover:bg-blue-50 text-gray-800 disabled:opacity-50"
+              >
+                🔄 데이터 동기화
+                <span className="block text-[9px] text-gray-500">공통 필드 양방향 업데이트</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="hidden md:block w-px h-5 bg-white/30 shrink-0" />
@@ -152,7 +185,7 @@ export default function CPTopMenuBar({
           onClick={() => router.push('/pfmea/worksheet')} 
           className="px-2 py-1 rounded border border-white/30 bg-indigo-700/50 text-white text-[10px] lg:text-xs font-medium hover:bg-indigo-600 transition-all whitespace-nowrap"
         >
-          📊 FMEA
+          📊 FMEA 이동
         </button>
         <button 
           onClick={() => router.push('/control-plan/list')} 

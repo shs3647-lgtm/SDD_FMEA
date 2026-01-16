@@ -96,6 +96,7 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
       if (name.includes('클릭하여')) return true;
       if (name.includes('선택')) return true;
       if (name.includes('입력')) return true;
+      if (name.includes('자동생성')) return true;  // ✅ "(자동생성)" 필터링 추가
       if (name.includes('필요')) return true;
       if (name.includes('추가')) return true;
       return false;
@@ -104,8 +105,11 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
     state.l2.forEach((proc: any) => {
       const funcs = (proc.functions || []).filter((f: any) => f.name && !isPlaceholderName(f.name));
       funcs.forEach((f: any) => {
+        // ✅ 2026-01-16: 제품특성 체크 제외 (사용자 요청: 특성은 필수항목 아님)
+        /*
         const chars = (f.productChars || []).filter((c: any) => c.name && !isPlaceholderName(c.name));
         if (chars.length === 0) count++;
+        */
       });
     });
     return count;
@@ -196,6 +200,19 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
     l2FuncDataRef.current = dataKey;
   }, [state.l2, saveToLocalStorage]);
 
+  // ✅ 누락 발생 시 자동 수정 모드 전환
+  useEffect(() => {
+    if (isConfirmed && missingCount > 0) {
+      console.log('[FunctionL2Tab] 누락 발생 감지 → 자동 수정 모드 전환, missingCount:', missingCount);
+      const updateFn = (prev: any) => ({ ...prev, l2Confirmed: false });
+      if (setStateSynced) {
+        setStateSynced(updateFn);
+      } else {
+        setState(updateFn);
+      }
+      setDirty(true);
+    }
+  }, [isConfirmed, missingCount, setState, setStateSynced, setDirty]);
 
   // 확정 핸들러 (고장분석 패턴 적용) - ✅ setStateSynced 사용으로 저장 보장
   const handleConfirm = useCallback(() => {
@@ -328,8 +345,9 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
           if (proc.id !== procId) return proc;
           const currentFuncs = proc.functions || [];
           
-          // 기존 funcId가 있으면 해당 기능만 수정
-          if (funcId) {
+          // ✅ 2026-01-16: funcId가 있어도 selectedValues가 여러 개면 다중 모드로 처리
+          // 기존 funcId가 있고 단일 선택인 경우만 해당 기능 수정
+          if (funcId && selectedValues.length === 1) {
             if (selectedValues.length === 0) {
               // 선택 해제 시 해당 기능 삭제
               return {
@@ -347,7 +365,7 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
             };
           }
           
-          // ✅ 다중 선택: 각각 별도 행으로 추가 (L1 패턴)
+          // ✅ 다중 선택: 선택된 항목 전체 반영 (기존 + 신규)
           const updatedFuncs = [...currentFuncs];
           const existingNames = new Set(currentFuncs.filter((f: any) => f.name && !f.name.includes('클릭')).map((f: any) => f.name));
           
@@ -408,8 +426,8 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
               if (f.id !== funcId) return f;
               const currentChars = f.productChars || [];
               
-              // ✅ charId가 있으면 해당 항목만 수정 (다중선택 개별 수정)
-              if (charId) {
+              // ✅ 2026-01-16: charId가 있어도 selectedValues가 여러 개면 다중 모드
+              if (charId && selectedValues.length === 1) {
                 if (selectedValues.length === 0) {
                   return { ...f, productChars: currentChars.filter((c: any) => c.id !== charId) };
                 }
@@ -421,7 +439,7 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
                 };
               }
               
-              // ✅ 다중 선택: 각각 별도 행으로 추가 (L1 패턴)
+              // ✅ 다중 선택: 선택된 항목 전체 반영 (기존 + 신규)
               const updatedChars = [...currentChars];
               const existingNames = new Set(currentChars.filter((c: any) => c.name && !c.name.includes('클릭')).map((c: any) => c.name));
               
@@ -664,13 +682,15 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
               const meaningfulFuncs = funcs.filter((f: any) => {
                 const name = f.name || '';
                 return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && 
-                       !name.includes('추가') && !name.includes('입력') && !name.includes('필요');
+                       !name.includes('추가') && !name.includes('입력') && !name.includes('필요') &&
+                       !name.includes('자동생성');  // ✅ "(자동생성)" 필터링 추가
               });
               const procRowSpan = meaningfulFuncs.length === 0 ? 1 : meaningfulFuncs.reduce((a, f) => {
                 const meaningfulChars = (f.productChars || []).filter((c: any, idx: number, arr: any[]) => {
                   const name = c.name || '';
                   const isMeaningful = name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && 
-                         !name.includes('추가') && !name.includes('입력') && !name.includes('필요');
+                         !name.includes('추가') && !name.includes('입력') && !name.includes('필요') &&
+                         !name.includes('자동생성');  // ✅ "(자동생성)" 필터링 추가
                   // ✅ 중복 제거: 같은 이름의 제품특성 중 첫 번째만 유지
                   const isFirst = arr.findIndex((x: any) => x.name === c.name) === idx;
                   return isMeaningful && isFirst;
@@ -732,7 +752,8 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
                 const meaningfulChars = (f.productChars || []).filter((c: any, idx: number, arr: any[]) => {
                   const name = c.name || '';
                   const isMeaningful = name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && 
-                         !name.includes('추가') && !name.includes('입력') && !name.includes('필요');
+                         !name.includes('추가') && !name.includes('입력') && !name.includes('필요') &&
+                         !name.includes('자동생성');  // ✅ "(자동생성)" 필터링 추가
                   // ✅ 중복 제거: 같은 이름의 제품특성 중 첫 번째만 유지
                   const isFirst = arr.findIndex((x: any) => x.name === c.name) === idx;
                   return isMeaningful && isFirst;

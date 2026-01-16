@@ -10,7 +10,7 @@ import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'reac
 import { useSearchParams, useRouter } from 'next/navigation';
 import CPTopNav from '@/components/layout/CPTopNav';
 import CPTopMenuBar from './components/CPTopMenuBar';
-import CPTabMenu, { CPInputMode } from './components/CPTabMenu';
+import CPTabMenu from './components/CPTabMenu';
 import { CPContextMenu } from './components/CPContextMenu';
 import { AutoInputModal } from './components/AutoInputModal';
 import ProcessFlowInputModal from './components/ProcessFlowInputModal';
@@ -18,9 +18,9 @@ import ProcessDescInputModal from './components/ProcessDescInputModal';
 import EquipmentInputModal from './components/EquipmentInputModal';
 import StandardInputModal from './components/StandardInputModal';
 import { renderCell } from './renderers';
-import { useProcessRowSpan, useDescRowSpan, useWorkRowSpan, useCharRowSpan, useContextMenu, useWorksheetHandlers } from './hooks';
+import { useProcessRowSpan, useDescRowSpan, useWorkRowSpan, useCharRowSpan, useContextMenu, useWorksheetHandlers, useModalHandlers, useFmeaSync } from './hooks';
 import { createSampleItems, createEmptyItem } from './utils';
-import { CPState, SaveStatus, AutoModalState, ContextMenuType } from './types';
+import { CPState, SaveStatus, ContextMenuType } from './types';
 import { 
   CP_COLUMNS, HEIGHTS,
   calculateGroupSpans, calculateTotalWidth,
@@ -49,50 +49,9 @@ function CPWorksheetContent() {
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [activeTab, setActiveTab] = useState('all');
-  const [inputMode, setInputMode] = useState<CPInputMode>('manual');
   
   // CP 목록 상태 (드롭다운용)
   const [cpList, setCpList] = useState<Array<{ id: string; cpNo: string; subject?: string }>>([]);
-  
-  // 자동 모드용 입력 모달 상태
-  const [autoModal, setAutoModal] = useState<AutoModalState>({
-    visible: false,
-    rowIdx: -1,
-    type: 'process',
-    position: 'below',
-  });
-  
-  // 공정명 입력 모달 상태
-  const [processModal, setProcessModal] = useState({
-    visible: false,
-    rowIdx: -1,
-  });
-  
-  // 공정설명 입력 모달 상태
-  const [processDescModal, setProcessDescModal] = useState({
-    visible: false,
-    rowIdx: -1,
-    processNo: '',
-    processName: '',
-  });
-  
-  // 설비/금형/JIG 입력 모달 상태
-  const [equipmentModal, setEquipmentModal] = useState({
-    visible: false,
-    rowIdx: -1,
-    processNo: '',
-    processName: '',
-  });
-
-  // 범용 입력 모달 상태 (제품특성, 공정특성, 스펙/공차, 평가방법, 샘플, 관리방법, 대응계획)
-  const [standardModal, setStandardModal] = useState({
-    visible: false,
-    rowIdx: -1,
-    columnKey: '',
-    columnName: '',
-    processNo: '',
-    processName: '',
-  });
   
   // 계산된 값
   const groupSpans = useMemo(() => calculateGroupSpans(CP_COLUMNS), []);
@@ -116,6 +75,37 @@ function CPWorksheetContent() {
     handleDeleteRow,
     handleSave,
   } = useWorksheetHandlers({ state, setState, setSaveStatus, closeContextMenu });
+  
+  // 모달 핸들러 훅
+  const {
+    autoModal,
+    processModal,
+    processDescModal,
+    equipmentModal,
+    standardModal,
+    setAutoModal,
+    handleAutoModeClick,
+    handleEquipmentSave,
+    handleStandardModalSave,
+    handleProcessSave,
+    handleProcessDescSave,
+    handleProcessDescContinuousAdd,
+    handleProcessContinuousAdd,
+    handleEnterKey,
+    handleAutoModalInsert,
+    closeProcessModal,
+    closeProcessDescModal,
+    closeEquipmentModal,
+    closeStandardModal,
+    closeAutoModal,
+  } = useModalHandlers({
+    items: state.items,
+    cpNo: state.cpNo,
+    setState,
+    handleCellChange,
+    handleInsertRowAbove,
+    handleInsertRowBelow,
+  });
   
   // FMEA에서 데이터 동기화
   const syncFromFmea = useCallback(async (fmeaId: string) => {
@@ -204,6 +194,17 @@ function CPWorksheetContent() {
     }
   }, [cpNoParam]);
   
+  // ★ FMEA 동기화 훅 (모듈화)
+  const {
+    syncStatus,
+    handleStructureSync,
+    handleDataSync,
+  } = useFmeaSync({
+    cpNo: state.cpNo,
+    fmeaId: state.fmeaId,
+    onSyncComplete: () => state.fmeaId && syncFromFmea(state.fmeaId),
+  });
+  
   // CP 목록 로드 (드롭다운용)
   useEffect(() => {
     const loadCpList = async () => {
@@ -241,13 +242,19 @@ function CPWorksheetContent() {
           if (cpRes.ok) {
             const cpData = await cpRes.json();
             if (cpData.success && cpData.data && cpData.data.length > 0) {
+              // ★ CP 헤더 정보도 함께 로드 (fmeaId 포함)
+              const cpHeader = cpData.cp || {};
               setState(prev => ({
                 ...prev,
                 cpNo: cpNoParam,
+                fmeaId: cpHeader.fmeaId || prev.fmeaId || '',
+                fmeaNo: cpHeader.fmeaNo || prev.fmeaNo || '',
+                partName: cpHeader.partName || prev.partName || '',
+                customer: cpHeader.customer || prev.customer || '',
                 items: cpData.data,
                 dirty: false,
               }));
-              console.log(`✅ [CP 워크시트] 로드 완료: ${cpData.data.length}건`);
+              console.log(`✅ [CP 워크시트] 로드 완료: ${cpData.data.length}건, FMEA: ${cpHeader.fmeaId || '없음'}`);
               setLoading(false);
               return;
             }
@@ -285,265 +292,6 @@ function CPWorksheetContent() {
     }
   }, [state.dirty, handleSave, saveStatus]);
   
-  // 자동 모드: 셀 클릭 시 모달 열기
-  const handleAutoModeClick = useCallback((rowIdx: number, type: ContextMenuType, colKey?: string) => {
-    console.log('🔥 handleAutoModeClick 호출됨:', { rowIdx, type, colKey, inputMode });
-    
-    // 공정명 셀 클릭 시 ProcessFlowInputModal 열기
-    if (type === 'process' && colKey === 'processName') {
-      setProcessModal({ visible: true, rowIdx });
-    } 
-    // 공정설명 셀 클릭 시 ProcessDescInputModal 열기
-    else if (type === 'process' && colKey === 'processDesc') {
-      const item = state.items[rowIdx];
-      if (item && item.processNo && item.processName) {
-        setProcessDescModal({ 
-          visible: true, 
-          rowIdx,
-          processNo: item.processNo,
-          processName: item.processName,
-        });
-      }
-    } 
-    // 설비/금형/JIG 셀 클릭 시 EquipmentInputModal 열기
-    else if (type === 'work') {
-      const item = state.items[rowIdx];
-      if (item && item.processNo && item.processName) {
-        setEquipmentModal({ 
-          visible: true, 
-          rowIdx,
-          processNo: item.processNo,
-          processName: item.processName,
-        });
-      }
-    }
-    // 제품특성, 공정특성, 스펙/공차, 평가방법, 샘플, 관리방법, 대응계획 등 텍스트 컬럼
-    else if (type === 'char' || type === 'general') {
-      const item = state.items[rowIdx];
-      // 드롭다운/체크박스 컬럼은 제외
-      const skipColumns = ['processLevel', 'specialChar', 'sampleFreq', 'owner1', 'owner2', 'detectorEp', 'detectorAuto', 'charNo', 'rowNo'];
-      if (colKey && !skipColumns.includes(colKey)) {
-        // 컬럼명 찾기
-        const colDef = CP_COLUMNS.find(c => c.key === colKey);
-        const columnName = colDef?.name || colKey;
-        
-        setStandardModal({
-          visible: true,
-          rowIdx,
-          columnKey: colKey,
-          columnName,
-          processNo: item?.processNo || '',
-          processName: item?.processName || '',
-        });
-      } else {
-        // 드롭다운/체크박스는 기존 AutoInputModal 사용
-        setAutoModal({ visible: true, rowIdx, type, position: 'below' });
-      }
-    }
-    else {
-      setAutoModal({ visible: true, rowIdx, type, position: 'below' });
-    }
-  }, [state.items]);
-
-  // 설비 모달: 저장 핸들러
-  const handleEquipmentSave = useCallback((selectedEquip: any) => {
-    const targetRowIdx = equipmentModal.rowIdx;
-    if (targetRowIdx < 0 || targetRowIdx >= state.items.length) return;
-    
-    const itemId = state.items[targetRowIdx].id;
-    handleCellChange(itemId, 'workElement', selectedEquip.name);
-    setEquipmentModal(prev => ({ ...prev, visible: false }));
-  }, [equipmentModal.rowIdx, state.items, handleCellChange]);
-
-  // 범용 입력 모달: 저장 핸들러
-  const handleStandardModalSave = useCallback((value: string) => {
-    const targetRowIdx = standardModal.rowIdx;
-    const colKey = standardModal.columnKey;
-    if (targetRowIdx < 0 || targetRowIdx >= state.items.length || !colKey) return;
-    
-    const itemId = state.items[targetRowIdx].id;
-    handleCellChange(itemId, colKey, value);
-    setStandardModal(prev => ({ ...prev, visible: false }));
-  }, [standardModal.rowIdx, standardModal.columnKey, state.items, handleCellChange]);
-  
-  // 공정명 모달: 저장 핸들러
-  const handleProcessSave = useCallback((selectedProcesses: any[]) => {
-    if (selectedProcesses.length === 0) return;
-    
-    const targetRowIdx = processModal.rowIdx;
-    
-    setState(prev => {
-      const newItems = [...prev.items];
-      
-      // 선택된 모든 공정에 대해 행 생성
-      selectedProcesses.forEach((process, idx) => {
-        if (idx === 0 && targetRowIdx >= 0 && targetRowIdx < newItems.length) {
-          // 첫 번째 공정: 현재 행 업데이트
-          newItems[targetRowIdx] = {
-            ...newItems[targetRowIdx],
-            processNo: process.no,
-            processName: process.name,
-          };
-        } else {
-          // 나머지 공정: 새 행 추가
-          const newItem = createEmptyItem(
-            prev.cpNo,
-            process.no,
-            process.name
-          );
-          newItem.sortOrder = newItems.length;
-          
-          // 첫 번째 공정이 현재 행에 업데이트된 경우 그 아래에 추가
-          // 그렇지 않으면 맨 아래에 추가
-          if (idx === 1 && targetRowIdx >= 0 && targetRowIdx < newItems.length) {
-            newItems.splice(targetRowIdx + 1, 0, newItem);
-          } else {
-            newItems.push(newItem);
-          }
-        }
-      });
-      
-      // sortOrder 재정렬
-      newItems.forEach((item, idx) => item.sortOrder = idx);
-      
-      return {
-        ...prev,
-        items: newItems,
-        dirty: true,
-      };
-    });
-    
-    setProcessModal({ visible: false, rowIdx: -1 });
-  }, [processModal.rowIdx, state.cpNo]);
-  
-  // 공정설명 모달: 저장 핸들러
-  const handleProcessDescSave = useCallback((selectedDesc: any) => {
-    const targetRowIdx = processDescModal.rowIdx;
-    
-    if (targetRowIdx >= 0 && targetRowIdx < state.items.length) {
-      setState(prev => ({
-        ...prev,
-        items: prev.items.map((item, idx) => {
-          if (idx === targetRowIdx) {
-            return {
-              ...item,
-              processDesc: selectedDesc.name,
-            };
-          }
-          return item;
-        }),
-        dirty: true,
-      }));
-    }
-    
-    setProcessDescModal({ visible: false, rowIdx: -1, processNo: '', processName: '' });
-  }, [processDescModal.rowIdx, state.items]);
-  
-  // 공정설명 모달: 연속 입력 핸들러
-  const handleProcessDescContinuousAdd = useCallback((desc: any, addNewRow: boolean) => {
-    const targetRowIdx = processDescModal.rowIdx;
-    
-    if (targetRowIdx >= 0 && targetRowIdx < state.items.length) {
-      // 현재 행 업데이트
-      setState(prev => ({
-        ...prev,
-        items: prev.items.map((item, idx) => {
-          if (idx === targetRowIdx) {
-            return {
-              ...item,
-              processDesc: desc.name,
-            };
-          }
-          return item;
-        }),
-        dirty: true,
-      }));
-      
-      // 새 행 추가
-      if (addNewRow) {
-        const newItem = {
-          ...state.items[targetRowIdx],
-          id: `item_${Date.now()}`,
-          processDesc: '',
-          sortOrder: state.items.length,
-        };
-        setState(prev => ({
-          ...prev,
-          items: [...prev.items, newItem],
-          dirty: true,
-        }));
-        
-        // 다음 행으로 포커스 이동
-        setProcessDescModal({ 
-          visible: true, 
-          rowIdx: targetRowIdx + 1,
-          processNo: processDescModal.processNo,
-          processName: processDescModal.processName,
-        });
-      }
-    }
-  }, [processDescModal, state.items]);
-  
-  // 공정명 모달: 연속 입력 핸들러
-  const handleProcessContinuousAdd = useCallback((process: any, addNewRow: boolean) => {
-    const targetRowIdx = processModal.rowIdx;
-    
-    if (targetRowIdx >= 0 && targetRowIdx < state.items.length) {
-      // 현재 행 업데이트
-      setState(prev => ({
-        ...prev,
-        items: prev.items.map((item, idx) => {
-          if (idx === targetRowIdx) {
-            return {
-              ...item,
-              processNo: process.no,
-              processName: process.name,
-            };
-          }
-          return item;
-        }),
-        dirty: true,
-      }));
-      
-      // 새 행 추가
-      if (addNewRow) {
-        const newItem = {
-          ...state.items[targetRowIdx],
-          id: `item_${Date.now()}`,
-          processNo: '',
-          processName: '',
-          sortOrder: state.items.length,
-        };
-        setState(prev => ({
-          ...prev,
-          items: [...prev.items, newItem],
-          dirty: true,
-        }));
-        
-        // 다음 행으로 포커스 이동
-        setProcessModal({ visible: true, rowIdx: targetRowIdx + 1 });
-      }
-    }
-  }, [processModal.rowIdx, state.items]);
-
-  // 수동 모드: 엔터 키로 행 추가
-  const handleEnterKey = useCallback((rowIdx: number, type: ContextMenuType, colKey?: string) => {
-    if (inputMode === 'manual') {
-      handleInsertRowBelow(rowIdx, type, colKey);
-    }
-  }, [inputMode, handleInsertRowBelow]);
-  
-  // 자동 모드: 모달에서 행 추가
-  const handleAutoModalInsert = useCallback(() => {
-    const { rowIdx, type, position } = autoModal;
-    if (position === 'above') {
-      handleInsertRowAbove(rowIdx, type);
-    } else {
-      handleInsertRowBelow(rowIdx, type);
-    }
-    setAutoModal(prev => ({ ...prev, visible: false }));
-  }, [autoModal, handleInsertRowAbove, handleInsertRowBelow]);
-  
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f5f7fa] flex items-center justify-center">
@@ -564,6 +312,7 @@ function CPWorksheetContent() {
         dirty={state.dirty}
         isSaving={saveStatus === 'saving'}
         itemCount={state.items.length}
+        syncStatus={syncStatus}
         onCpChange={(id) => {
           if (id === '__NEW__') {
             setState(prev => ({ ...prev, cpNo: '', items: [], dirty: false }));
@@ -575,7 +324,8 @@ function CPWorksheetContent() {
           }
         }}
         onSave={handleSave}
-        onSync={() => state.fmeaId && syncFromFmea(state.fmeaId)}
+        onStructureSync={handleStructureSync}
+        onDataSync={handleDataSync}
         onExport={() => {}}
         onImportClick={() => router.push(`/control-plan/import?id=${state.cpNo}`)}
         onAddRow={handleAddRow}
@@ -584,8 +334,6 @@ function CPWorksheetContent() {
       <CPTabMenu
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        inputMode={inputMode}
-        onInputModeChange={setInputMode}
         cpNo={state.cpNo}
         fmeaId={state.fmeaId}
         itemCount={state.items.length}
@@ -739,7 +487,6 @@ function CPWorksheetContent() {
                     descRowSpan,
                     workRowSpan,
                     charRowSpan,
-                    inputMode,
                     onCellChange: handleCellChange,
                     onContextMenu: openContextMenu,
                     onAutoModeClick: handleAutoModeClick,
@@ -774,7 +521,7 @@ function CPWorksheetContent() {
       {/* 자동 입력 모달 */}
       <AutoInputModal
         modal={autoModal}
-        onClose={() => setAutoModal(prev => ({ ...prev, visible: false }))}
+        onClose={closeAutoModal}
         onPositionChange={(pos) => setAutoModal(prev => ({ ...prev, position: pos }))}
         onInsert={handleAutoModalInsert}
       />
@@ -782,18 +529,19 @@ function CPWorksheetContent() {
       {/* 공정명 입력 모달 */}
       <ProcessFlowInputModal
         isOpen={processModal.visible}
-        onClose={() => setProcessModal({ visible: false, rowIdx: -1 })}
+        onClose={closeProcessModal}
         onSave={handleProcessSave}
         onContinuousAdd={handleProcessContinuousAdd}
         existingProcessNames={state.items
           .filter(item => item.processName && !item.processName.startsWith('_'))
           .map(item => item.processName)}
+        isEmptyRow={processModal.isEmptyRow}
       />
       
       {/* 공정설명 입력 모달 */}
       <ProcessDescInputModal
         isOpen={processDescModal.visible}
-        onClose={() => setProcessDescModal({ visible: false, rowIdx: -1, processNo: '', processName: '' })}
+        onClose={closeProcessDescModal}
         onSave={handleProcessDescSave}
         onContinuousAdd={handleProcessDescContinuousAdd}
         processNo={processDescModal.processNo}
@@ -807,7 +555,7 @@ function CPWorksheetContent() {
       {/* 설비/금형/JIG 입력 모달 */}
       <EquipmentInputModal
         isOpen={equipmentModal.visible}
-        onClose={() => setEquipmentModal({ visible: false, rowIdx: -1, processNo: '', processName: '' })}
+        onClose={closeEquipmentModal}
         onSave={handleEquipmentSave}
         processNo={equipmentModal.processNo}
         processName={equipmentModal.processName}
@@ -819,7 +567,7 @@ function CPWorksheetContent() {
       {/* 범용 입력 모달 (제품특성, 공정특성, 스펙/공차, 평가방법, 샘플, 관리방법, 대응계획) */}
       <StandardInputModal
         isOpen={standardModal.visible}
-        onClose={() => setStandardModal({ visible: false, rowIdx: -1, columnKey: '', columnName: '', processNo: '', processName: '' })}
+        onClose={closeStandardModal}
         onSave={handleStandardModalSave}
         columnKey={standardModal.columnKey}
         columnName={standardModal.columnName}

@@ -622,6 +622,20 @@ export default function StructureTab(props: StructureTabProps) {
     return { s2Count, s3Count };
   }, [state.l2]);
 
+  // ✅ 누락 발생 시 자동 수정 모드 전환
+  useEffect(() => {
+    if (isConfirmed && missingCounts.total > 0) {
+      console.log('[StructureTab] 누락 발생 감지 → 자동 수정 모드 전환, missingCount:', missingCounts.total);
+      const updateFn = (prev: any) => ({ ...prev, structureConfirmed: false });
+      if (setStateSynced) {
+        setStateSynced(updateFn);
+      } else {
+        setState(updateFn);
+      }
+      setDirty(true);
+    }
+  }, [isConfirmed, missingCounts.total, setState, setStateSynced, setDirty]);
+
   // ✅ 확정 핸들러 (고장분석 패턴 적용)
   const handleConfirm = useCallback(() => {
     console.log('[StructureTab] ========== 확정 버튼 클릭 ==========');
@@ -765,7 +779,13 @@ export default function StructureTab(props: StructureTabProps) {
               className="border border-[#ccc] p-1 text-center align-middle text-xs text-gray-400 cursor-pointer hover:bg-orange-100" 
               style={{ background: '#ffe0b2' }}
               onClick={() => {
-                // 작업요소 모달 열기
+                // ✅ 첫 번째 공정이 있으면 그것을 타겟으로 설정
+                if (state.l2.length > 0) {
+                  setTargetL2Id(state.l2[0].id);
+                  console.log('[StructureTab] 작업요소 모달 열기, targetL2Id:', state.l2[0].id);
+                } else {
+                  console.log('[StructureTab] 작업요소 모달 열기, 공정 없음');
+                }
                 setIsWorkElementModalOpen(true);
               }}
             >
@@ -838,10 +858,27 @@ export default function StructureTab(props: StructureTabProps) {
         isOpen={isWorkElementModalOpen}
         onClose={() => { setIsWorkElementModalOpen(false); setTargetL2Id(null); }}
         onSave={(selectedElements) => {
-          if (!targetL2Id) return;
+          console.log('🔵 [StructureTab onSave] 호출됨');
+          console.log('🔵 [StructureTab onSave] targetL2Id:', targetL2Id);
+          console.log('🔵 [StructureTab onSave] selectedElements:', selectedElements);
+          console.log('🔵 [StructureTab onSave] state.l2:', state.l2.map(p => ({ id: p.id, name: p.name })));
+          
+          // ✅ targetL2Id가 없으면 첫 번째 공정에 저장 시도
+          let effectiveTargetL2Id = targetL2Id;
+          if (!effectiveTargetL2Id && state.l2.length > 0) {
+            effectiveTargetL2Id = state.l2[0].id;
+            console.log('🔵 [StructureTab onSave] targetL2Id 없음, 첫 번째 공정 사용:', effectiveTargetL2Id);
+          }
+          
+          if (!effectiveTargetL2Id) {
+            console.warn('⚠️ [StructureTab onSave] 저장할 공정이 없습니다!');
+            alert('먼저 공정을 선택해주세요.');
+            return;
+          }
+          
           setState(prev => {
             const newL2 = prev.l2.map(proc => {
-              if (proc.id !== targetL2Id) return proc;
+              if (proc.id !== effectiveTargetL2Id) return proc;
               const newL3 = selectedElements.map((elem, idx) => ({
                 id: elem.id,
                 name: elem.name,
@@ -849,16 +886,22 @@ export default function StructureTab(props: StructureTabProps) {
                 order: idx,
                 functions: [],
               }));
+              console.log('✅ [StructureTab onSave] 공정', proc.name, '에 작업요소 저장:', newL3);
               return { ...proc, l3: newL3 };
             });
             return { ...prev, l2: newL2, structureConfirmed: false };
           });
           setDirty(true);
           saveToLocalStorage?.();
+          console.log('✅ [StructureTab onSave] 저장 완료');
         }}
-        processNo={state.l2.find(p => p.id === targetL2Id)?.no || ''}
-        processName={state.l2.find(p => p.id === targetL2Id)?.name || ''}
-        existingElements={state.l2.find(p => p.id === targetL2Id)?.l3?.filter(w => w.name && !w.name.includes('추가')).map(w => w.name) || []}
+        processNo={state.l2.find(p => p.id === targetL2Id)?.no || (state.l2[0]?.no || '')}
+        processName={state.l2.find(p => p.id === targetL2Id)?.name || (state.l2[0]?.name || '')}
+        existingElements={state.l2.find(p => p.id === targetL2Id)?.l3?.filter(w => w.name && !w.name.includes('추가')).map(w => w.name) || (state.l2[0]?.l3?.filter(w => w.name && !w.name.includes('추가')).map(w => w.name) || [])}
+        // ✅ 기존 저장된 작업요소 전체 전달 (이전에 추가한 항목 유지용)
+        existingL3={(state.l2.find(p => p.id === targetL2Id)?.l3 || state.l2[0]?.l3 || [])
+          .filter(w => w.name && !w.name.includes('추가') && !w.name.includes('클릭'))
+          .map(w => ({ id: w.id, name: w.name, m4: w.m4 || '' }))}
       />
     </>
   );

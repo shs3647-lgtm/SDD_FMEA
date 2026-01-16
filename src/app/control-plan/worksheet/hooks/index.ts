@@ -6,6 +6,8 @@
 export * from './useRowSpan';
 export * from './useContextMenu';
 export * from './useWorksheetHandlers';
+export * from './useModalHandlers';
+export * from './useFmeaSync';
 
 
 

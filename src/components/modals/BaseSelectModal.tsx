@@ -314,7 +314,7 @@ export default function BaseSelectModal({
   const handleDeleteAll = () => {
     if (!confirm('모든 항목을 삭제하시겠습니까?')) return;
     onDeleteAll?.();
-    onClose();
+    // 삭제 후 모달 유지 (onClose 제거)
   };
   
   // 새 항목 추가 (맨 위에)

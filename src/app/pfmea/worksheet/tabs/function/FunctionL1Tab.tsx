@@ -84,7 +84,7 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
     // ✅ 의미 있는 타입만 필터링 (빈 타입 제외)
     const meaningfulTypes = state.l1.types.filter((t: any) => {
       const name = t.name || '';
-      return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+      return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && !name.includes('자동생성');
     });
     
     // 구분이 없으면 누락
@@ -96,7 +96,7 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
       // ✅ 의미 있는 기능만 필터링
       const meaningfulFunctions = (t.functions || []).filter((f: any) => {
         const name = f.name || '';
-        return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+        return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && !name.includes('자동생성');
       });
       
       // 기능이 없으면 누락
@@ -111,13 +111,15 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
         // ✅ 의미 있는 요구사항만 필터링
         const meaningfulReqs = (f.requirements || []).filter((r: any) => {
           const name = r.name || '';
-          return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+          return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && !name.includes('자동생성');
         });
         
-        // 요구사항이 없으면 누락
+        // ✅ 2026-01-16: 요구사항 체크 제외 (사용자 요청: 특성/요구사항 필수 아님)
+        /*
         if (meaningfulReqs.length === 0) {
           requirementCount += 1;
         }
+        */
         
         // 요구사항 이름 체크 (이미 필터링되었지만 이중 체크)
         meaningfulReqs.forEach((r: any) => {
@@ -156,6 +158,19 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
     l1DataRef.current = dataKey;
   }, [state.l1.types, saveToLocalStorage]);
 
+  // ✅ 누락 발생 시 자동 수정 모드 전환
+  useEffect(() => {
+    if (isConfirmed && missingCount > 0) {
+      console.log('[FunctionL1Tab] 누락 발생 감지 → 자동 수정 모드 전환, missingCount:', missingCount);
+      const updateFn = (prev: any) => ({ ...prev, l1Confirmed: false });
+      if (setStateSynced) {
+        setStateSynced(updateFn);
+      } else {
+        setState(updateFn);
+      }
+      setDirty(true);
+    }
+  }, [isConfirmed, missingCount, setState, setStateSynced, setDirty]);
 
   // 확정 핸들러 (고장분석 패턴 적용) - ✅ setStateSynced 사용으로 저장 보장
   const handleConfirm = useCallback(() => {
@@ -310,8 +325,8 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
           if (t.id !== id) return t;
           const currentFuncs = t.functions;
           
-          // ✅ funcId가 있으면 해당 기능만 수정
-          if (funcId) {
+          // ✅ 2026-01-16: funcId가 있어도 selectedValues가 여러 개면 다중 모드
+          if (funcId && selectedValues.length === 1) {
             if (selectedValues.length === 0) {
               // 선택 해제 시 해당 기능 삭제
               return {
@@ -329,7 +344,7 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
             };
           }
           
-          // ✅ 다중 선택: 각각 별도 행으로 추가
+          // ✅ 다중 선택: 선택된 항목 전체 반영 (기존 + 신규)
           const updatedFuncs = [...currentFuncs];
           const existingNames = new Set(currentFuncs.filter((f: any) => f.name && !f.name.includes('클릭하여')).map((f: any) => f.name));
           
@@ -374,7 +389,7 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
             if (f.id !== id) return f;
             const currentReqs = f.requirements || [];
             
-            // ✅ reqId가 있고 단일 선택(1개)인 경우만 해당 요구사항 수정
+            // ✅ 2026-01-16: reqId가 있고 단일 선택(1개)인 경우만 해당 요구사항 수정
             if (reqId && selectedValues.length === 1) {
               return {
                 ...f,
@@ -389,7 +404,7 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
               return { ...f, requirements: currentReqs.filter((r: any) => r.id !== reqId) };
             }
             
-            // ✅ 다중 선택: 각각 별도 행으로 추가 (reqId가 있어도 2개 이상 선택 시)
+            // ✅ 다중 선택: 선택된 항목 전체 반영 (기존 + 신규)
             const updatedReqs = [...currentReqs];
             const existingNames = new Set(currentReqs.filter((r: any) => r.name && !r.name.includes('클릭하여')).map((r: any) => r.name));
             
@@ -586,10 +601,10 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
             })()
           ) : (() => {
             let globalRowIdx = 0;
-            // ✅ 빈 타입 필터링 (이름이 없거나 "클릭하여" 포함하는 타입 제외)
+            // ✅ 빈 타입 필터링 (이름이 없거나 "클릭하여" 포함하는 타입 제외, 자동생성 제외)
             const meaningfulTypes = state.l1.types.filter((t: any) => {
               const name = t.name || '';
-              return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+              return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && !name.includes('자동생성');
             });
             
             // 빈 타입이 없으면 첫 번째 빈 행만 표시
@@ -622,7 +637,7 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
               // ✅ 빈 기능 필터링
               const meaningfulFunctions = (t.functions || []).filter((f: any) => {
                 const name = f.name || '';
-                return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+                return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && !name.includes('자동생성');
               });
               
               // 각 구분(type)별 행 수 계산 (의미 있는 기능만)
@@ -630,7 +645,7 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
                 // ✅ 빈 요구사항 필터링
                 const meaningfulReqs = (f.requirements || []).filter((r: any) => {
                   const name = r.name || '';
-                  return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+                  return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && !name.includes('자동생성');
                 });
                 return a + Math.max(1, meaningfulReqs.length);
               }, 0);
@@ -662,10 +677,10 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
                 // ✅ 완제품기능(rowSpan): funcCounter 기준 번갈아
                 const currentFuncIdx = funcCounter++;
                 const funcBlockZebra = getZebra('function', currentFuncIdx);
-                // ✅ 빈 요구사항 필터링
+                // ✅ 빈 요구사항 필터링 (자동생성 제외)
                 const meaningfulReqs = (f.requirements || []).filter((r: any) => {
                   const name = r.name || '';
-                  return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택');
+                  return name.trim() !== '' && !name.includes('클릭하여') && !name.includes('선택') && !name.includes('자동생성');
                 });
                 
                 const funcRowSpan = Math.max(1, meaningfulReqs.length);

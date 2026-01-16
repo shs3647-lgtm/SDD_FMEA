@@ -166,6 +166,19 @@ export default function FailureL1Tab({ state, setState, setStateSynced, setDirty
     failureScopesRef.current = scopesKey;
   }, [state.l1, saveToLocalStorage]);
 
+  // ✅ 누락 발생 시 자동 수정 모드 전환
+  useEffect(() => {
+    if (isConfirmed && missingCount > 0) {
+      console.log('[FailureL1Tab] 누락 발생 감지 → 자동 수정 모드 전환, missingCount:', missingCount);
+      const updateFn = (prev: any) => ({ ...prev, failureL1Confirmed: false });
+      if (setStateSynced) {
+        setStateSynced(updateFn);
+      } else {
+        setState(updateFn);
+      }
+      setDirty(true);
+    }
+  }, [isConfirmed, missingCount, setState, setStateSynced, setDirty]);
 
   // 확정 핸들러 (L2 패턴 적용) - ✅ setStateSynced 패턴 적용
   const handleConfirm = useCallback(() => {
@@ -342,8 +355,8 @@ export default function FailureL1Tab({ state, setState, setStateSynced, setDirty
       const newState = JSON.parse(JSON.stringify(prev));
       if (!newState.l1.failureScopes) newState.l1.failureScopes = [];
       
-      // ✅ effectId가 있으면 해당 항목만 수정 (다중선택 개별 수정)
-      if (effectId) {
+      // ✅ 2026-01-16: effectId가 있어도 selectedValues가 여러 개면 다중 모드
+      if (effectId && selectedValues.length === 1) {
         if (selectedValues.length === 0) {
           newState.l1.failureScopes = newState.l1.failureScopes.filter((s: any) => s.id !== effectId);
         } else {
@@ -355,7 +368,7 @@ export default function FailureL1Tab({ state, setState, setStateSynced, setDirty
         return newState;
       }
       
-      // ✅ effectId가 없으면 빈 셀 클릭 → 새 항목 추가 (다중선택 지원)
+      // ✅ 다중 선택: 선택된 항목 전체 반영 (기존 + 신규)
       // 해당 요구사항의 기존 고장영향 보존하면서 새 항목 추가
       if (selectedValues.length > 0) {
         const currentReqName = modal.parentReqName;

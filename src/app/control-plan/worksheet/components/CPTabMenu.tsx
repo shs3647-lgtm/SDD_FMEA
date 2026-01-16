@@ -22,14 +22,9 @@ export const CP_TABS = [
   { id: 'action', label: '대응계획', shortLabel: '대응', color: '#7b1fa2' },
 ];
 
-// 입력 모드 타입
-export type CPInputMode = 'manual' | 'auto';
-
 interface CPTabMenuProps {
   activeTab: string;
   onTabChange: (tabId: string) => void;
-  inputMode: CPInputMode;
-  onInputModeChange: (mode: CPInputMode) => void;
   cpNo?: string;
   fmeaId?: string;
   itemCount: number;
@@ -39,8 +34,6 @@ interface CPTabMenuProps {
 export default function CPTabMenu({
   activeTab,
   onTabChange,
-  inputMode,
-  onInputModeChange,
   cpNo,
   fmeaId,
   itemCount,
@@ -55,37 +48,6 @@ export default function CPTabMenu({
     >
       {/* 좌측: 탭 버튼들 */}
       <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-hide flex-1">
-        
-        {/* 수동/자동 토글 */}
-        <div className="flex items-center shrink-0 mr-1">
-          <button
-            onClick={() => onInputModeChange(inputMode === 'manual' ? 'auto' : 'manual')}
-            className={`
-              flex items-center gap-1 px-2 py-1 rounded-full text-[10px] sm:text-[11px] font-bold
-              transition-all duration-300 border-2
-              ${inputMode === 'manual' 
-                ? 'bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-500/30' 
-                : 'bg-purple-600 border-purple-400 text-white shadow-lg shadow-purple-500/30'
-              }
-            `}
-            title={inputMode === 'manual' ? '수동 모드: 컨텍스트 메뉴로 작성' : '자동 모드: 입력 모달로 작성'}
-          >
-            {inputMode === 'manual' ? (
-              <>
-                <span className="text-sm">✋</span>
-                <span className="hidden sm:inline">수동</span>
-              </>
-            ) : (
-              <>
-                <span className="text-sm">🤖</span>
-                <span className="hidden sm:inline">자동</span>
-              </>
-            )}
-          </button>
-        </div>
-        
-        {/* 구분선 */}
-        <div className="w-px h-5 bg-white/30 shrink-0" />
         
         {/* CP 탭 */}
         <div className="flex gap-0.5 sm:gap-1">

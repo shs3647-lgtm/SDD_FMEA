@@ -200,6 +200,15 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
     }
   }, [state.l2, setState, setDirty, saveToLocalStorage]);
 
+  // ✅ 누락 발생 시 자동 수정 모드 전환
+  useEffect(() => {
+    if (isConfirmed && missingCount > 0) {
+      console.log('[FailureL3Tab] 누락 발생 감지 → 자동 수정 모드 전환, missingCount:', missingCount);
+      setState(prev => ({ ...prev, failureL3Confirmed: false }));
+      setDirty(true);
+    }
+  }, [isConfirmed, missingCount, setState, setDirty]);
+
   // ✅ failureCauses 변경 감지용 ref (FailureL2Tab 패턴과 동일)
   const failureCausesRef = useRef<string>('');
   
@@ -301,8 +310,8 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
           
           const currentCauses = proc.failureCauses || [];
           
-          // ✅ causeId가 있으면 해당 항목만 수정 (다중선택 개별 수정)
-          if (causeId) {
+          // ✅ 2026-01-16: causeId가 있어도 selectedValues가 여러 개면 다중 모드
+          if (causeId && selectedValues.length === 1) {
             if (selectedValues.length === 0) {
               return { ...proc, failureCauses: currentCauses.filter((c: any) => c.id !== causeId) };
             }
@@ -314,7 +323,7 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
             };
           }
           
-          // ✅ causeId가 없으면 빈 셀 클릭 → 새 항목 추가 (processCharId별)
+          // ✅ 다중 선택: 선택된 항목 전체 반영 (기존 + 신규)
           // 1. 다른 processCharId의 고장원인은 보존
           const otherCauses = currentCauses.filter((c: any) => c.processCharId !== processCharId);
           

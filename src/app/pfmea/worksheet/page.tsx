@@ -18,7 +18,7 @@ import PFMEATopNav from '@/components/layout/PFMEATopNav';
 // 모듈화된 상수, hooks, 탭 컴포넌트
 import { COLORS, uid, getTabLabel, WorksheetState, WorkElement, Process } from './constants';
 import { btnConfirm, btnEdit, badgeConfirmed, badgeOk, badgeMissing } from '@/styles/worksheet';
-import { useWorksheetState } from './hooks';
+import { useWorksheetState, useCpSync, useExcelHandlers, useProcessHandlers } from './hooks';
 import { 
   StructureTab, StructureColgroup, StructureHeader, StructureRow,
   FunctionTab, FunctionColgroup, FunctionHeader, FunctionRow,
@@ -116,6 +116,14 @@ function FMEAWorksheetPageContent() {
     addL2,
   } = useWorksheetState();
   
+  // ★ CP 동기화 훅 (모듈화)
+  const {
+    linkedCpNo,
+    syncStatus,
+    handleCpStructureSync,
+    handleCpDataSync,
+  } = useCpSync(selectedFmeaId);
+  
   // 모달 상태
   const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
   const [isWorkElementModalOpen, setIsWorkElementModalOpen] = useState(false);
@@ -123,7 +131,15 @@ function FMEAWorksheetPageContent() {
   const [isSODModalOpen, setIsSODModalOpen] = useState(false);
   const [showAPModal, setShowAPModal] = useState(false);
   const [show6APModal, setShow6APModal] = useState(false);
-  const [targetL2Id, setTargetL2Id] = useState<string | null>(null);
+  
+  // ★ 공정/작업요소 핸들러 훅 (모듈화)
+  const {
+    targetL2Id,
+    setTargetL2Id,
+    calculateStructureMissing,
+    handleProcessSave,
+    handleWorkElementSelect,
+  } = useProcessHandlers({ state, setState, setDirty });
   
   // 우측 패널 활성화 상태
   const [activePanelId, setActivePanelId] = useState<string>('tree');
@@ -158,8 +174,17 @@ function FMEAWorksheetPageContent() {
 
   // Import 모달 상태
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [importMessage, setImportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  
+  // ★ 엑셀 핸들러 훅 (모듈화)
+  const fmeaName = currentFmea?.fmeaInfo?.subject || currentFmea?.project?.productName || 'PFMEA';
+  const {
+    fileInputRef,
+    importMessage,
+    handleImportFile,
+    handleStructureExport,
+    handleDownloadTemplate,
+    handleWorksheetExport,
+  } = useExcelHandlers({ state, setState, setDirty, fmeaName });
   
   // ✅ 상속 정보 로드 (localStorage에서)
   React.useEffect(() => {
@@ -183,177 +208,6 @@ function FMEAWorksheetPageContent() {
       // ignore
     }
   }, [selectedFmeaId]);
-
-  // 구조분석 Import 핸들러
-  const handleImportFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setImportMessage(null);
-    const result = await importStructureAnalysis(file, setState, setDirty);
-    
-    setImportMessage({
-      type: result.success ? 'success' : 'error',
-      text: result.message
-    });
-
-    // 파일 입력 초기화
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-
-    // 3초 후 메시지 숨기기
-    setTimeout(() => setImportMessage(null), 3000);
-  }, [setState, setDirty]);
-
-  // 구조분석 Export 핸들러
-  const handleStructureExport = useCallback(async () => {
-    const fmeaName = currentFmea?.fmeaInfo?.subject || currentFmea?.project?.productName || 'PFMEA';
-    await exportStructureAnalysis(state, fmeaName);
-  }, [state, currentFmea]);
-
-  // 템플릿 다운로드 핸들러
-  const handleDownloadTemplate = useCallback(async () => {
-    await downloadStructureTemplate();
-  }, []);
-
-  // 구조분석 누락 건수 계산
-  const calculateStructureMissing = useCallback(() => {
-    let count = 0;
-    
-    // 완제품명 누락
-    if (!state.l1.name || state.l1.name.trim() === '') count++;
-    
-    // 공정 및 작업요소 검사
-    state.l2.forEach(proc => {
-      const procName = proc.name || '';
-      if (!procName || procName.includes('클릭') || procName.includes('선택')) count++;
-      
-      proc.l3.forEach(we => {
-        const weName = we.name || '';
-        if (!weName || weName.includes('클릭') || weName.includes('추가') || weName.includes('필요') || weName.includes('선택')) count++;
-      });
-    });
-    
-    return count;
-  }, [state.l1.name, state.l2]);
-
-  // 공정 모달 저장 핸들러
-  const handleProcessSave = useCallback((selectedProcesses: { no: string; name: string }[]) => {
-    console.log('[공정저장] 선택된 공정:', selectedProcesses.map(p => `${p.no}:${p.name}`));
-    
-    setState(prev => {
-      const selectedNames = selectedProcesses.map(p => p.name);
-      console.log('[공정저장] 선택된 이름들:', selectedNames);
-      console.log('[공정저장] 기존 l2:', prev.l2.map(p => `${p.no}:${p.name}`));
-      
-      const keepL2 = prev.l2.filter(p => !p.name.includes('클릭') && selectedNames.includes(p.name));
-      const keepNames = keepL2.map(p => p.name);
-      console.log('[공정저장] 유지할 공정:', keepNames);
-      
-      // 선택된 순서대로 처리 (기존 유지 또는 신규 생성)
-      const finalL2: Process[] = selectedProcesses.map((p, idx) => {
-        // 기존에 있으면 유지
-        const existing = prev.l2.find(e => e.name === p.name && !e.name.includes('클릭'));
-        if (existing) {
-          console.log('[공정저장] 기존 유지:', p.name);
-          return { ...existing, no: p.no, order: (idx + 1) * 10 };
-        }
-        // 없으면 새로 생성
-        console.log('[공정저장] 신규 생성:', p.name);
-        return {
-          id: uid(),
-          no: p.no,
-          name: p.name,
-          order: (idx + 1) * 10,
-          functions: [],
-          productChars: [],
-          l3: [{ id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10, functions: [], processChars: [] }]
-        };
-      });
-      
-      // 빈 경우 기본 항목 추가
-      if (finalL2.length === 0) {
-        finalL2.push({
-          id: uid(),
-          no: '',
-          name: '(클릭하여 공정 선택)',
-          order: 10,
-          functions: [],
-          productChars: [],
-          l3: [{ id: uid(), m4: '', name: '(공정 선택 후 작업요소 추가)', order: 10, functions: [], processChars: [] }]
-        });
-      }
-      
-      console.log('[공정저장] 최종 l2:', finalL2.map(p => `${p.no}:${p.name}`));
-      return { ...prev, l2: finalL2 };
-    });
-    setDirty(true);
-  }, [setState, setDirty]);
-
-  // 작업요소 모달 저장 핸들러 (확정/수정 모드 모두 동일하게 작동)
-  const handleWorkElementSelect = useCallback((selectedElements: { id: string; m4: string; name: string }[]) => {
-    if (!targetL2Id) {
-      console.warn('[작업요소 저장] targetL2Id 없음 - 중단');
-      return;
-    }
-    
-    const isConfirmed = state.structureConfirmed || false;
-    console.log('[작업요소 저장] 시작', { targetL2Id, selectedCount: selectedElements.length, isConfirmed });
-    
-    // 중복 제거 (이름 기준) + 경고 메시지
-    const duplicates = selectedElements.filter((e, idx, arr) => 
-      arr.findIndex(x => x.name === e.name) !== idx
-    );
-    if (duplicates.length > 0) {
-      const dupNames = [...new Set(duplicates.map(d => d.name))].join(', ');
-      alert(`⚠️ 중복 항목이 제거되었습니다: ${dupNames}`);
-    }
-    const uniqueElements = selectedElements.filter((e, idx, arr) => 
-      arr.findIndex(x => x.name === e.name) === idx
-    );
-    
-    setState(prev => {
-      const newL2 = prev.l2.map(proc => {
-        if (proc.id !== targetL2Id) return proc;
-        
-        const existingCount = proc.l3.length;
-        
-        // ✅ 선택된 항목들로 새 리스트 생성 (확정/수정 모드 모두 동일)
-        const newL3: WorkElement[] = uniqueElements.map((e, idx) => ({
-          id: uid(),
-          m4: e.m4 || 'MN',  // m4가 없으면 기본값 'MN'
-          name: e.name,
-          order: (idx + 1) * 10,
-          functions: [],
-          processChars: [],
-        }));
-        
-        // 행이 1개만 남았는데 0개 선택 → 내용만 비우고 행 유지
-        if (existingCount === 1 && newL3.length === 0) {
-          newL3.push({ 
-            id: proc.l3[0]?.id || uid(), 
-            m4: '', 
-            name: '(클릭하여 작업요소 추가)', 
-            order: 10, 
-            functions: [], 
-            processChars: [] 
-          });
-        }
-        
-        // 최소 1행 보장
-        if (newL3.length === 0) {
-          newL3.push({ id: uid(), m4: '', name: '(클릭하여 작업요소 추가)', order: 10, functions: [], processChars: [] });
-        }
-        
-        console.log('[작업요소 저장] 완료, 최종 l3:', newL3.length, '개');
-        return { ...proc, l3: newL3 };
-      });
-      return { ...prev, l2: newL2 };
-    });
-    setDirty(true);
-    requestAnimationFrame(() => saveToLocalStorage?.());
-  }, [targetL2Id, state, setState, setDirty, saveToLocalStorage]);
 
   // 작업요소 모달 연속입력 핸들러 (수동입력 후 즉시 워크시트 반영)
   const handleWorkElementContinuousAdd = useCallback((element: { id: string; m4: string; name: string }, addNewRow: boolean) => {
@@ -512,8 +366,10 @@ function FMEAWorksheetPageContent() {
           fmeaList={fmeaList}
           currentFmea={currentFmea}
           selectedFmeaId={selectedFmeaId}
+          cpNo={linkedCpNo}
           dirty={dirty}
           isSaving={isSaving}
+          syncStatus={syncStatus}
           lastSaved={lastSaved}
           currentTab={state.tab}
           importMessage={importMessage}
@@ -560,6 +416,8 @@ function FMEAWorksheetPageContent() {
           onOpen5AP={() => setActivePanelId(prev => prev === '5ap' ? (state.tab === 'all' ? '' : 'tree') : '5ap')}
           onOpen6AP={() => setActivePanelId(prev => prev === '6ap' ? (state.tab === 'all' ? '' : 'tree') : '6ap')}
           onOpenRPN={() => setActivePanelId(prev => prev === 'rpn' ? (state.tab === 'all' ? '' : 'tree') : 'rpn')}
+          onCpStructureSync={handleCpStructureSync}
+          onCpDataSync={handleCpDataSync}
           state={state}
         />
 

@@ -25,6 +25,8 @@ interface ProcessFlowInputModalProps {
   onContinuousAdd?: (process: ProcessItem, addNewRow: boolean) => void;
   // 현재 행 인덱스 (자동 입력 모드용)
   currentRowIdx?: number;
+  // 빈 행 여부 (사전 선택 비활성화)
+  isEmptyRow?: boolean;
 }
 
 // DB에서 마스터 FMEA 공정 로드 (우선순위 1 - PFMEA 마스터)
@@ -141,9 +143,11 @@ export default function ProcessFlowInputModal({
   existingProcessNames = [],
   onContinuousAdd,
   currentRowIdx,
+  isEmptyRow = false,
 }: ProcessFlowInputModalProps) {
   const [processes, setProcesses] = useState<ProcessItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [initialSelectedIds, setInitialSelectedIds] = useState<Set<string>>(new Set()); // ★ 초기 선택 ID (기존 공정)
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -248,13 +252,21 @@ export default function ProcessFlowInputModal({
         console.log('📋 로드된 공정:', loaded.map(p => p.name).join(', '));
         setProcesses(loaded);
         
-        const preSelected = new Set<string>();
-        loaded.forEach(p => {
-          if (existingProcessNames.includes(p.name)) {
-            preSelected.add(p.id);
-          }
-        });
-        setSelectedIds(preSelected);
+        // ★ 빈 행에서 클릭한 경우 사전 선택 비활성화
+        if (isEmptyRow) {
+          console.log('🆕 [CP 모달] 빈 행 클릭 - 사전 선택 없음');
+          setSelectedIds(new Set());
+          setInitialSelectedIds(new Set()); // 초기 선택 없음
+        } else {
+          const preSelected = new Set<string>();
+          loaded.forEach(p => {
+            if (existingProcessNames.includes(p.name)) {
+              preSelected.add(p.id);
+            }
+          });
+          setSelectedIds(preSelected);
+          setInitialSelectedIds(new Set(preSelected)); // ★ 초기 선택 저장 (기존 공정)
+        }
         setLoading(false);
       };
       
@@ -265,7 +277,7 @@ export default function ProcessFlowInputModal({
       setContinuousMode(false);
       setAddedCount(0);
     }
-  }, [isOpen, existingProcessNames]);
+  }, [isOpen, existingProcessNames, isEmptyRow]);
 
   const filteredProcesses = useMemo(() => {
     let result = processes;
@@ -300,8 +312,12 @@ export default function ProcessFlowInputModal({
   const deselectAll = () => setSelectedIds(new Set());
   
   const handleSave = () => {
-    const selected = processes.filter(p => selectedIds.has(p.id));
-    onSave(selected);
+    // ★ 새로 선택된 공정만 저장 (기존 공정 제외)
+    const newlySelected = processes.filter(p => 
+      selectedIds.has(p.id) && !initialSelectedIds.has(p.id)
+    );
+    console.log('📝 [CP 모달] 새로 선택된 공정만 저장:', newlySelected.map(p => p.name).join(', '));
+    onSave(newlySelected);
     onClose();
   };
 
@@ -590,9 +606,10 @@ export default function ProcessFlowInputModal({
           )}
         </div>
 
-        {/* 푸터 - 선택 수 표시만 */}
-        <div className="px-3 py-2 border-t bg-gray-50 flex items-center justify-center">
-          <span className="text-xs font-bold text-blue-600">✓ {selectedIds.size}개 선택</span>
+        {/* 푸터 - 새로 선택된 수 표시 */}
+        <div className="px-3 py-2 border-t bg-gray-50 flex items-center justify-center gap-2">
+          <span className="text-xs text-gray-500">전체 {selectedIds.size}개</span>
+          <span className="text-xs font-bold text-blue-600">✓ 신규 {Array.from(selectedIds).filter(id => !initialSelectedIds.has(id)).length}개 추가</span>
         </div>
       </div>
     </div>

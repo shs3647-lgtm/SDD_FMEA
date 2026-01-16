@@ -15,9 +15,10 @@ export interface CPItem {
   detectorNo: boolean;
   detectorEp: boolean;
   detectorAuto: boolean;
-  productChar: string;
-  processChar: string;
+  productChar: string;  // 원자성: 한 셀에 하나만
+  processChar: string;  // 원자성: 한 셀에 하나만
   specialChar: string;
+  charIndex: number;    // 원자성 인덱스: 동일 공정 내 특성 순서
   specTolerance: string;
   evalMethod: string;
   sampleSize: string;

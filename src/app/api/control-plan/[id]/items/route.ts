@@ -33,7 +33,20 @@ export async function GET(
       orderBy: { sortOrder: 'asc' },
     });
 
-    return NextResponse.json({ success: true, data: items });
+    // CP 헤더 정보도 함께 반환 (fmeaId 포함)
+    return NextResponse.json({ 
+      success: true, 
+      data: items,
+      cp: {
+        id: cp.id,
+        cpNo: cp.cpNo,
+        fmeaId: cp.fmeaId,
+        fmeaNo: cp.fmeaNo,
+        partName: cp.partName,
+        partNo: cp.partNo,
+        customer: cp.customer,
+      }
+    });
   } catch (error) {
     console.error('CP Items 조회 오류:', error);
     return NextResponse.json({ success: false, error: 'CP Items 조회 실패' }, { status: 500 });
@@ -72,7 +85,7 @@ export async function PUT(
       where: { cpId: cp.id },
     });
 
-    // 새 아이템 생성
+    // 새 아이템 생성 (원자성 데이터: charIndex 포함)
     const createPromises = items.map((item: any, idx: number) => 
       prisma.controlPlanItem.create({
         data: {
@@ -85,9 +98,10 @@ export async function PUT(
           detectorNo: item.detectorNo || false,
           detectorEp: item.detectorEp || false,
           detectorAuto: item.detectorAuto || false,
-          productChar: item.productChar || '',
-          processChar: item.processChar || '',
+          productChar: item.productChar || '',  // 원자성: 한 셀에 하나만
+          processChar: item.processChar || '',  // 원자성: 한 셀에 하나만
           specialChar: item.specialChar || '',
+          charIndex: item.charIndex ?? idx,     // ★ 원자성 인덱스
           specTolerance: item.specTolerance || '',
           evalMethod: item.evalMethod || '',
           sampleSize: item.sampleSize || '',
@@ -170,9 +184,10 @@ export async function POST(
         detectorNo: item.detectorNo || false,
         detectorEp: item.detectorEp || false,
         detectorAuto: item.detectorAuto || false,
-        productChar: item.productChar || '',
-        processChar: item.processChar || '',
+        productChar: item.productChar || '',  // 원자성: 한 셀에 하나만
+        processChar: item.processChar || '',  // 원자성: 한 셀에 하나만
         specialChar: item.specialChar || '',
+        charIndex: item.charIndex ?? (lastItem?.sortOrder || 0) + 1,  // ★ 원자성 인덱스
         specTolerance: item.specTolerance || '',
         evalMethod: item.evalMethod || '',
         sampleSize: item.sampleSize || '',

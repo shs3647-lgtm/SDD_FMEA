@@ -843,9 +843,10 @@ model ControlPlanItem {
   detectorAuto Boolean @default(false) // 검출장치_자동검사
 
   // ===== 관리항목 (PFMEA 연동) =====
-  productChar String? // 제품특성
-  processChar String? // 공정특성
+  productChar String? // 제품특성 (원자성: 한 셀에 하나만)
+  processChar String? // 공정특성 (원자성: 한 셀에 하나만)
   specialChar String? // 특별특성 (CC/SC/IC)
+  charIndex   Int     @default(0) // 원자성 인덱스: 동일 공정 내 특성 순서
 
   // ===== 관리항목 (CP 전용) =====
   specTolerance String? // 스펙/공차
@@ -907,6 +908,112 @@ model SyncLog {
   @@index([targetType, targetId])
   @@index([status])
   @@map("sync_logs")
+}
+
+// ============ PFD (공정흐름도) 테이블 ============
+
+// PFD 등록 헤더
+model PfdRegistration {
+  id              String   @id @default(uuid())
+  pfdNo           String   @unique // PFD 번호 (예: pfd26-m001)
+  
+  // 연결 정보
+  fmeaId          String?  // 연결된 FMEA ID
+  cpNo            String?  // 연결된 CP 번호
+  apqpProjectId   String?  // APQP 프로젝트 ID
+  
+  // 기본 정보
+  partName        String?  // 부품명
+  partNo          String?  // 부품번호
+  subject         String?  // 제목
+  customerName    String?  // 고객사
+  modelYear       String?  // 모델연도
+  
+  // 담당 정보
+  companyName     String?  // 회사명
+  processOwner    String?  // 공정 담당자
+  createdBy       String?  // 작성자
+  
+  // 상태
+  status          String   @default("draft") // draft | active | locked | obsolete
+  
+  // 타임스탬프
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // 관계
+  items           PfdItem[]
+  
+  @@index([fmeaId])
+  @@index([cpNo])
+  @@index([status])
+  @@map("pfd_registrations")
+}
+
+// PFD 항목 (행)
+model PfdItem {
+  id              String   @id @default(uuid())
+  pfdId           String   // PFD 등록 ID
+  
+  // 공정 정보
+  processNo       String?  // 공정번호
+  processName     String?  // 공정명
+  processDesc     String?  // 공정설명 (기능)
+  workElement     String?  // 작업요소
+  
+  // 설비 정보
+  equipment       String?  // 설비/금형/지그
+  
+  // 특성 정보
+  productChar     String?  // 제품특성
+  processChar     String?  // 공정특성
+  specialChar     String?  // 특별특성 (CC/SC)
+  
+  // 연결 정보
+  fmeaL2Id        String?  // 연결된 FMEA L2 ID
+  fmeaL3Id        String?  // 연결된 FMEA L3 ID
+  cpItemId        String?  // 연결된 CP Item ID
+  
+  // 정렬/상태
+  sortOrder       Int      @default(0)
+  isDeleted       Boolean  @default(false)
+  
+  // 타임스탬프
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // 관계
+  pfd             PfdRegistration @relation(fields: [pfdId], references: [id], onDelete: Cascade)
+  
+  @@index([pfdId])
+  @@index([processNo])
+  @@index([fmeaL2Id])
+  @@index([cpItemId])
+  @@map("pfd_items")
+}
+
+// 문서 연결 테이블
+model DocumentLink {
+  id              String   @id @default(uuid())
+  
+  sourceType      String   // 'pfd' | 'fmea' | 'cp'
+  sourceId        String   // 원본 문서 ID
+  targetType      String   // 'pfd' | 'fmea' | 'cp'
+  targetId        String   // 대상 문서 ID
+  
+  linkType        String   @default("synced_with") // derived_from | references | synced_with
+  syncPolicy      String   @default("manual") // manual | realtime | snapshot
+  
+  lastSyncAt      DateTime?
+  syncHash        String?  // 동기화 해시 (변경 감지용)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([sourceType, sourceId, targetType, targetId])
+  @@index([sourceType, sourceId])
+  @@index([targetType, targetId])
+  @@map("document_links")
 }
 
 // ============ SOD 기준 마스터 테이블 (PUBLIC) ============
@@ -1011,6 +1118,46 @@ model DfmeaDetectionCriteria {
 
   @@index([rating])
   @@map("dfmea_detection_criteria")
+}
+
+// ============ 전역 마스터 테이블 (PFMEA/CP/PFD 공통) ============
+
+// 부품 마스터 - 전역 키
+model Part {
+  id        String   @id @default(uuid())
+  partNo    String   @unique // 품번 (고유)
+  partName  String // 품명
+  customer  String? // 고객
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([partNo])
+  @@index([partName])
+  @@map("parts")
+}
+
+// 공정 통합 마스터 - PFMEA/CP 공통
+model MasterProcess {
+  id          String   @id @default(uuid())
+  processNo   String // 공정번호
+  processName String // 공정명
+  processDesc String? // 공정설명 (PFMEA 기능)
+  level       String? // 레벨 (Main/Sub/L1/L2/L3)
+  equipment   String? // 설비/금형/지그
+  sourceType  String   @default("manual") // manual | pfmea_import | cp_import
+  sourceId    String? // 원본 ID (import 시)
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([processNo, processName])
+  @@index([processNo])
+  @@index([processName])
+  @@index([sourceType])
+  @@map("master_processes")
 }
 
 // ============ CP 기초정보 마스터 테이블 (PUBLIC) ============

@@ -247,12 +247,11 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
         fmeaId: oldData.fmeaId,
         l1StructId: db.l1Structure?.id || '',
         category: (fs.scope as any) || 'Your Plant',
-        functionName: '(자동생성)',
+        functionName: '',
         requirement: fs.requirement || '',
       };
       db.l1Functions.push(targetFunc);
       l1FuncMap.set(targetFunc.id, targetFunc);
-      console.warn('[마이그레이션] FE용 임시 L1Function 생성:', fs.effect);
     }
     
     const category = (fs.scope as any) || targetFunc.category || 'Your Plant';
@@ -363,13 +362,12 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
           l1FuncId: db.l1Functions[0]?.id || '',
           l2StructId: l2Struct.id,
           parentId: l2Struct.id, // ★ 모자관계
-          functionName: '(자동생성)',
+          functionName: '',
           productChar: '',
           specialChar: '',
         };
         db.l2Functions.push(tempL2Func);
         relatedL2Func = tempL2Func;
-        console.warn('[마이그레이션] FM용 임시 L2Function 생성:', fm.name);
       }
       
       fmIdx++;
@@ -489,11 +487,10 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
             l2Id: l2Struct.id,
             parentId: l2Struct.id, // ★ 모자관계
             m4: '',
-            name: '(자동생성-작업요소)',
+            name: '',
             order: 0,
           };
           db.l3Structures.push(targetL3Struct);
-          console.warn('[마이그레이션] FC용 임시 L3Structure 생성:', fc.name);
         }
         // L3Function 자동 생성 (하이브리드 ID)
         const tempL3FuncPath = createL3Path(pIdx + 1, 0, 0, 0);
@@ -506,12 +503,11 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
           l3StructId: targetL3Struct.id,
           l2StructId: l2Struct.id,
           parentId: targetL3Struct.id, // ★ 모자관계
-          functionName: '(자동생성)',
+          functionName: '',
           processChar: '',
           specialChar: '',
         };
         db.l3Functions.push(relatedL3Func);
-        console.warn('[마이그레이션] FC용 임시 L3Function 생성:', fc.name);
       }
       
       fcIdx++;
@@ -623,7 +619,7 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
         fmeaId: oldData.fmeaId,
         l1FuncId: db.l1Functions[0].id,
         category: oldLink.feScope || 'Your Plant',
-        effect: oldLink.feText || '(자동생성)',
+        effect: oldLink.feText || '',
         severity: oldLink.severity || 0,
         parentId: db.l1Functions[0].id, // ★ 모자관계
       };
@@ -649,7 +645,7 @@ export function migrateToAtomicDB(oldData: OldWorksheetData | any): FMEAWorkshee
         l3FuncId: db.l3Functions[0].id,
         l3StructId: db.l3Functions[0].l3StructId,
         l2StructId: db.l3Functions[0].l2StructId,
-        cause: oldLink.fcText || '(자동생성)',
+        cause: oldLink.fcText || '',
         occurrence: undefined,
         parentId: db.l3Functions[0].id, // ★ 모자관계
       };

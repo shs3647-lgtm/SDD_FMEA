@@ -27,6 +27,7 @@ export function createEmptyItem(
     productChar: '',
     processChar: '',
     specialChar: '',
+    charIndex: 0,  // 원자성 인덱스
     specTolerance: '',
     evalMethod: '',
     sampleSize: '',

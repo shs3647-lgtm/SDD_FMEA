@@ -195,6 +195,20 @@ export default function FailureL2Tab({ state, setState, setStateSynced, setDirty
     return count;
   }, [isUpstreamConfirmed, state.l2]);
 
+  // ✅ 누락 발생 시 자동 수정 모드 전환
+  useEffect(() => {
+    if (isConfirmed && missingCount > 0) {
+      console.log('[FailureL2Tab] 누락 발생 감지 → 자동 수정 모드 전환, missingCount:', missingCount);
+      const updateFn = (prev: any) => ({ ...prev, failureL2Confirmed: false });
+      if (setStateSynced) {
+        setStateSynced(updateFn);
+      } else {
+        setState(updateFn);
+      }
+      setDirty(true);
+    }
+  }, [isConfirmed, missingCount, setState, setStateSynced, setDirty]);
+
   // ✅ 확정 핸들러 - setStateSynced 패턴 적용
   const handleConfirm = useCallback(() => {
     if (!isUpstreamConfirmed) {
@@ -288,8 +302,8 @@ export default function FailureL2Tab({ state, setState, setStateSynced, setDirty
         
         const currentModes = proc.failureModes || [];
         
-        // ✅ modeId가 있으면 해당 항목만 수정 (다중선택 개별 수정)
-        if (modeId) {
+        // ✅ 2026-01-16: modeId가 있어도 selectedValues가 여러 개면 다중 모드
+        if (modeId && selectedValues.length === 1) {
           if (selectedValues.length === 0) {
             return { ...proc, failureModes: currentModes.filter((m: any) => m.id !== modeId) };
           }
@@ -301,7 +315,7 @@ export default function FailureL2Tab({ state, setState, setStateSynced, setDirty
           };
         }
         
-        // ✅ modeId가 없으면 빈 셀 클릭 → 새 항목 추가 (productCharId별)
+        // ✅ 다중 선택: 선택된 항목 전체 반영 (기존 + 신규)
         // 1. 다른 productCharId의 고장형태는 보존
         const otherModes = currentModes.filter((m: any) => m.productCharId !== productCharId);
         

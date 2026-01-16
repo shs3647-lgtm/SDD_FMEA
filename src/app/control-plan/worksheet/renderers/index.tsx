@@ -6,7 +6,6 @@
 import React from 'react';
 import { CPItem, SpanInfo, ContextMenuType } from '../types';
 import { CPColumnDef, CELL_STYLE, HEIGHTS, COLORS, SPECIAL_CHAR_OPTIONS, FREQUENCY_OPTIONS, OWNER_OPTIONS, LEVEL_OPTIONS } from '../cpConstants';
-import { CPInputMode } from '../components/CPTabMenu';
 
 interface RenderCellProps {
   item: CPItem;
@@ -17,7 +16,6 @@ interface RenderCellProps {
   descRowSpan: SpanInfo[];
   workRowSpan: SpanInfo[];
   charRowSpan: SpanInfo[];
-  inputMode: CPInputMode;
   onCellChange: (itemId: string, key: string, value: any) => void;
   onContextMenu: (e: React.MouseEvent, rowIdx: number, type: ContextMenuType, colKey?: string) => void;
   onAutoModeClick: (rowIdx: number, type: ContextMenuType, colKey?: string) => void;
@@ -33,7 +31,6 @@ export function renderCell({
   descRowSpan,
   workRowSpan,
   charRowSpan,
-  inputMode,
   onCellChange,
   onContextMenu,
   onAutoModeClick,
@@ -57,9 +54,9 @@ export function renderCell({
     verticalAlign: 'middle',
   };
   
-  // 엔터 키 핸들러 (수동 모드일 때만) - 컨텍스트 메뉴의 "아래로 행추가"와 동일하게 동작
+  // 엔터 키 핸들러 (통합 모드: 항상 행 추가)
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (inputMode === 'manual' && e.key === 'Enter' && onEnterKey) {
+    if (e.key === 'Enter' && onEnterKey) {
       e.preventDefault();
       // 컬럼 타입에 따라 ContextMenuType 결정
       let type: ContextMenuType = 'general';
@@ -70,7 +67,6 @@ export function renderCell({
       } else if (col.key === 'productChar' || col.key === 'processChar') {
         type = 'char';
       } else {
-        // 나머지 열은 'general' 타입으로 행 추가
         type = 'general';
       }
       onEnterKey(rowIdx, type, col.key);
@@ -108,23 +104,23 @@ export function renderCell({
         style={{ 
           ...cellStyle, 
           verticalAlign: 'middle',
-          cursor: isProcessName && inputMode === 'auto' ? 'pointer' : 'context-menu',
-          background: isProcessName && inputMode === 'auto' ? '#e3f2fd' : cellStyle.background, // 자동모드 시 강조
-          padding: '1px', // 내부여백 1PX
+          cursor: isProcessName ? 'pointer' : 'context-menu',
+          background: isProcessName ? '#e3f2fd' : cellStyle.background,
+          padding: '1px',
         }}
         rowSpan={spanInfo.span}
         onContextMenu={(e) => onContextMenu(e, rowIdx, 'process', col.key)}
-        onClick={isProcessName && inputMode === 'auto' ? () => onAutoModeClick(rowIdx, 'process', col.key) : undefined}
+        onClick={isProcessName ? () => onAutoModeClick(rowIdx, 'process', col.key) : undefined}
       >
         <div className="flex items-center gap-1 justify-center h-full">
-          {isProcessName && inputMode === 'auto' && <span className="text-blue-500 text-[8px]">➕</span>}
+          {isProcessName && <span className="text-blue-500 text-[8px]">➕</span>}
           <input
             type="text"
             value={displayValue}
             onChange={(e) => onCellChange(item.id, col.key, e.target.value)}
             onKeyDown={handleKeyDown}
             className="w-full bg-transparent outline-none text-center text-[11px] p-0 h-full"
-            onClick={(e) => isProcessName && inputMode === 'auto' && e.stopPropagation()}
+            onClick={(e) => isProcessName && e.stopPropagation()}
           />
         </div>
       </td>
@@ -243,7 +239,7 @@ export function renderCell({
     );
   }
   
-  // 공정설명 - rowSpan 병합 + 수동(컨텍스트메뉴)/자동(클릭모달)
+  // 공정설명 - rowSpan 병합 + 클릭 시 모달 (통합 모드)
   if (col.key === 'processDesc') {
     const spanInfo = descRowSpan[rowIdx];
     if (!spanInfo?.isFirst) {
@@ -256,31 +252,22 @@ export function renderCell({
         key={col.id} 
         style={{ 
           ...cellStyle, 
-          cursor: 'context-menu', 
-          verticalAlign: 'middle', // 세로 중앙 정렬 적용
-          background: inputMode === 'auto' ? '#e3f2fd' : bgColor, // 자동모드 시 강조
-          padding: '1px', // 내부여백 좌우상하 1PX로 통일
-          whiteSpace: 'pre-wrap', // 줄바꿈 처리
+          cursor: 'pointer', 
+          verticalAlign: 'middle',
+          background: '#e3f2fd',
+          padding: '1px',
+          whiteSpace: 'pre-wrap',
           wordBreak: 'break-all',
         }}
         rowSpan={spanInfo.span}
         onContextMenu={(e) => onContextMenu(e, rowIdx, 'process', col.key)}
-        onClick={inputMode === 'auto' ? () => onAutoModeClick(rowIdx, 'process', col.key) : undefined}
+        onClick={() => onAutoModeClick(rowIdx, 'process', col.key)}
       >
         <div className="flex items-center gap-1 h-full min-h-[20px]">
-          {inputMode === 'auto' && <span className="text-blue-500 text-[8px] mt-1">➕</span>}
+          <span className="text-blue-500 text-[8px] mt-1">➕</span>
           <div 
-            contentEditable={inputMode === 'manual'}
-            suppressContentEditableWarning
-            onBlur={(e) => onCellChange(item.id, col.key, e.currentTarget.innerText)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleKeyDown(e as any);
-              }
-            }}
             className="w-full bg-transparent outline-none text-[11px] text-left min-h-[18px] flex items-center"
-            onClick={(e) => inputMode === 'auto' && e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
             {displayValue}
           </div>
@@ -289,7 +276,7 @@ export function renderCell({
     );
   }
   
-  // 설비/금형/JIG - rowSpan 병합 + 수동(컨텍스트메뉴)/자동(클릭모달)
+  // 설비/금형/JIG - rowSpan 병합 + 클릭 시 모달 (통합 모드)
   if (col.key === 'workElement') {
     const spanInfo = workRowSpan[rowIdx];
     if (!spanInfo?.isFirst) {
@@ -300,41 +287,35 @@ export function renderCell({
         key={col.id} 
         style={{ 
           ...cellStyle, 
-          cursor: 'context-menu', 
+          cursor: 'pointer', 
           verticalAlign: 'middle',
-          background: inputMode === 'auto' ? '#e8f5e9' : bgColor, // 자동모드 시 강조
+          background: '#e8f5e9',
         }}
         rowSpan={spanInfo.span}
         onContextMenu={(e) => onContextMenu(e, rowIdx, 'work', col.key)}
-        onClick={inputMode === 'auto' ? () => onAutoModeClick(rowIdx, 'work') : undefined}
+        onClick={() => onAutoModeClick(rowIdx, 'work')}
       >
         <div className="flex items-center gap-1 justify-center">
-          {inputMode === 'auto' && <span className="text-green-500 text-[8px]">➕</span>}
+          <span className="text-green-500 text-[8px]">➕</span>
           <input
             type="text"
             value={value || ''}
             onChange={(e) => onCellChange(item.id, col.key, e.target.value)}
             onKeyDown={handleKeyDown}
             className="w-full bg-transparent outline-none text-center text-[11px]"
-            onClick={(e) => inputMode === 'auto' && e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           />
         </div>
       </td>
     );
   }
   
-  // 제품특성 - rowSpan 병합 + 수동(컨텍스트메뉴)/자동(클릭모달)
+  // 제품특성 - rowSpan 병합 + 클릭 시 모달 (통합 모드)
   if (col.key === 'productChar') {
     const spanInfo = charRowSpan[rowIdx];
     if (!spanInfo?.isFirst) {
       return null; // 병합된 행은 렌더링 안함
     }
-    const handleProductCharClick = () => {
-      console.log('🔥 productChar 클릭됨, inputMode:', inputMode);
-      if (inputMode === 'auto') {
-        onAutoModeClick(rowIdx, 'char', col.key);
-      }
-    };
     return (
       <td 
         key={col.id}
@@ -342,16 +323,16 @@ export function renderCell({
         style={{ 
           ...cellStyle, 
           verticalAlign: 'middle',
-          cursor: inputMode === 'auto' ? 'pointer' : 'context-menu',
-          background: inputMode === 'auto' ? '#fff3e0' : bgColor, // 자동모드 시 강조
+          cursor: 'pointer',
+          background: '#fff3e0',
           padding: '1px',
         }}
         rowSpan={spanInfo.span}
         onContextMenu={(e) => onContextMenu(e, rowIdx, 'char', col.key)}
-        onClick={handleProductCharClick}
+        onClick={() => onAutoModeClick(rowIdx, 'char', col.key)}
       >
         <div className="flex items-center gap-1 justify-center h-full">
-          {inputMode === 'auto' && <span className="text-orange-500 text-[8px]">➕</span>}
+          <span className="text-orange-500 text-[8px]">➕</span>
           <input
             type="text"
             value={value || ''}
@@ -365,17 +346,8 @@ export function renderCell({
     );
   }
   
-  // 기본 텍스트 입력 (중앙정렬) - 나머지 열에도 컨텍스트 메뉴 추가 (자동모드에서도 활성화)
-  // 드롭다운/체크박스 제외한 텍스트 컬럼은 자동모드에서 클릭 시 모달 열기
+  // 기본 텍스트 입력 (통합 모드: 클릭 시 모달, 우클릭 시 컨텍스트 메뉴)
   const isTextInputColumn = !['processLevel', 'specialChar', 'sampleFreq', 'owner1', 'owner2', 'detectorEp', 'detectorAuto', 'charNo', 'rowNo'].includes(col.key);
-  const showClickableHighlight = inputMode === 'auto' && isTextInputColumn;
-  
-  const handleTextCellClick = () => {
-    console.log(`🔥 ${col.key} 클릭됨, inputMode:`, inputMode);
-    if (inputMode === 'auto' && isTextInputColumn) {
-      onAutoModeClick(rowIdx, 'general', col.key);
-    }
-  };
   
   return (
     <td 
@@ -383,16 +355,16 @@ export function renderCell({
       data-column={col.key}
       style={{ 
         ...cellStyle, 
-        cursor: showClickableHighlight ? 'pointer' : 'context-menu',
-        padding: '1px', // 내부여백 1PX
+        cursor: isTextInputColumn ? 'pointer' : 'context-menu',
+        padding: '1px',
         verticalAlign: 'middle',
-        background: showClickableHighlight ? '#fff8e1' : bgColor, // 자동모드 시 강조
+        background: isTextInputColumn ? '#fff8e1' : bgColor,
       }}
       onContextMenu={(e) => onContextMenu(e, rowIdx, 'general', col.key)}
-      onClick={handleTextCellClick}
+      onClick={isTextInputColumn ? () => onAutoModeClick(rowIdx, 'general', col.key) : undefined}
     >
       <div className="flex items-center gap-1 justify-center h-full">
-        {showClickableHighlight && <span className="text-amber-500 text-[8px]">➕</span>}
+        {isTextInputColumn && <span className="text-amber-500 text-[8px]">➕</span>}
         <input
           type="text"
           value={value || ''}
