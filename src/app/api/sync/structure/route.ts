@@ -495,9 +495,20 @@ async function syncCpToFmea(
       });
     }
 
+    const fmeaIdLower = fmeaId.toLowerCase();
+    const baseUrl = getBaseDatabaseUrl();
+    const schema = getProjectSchemaName(fmeaIdLower);
+    let projectPrisma = prisma;
+
+    if (baseUrl) {
+      await ensureProjectSchemaReady({ baseDatabaseUrl: baseUrl, schema });
+      projectPrisma = getPrismaForSchema(schema) || prisma;
+      console.log(`[SYNC] CP→FMEA 프로젝트 스키마 사용: ${schema}`);
+    }
+
     // L1 조회 (FMEA에 L1이 있어야 L2 생성 가능)
-    const l1 = await prisma.l1Structure.findFirst({
-      where: { fmeaId },
+    const l1 = await projectPrisma.l1Structure.findFirst({
+      where: { fmeaId: fmeaIdLower },
       orderBy: { order: 'asc' },
     });
 
@@ -527,9 +538,9 @@ async function syncCpToFmea(
       const firstItem = items[0];
       
       // L2 생성 (스키마에 맞게)
-      const l2 = await prisma.l2Structure.create({
+      const l2 = await projectPrisma.l2Structure.create({
         data: {
-          fmeaId: fmeaId,
+          fmeaId: fmeaIdLower,
           l1Id: l1.id,
           no: firstItem.processNo || String((l2Count + 1) * 10),
           name: firstItem.processName || '',
@@ -539,9 +550,9 @@ async function syncCpToFmea(
 
       // L3 생성 (workElement가 있는 경우)
       if (firstItem.workElement) {
-        await prisma.l3Structure.create({
+        await projectPrisma.l3Structure.create({
           data: {
-            fmeaId: fmeaId,
+            fmeaId: fmeaIdLower,
             l1Id: l1.id,
             l2Id: l2.id,
             name: firstItem.workElement,

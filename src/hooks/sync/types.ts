@@ -132,6 +132,10 @@ export interface DataSyncRequest {
   cpNo: string;
   fields?: string[];
   conflictPolicy?: ConflictPolicy;
+  resolutions?: Array<{
+    field: string;
+    resolution: ConflictResolution;
+  }>;
 }
 
 /** 동기화 응답 */

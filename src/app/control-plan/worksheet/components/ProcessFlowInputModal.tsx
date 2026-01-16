@@ -8,6 +8,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useDraggableModal } from '@/components/modals/useDraggableModal';
 
 interface ProcessItem {
   id: string;
@@ -161,53 +162,9 @@ export default function ProcessFlowInputModal({
   const [continuousMode, setContinuousMode] = useState(false);
   const [addedCount, setAddedCount] = useState(0);
   
-  // 드래그 상태
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [modalPosition, setModalPosition] = useState({ top: 200, right: 350 });
+  const { position: modalPosition, handleMouseDown } =
+    useDraggableModal({ initialPosition: { top: 200, right: 350 }, modalWidth: 350, modalHeight: 200, isOpen });
 
-  // 드래그 시작
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.target instanceof HTMLElement && e.target.closest('button')) return;
-    setIsDragging(true);
-    setDragStart({ x: e.clientX, y: e.clientY });
-  }, []);
-
-  // 드래그 중
-  useEffect(() => {
-    if (!isDragging) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const deltaX = e.clientX - dragStart.x;
-      const deltaY = e.clientY - dragStart.y;
-      
-      setModalPosition(prev => ({
-        top: Math.max(0, Math.min(window.innerHeight - 200, prev.top + deltaY)),
-        right: Math.max(0, Math.min(window.innerWidth - 350, prev.right - deltaX))
-      }));
-      
-      setDragStart({ x: e.clientX, y: e.clientY });
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging, dragStart]);
-
-  // 모달이 열릴 때 위치 초기화 (우측 350px)
-  useEffect(() => {
-    if (isOpen) {
-      setModalPosition({ top: 200, right: 350 });
-    }
-  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {

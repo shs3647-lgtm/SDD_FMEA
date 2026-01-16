@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import type {
   SyncStatus,
   SyncConflict,
@@ -14,9 +14,7 @@ import type {
   ConflictResolution,
   DataSyncRequest,
   SyncResponse,
-  FieldMapping,
 } from './types';
-import { SYNC_FIELD_MAPPINGS, getBidirectionalFields } from './types';
 
 // ============================================================================
 // 타입 정의
@@ -57,49 +55,7 @@ const INITIAL_STATE: UseDataSyncState = {
 // 유틸리티 함수
 // ============================================================================
 
-/**
- * 두 값이 다른지 비교
- */
-const isDifferent = (a: any, b: any): boolean => {
-  const aVal = a ?? '';
-  const bVal = b ?? '';
-  return String(aVal).trim() !== String(bVal).trim();
-};
-
-/**
- * FMEA 값 추출
- */
-const extractFmeaValue = (fmeaData: any, field: string): string => {
-  // field에 따라 다른 경로에서 값 추출
-  switch (field) {
-    case 'l2No':
-      return fmeaData.l2?.[0]?.no || '';
-    case 'l2Name':
-      return fmeaData.l2?.[0]?.name || '';
-    case 'l2Function':
-      return fmeaData.l2?.[0]?.function || '';
-    case 'l3Name':
-      return fmeaData.l2?.[0]?.l3Structures?.[0]?.name || '';
-    case 'equipment':
-      return fmeaData.l2?.[0]?.l3Structures?.[0]?.equipment || '';
-    case 'productChar':
-      return fmeaData.l2?.[0]?.productChars?.[0]?.name || '';
-    case 'processChar':
-      return fmeaData.l2?.[0]?.processChars?.[0]?.name || '';
-    case 'specialChar':
-      return fmeaData.l2?.[0]?.productChars?.[0]?.specialChar || '';
-    default:
-      return fmeaData[field] || '';
-  }
-};
-
-/**
- * CP 값 추출
- */
-const extractCpValue = (cpItems: any[], field: string): string => {
-  const firstItem = cpItems[0] || {};
-  return firstItem[field] ?? '';
-};
+// (로컬 데이터 비교 로직 제거: API 기반 동기화로 통일)
 
 // ============================================================================
 // 훅 구현
@@ -136,6 +92,7 @@ const extractCpValue = (cpItems: any[], field: string): string => {
  */
 export function useDataSync(): UseDataSyncReturn {
   const [state, setState] = useState<UseDataSyncState>(INITIAL_STATE);
+  const lastTargetRef = useRef<{ fmeaId: string; cpNo: string; fields?: string[] } | null>(null);
 
   /**
    * 충돌 감지
@@ -145,38 +102,20 @@ export function useDataSync(): UseDataSyncReturn {
     cpNo: string
   ): Promise<SyncConflict[]> => {
     try {
-      // FMEA 데이터 조회
-      const fmeaRes = await fetch(`/api/pfmea/${fmeaId}`);
-      const fmeaJson = await fmeaRes.json();
-      const fmeaData = fmeaJson.data || {};
-
-      // CP 데이터 조회
-      const cpRes = await fetch(`/api/control-plan/${cpNo}/items`);
-      const cpJson = await cpRes.json();
-      const cpItems = cpJson.data || [];
-
-      // 양방향 동기화 필드만 비교
-      const bidirectionalFields = getBidirectionalFields();
-      const conflicts: SyncConflict[] = [];
-
-      bidirectionalFields.forEach((mapping) => {
-        const fmeaValue = extractFmeaValue(fmeaData, mapping.fmeaField);
-        const cpValue = extractCpValue(cpItems, mapping.cpField);
-
-        if (isDifferent(fmeaValue, cpValue)) {
-          conflicts.push({
-            field: mapping.cpField,
-            fieldLabel: mapping.label,
-            fmeaValue,
-            cpValue,
-          });
-        }
+      const response = await fetch('/api/sync/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fmeaId, cpNo, conflictPolicy: 'ask' }),
       });
 
-      setState(prev => ({ 
-        ...prev, 
+      const result = await response.json();
+      const conflicts = result.conflicts || [];
+      lastTargetRef.current = { fmeaId, cpNo };
+
+      setState(prev => ({
+        ...prev,
         conflicts,
-        status: conflicts.length > 0 ? 'conflict' : 'idle'
+        status: conflicts.length > 0 ? 'conflict' : 'idle',
       }));
 
       return conflicts;
@@ -218,24 +157,42 @@ export function useDataSync(): UseDataSyncReturn {
    * 충돌 해결 적용
    */
   const applyResolutions = useCallback(async (): Promise<SyncResponse> => {
-    // TODO: 실제 적용 로직 구현
-    const resolved = state.conflicts.filter(c => c.resolution);
-    const skipped = state.conflicts.filter(c => c.resolution === 'skip');
+    if (!lastTargetRef.current) {
+      return {
+        success: false,
+        synced: 0,
+        conflicts: [],
+        skipped: 0,
+        error: '동기화 대상이 없습니다.',
+      };
+    }
 
+    const resolutions = state.conflicts
+      .filter(c => c.resolution)
+      .map(c => ({ field: c.field, resolution: c.resolution! }));
+
+    const response = await fetch('/api/sync/data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...lastTargetRef.current,
+        conflictPolicy: 'ask',
+        resolutions,
+      }),
+    });
+
+    const result = await response.json();
     setState(prev => ({
       ...prev,
-      status: 'success',
-      synced: resolved.length - skipped.length,
-      skipped: skipped.length,
+      status: result.success ? 'success' : 'error',
+      synced: result.synced || 0,
+      skipped: result.skipped || 0,
+      conflicts: result.conflicts || [],
       lastSyncAt: new Date(),
+      error: result.error,
     }));
 
-    return {
-      success: true,
-      synced: resolved.length - skipped.length,
-      conflicts: [],
-      skipped: skipped.length,
-    };
+    return result;
   }, [state.conflicts]);
 
   /**
@@ -249,56 +206,28 @@ export function useDataSync(): UseDataSyncReturn {
     setState(prev => ({ ...prev, status: 'syncing' }));
 
     try {
-      // 1. 충돌 감지
-      const conflicts = await detectConflicts(fmeaId, cpNo);
-      
-      // 2. 충돌 정책에 따라 처리
-      if (conflicts.length > 0) {
-        if (conflictPolicy === 'ask') {
-          // 사용자에게 묻기
-          return {
-            success: false,
-            synced: 0,
-            conflicts,
-            skipped: 0,
-          };
-        }
+      lastTargetRef.current = { fmeaId, cpNo, fields };
 
-        // 정책에 따라 자동 해결
-        let resolution: ConflictResolution;
-        switch (conflictPolicy) {
-          case 'fmea-wins':
-            resolution = 'use-fmea';
-            break;
-          case 'cp-wins':
-            resolution = 'use-cp';
-            break;
-          case 'skip':
-          case 'latest-wins':
-          default:
-            resolution = 'skip';
-        }
-
-        resolveAllConflicts(resolution);
-      }
-
-      // 3. API 호출
+      // API 호출
       const syncRes = await fetch('/api/sync/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
       });
 
-      if (!syncRes.ok) {
-        // API가 없으면 로컬 시뮬레이션
-        console.warn('⚠️ /api/sync/data API 미구현 - 로컬 시뮬레이션');
-        
-        const result = await applyResolutions();
-        return result;
+      const syncData = await syncRes.json();
+
+      if (!syncData.success && syncData.conflicts?.length > 0) {
+        setState(prev => ({
+          ...prev,
+          status: 'conflict',
+          conflicts: syncData.conflicts,
+          synced: 0,
+          skipped: 0,
+        }));
+        return syncData;
       }
 
-      const syncData = await syncRes.json();
-      
       setState(prev => ({
         ...prev,
         status: syncData.success ? 'success' : 'error',
@@ -327,7 +256,7 @@ export function useDataSync(): UseDataSyncReturn {
         error: error.message,
       };
     }
-  }, [detectConflicts, resolveAllConflicts, applyResolutions]);
+  }, [applyResolutions]);
 
   /**
    * 충돌 목록 초기화

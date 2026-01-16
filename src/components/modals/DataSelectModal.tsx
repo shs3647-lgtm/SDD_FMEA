@@ -23,6 +23,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useDraggableModal } from './useDraggableModal';
 import { 
   DataItem, 
   ITEM_CODE_LABELS, 
@@ -88,53 +89,8 @@ export default function DataSelectModal({
   // ✅ 초기화 완료 플래그 (items 변경 시 재초기화 방지)
   const [initialized, setInitialized] = useState(false);
   
-  // 드래그 상태
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [modalPosition, setModalPosition] = useState({ top: 200, right: 0 });
-
-  // 드래그 시작
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.target instanceof HTMLElement && e.target.closest('button')) return;
-    setIsDragging(true);
-    setDragStart({ x: e.clientX, y: e.clientY });
-  }, []);
-
-  // 드래그 중
-  useEffect(() => {
-    if (!isDragging) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const deltaX = e.clientX - dragStart.x;
-      const deltaY = e.clientY - dragStart.y;
-      
-      setModalPosition(prev => ({
-        top: Math.max(0, Math.min(window.innerHeight - 200, prev.top + deltaY)),
-        right: Math.max(-350, Math.min(window.innerWidth - 350, prev.right - deltaX))
-      }));
-      
-      setDragStart({ x: e.clientX, y: e.clientY });
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging, dragStart]);
-
-  // 모달이 열릴 때 위치 초기화
-  useEffect(() => {
-    if (isOpen) {
-      setModalPosition({ top: 200, right: 0 });
-    }
-  }, [isOpen]);
+  const { position: modalPosition, handleMouseDown } =
+    useDraggableModal({ initialPosition: { top: 200, right: 0 }, modalWidth: 350, modalHeight: 200, isOpen });
 
   const itemInfo = ITEM_CODE_LABELS[itemCode] || { label: itemCode, category: 'A', level: 'L1' };
   const hasBelongsToFilter = ['C1', 'C2', 'C3', 'FE1', 'FE2'].includes(itemCode);

@@ -7,6 +7,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useDraggableModal } from '@/components/modals/useDraggableModal';
 
 interface EquipmentItem {
   id: string;
@@ -81,8 +82,8 @@ export default function EquipmentInputModal({
   const [continuousMode, setContinuousMode] = useState(false);
   const [addedCount, setAddedCount] = useState(0);
   
-  // 모달 위치
-  const [modalPosition, setModalPosition] = useState({ top: 200, right: 350 });
+  const { position: modalPosition, handleMouseDown } =
+    useDraggableModal({ initialPosition: { top: 200, right: 350 }, modalWidth: 350, modalHeight: 200, isOpen });
 
   useEffect(() => {
     if (isOpen && processNo) {
@@ -101,7 +102,6 @@ export default function EquipmentInputModal({
       setEditingId(null);
       setContinuousMode(false);
       setAddedCount(0);
-      setModalPosition({ top: 200, right: 350 });
     }
   }, [isOpen, processNo, processName, existingEquip]);
 
@@ -151,7 +151,10 @@ export default function EquipmentInputModal({
         onClick={e => e.stopPropagation()}
       >
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white select-none">
+        <div
+          className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white select-none cursor-move"
+          onMouseDown={handleMouseDown}
+        >
           <div className="flex items-center gap-2">
             <span className="text-base">🔧</span>
             <h2 className="text-xs font-bold">설비/금형/JIG 선택</h2>

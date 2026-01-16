@@ -172,6 +172,8 @@ export function useWorksheetState(): UseWorksheetStateReturn {
   const [currentFmea, setCurrentFmea] = useState<FMEAProject | null>(null);
   
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastAutoSaveHashRef = useRef<string>('');
 
   // ✅ state를 ref로 유지하여 saveToLocalStorage에서 항상 최신 값 사용
   // ⚠️ 중요: useLayoutEffect를 사용하여 렌더 직후 동기적으로 업데이트
@@ -332,6 +334,47 @@ export function useWorksheetState(): UseWorksheetStateReturn {
       setIsSaving(false);
     }
   }, [atomicDB, selectedFmeaId, currentFmea]); // ✅ FMEA ID 폴백 지원
+
+  // ✅ 구조~고장원인까지 변경 시 원자성 DB 자동 저장 (관리계획서 연동용 최신성 보장)
+  useEffect(() => {
+    if (suppressAutoSaveRef.current) return;
+    if (!selectedFmeaId && !currentFmea?.id) return;
+
+    const snapshot = {
+      l1: stateRef.current.l1,
+      l2: stateRef.current.l2,
+      failureLinks: (stateRef.current as any).failureLinks || [],
+      confirmed: {
+        structureConfirmed: (stateRef.current as any).structureConfirmed || false,
+        l1Confirmed: (stateRef.current as any).l1Confirmed || false,
+        l2Confirmed: (stateRef.current as any).l2Confirmed || false,
+        l3Confirmed: (stateRef.current as any).l3Confirmed || false,
+        failureL1Confirmed: (stateRef.current as any).failureL1Confirmed || false,
+        failureL2Confirmed: (stateRef.current as any).failureL2Confirmed || false,
+        failureL3Confirmed: (stateRef.current as any).failureL3Confirmed || false,
+        failureLinkConfirmed: (stateRef.current as any).failureLinkConfirmed || false,
+      },
+      riskData: stateRef.current.riskData || {},
+    };
+
+    const hash = JSON.stringify(snapshot);
+    if (lastAutoSaveHashRef.current && hash === lastAutoSaveHashRef.current) return;
+    lastAutoSaveHashRef.current = hash;
+
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      saveAtomicDB().catch(e => console.error('[자동저장] 원자성 DB 저장 오류:', e));
+    }, 800);
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [state, selectedFmeaId, currentFmea?.id, saveAtomicDB]);
 
   /**
    * ✅ 성능 최적화용 저장 함수 (localStorage ONLY)
