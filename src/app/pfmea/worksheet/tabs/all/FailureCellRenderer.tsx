@@ -40,6 +40,7 @@ interface FMGroupRow {
 
 interface FMGroup {
   fmId: string;
+  fmNo: string;
   fmText: string;
   fmRowSpan: number;
   fmProcessNo: string;
@@ -200,9 +201,10 @@ export function FailureCellRenderer({
   // ★ 고장형태(FM) - FM 전체 병합
   if (col.name === '고장형태(FM)') {
     if (row.isFirstRow) {
+      const fmLabel = fmGroup.fmNo ? `${fmGroup.fmNo} ${fmGroup.fmText}` : fmGroup.fmText;
       return (
         <td key={colIdx} rowSpan={fmGroup.fmRowSpan} style={{ ...cellStyle(fmGroup.fmRowSpan), textAlign: 'center', color: '#000', borderBottom: '2px solid #303f9f' }}>
-          {fmGroup.fmText}
+          {fmLabel}
         </td>
       );
     }

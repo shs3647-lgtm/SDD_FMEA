@@ -6,6 +6,7 @@
 /** 고장연결 데이터 행 타입 */
 export interface FailureLinkRow {
   fmId: string;
+  fmNo?: string;
   fmText: string;
   feId: string;
   feText: string;
@@ -29,6 +30,7 @@ export interface FailureLinkRow {
 /** 처리된 FM 그룹 타입 */
 export interface ProcessedFMGroup {
   fmId: string;
+  fmNo: string;
   fmText: string;
   fmRowSpan: number;
   maxSeverity: number;
@@ -77,6 +79,7 @@ interface FCData {
 
 /** FM 데이터 내부 타입 */
 interface FMData {
+  fmNo: string;
   fmText: string;
   l1ProductName: string;
   // DFMEA: fmProcessNo 제거됨
@@ -90,6 +93,7 @@ interface FMData {
 /** FM 최신 데이터 타입 (state.l2에서 가져옴) */
 interface FMLatestData {
   name: string;  // A'SSY명 (DFMEA)
+  order?: number | string;
   failureModes?: Array<{ id: string; name: string }>;  // ★ text → name
 }
 
@@ -103,13 +107,25 @@ interface FMLatestData {
 export function processFailureLinks(links: FailureLinkRow[], l2Data?: FMLatestData[]): ProcessedFMGroup[] {
   if (!links || links.length === 0) return [];
   
+  const toOrderValue = (orderValue: unknown, fallbackIndex: number) => {
+    const orderNum = typeof orderValue === 'number' ? orderValue : Number.parseInt(String(orderValue ?? '').trim(), 10);
+    if (!Number.isNaN(orderNum)) return orderNum;
+    return fallbackIndex + 1;
+  };
+
   // ★ state.l2에서 최신 FM 텍스트 맵 생성
-  const latestFMTextMap = new Map<string, { text: string; processName: string }>();
+  const latestFMTextMap = new Map<string, { text: string; processName: string; processOrder: number; fmOrder: number }>();
   if (l2Data) {
-    l2Data.forEach((proc: FMLatestData) => {
-      proc.failureModes?.forEach((fm: { id: string; name: string }) => {
+    l2Data.forEach((proc: FMLatestData, procIndex: number) => {
+      const processOrder = toOrderValue(proc.order, procIndex);
+      proc.failureModes?.forEach((fm: { id: string; name: string }, fmIndex: number) => {
         // ★ fm.name이 실제 고장형태 텍스트
-        latestFMTextMap.set(fm.id, { text: fm.name, processName: proc.name });
+        latestFMTextMap.set(fm.id, { 
+          text: fm.name, 
+          processName: proc.name,
+          processOrder,
+          fmOrder: fmIndex + 1,
+        });
       });
     });
     console.log('[processFailureLinks] 최신 FM 맵 생성:', latestFMTextMap.size, '개');
@@ -125,6 +141,7 @@ export function processFailureLinks(links: FailureLinkRow[], l2Data?: FMLatestDa
     
     if (!fmMap.has(link.fmId)) {
       fmMap.set(link.fmId, {
+        fmNo: link.fmNo || '',
         fmText: fmText,           // ★ 최신 텍스트 사용
         l1ProductName: link.l1ProductName || '',
         // DFMEA: fmProcessNo 제거됨
@@ -136,6 +153,9 @@ export function processFailureLinks(links: FailureLinkRow[], l2Data?: FMLatestDa
       });
     }
     const group = fmMap.get(link.fmId)!;
+    if (!group.fmNo && link.fmNo) {
+      group.fmNo = link.fmNo;
+    }
     if (link.feId && link.feText) {
       group.fes.set(link.feId, { 
         text: link.feText, 
@@ -229,6 +249,7 @@ export function processFailureLinks(links: FailureLinkRow[], l2Data?: FMLatestDa
     
     result.push({
       fmId,
+      fmNo: group.fmNo,
       fmText: group.fmText,
       fmRowSpan: maxRows,
       maxSeverity,
@@ -241,7 +262,41 @@ export function processFailureLinks(links: FailureLinkRow[], l2Data?: FMLatestDa
       rows,
     });
   });
-  
-  return result;
+
+  const parseFmNo = (value: string) => {
+    const match = value.match(/\d+/);
+    return match ? Number(match[0]) : Number.NaN;
+  };
+  const getProcessOrder = (group: ProcessedFMGroup, fallbackIndex: number) => {
+    const meta = latestFMTextMap.get(group.fmId);
+    if (meta) return meta.processOrder;
+    return toOrderValue(undefined, fallbackIndex);
+  };
+  const getFmOrder = (group: ProcessedFMGroup) => {
+    const meta = latestFMTextMap.get(group.fmId);
+    return meta?.fmOrder ?? Number.MAX_SAFE_INTEGER;
+  };
+
+  const sorted = result.sort((a, b) => {
+    const aFmNo = parseFmNo(a.fmNo || '');
+    const bFmNo = parseFmNo(b.fmNo || '');
+    const aHasNo = Number.isFinite(aFmNo);
+    const bHasNo = Number.isFinite(bFmNo);
+    if (aHasNo && bHasNo && aFmNo !== bFmNo) return aFmNo - bFmNo;
+    if (aHasNo && !bHasNo) return -1;
+    if (!aHasNo && bHasNo) return 1;
+    const aProcessOrder = getProcessOrder(a, 0);
+    const bProcessOrder = getProcessOrder(b, 0);
+    if (aProcessOrder !== bProcessOrder) return aProcessOrder - bProcessOrder;
+    const aFmOrder = getFmOrder(a);
+    const bFmOrder = getFmOrder(b);
+    if (aFmOrder !== bFmOrder) return aFmOrder - bFmOrder;
+    return a.fmText.localeCompare(b.fmText, 'ko');
+  });
+
+  return sorted.map((group, index) => ({
+    ...group,
+    fmNo: group.fmNo || `M${index + 1}`,
+  }));
 }
 

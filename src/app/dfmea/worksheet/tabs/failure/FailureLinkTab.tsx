@@ -1118,6 +1118,7 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
       fcArray.forEach(fc => {
         newLinks.push({
           fmId: currentFMId,
+          fmNo: currentFM.fmNo,
           fmText: currentFM.text,
           fmProcess: currentFM.processName,
           feId: fe.id,

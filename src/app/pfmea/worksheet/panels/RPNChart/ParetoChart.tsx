@@ -82,8 +82,20 @@ export default function ParetoChart({ state }: ParetoChartProps) {
       }
     });
     
-    // failureLinkUI에서 FM/FC 정보 가져오기
-    const savedLinks = state?.failureLinkUI?.savedLinks || [];
+    // 고장연결 데이터 (ALL 화면 기준) - failureLinks 우선
+    const savedLinks = state?.failureLinks || state?.failureLinkUI?.savedLinks || [];
+    const linkByKey = new Map<string, { processName: string; failureMode: string; workElement: string; severity: number }>();
+    savedLinks.forEach((link: any) => {
+      const key = `${link.fmId}-${link.fcId}`;
+      const processName = link.fmProcess || link.fmProcessName || link.processName || link.l2Name || '';
+      const failureMode = link.fmText || '';
+      const workElement = link.fcWorkElem || link.workElement || link.fcWe || '';
+      const severity = Number(link.feSeverity || link.severity || 0) || 0;
+      const existing = linkByKey.get(key);
+      if (!existing || severity > existing.severity) {
+        linkByKey.set(key, { processName, failureMode, workElement, severity });
+      }
+    });
     
     allUniqueKeys.forEach(uniqueKey => {
       const o = Number(riskData[`risk-${uniqueKey}-O`]) || 0;
@@ -97,15 +109,14 @@ export default function ParetoChart({ state }: ParetoChartProps) {
         let processName = '';
         let failureMode = '';
         let workElement = '';
+        let linkSeverity = 0;
         
-        // uniqueKey가 fmId-fcId 형식인 경우 매칭 시도
-        const link = savedLinks.find((lk: any) => 
-          `${lk.fmId}-${lk.fcId}` === uniqueKey || lk.id === uniqueKey
-        );
-        if (link) {
-          processName = link.processName || link.l2Name || '';
-          failureMode = link.fmText || '';
-          workElement = link.fcWe || link.workElement || '';
+        const linkInfo = linkByKey.get(uniqueKey);
+        if (linkInfo) {
+          processName = linkInfo.processName;
+          failureMode = linkInfo.failureMode;
+          workElement = linkInfo.workElement;
+          linkSeverity = linkInfo.severity;
         }
         
         items.push({
@@ -113,7 +124,7 @@ export default function ParetoChart({ state }: ParetoChartProps) {
           processName,
           workElement,
           failureMode: failureMode || `항목 ${items.length + 1}`,
-          severity: s,
+          severity: linkSeverity || s,
           occurrence: o,
           detection: d,
           rpn,

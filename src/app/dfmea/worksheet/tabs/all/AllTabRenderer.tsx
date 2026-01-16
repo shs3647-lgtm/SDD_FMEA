@@ -324,6 +324,7 @@ export default function AllTabRenderer({
     
     return {
       fmId: normalizedFmId || fmId,
+      fmNo: link.fmNo || '',
       // ★ fmText: 1순위 link, 2순위 cache, 3순위 DB 조회, 4순위 state.l2 검색, 5순위 fmId
       fmText: finalFmText,
       // ★ L1 역전개 데이터 (제품명) (DFMEA)
