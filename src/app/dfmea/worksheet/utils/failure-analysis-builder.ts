@@ -84,12 +84,12 @@ export function buildFailureAnalyses(db: FMEAWorksheetDB): FailureAnalysis[] {
       fmText: fm.mode || '',
       fmProcessName: l2Struct?.name || link.cache?.fmProcess || '',
       
-      feId: fe?.id || '',
+      feId: fe?.id || link.feId || '',
       feText: fe?.effect || link.cache?.feText || '',
       feCategory: fe?.category || link.cache?.feCategory || '',
       feSeverity: fe?.severity || link.cache?.feSeverity || 0,
       
-      fcId: fc?.id || '',
+      fcId: fc?.id || link.fcId || '',
       fcText: fc?.cause || link.cache?.fcText || '',
       fcOccurrence: fc?.occurrence || 0,
       fcWorkElementName: l3Struct?.name || link.cache?.fcWorkElem || '',

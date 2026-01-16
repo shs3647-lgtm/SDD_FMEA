@@ -67,6 +67,12 @@ export default function FailureLinkResult({ savedLinks, fmData }: FailureLinkRes
       });
     });
     
+    const parseFmNo = (fmNo: string) => {
+      const match = fmNo.match(/\d+/);
+      return match ? Number(match[0]) : Number.POSITIVE_INFINITY;
+    };
+
+    result.sort((a, b) => parseFmNo(a.fmNo) - parseFmNo(b.fmNo));
     return result;
   }, [fmGroupsMap, fmData]);
 

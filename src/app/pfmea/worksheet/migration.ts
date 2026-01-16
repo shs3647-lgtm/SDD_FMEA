@@ -1069,20 +1069,37 @@ export function convertToLegacyFormat(db: FMEAWorksheetDB): OldWorksheetData {
     result.l2.push(procObj);
   });
   
-  // FailureLinks 변환
+  // FailureLinks 변환 (failureAnalyses 또는 원자성 테이블 기준으로 텍스트 복원)
+  const feById = new Map(db.failureEffects.map(fe => [fe.id, fe]));
+  const fmById = new Map(db.failureModes.map(fm => [fm.id, fm]));
+  const fcById = new Map(db.failureCauses.map(fc => [fc.id, fc]));
+  const l2ById = new Map(db.l2Structures.map(l2 => [l2.id, l2]));
+  const l3ById = new Map(db.l3Structures.map(l3 => [l3.id, l3]));
+  const analysisByLinkId = new Map(db.failureAnalyses.map(fa => [fa.linkId, fa]));
+
   db.failureLinks.forEach((link: any) => {
+    const analysis = analysisByLinkId.get(link.id);
+    const fm = fmById.get(link.fmId);
+    const fe = feById.get(link.feId);
+    const fc = fcById.get(link.fcId);
+    const fmProcessName = analysis?.fmProcessName || (fm?.l2StructId ? l2ById.get(fm.l2StructId)?.name : '') || '';
+    const fcWorkElem = analysis?.fcWorkElementName || (fc?.l3StructId ? l3ById.get(fc.l3StructId)?.name : '') || '';
+    const fcProcess = analysis?.l2StructName || (fc?.l2StructId ? l2ById.get(fc.l2StructId)?.name : '') || '';
+    const fcM4 = analysis?.fcM4 || (fc?.l3StructId ? l3ById.get(fc.l3StructId)?.m4 : '') || '';
+
     result.failureLinks!.push({
       fmId: link.fmId,
-      fmText: link.cache?.fmText || '',
-      fmProcess: link.cache?.fmProcess || '',
+      fmText: analysis?.fmText || fm?.mode || '',
+      fmProcess: fmProcessName,
       feId: link.feId,
-      feScope: link.cache?.feCategory,
-      feText: link.cache?.feText,
-      severity: link.cache?.feSeverity,
+      feScope: analysis?.feCategory || fe?.category,
+      feText: analysis?.feText || fe?.effect || '',
+      severity: analysis?.feSeverity ?? fe?.severity ?? 0,
       fcId: link.fcId,
-      fcText: link.cache?.fcText,
-      fcWorkElem: link.cache?.fcWorkElem,
-      fcProcess: link.cache?.fcProcess,
+      fcText: analysis?.fcText || fc?.cause || '',
+      fcWorkElem,
+      fcProcess,
+      fcM4,
     });
   });
   

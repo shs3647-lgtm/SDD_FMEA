@@ -418,6 +418,81 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     return items;
   }, [state.l2, isL3Confirmed]);
 
+  // ========== savedLinks 보강 (ID만 있는 경우 텍스트 복원) ==========
+  const fmById = useMemo(() => new Map(fmData.map(fm => [fm.id, fm])), [fmData]);
+  const feById = useMemo(() => new Map(feData.map(fe => [fe.id, fe])), [feData]);
+  const fcById = useMemo(() => new Map(fcData.map(fc => [fc.id, fc])), [fcData]);
+  const rawFmById = useMemo(() => {
+    const map = new Map<string, { text: string; processName: string }>();
+    (state.l2 || []).forEach((proc: any) => {
+      (proc.failureModes || []).forEach((fm: any) => {
+        if (!fm?.id) return;
+        map.set(fm.id, { text: fm.name || '', processName: proc.name || '' });
+      });
+    });
+    return map;
+  }, [state.l2]);
+  const rawFeById = useMemo(() => {
+    const map = new Map<string, { text: string; scope: string; severity?: number }>();
+    const types = state.l1?.types || [];
+    (state.l1?.failureScopes || []).forEach((fs: any) => {
+      if (!fs?.id) return;
+      let scope = fs.scope || fs.category || '';
+      if (!scope && fs.reqId) {
+        types.forEach((type: any) => {
+          (type.functions || []).forEach((fn: any) => {
+            (fn.requirements || []).forEach((req: any) => {
+              if (req.id === fs.reqId) {
+                scope = type.name || scope;
+              }
+            });
+          });
+        });
+      }
+      map.set(fs.id, { text: fs.effect || '', scope, severity: fs.severity });
+    });
+    return map;
+  }, [state.l1]);
+  const rawFcById = useMemo(() => {
+    const map = new Map<string, { text: string; processName: string }>();
+    (state.l2 || []).forEach((proc: any) => {
+      (proc.failureCauses || []).forEach((fc: any) => {
+        if (!fc?.id) return;
+        map.set(fc.id, { text: fc.name || '', processName: proc.name || '' });
+      });
+    });
+    return map;
+  }, [state.l2]);
+  const enrichedLinks = useMemo(() => {
+    return savedLinks.map(link => {
+      const fm = fmById.get(link.fmId) ?? rawFmById.get(link.fmId);
+      const fe = feById.get(link.feId) ?? rawFeById.get(link.feId);
+      const fc = fcById.get(link.fcId) ?? rawFcById.get(link.fcId);
+      return {
+        ...link,
+        fmText: link.fmText || fm?.text || '',
+        fmProcess: link.fmProcess || fm?.processName || '',
+        feNo: link.feNo || fe?.feNo || '',
+        feScope: link.feScope || fe?.scope || '',
+        feText: link.feText || fe?.text || '',
+        severity: link.severity ?? fe?.severity ?? 0,
+        fcNo: link.fcNo || fc?.fcNo || '',
+        fcProcess: link.fcProcess || fc?.processName || '',
+        fcM4: link.fcM4 || fc?.m4 || '',
+        fcWorkElem: link.fcWorkElem || fc?.workElem || '',
+        fcText: link.fcText || fc?.text || '',
+      };
+    });
+  }, [savedLinks, fmById, feById, fcById, rawFmById, rawFeById, rawFcById]);
+
+  useEffect(() => {
+    if (savedLinks.length === 0) return;
+    const nextJson = JSON.stringify(enrichedLinks);
+    if (nextJson !== savedLinksJson) {
+      setSavedLinks(enrichedLinks);
+    }
+  }, [savedLinksJson, savedLinks.length, enrichedLinks]);
+
   // ========== 현재 선택된 FM ==========
   const currentFM = useMemo(() => fmData.find(f => f.id === currentFMId), [fmData, currentFMId]);
 
@@ -778,6 +853,8 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     if (hasPrevFM) {
       const prevFM = fmData[currentFMIndex - 1];
       setCurrentFMId(prevFM.id);
+      setSelectedProcess(prevFM.processName);
+      setViewMode('diagram');
       setTimeout(drawLines, 50);
     }
   }, [currentFMIndex, fmData, hasPrevFM, drawLines]);
@@ -786,6 +863,8 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     if (hasNextFM) {
       const nextFM = fmData[currentFMIndex + 1];
       setCurrentFMId(nextFM.id);
+      setSelectedProcess(nextFM.processName);
+      setViewMode('diagram');
       setTimeout(drawLines, 50);
     }
   }, [currentFMIndex, fmData, hasNextFM, drawLines]);

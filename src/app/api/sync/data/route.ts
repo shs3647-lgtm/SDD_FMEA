@@ -150,6 +150,11 @@ export async function POST(req: NextRequest) {
         });
       });
 
+      const combinedChars = [
+        ...productChars.map((c) => ({ type: 'product', name: c.name, specialChar: c.specialChar })),
+        ...processChars.map((c) => ({ type: 'process', name: c.name, specialChar: c.specialChar })),
+      ];
+
       const fmeaEntry = {
         id: l2.id,
         processNo: l2.no || '',
@@ -159,6 +164,7 @@ export async function POST(req: NextRequest) {
         equipment: equipmentNames.join(', '),
         productChars,
         processChars,
+        combinedChars,
         l3Structures,
       };
 
@@ -198,12 +204,9 @@ export async function POST(req: NextRequest) {
 
       if (!fmeaEntry) continue;
 
-      const productCharMap = new Map(
-        fmeaEntry.productChars.map((c: any) => [c.name, c])
-      );
-      const processCharMap = new Map(
-        fmeaEntry.processChars.map((c: any) => [c.name, c])
-      );
+      const combined = fmeaEntry.combinedChars || [];
+      const expectedByIndex = (idx: number) =>
+        idx >= 0 && idx < combined.length ? combined[idx] : null;
 
       for (const mapping of FIELD_MAPPINGS) {
         if (!fieldsToSync.includes(mapping.cpField)) continue;
@@ -215,23 +218,16 @@ export async function POST(req: NextRequest) {
         if (mapping.cpField === 'workElement') fmeaValue = fmeaEntry.workElement;
         if (mapping.cpField === 'equipment') fmeaValue = fmeaEntry.equipment;
         if (mapping.cpField === 'productChar') {
-          fmeaValue = productCharMap.has(cpItem.productChar || '')
-            ? (cpItem.productChar || '')
-            : '';
+          const expected = expectedByIndex(cpItem.charIndex ?? -1);
+          fmeaValue = expected?.type === 'product' ? expected.name : '';
         }
         if (mapping.cpField === 'processChar') {
-          fmeaValue = processCharMap.has(cpItem.processChar || '')
-            ? (cpItem.processChar || '')
-            : '';
+          const expected = expectedByIndex(cpItem.charIndex ?? -1);
+          fmeaValue = expected?.type === 'process' ? expected.name : '';
         }
         if (mapping.cpField === 'specialChar') {
-          if (cpItem.productChar) {
-            fmeaValue = productCharMap.get(cpItem.productChar)?.specialChar || '';
-          } else if (cpItem.processChar) {
-            fmeaValue = processCharMap.get(cpItem.processChar)?.specialChar || '';
-          } else {
-            fmeaValue = '';
-          }
+          const expected = expectedByIndex(cpItem.charIndex ?? -1);
+          fmeaValue = expected?.specialChar || '';
         }
 
         const cpValue = (cpItem as any)[mapping.cpField] || '';

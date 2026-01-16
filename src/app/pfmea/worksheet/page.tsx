@@ -502,12 +502,6 @@ function FMEAWorksheetPageContent() {
                   background: '#fff',
                   position: 'relative',
                 }}
-                onWheel={(e) => {
-                  // 마우스 휠로 좌우 스크롤 (Shift 없이도 가능)
-                  if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-                    e.currentTarget.scrollLeft += e.deltaY;
-                  }
-                }}
               >
                 {/* 전체보기 탭: 통합 화면 (40열 구조) - 원자성 DB 기반 */}
                 <AllTabRenderer 

@@ -707,6 +707,85 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     };
   }, [state.l2, saveToLocalStorage, selectedFmeaId, currentFmea?.id]);
 
+  // ✅ 고장연결 데이터 정규화 (ID 누락 방지 - 근본 해결)
+  const failureLinksNormalizeRef = useRef<string>('');
+  useEffect(() => {
+    const links = (state as any).failureLinks || [];
+    if (links.length === 0) return;
+
+    const fmTextToId = new Map<string, string>();
+    const fmIdToText = new Map<string, string>();
+    const fmIdToProcess = new Map<string, string>();
+    const feTextToId = new Map<string, string>();
+    const feIdToText = new Map<string, string>();
+    const fcTextToId = new Map<string, string>();
+    const fcIdToText = new Map<string, string>();
+
+    (state.l2 || []).forEach((proc: any) => {
+      (proc.failureModes || []).forEach((fm: any) => {
+        const text = fm.mode || fm.name || '';
+        if (fm.id) {
+          fmIdToText.set(fm.id, text);
+          fmIdToProcess.set(fm.id, proc.name || '');
+        }
+        if (text && fm.id && !fmTextToId.has(text)) {
+          fmTextToId.set(text, fm.id);
+        }
+      });
+      (proc.failureCauses || []).forEach((fc: any) => {
+        const text = fc.cause || fc.name || '';
+        if (fc.id) {
+          fcIdToText.set(fc.id, text);
+        }
+        if (text && fc.id && !fcTextToId.has(text)) {
+          fcTextToId.set(text, fc.id);
+        }
+      });
+    });
+
+    ((state.l1 as any)?.failureScopes || []).forEach((fe: any) => {
+      const text = fe.effect || fe.name || '';
+      if (fe.id) {
+        feIdToText.set(fe.id, text);
+      }
+      if (text && fe.id && !feTextToId.has(text)) {
+        feTextToId.set(text, fe.id);
+      }
+    });
+
+    const normalized = links.map((link: any) => {
+      const fmText = link.fmText || link.cache?.fmText || '';
+      const feText = link.feText || link.cache?.feText || '';
+      const fcText = link.fcText || link.cache?.fcText || '';
+
+      const fmId = link.fmId || fmTextToId.get(fmText) || '';
+      const feId = link.feId || feTextToId.get(feText) || '';
+      const fcId = link.fcId || fcTextToId.get(fcText) || '';
+
+      return {
+        ...link,
+        fmId,
+        fmText: fmText || fmIdToText.get(fmId) || '',
+        fmProcess: link.fmProcess || fmIdToProcess.get(fmId) || '',
+        feId,
+        feText: feText || feIdToText.get(feId) || '',
+        fcId,
+        fcText: fcText || fcIdToText.get(fcId) || '',
+      };
+    });
+
+    const currentKey = JSON.stringify(links);
+    const normalizedKey = JSON.stringify(normalized);
+    if (normalizedKey !== currentKey && normalizedKey !== failureLinksNormalizeRef.current) {
+      failureLinksNormalizeRef.current = normalizedKey;
+      setStateSynced(prev => ({ ...prev, failureLinks: normalized } as any));
+      setDirty(true);
+      setTimeout(() => saveToLocalStorage(), 100);
+    } else {
+      failureLinksNormalizeRef.current = normalizedKey;
+    }
+  }, [state.l1, state.l2, (state as any).failureLinks, setStateSynced, setDirty, saveToLocalStorage]);
+
   // ✅ 확정 상태 변경 시 즉시 저장 (분석 확정 상태 손실 방지)
   const confirmedStateRef = useRef<string>('');
   useEffect(() => {

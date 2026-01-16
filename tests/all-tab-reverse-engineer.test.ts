@@ -1,3 +1,5 @@
+import { test, expect } from '@playwright/test';
+
 /**
  * ALL 화면 역전개 시스템 TDD 검증
  * 
@@ -9,7 +11,7 @@
  * 5. 빈 데이터 처리: 빈 문자열, null, undefined
  */
 
-describe('ALL 화면 역전개 시스템 검증', () => {
+test.describe('ALL 화면 역전개 시스템 검증', () => {
   
   // ========== 테스트 케이스 1: L1 역전개 검증 ==========
   test('TC1: L1.name이 없을 때 완제품명 빈 문자열 반환', () => {

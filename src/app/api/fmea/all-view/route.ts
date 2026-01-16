@@ -109,15 +109,36 @@ export async function GET(request: NextRequest) {
 
     if (failureAnalyses && failureAnalyses.length > 0) {
       console.log(`[ALL-VIEW API] ✅ FailureAnalyses 테이블에서 로드: ${failureAnalyses.length}개`);
+
+      const hasMissingIds = failureAnalyses.some(fa => !fa.feId || !fa.fcId || !fa.fmId);
+      const linkById = hasMissingIds
+        ? new Map(
+            (await prisma.failureLink.findMany({
+              where: { fmeaId },
+              select: { id: true, fmId: true, feId: true, fcId: true },
+            }).catch(() => []))
+            .map(link => [link.id, link])
+          )
+        : new Map<string, { id: string; fmId: string; feId: string; fcId: string }>();
+
+      const normalized = failureAnalyses.map(fa => {
+        const link = linkById.get(fa.linkId);
+        return {
+          ...fa,
+          fmId: fa.fmId || link?.fmId || '',
+          feId: fa.feId || link?.feId || '',
+          fcId: fa.fcId || link?.fcId || '',
+        };
+      });
       
       // ★ FM/FE/FC 번호 생성
       const fmIdToNo = new Map<string, string>();
       const feIdToNo = new Map<string, string>();
       const fcIdToNo = new Map<string, string>();
       
-      const uniqueFMs = [...new Set(failureAnalyses.map(fa => fa.fmId))];
-      const uniqueFEs = [...new Set(failureAnalyses.map(fa => fa.feId).filter(Boolean))];
-      const uniqueFCs = [...new Set(failureAnalyses.map(fa => fa.fcId).filter(Boolean))];
+      const uniqueFMs = [...new Set(normalized.map(fa => fa.fmId).filter(Boolean))];
+      const uniqueFEs = [...new Set(normalized.map(fa => fa.feId).filter(Boolean))];
+      const uniqueFCs = [...new Set(normalized.map(fa => fa.fcId).filter(Boolean))];
       
       uniqueFMs.forEach((id, idx) => fmIdToNo.set(id, `M${idx + 1}`));
       uniqueFEs.forEach((id, idx) => feIdToNo.set(id, `S${idx + 1}`));
@@ -133,7 +154,7 @@ export async function GET(request: NextRequest) {
       riskAnalyses.forEach(r => riskByLinkId.set(r.linkId, r));
 
       // FailureAnalyses → AllViewRow 변환
-      const rows: AllViewRow[] = failureAnalyses.map(fa => {
+      const rows: AllViewRow[] = normalized.map(fa => {
         const risk = riskByLinkId.get(fa.linkId);
         const opt = risk?.optimizations?.[0];
 

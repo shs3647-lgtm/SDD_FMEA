@@ -130,6 +130,7 @@ export default function AllTabRenderer({
   // fcId → { workFunction, processChar, workElem } 매핑 (DFMEA: m4 제거됨)
   const fcToL3Map = new Map<string, { workFunction: string; processChar: string; workElem: string }>();
   const fcToTextMap = new Map<string, string>();  // ★ fcId → cause 텍스트 매핑
+  const fcTextToIdMap = new Map<string, string>(); // ★ cause 텍스트 → fcId 역매핑
   
   (state.l2 || []).forEach((proc: any) => {
     // ★ 먼저 모든 failureCauses의 cause 텍스트 수집
@@ -139,6 +140,9 @@ export default function AllTabRenderer({
         const causeText = fc.cause || fc.name || '';
         if (causeText) {
           fcToTextMap.set(fc.id, causeText);
+          if (!fcTextToIdMap.has(causeText)) {
+            fcTextToIdMap.set(causeText, fc.id);
+          }
         }
       }
     });
@@ -173,6 +177,7 @@ export default function AllTabRenderer({
   // fmId → { processFunction, productChar } 매핑
   const fmToL2Map = new Map<string, { processFunction: string; productChar: string; processName: string }>(); // DFMEA: processNo 제거됨
   const fmToTextMap = new Map<string, string>();  // ★ fmId → mode 텍스트 매핑
+  const fmTextToIdMap = new Map<string, string>(); // ★ mode 텍스트 → fmId 역매핑
   
   (state.l2 || []).forEach((proc: any) => {
     if (!proc.name) return;
@@ -183,6 +188,9 @@ export default function AllTabRenderer({
         const modeText = fm.mode || fm.name || '';
         if (modeText) {
           fmToTextMap.set(fm.id, modeText);
+          if (!fmTextToIdMap.has(modeText)) {
+            fmTextToIdMap.set(modeText, fm.id);
+          }
         }
       }
     });
@@ -224,12 +232,17 @@ export default function AllTabRenderer({
   
   // ★ FE 텍스트 매핑 (failureScopes에서)
   const feToTextMap = new Map<string, { text: string; severity: number }>();
+  const feTextToIdMap = new Map<string, string>();
   failureScopes.forEach((fs: any) => {
     if (fs.id) {
       feToTextMap.set(fs.id, {
         text: fs.effect || fs.name || '',
         severity: fs.severity || 0,
       });
+      const feTextValue = fs.effect || fs.name || '';
+      if (feTextValue && !feTextToIdMap.has(feTextValue)) {
+        feTextToIdMap.set(feTextValue, fs.id);
+      }
     }
   });
   
@@ -270,13 +283,6 @@ export default function AllTabRenderer({
       }
     }
     
-    // ★ FM 역전개: state.l2에서 A'SSY 기능, 제품 특성 찾기 (DFMEA)
-    const fmL2Data = fmToL2Map.get(fmId);
-    const fmProcessFunction = fmL2Data?.processFunction || '';
-    const fmProductChar = fmL2Data?.productChar || '';
-    // DFMEA: fmProcessNo 제거됨
-    const fmProcessName = fmL2Data?.processName || link.fmProcess || '';
-    
     // ★ DB에서 텍스트 조회 (fallback)
     const dbFmText = fmToTextMap.get(fmId) || '';
     const dbFeData = feToTextMap.get(feId);
@@ -302,8 +308,22 @@ export default function AllTabRenderer({
       finalFmText = fmId || '(고장형태 없음)';
     }
     
+    // ★ 누락된 ID 보강 (텍스트 기반, 마지막 방어)
+    const normalizedFmId = fmId || fmTextToIdMap.get(finalFmText) || '';
+    const finalFeText = feText || dbFeData?.text || '';
+    const normalizedFeId = feId || feTextToIdMap.get(finalFeText) || '';
+    const finalFcText = link.fcText || link.cache?.fcText || dbFcText;
+    const normalizedFcId = link.fcId || fcTextToIdMap.get(finalFcText || '') || '';
+    
+    // ★ FM 역전개: state.l2에서 A'SSY 기능, 제품 특성 찾기 (DFMEA)
+    const fmL2Data = fmToL2Map.get(normalizedFmId);
+    const fmProcessFunction = fmL2Data?.processFunction || '';
+    const fmProductChar = fmL2Data?.productChar || '';
+    // DFMEA: fmProcessNo 제거됨
+    const fmProcessName = fmL2Data?.processName || link.fmProcess || '';
+    
     return {
-      fmId,
+      fmId: normalizedFmId || fmId,
       // ★ fmText: 1순위 link, 2순위 cache, 3순위 DB 조회, 4순위 state.l2 검색, 5순위 fmId
       fmText: finalFmText,
       // ★ L1 역전개 데이터 (제품명) (DFMEA)
@@ -312,28 +332,28 @@ export default function AllTabRenderer({
       fmProcessName,     // ★ A'SSY명
       fmProcessFunction, // ★ A'SSY 기능 (역전개)
       fmProductChar,     // ★ 제품특성 (역전개)
-      feId,
+      feId: normalizedFeId || feId,
       // ★ feText: 1순위 link, 2순위 cache, 3순위 DB 조회
-      feText: feText || dbFeData?.text || '',
+      feText: finalFeText,
       // ★ 심각도: 1순위 link, 2순위 cache, 3순위 DB 조회
       feSeverity: (() => {
         const sev = link.severity || link.feSeverity || link.cache?.feSeverity || dbFeData?.severity || 0;
         if (sev > 0) console.log(`🔴 심각도 발견: ${sev} (feId=${feId})`);
         return sev;
       })(),
-      fcId: link.fcId || '',
+      fcId: normalizedFcId || link.fcId || '',
       // ★ fcText: 1순위 link, 2순위 cache, 3순위 DB 조회
-      fcText: link.fcText || link.cache?.fcText || dbFcText,
+      fcText: finalFcText,
       // ★ FE 역전개 데이터
       feCategory,        // 구분 (Your Plant / Ship to Plant / User)
       feFunctionName,    // 제품 기능 (DFMEA)
       feRequirement,     // 요구사항
       // ★ FC 역전개 데이터 (고장원인 → 3L 기능분석)
-      fcWorkFunction: link.fcWorkFunction || fcToL3Map.get(link.fcId || '')?.workFunction || '',  // 부품 기능 (DFMEA)
-      fcProcessChar: link.fcProcessChar || fcToL3Map.get(link.fcId || '')?.processChar || '',    // 부품 특성 (DFMEA)
+      fcWorkFunction: link.fcWorkFunction || fcToL3Map.get(normalizedFcId || link.fcId || '')?.workFunction || '',  // 부품 기능 (DFMEA)
+      fcProcessChar: link.fcProcessChar || fcToL3Map.get(normalizedFcId || link.fcId || '')?.processChar || '',    // 부품 특성 (DFMEA)
       // ★★★ FC 역전개 데이터 (고장원인 → 2L 구조분석) - fcToL3Map에서 fallback ★★★
       // DFMEA: fcM4 제거됨
-      fcWorkElem: link.fcWorkElem || fcToL3Map.get(link.fcId || '')?.workElem || '',  // 부품 또는 특성 (DFMEA)
+      fcWorkElem: link.fcWorkElem || fcToL3Map.get(normalizedFcId || link.fcId || '')?.workElem || '',  // 부품 또는 특성 (DFMEA)
     };
   });
   
