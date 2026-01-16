@@ -1956,6 +1956,18 @@ export function useWorksheetState(): UseWorksheetStateReturn {
           
           console.log('[데이터 정리] 원본 공정 수:', parsed.l2.length, '→ 정리 후:', migratedL2.length);
 
+          // ✅ 확정 상태 병합 (flat + confirmed 객체 모두 지원)
+          const mergedConfirmed = normalizeConfirmedFlags({
+            structureConfirmed: Boolean(parsed.structureConfirmed ?? parsed.confirmed?.structure ?? false),
+            l1Confirmed: Boolean(parsed.l1Confirmed ?? parsed.confirmed?.l1Function ?? false),
+            l2Confirmed: Boolean(parsed.l2Confirmed ?? parsed.confirmed?.l2Function ?? false),
+            l3Confirmed: Boolean(parsed.l3Confirmed ?? parsed.confirmed?.l3Function ?? false),
+            failureL1Confirmed: Boolean(parsed.failureL1Confirmed ?? parsed.confirmed?.l1Failure ?? false),
+            failureL2Confirmed: Boolean(parsed.failureL2Confirmed ?? parsed.confirmed?.l2Failure ?? false),
+            failureL3Confirmed: Boolean(parsed.failureL3Confirmed ?? parsed.confirmed?.l3Failure ?? false),
+            failureLinkConfirmed: Boolean(parsed.failureLinkConfirmed ?? parsed.confirmed?.failureLink ?? false),
+          });
+
           // 원자성 DB로 마이그레이션 (★ riskData 추가)
           const atomicData = migrateToAtomicDB({
             fmeaId: selectedFmeaId,
@@ -1963,13 +1975,13 @@ export function useWorksheetState(): UseWorksheetStateReturn {
             l2: migratedL2,
             failureLinks: parsed.failureLinks || [],
             riskData: parsed.riskData || {},  // ★ riskData 추가
-            structureConfirmed: parsed.structureConfirmed,
-            l1Confirmed: parsed.l1Confirmed,
-            l2Confirmed: parsed.l2Confirmed,
-            l3Confirmed: parsed.l3Confirmed,
-            failureL1Confirmed: parsed.failureL1Confirmed,
-            failureL2Confirmed: parsed.failureL2Confirmed,
-            failureL3Confirmed: parsed.failureL3Confirmed,
+            structureConfirmed: mergedConfirmed.structureConfirmed,
+            l1Confirmed: mergedConfirmed.l1Confirmed,
+            l2Confirmed: mergedConfirmed.l2Confirmed,
+            l3Confirmed: mergedConfirmed.l3Confirmed,
+            failureL1Confirmed: mergedConfirmed.failureL1Confirmed,
+            failureL2Confirmed: mergedConfirmed.failureL2Confirmed,
+            failureL3Confirmed: mergedConfirmed.failureL3Confirmed,
           });
           setAtomicDB(atomicData);
           // ★ legacyData도 함께 저장 (riskData 포함)
@@ -2093,14 +2105,14 @@ export function useWorksheetState(): UseWorksheetStateReturn {
               // ✅ 기존 값이 있으면 유지, 새 값이 있으면 새 값 사용
               riskData: hasExistingRiskData ? prev.riskData : (hasNewRiskData ? parsedRiskData : prev.riskData),
               tab: parsed.tab || prev.tab,
-              structureConfirmed: parsed.structureConfirmed || false,
-              l1Confirmed: parsed.l1Confirmed || false,
-              l2Confirmed: parsed.l2Confirmed || false,
-              l3Confirmed: parsed.l3Confirmed || false,
-              failureL1Confirmed: parsed.failureL1Confirmed || false,
-              failureL2Confirmed: parsed.failureL2Confirmed || false,
-              failureL3Confirmed: parsed.failureL3Confirmed || false,
-              failureLinkConfirmed: parsed.failureLinkConfirmed || false,  // ✅ 고장연결 확정 상태 복원
+              structureConfirmed: mergedConfirmed.structureConfirmed,
+              l1Confirmed: mergedConfirmed.l1Confirmed,
+              l2Confirmed: mergedConfirmed.l2Confirmed,
+              l3Confirmed: mergedConfirmed.l3Confirmed,
+              failureL1Confirmed: mergedConfirmed.failureL1Confirmed,
+              failureL2Confirmed: mergedConfirmed.failureL2Confirmed,
+              failureL3Confirmed: mergedConfirmed.failureL3Confirmed,
+              failureLinkConfirmed: mergedConfirmed.failureLinkConfirmed,  // ✅ 고장연결 확정 상태 복원
               visibleSteps: prev.visibleSteps || [2, 3, 4, 5, 6],  // 기존 토글 상태 유지
             };
           });
