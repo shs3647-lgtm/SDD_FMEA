@@ -294,7 +294,8 @@ export default function FailureL2Tab({ state, setState, setStateSynced, setDirty
     
     console.log('[FailureL2Tab] 저장 시작', { processId, productCharId, modeId, selectedCount: selectedValues.length, isConfirmed });
     
-    setState(prev => {
+    // ✅ 2026-01-16: setStateSynced 사용으로 stateRef 동기 업데이트 보장 (DB 저장 정확성)
+    const updateFn = (prev: any) => {
       const newState = JSON.parse(JSON.stringify(prev));
       
       newState.l2 = newState.l2.map((proc: any) => {
@@ -302,11 +303,13 @@ export default function FailureL2Tab({ state, setState, setStateSynced, setDirty
         
         const currentModes = proc.failureModes || [];
         
-        // ✅ 2026-01-16: modeId가 있어도 selectedValues가 여러 개면 다중 모드
-        if (modeId && selectedValues.length === 1) {
+        // ✅ 2026-01-16: modeId가 있고 단일 선택인 경우
+        if (modeId && selectedValues.length <= 1) {
           if (selectedValues.length === 0) {
+            // 선택 해제 시 해당 고장형태 삭제
             return { ...proc, failureModes: currentModes.filter((m: any) => m.id !== modeId) };
           }
+          // 단일 선택 시 해당 고장형태 수정
           return {
             ...proc,
             failureModes: currentModes.map((m: any) => 
@@ -397,17 +400,32 @@ export default function FailureL2Tab({ state, setState, setStateSynced, setDirty
       
       console.log('[FailureL2Tab] 상태 업데이트 완료');
       return newState;
-    });
+    };
+    
+    // ✅ setStateSynced 사용 (stateRef 동기 업데이트 보장)
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     
     setDirty(true);
-    setModal(null);
+    // ✅ 2026-01-16: 저장 후 모달 유지 (닫기 버튼으로만 닫음)
     
-    // ✅ 저장 보장 (stateRef 업데이트 대기 후 저장)
-    setTimeout(() => {
+    // ✅ 저장 보장 (stateRef 업데이트 대기 후 저장) + DB 저장 추가
+    setTimeout(async () => {
       saveToLocalStorage?.();
+      if (saveAtomicDB) {
+        try {
+          await saveAtomicDB();
+          console.log('[FailureL2Tab] DB 저장 완료');
+        } catch (e) {
+          console.error('[FailureL2Tab] DB 저장 오류:', e);
+        }
+      }
       console.log('[FailureL2Tab] 저장 완료');
     }, 200);
-  }, [modal, state.failureL2Confirmed, setState, setDirty, saveToLocalStorage]);
+  }, [modal, state.failureL2Confirmed, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   const handleDelete = useCallback((deletedValues: string[]) => {
     if (!modal) return;
@@ -607,7 +625,8 @@ export default function FailureL2Tab({ state, setState, setStateSynced, setDirty
                     <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
                   )}
                   <span className={missingCount > 0 ? badgeMissing : badgeOk}>누락 {missingCount}건</span>
-                  {isConfirmed && (
+                  {/* ✅ 2026-01-16: 수정 버튼 항상 표시 (확정됨/누락 있을 때) */}
+                  {(isConfirmed || missingCount > 0) && (
                     <button type="button" onClick={handleEdit} className={btnEdit}>수정</button>
                   )}
                 </div>

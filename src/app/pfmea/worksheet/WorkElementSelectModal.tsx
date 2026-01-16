@@ -226,7 +226,7 @@ export default function WorkElementSelectModal({
     const selected = elements.filter(e => selectedIds.has(e.id));
     console.log('🟢 [handleApply] 저장될 항목들:', selected);
     onSave(selected);
-    onClose();
+    // ✅ 2026-01-16: 적용 후 모달 유지 (닫기 버튼으로만 닫음)
   };
 
   // ✅ Enter 키 처리: 검색 결과 선택 또는 새 항목 추가
@@ -243,6 +243,13 @@ export default function WorkElementSelectModal({
       toggleSelect(exactMatch.id);
       setInputValue('');
       console.log(`✅ 기존 항목 선택: ${exactMatch.name}`);
+      // ✅ 2026-01-16: 엔터 시 워크시트에 즉시 반영 (모달 유지)
+      const currentSelected = elements.filter(el => selectedIds.has(el.id));
+      const allSelected = currentSelected.some(s => s.id === exactMatch.id)
+        ? currentSelected.filter(s => s.id !== exactMatch.id)
+        : [...currentSelected, exactMatch];
+      onSave(allSelected);
+      console.log('[WorkElementSelectModal] 워크시트 반영:', allSelected.map(el => el.name));
       return;
     }
     
@@ -251,6 +258,13 @@ export default function WorkElementSelectModal({
       toggleSelect(filteredElements[0].id);
       setInputValue('');
       console.log(`✅ 검색 결과 선택: ${filteredElements[0].name}`);
+      // ✅ 2026-01-16: 엔터 시 워크시트에 즉시 반영 (모달 유지)
+      const currentSelected = elements.filter(el => selectedIds.has(el.id));
+      const allSelected = currentSelected.some(s => s.id === filteredElements[0].id)
+        ? currentSelected.filter(s => s.id !== filteredElements[0].id)
+        : [...currentSelected, filteredElements[0]];
+      onSave(allSelected);
+      console.log('[WorkElementSelectModal] 워크시트 반영:', allSelected.map(el => el.name));
       return;
     }
     
@@ -284,6 +298,11 @@ export default function WorkElementSelectModal({
       console.error('저장 오류:', e);
     }
     
+    // ✅ 2026-01-16: 엔터 시 워크시트에 즉시 반영 (모달 유지)
+    const currentSelected = elements.filter(el => selectedIds.has(el.id));
+    onSave([...currentSelected, newElem]);
+    console.log('[WorkElementSelectModal] 워크시트 반영:', [...currentSelected, newElem].map(el => el.name));
+    
     console.log(`✅ 새 항목 추가: ${selectedM4} ${trimmed}`);
   };
 
@@ -306,7 +325,7 @@ export default function WorkElementSelectModal({
   return (
     <div 
       className="fixed inset-0 z-[9999] bg-black/40"
-      onClick={onClose}
+      // ✅ 2026-01-16: 배경 클릭으로 닫히지 않음 (닫기 버튼으로만 닫음)
     >
       <div 
         className="fixed bg-white rounded-lg shadow-2xl w-[350px] flex flex-col overflow-hidden max-h-[calc(100vh-120px)] cursor-move"

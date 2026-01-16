@@ -245,7 +245,7 @@ export default function ProcessSelectModal({
     
     if (!window.confirm(message)) return;
     onSave([]);
-    onClose();
+    // ✅ 2026-01-16: 삭제 후 모달 유지 (닫기 버튼으로만 닫음)
   };
 
   const handleSave = () => {
@@ -262,7 +262,7 @@ export default function ProcessSelectModal({
     }
     
     onSave(selected);
-    onClose();
+    // ✅ 2026-01-16: 적용 후 모달 유지 (닫기 버튼으로만 닫음)
   };
 
   // 더블클릭 수정
@@ -295,7 +295,7 @@ export default function ProcessSelectModal({
     newSelectedIds.delete(proc.id);
     const selected = processes.filter(p => newSelectedIds.has(p.id));
     onSave(selected);
-    onClose();
+    // ✅ 2026-01-16: 삭제 후 모달 유지 (닫기 버튼으로만 닫음)
   };
 
   const isCurrentlySelected = (name: string) => existingProcessNames.includes(name);
@@ -341,6 +341,11 @@ export default function ProcessSelectModal({
       onContinuousAdd(newProc, true); // 새 행 추가 요청
       setAddedCount(prev => prev + 1);
       console.log(`[연속입력] "${newProc.name}" 추가 완료 (총 ${addedCount + 1}개)`);
+    } else {
+      // ✅ 2026-01-16: 일반 모드에서도 엔터 시 워크시트에 즉시 반영 (모달 유지)
+      const currentSelected = processes.filter(p => selectedIds.has(p.id));
+      onSave([...currentSelected, newProc]);
+      console.log('[ProcessSelectModal] 워크시트 반영:', [...currentSelected, newProc].map(p => p.name));
     }
     
     setNewNo('');
@@ -352,7 +357,7 @@ export default function ProcessSelectModal({
   return (
     <div 
       className="fixed inset-0 z-[9999] bg-black/40"
-      onClick={onClose}
+      // ✅ 2026-01-16: 배경 클릭으로 닫히지 않음 (닫기 버튼으로만 닫음)
     >
       <div 
         className="fixed bg-white rounded-lg shadow-2xl w-[350px] max-w-[350px] min-w-[350px] flex flex-col overflow-hidden max-h-[calc(100vh-120px)] cursor-move"

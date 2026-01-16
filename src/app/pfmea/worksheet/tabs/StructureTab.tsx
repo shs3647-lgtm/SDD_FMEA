@@ -847,7 +847,18 @@ export default function StructureTab(props: StructureTabProps) {
             return { ...prev, l2: newL2, structureConfirmed: false };
           });
           setDirty(true);
-          saveToLocalStorage?.();
+          // ✅ 2026-01-16: 적용 시 localStorage + DB 저장
+          setTimeout(async () => {
+            saveToLocalStorage?.();
+            if (saveAtomicDB) {
+              try {
+                await saveAtomicDB();
+                console.log('[StructureTab] ProcessSelect DB 저장 완료');
+              } catch (e) {
+                console.error('[StructureTab] DB 저장 오류:', e);
+              }
+            }
+          }, 100);
         }}
         existingProcessNames={state.l2.map(p => p.name)}
         existingProcessesInfo={state.l2.map(p => ({ name: p.name, l3Count: p.l3?.length || 0 }))}
@@ -892,8 +903,19 @@ export default function StructureTab(props: StructureTabProps) {
             return { ...prev, l2: newL2, structureConfirmed: false };
           });
           setDirty(true);
-          saveToLocalStorage?.();
-          console.log('✅ [StructureTab onSave] 저장 완료');
+          // ✅ 2026-01-16: 적용 시 localStorage + DB 저장
+          setTimeout(async () => {
+            saveToLocalStorage?.();
+            if (saveAtomicDB) {
+              try {
+                await saveAtomicDB();
+                console.log('[StructureTab] WorkElementSelect DB 저장 완료');
+              } catch (e) {
+                console.error('[StructureTab] DB 저장 오류:', e);
+              }
+            }
+            console.log('✅ [StructureTab onSave] 저장 완료');
+          }, 100);
         }}
         processNo={state.l2.find(p => p.id === targetL2Id)?.no || (state.l2[0]?.no || '')}
         processName={state.l2.find(p => p.id === targetL2Id)?.name || (state.l2[0]?.name || '')}

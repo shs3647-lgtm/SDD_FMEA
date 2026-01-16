@@ -307,7 +307,7 @@ export default function BaseSelectModal({
   const handleApply = () => {
     const selected = items.filter(i => selectedIds.has(i.id));
     onApply(selected);
-    onClose();
+    // ✅ 2026-01-16: 적용 후 모달 유지 (닫기 버튼으로만 닫음)
   };
   
   // 삭제
@@ -333,6 +333,12 @@ export default function BaseSelectModal({
     
     setItems(prev => [newItem, ...prev]); // 맨 위에 추가
     setSelectedIds(prev => new Set([...prev, newItem.id]));
+    
+    // ✅ 2026-01-16: 엔터 시 워크시트에 즉시 반영 (모달 유지)
+    const currentSelected = items.filter(i => selectedIds.has(i.id));
+    onApply([...currentSelected, newItem]);
+    console.log('[BaseSelectModal] 워크시트 반영:', [...currentSelected, newItem].map(i => i.value));
+    
     setNewValue('');
   };
   
@@ -341,7 +347,7 @@ export default function BaseSelectModal({
   return (
     <div 
       className="fixed inset-0 z-[9999] bg-black/40" 
-      onClick={onClose}
+      // ✅ 2026-01-16: 배경 클릭으로 닫히지 않음 (닫기 버튼으로만 닫음)
     >
       <div 
         className="fixed bg-white rounded-lg shadow-2xl w-[350px] max-w-[350px] min-w-[350px] flex flex-col overflow-hidden max-h-[calc(100vh-120px)] cursor-move" 

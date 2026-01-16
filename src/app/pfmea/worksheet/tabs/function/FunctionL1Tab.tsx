@@ -278,7 +278,8 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
     
     console.log('[FunctionL1Tab] handleSave 시작', { type: modal.type, id: modal.id, selectedValues });
     
-    setState(prev => {
+    // ✅ 2026-01-16: setStateSynced 사용으로 stateRef 동기 업데이트 보장 (DB 저장 정확성)
+    const updateFn = (prev: any) => {
       // ✅ 깊은 복사 (FailureL2Tab 패턴)
       const newState = JSON.parse(JSON.stringify(prev));
       const { type, id } = modal;
@@ -325,8 +326,8 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
           if (t.id !== id) return t;
           const currentFuncs = t.functions;
           
-          // ✅ 2026-01-16: funcId가 있어도 selectedValues가 여러 개면 다중 모드
-          if (funcId && selectedValues.length === 1) {
+          // ✅ 2026-01-16: funcId가 있고 단일 선택인 경우
+          if (funcId && selectedValues.length <= 1) {
             if (selectedValues.length === 0) {
               // 선택 해제 시 해당 기능 삭제
               return {
@@ -434,12 +435,30 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
       }
       
       return newState;
-    });
+    };
+    
+    // ✅ setStateSynced 사용 (stateRef 동기 업데이트 보장)
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     
     setDirty(true);
-    setModal(null);
-    saveToLocalStorage?.(); // 영구 저장
-  }, [modal, state, setState, setDirty, saveToLocalStorage]);
+    // ✅ 2026-01-16: 저장 후 모달 유지 (닫기 버튼으로만 닫음)
+    // ✅ 2026-01-16: 적용 시 localStorage + DB 저장
+    setTimeout(async () => {
+      saveToLocalStorage?.();
+      if (saveAtomicDB) {
+        try {
+          await saveAtomicDB();
+          console.log('[FunctionL1Tab] DB 저장 완료');
+        } catch (e) {
+          console.error('[FunctionL1Tab] DB 저장 오류:', e);
+        }
+      }
+    }, 100);
+  }, [modal, state, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   // 워크시트 데이터 삭제 핸들러
   const handleDelete = useCallback((deletedValues: string[]) => {
@@ -538,7 +557,8 @@ export default function FunctionL1Tab({ state, setState, setStateSynced, setDirt
                     <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
                   )}
                   <span className={missingCount > 0 ? badgeMissing : badgeOk}>누락 {missingCount}건</span>
-                  {isConfirmed && (
+                  {/* ✅ 2026-01-16: 수정 버튼 항상 표시 (확정됨/누락 있을 때) */}
+                  {(isConfirmed || missingCount > 0) && (
                     <button type="button" onClick={handleEdit} className={btnEdit}>수정</button>
                   )}
                 </div>

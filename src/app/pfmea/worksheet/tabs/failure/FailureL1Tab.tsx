@@ -351,13 +351,15 @@ export default function FailureL1Tab({ state, setState, setStateSynced, setDirty
     
     console.log('[FailureL1Tab] 저장 시작', { reqId: modal.reqId, effectId, selectedCount: selectedValues.length, isConfirmed });
     
-    setState(prev => {
+    // ✅ 2026-01-16: setStateSynced 사용으로 stateRef 동기 업데이트 보장 (DB 저장 정확성)
+    const updateFn = (prev: any) => {
       const newState = JSON.parse(JSON.stringify(prev));
       if (!newState.l1.failureScopes) newState.l1.failureScopes = [];
       
-      // ✅ 2026-01-16: effectId가 있어도 selectedValues가 여러 개면 다중 모드
-      if (effectId && selectedValues.length === 1) {
+      // ✅ 2026-01-16: effectId가 있고 단일 선택인 경우
+      if (effectId && selectedValues.length <= 1) {
         if (selectedValues.length === 0) {
+          // 선택 해제 시 해당 고장영향 삭제
           newState.l1.failureScopes = newState.l1.failureScopes.filter((s: any) => s.id !== effectId);
         } else {
           newState.l1.failureScopes = newState.l1.failureScopes.map((s: any) => 
@@ -421,17 +423,32 @@ export default function FailureL1Tab({ state, setState, setStateSynced, setDirty
       
       console.log('[FailureL1Tab] 상태 업데이트 완료, 최종 failureScopes:', newState.l1.failureScopes.length, '개');
       return newState;
-    });
+    };
+    
+    // ✅ setStateSynced 사용 (stateRef 동기 업데이트 보장)
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     
     setDirty(true);
-    setModal(null);
+    // ✅ 2026-01-16: 저장 후 모달 유지 (닫기 버튼으로만 닫음)
     
-    // ✅ 저장 보장 (stateRef 업데이트 대기 후 저장)
-    setTimeout(() => {
+    // ✅ 저장 보장 (stateRef 업데이트 대기 후 저장) + DB 저장 추가
+    setTimeout(async () => {
       saveToLocalStorage?.();
+      if (saveAtomicDB) {
+        try {
+          await saveAtomicDB();
+          console.log('[FailureL1Tab] DB 저장 완료');
+        } catch (e) {
+          console.error('[FailureL1Tab] DB 저장 오류:', e);
+        }
+      }
       console.log('[FailureL1Tab] 저장 완료');
     }, 200);
-  }, [modal, state.failureL1Confirmed, setState, setDirty, saveToLocalStorage]);
+  }, [modal, state.failureL1Confirmed, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   // 삭제 핸들러
   const handleDelete = useCallback((deletedValues: string[]) => {
@@ -677,7 +694,8 @@ export default function FailureL1Tab({ state, setState, setStateSynced, setDirty
                     <button type="button" onClick={handleConfirm} className={`${btnConfirm} whitespace-nowrap text-[9px] px-1`}>확정</button>
                   )}
                   <span className={`${missingCount > 0 ? badgeMissing : badgeOk} whitespace-nowrap text-[9px] px-1`}>{missingCount}건</span>
-                  {isConfirmed && (
+                  {/* ✅ 2026-01-16: 수정 버튼 항상 표시 (확정됨/누락 있을 때) */}
+                  {(isConfirmed || missingCount > 0) && (
                     <button type="button" onClick={handleEdit} className={`${btnEdit} whitespace-nowrap text-[9px] px-1`}>수정</button>
                   )}
                 </div>

@@ -32,7 +32,7 @@ import { COLORS, uid, FONT_SIZES, FONT_WEIGHTS, HEIGHTS } from '../../constants'
 import { S, F, X, cell, cellP0, btnConfirm, btnEdit, btnDisabled, badgeOk, badgeConfirmed, badgeMissing, badgeCount } from '@/styles/worksheet';
 import { getZebra, getZebraColors } from '@/styles/level-colors';
 import { handleEnterBlur } from '../../utils/keyboard';
-import { findLinkedFailureCausesForProcessChar, getAutoLinkMessage } from '../../utils/auto-link';
+import { getAutoLinkMessage } from '../../utils/auto-link';
 import { autoSetSCForFailureCause, syncSCToMaster } from '../../utils/special-char-sync';
 
 // 색상 정의
@@ -68,18 +68,24 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
   // ✅ 상위 단계(기능분석 3L) 확정 여부 - 미확정이면 FC 입력/확정/표시를 막음
   const isUpstreamConfirmed = state.l3Confirmed || false;
 
-  // ✅ 셀 클릭 시 확정됨 상태면 자동으로 수정 모드로 전환
+  // ✅ 셀 클릭 시 확정됨 상태면 자동으로 수정 모드로 전환 - setStateSynced 패턴 적용
   const handleCellClick = useCallback((modalConfig: any) => {
     if (!isUpstreamConfirmed) {
       alert('⚠️ 기능분석(3L)을 먼저 확정해주세요.\n\n기능분석 확정 후 고장원인(FC)을 입력할 수 있습니다.');
       return;
     }
     if (isConfirmed) {
-      setState(prev => ({ ...prev, failureL3Confirmed: false }));
+      // ✅ setStateSynced 패턴 적용
+      const updateFn = (prev: any) => ({ ...prev, failureL3Confirmed: false });
+      if (setStateSynced) {
+        setStateSynced(updateFn);
+      } else {
+        setState(updateFn);
+      }
       setDirty(true);
     }
     setModal(modalConfig);
-  }, [isUpstreamConfirmed, isConfirmed, setState, setDirty]);
+  }, [isUpstreamConfirmed, isConfirmed, setState, setStateSynced, setDirty]);
 
   // 플레이스홀더 패턴 체크 함수
   const isMissing = (name: string | undefined) => {
@@ -161,11 +167,15 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
   // 총 누락 건수 (기존 호환성)
   const missingCount = missingCounts.total;
 
-  // ✅ 중복 고장원인 정리 (마운트 시 1회만 실행)
-  const hasCleanedRef = useRef(false);
+  // ✅ 중복 고장원인 정리 (FailureL2Tab 패턴과 동일)
+  const lastCleanedHash = useRef<string>('');
   useEffect(() => {
-    if (hasCleanedRef.current) return;
-    hasCleanedRef.current = true;
+    // 이미 정리한 데이터인지 체크 (무한 루프 방지)
+    const currentHash = JSON.stringify(state.l2.map(p => ({
+      id: p.id,
+      causes: (p.failureCauses || []).map((c: any) => ({ name: c.name, pcId: c.processCharId }))
+    })));
+    if (lastCleanedHash.current === currentHash) return;
     
     // 중복 고장원인 검사 및 정리
     let hasDuplicates = false;
@@ -193,21 +203,84 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
     });
     
     if (hasDuplicates) {
-      console.log('[FailureL3Tab] 중복 고장원인 정리 완료');
+      console.log('[FailureL3Tab] ⚠️ 중복 고장원인 발견 → 자동 정리');
+      lastCleanedHash.current = JSON.stringify(cleanedL2.map((p: any) => ({
+        id: p.id,
+        causes: (p.failureCauses || []).map((c: any) => ({ name: c.name, pcId: c.processCharId }))
+      })));
       setState(prev => ({ ...prev, l2: cleanedL2 as any }));
       setDirty(true);
-      setTimeout(() => saveToLocalStorage?.(), 100);
+      setTimeout(() => {
+        saveToLocalStorage?.();
+        console.log('[FailureL3Tab] ✅ 중복 정리 후 저장 완료');
+      }, 100);
+    } else {
+      lastCleanedHash.current = currentHash;
     }
   }, [state.l2, setState, setDirty, saveToLocalStorage]);
 
-  // ✅ 누락 발생 시 자동 수정 모드 전환
+  // ✅ 2026-01-16: 데이터 상태 로그 (진단용)
+  useEffect(() => {
+    const allCharsCount = state.l2.reduce((acc: number, proc: any) => {
+      return acc + (proc.l3 || []).reduce((weAcc: number, we: any) => {
+        return weAcc + (we.functions || []).reduce((fAcc: number, f: any) => {
+          return fAcc + (f.processChars || []).filter((pc: any) => 
+            pc.name && !pc.name.includes('클릭') && !pc.name.includes('선택')
+          ).length;
+        }, 0);
+      }, 0);
+    }, 0);
+    const allCausesCount = state.l2.reduce((acc: number, proc: any) => acc + (proc.failureCauses || []).length, 0);
+    
+    // 상세 진단 로그
+    const processDetails = state.l2.map((proc: any) => {
+      const l3Details = (proc.l3 || []).map((we: any) => {
+        const funcDetails = (we.functions || []).map((f: any) => ({
+          funcName: f.name,
+          processCharsCount: (f.processChars || []).length,
+          processChars: (f.processChars || []).map((pc: any) => pc.name).join(', ')
+        }));
+        return {
+          weName: we.name,
+          funcsCount: (we.functions || []).length,
+          funcs: funcDetails
+        };
+      });
+      return {
+        procName: proc.name,
+        l3Count: (proc.l3 || []).length,
+        failureCausesCount: (proc.failureCauses || []).length,
+        l3Details
+      };
+    });
+    
+    console.log('[FailureL3Tab] 📊 데이터 상태:', {
+      isUpstreamConfirmed,
+      공정수: state.l2.length,
+      공정특성수: allCharsCount,
+      고장원인수: allCausesCount,
+      l3Confirmed: state.l3Confirmed
+    });
+    
+    if (allCharsCount === 0 && state.l2.length > 0) {
+      console.warn('[FailureL3Tab] ⚠️ 공정특성이 없습니다! 3L 기능분석 데이터를 확인하세요.');
+      console.log('[FailureL3Tab] 상세 데이터:', JSON.stringify(processDetails, null, 2));
+    }
+  }, [state.l2, isUpstreamConfirmed, state.l3Confirmed]);
+
+  // ✅ 누락 발생 시 자동 수정 모드 전환 - setStateSynced 패턴 적용
   useEffect(() => {
     if (isConfirmed && missingCount > 0) {
       console.log('[FailureL3Tab] 누락 발생 감지 → 자동 수정 모드 전환, missingCount:', missingCount);
-      setState(prev => ({ ...prev, failureL3Confirmed: false }));
+      const updateFn = (prev: any) => ({ ...prev, failureL3Confirmed: false });
+      if (setStateSynced) {
+        setStateSynced(updateFn);
+      } else {
+        setState(updateFn);
+      }
       setDirty(true);
     }
-  }, [isConfirmed, missingCount, setState, setDirty]);
+  }, [isConfirmed, missingCount, setState, setStateSynced, setDirty]);
 
   // ✅ failureCauses 변경 감지용 ref (FailureL2Tab 패턴과 동일)
   const failureCausesRef = useRef<string>('');
@@ -310,11 +383,13 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
           
           const currentCauses = proc.failureCauses || [];
           
-          // ✅ 2026-01-16: causeId가 있어도 selectedValues가 여러 개면 다중 모드
-          if (causeId && selectedValues.length === 1) {
+          // ✅ 2026-01-16: causeId가 있고 단일 선택인 경우
+          if (causeId && selectedValues.length <= 1) {
             if (selectedValues.length === 0) {
+              // 선택 해제 시 해당 고장원인 삭제
               return { ...proc, failureCauses: currentCauses.filter((c: any) => c.id !== causeId) };
             }
+            // 단일 선택 시 해당 고장원인 수정
             return {
               ...proc,
               failureCauses: currentCauses.map((c: any) => 
@@ -424,7 +499,7 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
     }
     
     setDirty(true);
-    setModal(null);
+    // ✅ 2026-01-16: 저장 후 모달 유지 (닫기 버튼으로만 닫음)
     
     // ✅ 저장 보장 (stateRef 업데이트 대기 후 저장) + DB 저장 추가
     setTimeout(async () => {
@@ -683,7 +758,8 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
                     <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
                   )}
                   <span className={missingCount > 0 ? badgeMissing : badgeOk}>누락 {missingCount}건</span>
-                  {isConfirmed && (
+                  {/* ✅ 2026-01-16: 수정 버튼 항상 표시 (확정됨/누락 있을 때) */}
+                  {(isConfirmed || missingCount > 0) && (
                     <button type="button" onClick={handleEdit} className={btnEdit}>수정</button>
                   )}
                 </div>
@@ -848,19 +924,29 @@ export default function FailureL3Tab({ state, setState, setStateSynced, setDirty
                         });
                       }}
                       onDoubleClickEdit={row.cause?.id ? (newValue: string) => {
-                        // ★ 더블클릭 인라인 편집: 해당 고장원인 이름 직접 수정
-                        setState((prev: any) => {
+                        // ★ 더블클릭 인라인 편집: 해당 고장원인 이름 직접 수정 - setStateSynced 패턴 적용
+                        const updateFn = (prev: any) => {
                           const newL2 = prev.l2.map((proc: any) => {
                             if (proc.id !== row.proc.id) return proc;
                             const newCauses = (proc.failureCauses || []).map((c: any) => {
                               if (c.id !== row.cause?.id) return c;
                               return { ...c, name: newValue };
                             });
-                            return { ...proc, failureCauses: newCauses };
+                            return { ...proc, failureCauses: newCauses, failureL3Confirmed: false };
                           });
-                          return { ...prev, l2: newL2 };
-                        });
+                          return { ...prev, l2: newL2, failureL3Confirmed: false };
+                        };
+                        if (setStateSynced) {
+                          setStateSynced(updateFn);
+                        } else {
+                          setState(updateFn);
+                        }
                         setDirty(true);
+                        // ✅ 인라인 편집 후 저장
+                        setTimeout(() => {
+                          saveToLocalStorage?.();
+                          saveAtomicDB?.();
+                        }, 100);
                       } : undefined}
                     />
                   ) : (

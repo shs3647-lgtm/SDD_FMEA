@@ -139,7 +139,7 @@ export default function StandardInputModal({
       const selected = items.find(i => i.id === selectedId);
       if (selected) {
         onSave(selected.value);
-        onClose();
+        // ✅ 2026-01-16: 적용 후 모달 유지 (닫기 버튼으로만 닫음)
       }
     }
   };
@@ -163,14 +163,15 @@ export default function StandardInputModal({
   const handleDirectSave = () => {
     if (newValue.trim()) {
       onSave(newValue.trim());
-      onClose();
+      // ✅ 2026-01-16: 적용 후 모달 유지 (닫기 버튼으로만 닫음)
     }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-[9999] bg-black/40">
+      {/* ✅ 2026-01-16: 배경 클릭으로 닫히지 않음 (닫기 버튼으로만 닫음) */}
       <div
         className="fixed bg-white rounded-lg shadow-2xl w-[380px] flex flex-col overflow-hidden max-h-[calc(100vh-120px)]"
         style={{ top: '180px', right: '320px' }}

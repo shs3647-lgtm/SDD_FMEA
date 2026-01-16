@@ -168,7 +168,7 @@ export default function StandardSelectModal({
   const handleApply = () => {
     const selectedItems = items.filter(i => selectedIds.has(i.id));
     onSave(selectedItems);
-    onClose();
+    // ✅ 2026-01-16: 적용 후 모달 유지 (닫기 버튼으로만 닫음)
   };
 
   // 삭제
@@ -186,8 +186,21 @@ export default function StandardSelectModal({
 
   // 새 항목 저장
   const handleAddSave = () => {
-    if (!onAdd || !newValue.trim()) return;
-    onAdd(newValue.trim(), newCategory);
+    if (!newValue.trim()) return;
+    const trimmed = newValue.trim();
+    
+    // onAdd가 있으면 항목 추가
+    if (onAdd) {
+      onAdd(trimmed, newCategory);
+    }
+    
+    // ✅ 2026-01-16: 엔터 시 워크시트에 즉시 반영 (모달 유지)
+    // 현재 선택된 항목들 + 새 항목을 워크시트에 전달
+    const currentSelected = items.filter(i => selectedIds.has(i.id));
+    const newItem: SelectItem = { id: `new_${Date.now()}`, value: trimmed, category: newCategory || '추가' };
+    onSave([...currentSelected, newItem]);
+    console.log('[StandardSelectModal] 워크시트 반영:', [...currentSelected, newItem].map(i => i.value));
+    
     setNewValue('');
   };
 
@@ -196,7 +209,7 @@ export default function StandardSelectModal({
   return (
     <div 
       className="fixed inset-0 z-[9999] flex items-start justify-end bg-black/40 pt-36 pr-5"
-      onClick={onClose}
+      // ✅ 2026-01-16: 배경 클릭으로 닫히지 않음 (닫기 버튼으로만 닫음)
     >
       <div 
         className="bg-white rounded-lg shadow-2xl w-[500px] flex flex-col overflow-hidden max-h-[calc(100vh-160px)]"

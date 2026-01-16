@@ -21,7 +21,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   DataItem, 
@@ -140,7 +140,17 @@ export default function DataSelectModal({
   const hasBelongsToFilter = ['C1', 'C2', 'C3', 'FE1', 'FE2'].includes(itemCode);
   const needsFunctionSelect = itemCode === 'C3' && parentFunctions.length > 0; // 요구사항 선택 시 기능 필요
 
-  // 데이터 로드
+  // ✅ 2026-01-16: 초기 currentValues 저장 (모달 열릴 때마다 업데이트)
+  const initialCurrentValuesRef = useRef<string[]>(currentValues);
+  
+  // ✅ 모달이 열릴 때마다 초기값 업데이트
+  useEffect(() => {
+    if (isOpen) {
+      initialCurrentValuesRef.current = currentValues;
+    }
+  }, [isOpen, currentValues]);
+  
+  // 데이터 로드 - ✅ currentValues 의존성 제거 (모달 열린 후 리로드 방지)
   useEffect(() => {
     if (!isOpen) return;
     console.log('[DataSelectModal] 모달 열림', { singleSelect, itemCode, title });
@@ -178,8 +188,8 @@ export default function DataSelectModal({
       console.error('데이터 로드 오류:', e);
     }
     
-    // 현재 워크시트에 있는 값
-    currentValues.forEach((val, idx) => {
+    // 현재 워크시트에 있는 값 (초기값 사용)
+    initialCurrentValuesRef.current.forEach((val, idx) => {
       if (val && val.trim() && !allItems.find(i => i.value === val)) {
         allItems.push({
           id: `${itemCode}_current_${idx}`,
@@ -192,7 +202,7 @@ export default function DataSelectModal({
     setItems(allItems);
     setSearch('');
     setCategoryFilter('All');
-  }, [isOpen, itemCode, processNo, currentValues]);
+  }, [isOpen, itemCode, processNo]);
 
   // ✅ 모달이 닫힐 때 초기화 플래그 리셋
   useEffect(() => {
@@ -207,7 +217,7 @@ export default function DataSelectModal({
     if (items.length === 0) return; // 아직 items 로드 안됨
     
     const newSelectedIds = new Set<string>();
-    currentValues.forEach(val => {
+    initialCurrentValuesRef.current.forEach(val => {
       const found = items.find(item => item.value === val);
       if (found) newSelectedIds.add(found.id);
     });
@@ -217,10 +227,10 @@ export default function DataSelectModal({
       title, 
       itemCode,
       itemsCount: items.length, 
-      currentValues, 
+      initialCurrentValues: initialCurrentValuesRef.current, 
       selectedCount: newSelectedIds.size 
     });
-  }, [items, currentValues, initialized, title, itemCode]);
+  }, [items, initialized, title, itemCode]);
 
   // 필터링
   const filteredItems = useMemo(() => {
@@ -330,7 +340,7 @@ export default function DataSelectModal({
       singleSelect 
     });
     onSave(selectedValues);
-    onClose();
+    // ✅ 2026-01-16: 적용 후 모달 유지 (닫기 버튼으로만 닫음)
   };
 
   const handleDeleteAll = () => {
@@ -378,6 +388,12 @@ export default function DataSelectModal({
       console.error('[수동입력] 저장 오류:', e);
     }
     
+    // ✅ 2026-01-16: 엔터 시 워크시트에 즉시 반영 (모달 유지)
+    // 현재 선택된 항목들 + 새 항목을 워크시트에 전달
+    const allSelectedValues = [...currentValues.filter(v => v !== trimmedValue), trimmedValue];
+    onSave(allSelectedValues);
+    console.log('[수동입력] 워크시트 반영:', allSelectedValues);
+    
     setNewValue('');
   };
 
@@ -398,7 +414,7 @@ export default function DataSelectModal({
   const modalContent = (
     <div 
       className="fixed inset-0 z-[99999] bg-black/40"
-      onClick={onClose}
+      // ✅ 2026-01-16: 배경 클릭으로 닫히지 않음 (닫기 버튼으로만 닫음)
       style={{ zIndex: 99999 }}
     >
       <div 
@@ -523,12 +539,20 @@ export default function DataSelectModal({
                     dataList.unshift({ id: newItem.id, itemCode, value: trimmed, category: '추가', createdAt: new Date().toISOString() }); // 맨 위에
                     localStorage.setItem('pfmea_master_data', JSON.stringify(dataList));
                   } catch (err) { console.error(err); }
+                  // ✅ 2026-01-16: 엔터 시 워크시트에 즉시 반영 (모달 유지)
+                  const allSelectedValues = [...currentValues.filter(v => v !== trimmed), trimmed];
+                  onSave(allSelectedValues);
+                  console.log('[검색입력] 워크시트 반영:', allSelectedValues);
                   setSearch('');
                 } else {
-                  // 이미 있으면 선택
+                  // 이미 있으면 선택 후 워크시트에 반영
                   const found = items.find(i => i.value === trimmed);
                   if (found) {
                     setSelectedIds(prev => new Set([...prev, found.id]));
+                    // ✅ 2026-01-16: 엔터 시 워크시트에 즉시 반영 (모달 유지)
+                    const allSelectedValues = [...currentValues.filter(v => v !== trimmed), trimmed];
+                    onSave(allSelectedValues);
+                    console.log('[검색선택] 워크시트 반영:', allSelectedValues);
                   }
                   setSearch('');
                 }

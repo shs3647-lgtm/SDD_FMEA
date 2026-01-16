@@ -261,7 +261,7 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
 
   // 메인공정 기능 인라인 편집 핸들러 (더블클릭)
   const handleInlineEditFunction = useCallback((procId: string, funcId: string, newValue: string) => {
-    setState(prev => ({
+    const updateFn = (prev: any) => ({
       ...prev,
       l2: prev.l2.map(proc => {
         if (proc.id !== procId) return proc;
@@ -273,14 +273,22 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
           })
         };
       })
-    }));
+    });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     setDirty(true);
-    saveToLocalStorage?.();
-  }, [setState, setDirty, saveToLocalStorage]);
+    setTimeout(() => {
+      saveToLocalStorage?.();
+      saveAtomicDB?.();
+    }, 100);
+  }, [setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   // 제품특성 인라인 편집 핸들러 (더블클릭)
   const handleInlineEditProductChar = useCallback((procId: string, funcId: string, charId: string, newValue: string) => {
-    setState(prev => ({
+    const updateFn = (prev: any) => ({
       ...prev,
       l2: prev.l2.map(proc => {
         if (proc.id !== procId) return proc;
@@ -298,10 +306,18 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
           })
         };
       })
-    }));
+    });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     setDirty(true);
-    saveToLocalStorage?.();
-  }, [setState, setDirty, saveToLocalStorage]);
+    setTimeout(() => {
+      saveToLocalStorage?.();
+      saveAtomicDB?.();
+    }, 100);
+  }, [setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
@@ -336,7 +352,8 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
       }
     }
     
-    setState(prev => {
+    // ✅ 2026-01-16: setStateSynced 사용으로 stateRef 동기 업데이트 보장 (DB 저장 정확성)
+    const updateFn = (prev: any) => {
       const newState = JSON.parse(JSON.stringify(prev));
 
       if (type === 'l2Function') {
@@ -426,9 +443,10 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
               if (f.id !== funcId) return f;
               const currentChars = f.productChars || [];
               
-              // ✅ 2026-01-16: charId가 있어도 selectedValues가 여러 개면 다중 모드
-              if (charId && selectedValues.length === 1) {
+              // ✅ 2026-01-16: charId가 있고 단일 선택인 경우
+              if (charId && selectedValues.length <= 1) {
                 if (selectedValues.length === 0) {
+                  // 선택 해제 시 해당 제품특성 삭제
                   return { ...f, productChars: currentChars.filter((c: any) => c.id !== charId) };
                 }
                 return {
@@ -470,12 +488,30 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
       }
       
       return newState;
-    });
+    };
+    
+    // ✅ setStateSynced 사용 (stateRef 동기 업데이트 보장)
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     
     setDirty(true);
-    setModal(null);
-    saveToLocalStorage?.(); // 영구 저장
-  }, [modal, setState, setDirty, saveToLocalStorage]);
+    // ✅ 2026-01-16: 저장 후 모달 유지 (닫기 버튼으로만 닫음)
+    // ✅ 2026-01-16: 적용 시 localStorage + DB 저장
+    setTimeout(async () => {
+      saveToLocalStorage?.();
+      if (saveAtomicDB) {
+        try {
+          await saveAtomicDB();
+          console.log('[FunctionL2Tab] DB 저장 완료');
+        } catch (e) {
+          console.error('[FunctionL2Tab] DB 저장 오류:', e);
+        }
+      }
+    }, 100);
+  }, [modal, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   const handleDelete = useCallback((deletedValues: string[]) => {
     if (!modal) return;
@@ -508,7 +544,7 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
       }
     }
     
-    setState(prev => {
+    const updateFn = (prev: any) => {
       const newState = JSON.parse(JSON.stringify(prev));
 
       if (type === 'l2Function') {
@@ -536,11 +572,19 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
       }
       
       return newState;
-    });
+    };
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     
     setDirty(true);
-    setTimeout(() => saveToLocalStorage?.(), 200);
-  }, [modal, setState, setDirty, saveToLocalStorage]);
+    setTimeout(() => {
+      saveToLocalStorage?.();
+      saveAtomicDB?.();
+    }, 200);
+  }, [modal, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   // 특별특성 선택 핸들러
   // ✅ 특별특성 업데이트 - CRUD Update → 확정 해제 필요
@@ -549,7 +593,7 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
     
     const { procId, funcId, charId } = specialCharModal;
     
-    setState(prev => {
+    const updateFn = (prev: any) => {
       const newState = JSON.parse(JSON.stringify(prev));
       newState.l2 = newState.l2.map((proc: any) => {
         if (proc.id !== procId) return proc;
@@ -570,12 +614,20 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
       // ✅ CRUD Update: 확정 상태 해제
       newState.l2Confirmed = false;
       return newState;
-    });
+    };
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     
     setDirty(true);
     setSpecialCharModal(null);
-    setTimeout(() => saveToLocalStorage?.(), 200);
-  }, [specialCharModal, setState, setDirty, saveToLocalStorage]);
+    setTimeout(() => {
+      saveToLocalStorage?.();
+      saveAtomicDB?.();
+    }, 200);
+  }, [specialCharModal, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   // 총 행 수 계산
   const getTotalRows = () => {
@@ -616,7 +668,8 @@ export default function FunctionL2Tab({ state, setState, setStateSynced, setDirt
                     <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
                   )}
                   <span className={missingCount > 0 ? badgeMissing : badgeOk}>누락 {missingCount}건</span>
-                  {isConfirmed && (
+                  {/* ✅ 2026-01-16: 수정 버튼 항상 표시 (확정됨/누락 있을 때) */}
+                  {(isConfirmed || missingCount > 0) && (
                     <button type="button" onClick={handleEdit} className={btnEdit}>수정</button>
                   )}
                 </div>

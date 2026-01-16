@@ -318,7 +318,7 @@ export default function ProcessFlowInputModal({
     );
     console.log('📝 [CP 모달] 새로 선택된 공정만 저장:', newlySelected.map(p => p.name).join(', '));
     onSave(newlySelected);
-    onClose();
+    // ✅ 2026-01-16: 적용 후 모달 유지 (닫기 버튼으로만 닫음)
   };
 
   // 더블클릭 수정
@@ -408,7 +408,7 @@ export default function ProcessFlowInputModal({
   return (
     <div 
       className="fixed inset-0 z-[9999] bg-black/40"
-      onClick={onClose}
+      // ✅ 2026-01-16: 배경 클릭으로 닫히지 않음 (닫기 버튼으로만 닫음)
     >
       <div 
         className="fixed bg-white rounded-lg shadow-2xl w-[350px] max-w-[350px] min-w-[350px] flex flex-col overflow-hidden max-h-[calc(100vh-120px)] cursor-move"

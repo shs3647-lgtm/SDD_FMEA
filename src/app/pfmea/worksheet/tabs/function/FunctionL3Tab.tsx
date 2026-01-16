@@ -151,6 +151,82 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
   // ✅ L3 기능 데이터 변경 감지용 ref (고장분석 패턴 적용)
   const l3FuncDataRef = useRef<string>('');
   
+  // ✅ 공정특성 + 기능 중복 제거 (FunctionL2Tab 패턴과 동일)
+  const lastCleanedHash = useRef<string>('');
+  useEffect(() => {
+    // 이미 정리한 데이터인지 체크 (무한 루프 방지)
+    const currentHash = JSON.stringify(state.l2.map(p => ({
+      id: p.id,
+      l3: (p.l3 || []).map((we: any) => ({
+        id: we.id,
+        funcs: (we.functions || []).map((f: any) => ({ name: f.name, chars: (f.processChars || []).map((c: any) => c.name) }))
+      }))
+    })));
+    if (lastCleanedHash.current === currentHash) return;
+    
+    let cleaned = false;
+    const newL2 = state.l2.map((proc: any) => {
+      const newL3 = (proc.l3 || []).map((we: any) => {
+        const funcs = we.functions || [];
+        
+        // 1. 기능 중복 제거 (같은 이름의 기능은 첫 번째만 유지, 나머지는 합침)
+        const funcMap = new Map<string, any>();
+        funcs.forEach((f: any) => {
+          const name = f.name?.trim();
+          if (!name) return;
+          if (funcMap.has(name)) {
+            // 이미 있으면 공정특성 합침
+            const existing = funcMap.get(name);
+            const allChars = [...(existing.processChars || []), ...(f.processChars || [])];
+            existing.processChars = allChars;
+            cleaned = true;
+          } else {
+            funcMap.set(name, { ...f });
+          }
+        });
+        
+        // 2. 각 기능별 공정특성 중복 제거
+        const uniqueFuncs = Array.from(funcMap.values()).map((f: any) => {
+          const chars = f.processChars || [];
+          const seen = new Set<string>();
+          const uniqueChars = chars.filter((c: any) => {
+            const name = c.name?.trim();
+            if (!name || name === '' || seen.has(name)) {
+              if (name && seen.has(name)) cleaned = true;
+              return false;
+            }
+            seen.add(name);
+            return true;
+          });
+          return { ...f, processChars: uniqueChars };
+        });
+        
+        return { ...we, functions: uniqueFuncs };
+      });
+      
+      return { ...proc, l3: newL3 };
+    });
+    
+    if (cleaned) {
+      console.log('[FunctionL3Tab] ⚠️ 기능/공정특성 중복 발견 → 자동 정리');
+      lastCleanedHash.current = JSON.stringify(newL2.map((p: any) => ({
+        id: p.id,
+        l3: (p.l3 || []).map((we: any) => ({
+          id: we.id,
+          funcs: (we.functions || []).map((f: any) => ({ name: f.name, chars: (f.processChars || []).map((c: any) => c.name) }))
+        }))
+      })));
+      setState(prev => ({ ...prev, l2: newL2 }));
+      setDirty(true);
+      setTimeout(() => {
+        saveToLocalStorage?.();
+        console.log('[FunctionL3Tab] ✅ 중복 정리 후 저장 완료');
+      }, 100);
+    } else {
+      lastCleanedHash.current = currentHash;
+    }
+  }, [state.l2, setState, setDirty, saveToLocalStorage]);
+  
   // ✅ L3 기능 데이터 변경 시 자동 저장 (확실한 저장 보장)
   useEffect(() => {
     const allFuncs = state.l2.flatMap((p: any) => (p.l3 || []).flatMap((we: any) => we.functions || []));
@@ -229,17 +305,17 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
 
   // 작업요소 기능 인라인 편집 핸들러 (더블클릭)
   const handleInlineEditFunction = useCallback((procId: string, l3Id: string, funcId: string, newValue: string) => {
-    setState(prev => ({
+    const updateFn = (prev: any) => ({
       ...prev,
-      l2: prev.l2.map(proc => {
+      l2: prev.l2.map((proc: any) => {
         if (proc.id !== procId) return proc;
         return {
           ...proc,
-          l3: proc.l3.map(we => {
+          l3: (proc.l3 || []).map((we: any) => {
             if (we.id !== l3Id) return we;
             return {
               ...we,
-              functions: (we.functions || []).map(f => {
+              functions: (we.functions || []).map((f: any) => {
                 if (f.id !== funcId) return f;
                 return { ...f, name: newValue };
               })
@@ -247,28 +323,36 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
           })
         };
       })
-    }));
+    });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     setDirty(true);
-    saveToLocalStorage?.();
-  }, [setState, setDirty, saveToLocalStorage]);
+    setTimeout(() => {
+      saveToLocalStorage?.();
+      saveAtomicDB?.();
+    }, 100);
+  }, [setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   // 공정특성 인라인 편집 핸들러 (더블클릭)
   const handleInlineEditProcessChar = useCallback((procId: string, l3Id: string, funcId: string, charId: string, newValue: string) => {
-    setState(prev => ({
+    const updateFn = (prev: any) => ({
       ...prev,
-      l2: prev.l2.map(proc => {
+      l2: prev.l2.map((proc: any) => {
         if (proc.id !== procId) return proc;
         return {
           ...proc,
-          l3: proc.l3.map(we => {
+          l3: (proc.l3 || []).map((we: any) => {
             if (we.id !== l3Id) return we;
             return {
               ...we,
-              functions: (we.functions || []).map(f => {
+              functions: (we.functions || []).map((f: any) => {
                 if (f.id !== funcId) return f;
                 return {
                   ...f,
-                  processChars: (f.processChars || []).map(c => {
+                  processChars: (f.processChars || []).map((c: any) => {
                     if (c.id !== charId) return c;
                     return { ...c, name: newValue };
                   })
@@ -278,31 +362,42 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
           })
         };
       })
-    }));
+    });
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     setDirty(true);
-    saveToLocalStorage?.();
-  }, [setState, setDirty, saveToLocalStorage]);
+    setTimeout(() => {
+      saveToLocalStorage?.();
+      saveAtomicDB?.();
+    }, 100);
+  }, [setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   const handleSave = useCallback((selectedValues: string[]) => {
     if (!modal) return;
     const { type, procId, l3Id, funcId } = modal;
     const isConfirmed = state.l3Confirmed || false;
     
-    setState(prev => {
+    // ✅ 2026-01-16: setStateSynced 사용으로 stateRef 동기 업데이트 보장 (DB 저장 정확성)
+    const updateFn = (prev: any) => {
       const newState = JSON.parse(JSON.stringify(prev));
 
       if (type === 'l3Function') {
         // 작업요소 기능 저장
         newState.l2 = newState.l2.map((proc: any) => {
           if (proc.id !== procId) return proc;
+          // ✅ l3가 없으면 빈 배열로 초기화
+          const l3List = proc.l3 || [];
           return {
             ...proc,
-            l3: proc.l3.map((we: any) => {
+            l3: l3List.map((we: any) => {
               if (we.id !== l3Id) return we;
               const currentFuncs = we.functions || [];
               
-              // ✅ 2026-01-16: funcId가 있어도 selectedValues가 여러 개면 다중 모드
-              if (funcId && selectedValues.length === 1) {
+              // ✅ 2026-01-16: funcId가 있고 단일 선택/삭제 모드
+              if (funcId && selectedValues.length <= 1) {
                 if (selectedValues.length === 0) {
                   // 선택 해제 시 해당 기능 삭제
                   return {
@@ -310,13 +405,31 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
                     functions: currentFuncs.filter((f: any) => f.id !== funcId)
                   };
                 }
+                
+                // ✅ 2026-01-16: 단일 선택 시에도 자동연결 적용
+                const linkedChars = findLinkedProcessCharsForFunction(prev, selectedValues[0]);
+                const autoLinkedChars = linkedChars.map(name => ({ id: uid(), name, specialChar: null }));
+                
                 return {
                   ...we,
-                  functions: currentFuncs.map((f: any) => 
-                    f.id === funcId 
-                      ? { ...f, name: selectedValues[0] || f.name }
-                      : f
-                  )
+                  functions: currentFuncs.map((f: any) => {
+                    if (f.id !== funcId) return f;
+                    
+                    // 기존 processChars가 없거나 비어있으면 자동연결 적용
+                    const existingChars = f.processChars || [];
+                    const hasValidChars = existingChars.some((c: any) => c.name && !c.name.includes('클릭'));
+                    
+                    // 자동연결 알림
+                    if (!hasValidChars && autoLinkedChars.length > 0) {
+                      console.log(`[FunctionL3Tab] 단일선택 자동연결: ${selectedValues[0]} → ${linkedChars.join(', ')}`);
+                    }
+                    
+                    return { 
+                      ...f, 
+                      name: selectedValues[0] || f.name,
+                      processChars: !hasValidChars && autoLinkedChars.length > 0 ? autoLinkedChars : existingChars
+                    };
+                  })
                 };
               }
               
@@ -330,9 +443,23 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
               
               // 빈 기능이 있으면 첫 번째 선택값 할당
               if (emptyFuncIdx !== -1 && selectedValues.length > 0 && !existingNames.has(selectedValues[0])) {
-                updatedFuncs[emptyFuncIdx] = { ...updatedFuncs[emptyFuncIdx], name: selectedValues[0] };
+                // ✅ 2026-01-16: 빈 기능 업데이트 시에도 자동연결 적용
+                const linkedChars = findLinkedProcessCharsForFunction(prev, selectedValues[0]);
+                const autoLinkedChars = linkedChars.map(name => ({ id: uid(), name, specialChar: null }));
+                
+                updatedFuncs[emptyFuncIdx] = { 
+                  ...updatedFuncs[emptyFuncIdx], 
+                  name: selectedValues[0],
+                  processChars: autoLinkedChars.length > 0 ? autoLinkedChars : (updatedFuncs[emptyFuncIdx].processChars || [])
+                };
                 existingNames.add(selectedValues[0]);
                 startIdx = 1;
+                
+                // 자동연결 알림
+                if (autoLinkedChars.length > 0) {
+                  const message = getAutoLinkMessage(linkedChars, '공정특성');
+                  console.log(`[FunctionL3Tab] ${selectedValues[0]}: ${message}`);
+                }
               }
               
               // 나머지 선택값들 각각 새 행으로 추가 (중복 제외)
@@ -363,15 +490,17 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
         // ✅ 원칙: 상위(기능)가 없으면 하위(공정특성) 생성 안됨
         if (!funcId) {
           alert('먼저 작업요소기능을 선택해주세요.');
-          return;
+          return prev; // ✅ undefined가 아닌 prev 반환으로 상태 보존
         }
         
         const charId = (modal as any).charId;
         newState.l2 = newState.l2.map((proc: any) => {
           if (proc.id !== procId) return proc;
+          // ✅ l3가 없으면 빈 배열로 초기화
+          const l3List = proc.l3 || [];
           return {
             ...proc,
-            l3: proc.l3.map((we: any) => {
+            l3: l3List.map((we: any) => {
               if (we.id !== l3Id) return we;
               return {
                 ...we,
@@ -379,9 +508,10 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
                   if (f.id !== funcId) return f;
                   const currentChars = f.processChars || [];
                   
-                  // ✅ 2026-01-16: charId가 있어도 selectedValues가 여러 개면 다중 모드
-                  if (charId && selectedValues.length === 1) {
+                  // ✅ 2026-01-16: charId가 있고 단일 선택인 경우
+                  if (charId && selectedValues.length <= 1) {
                     if (selectedValues.length === 0) {
+                      // 선택 해제 시 해당 공정특성 삭제
                       return { ...f, processChars: currentChars.filter((c: any) => c.id !== charId) };
                     }
                     return {
@@ -425,18 +555,36 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
       }
       
       return newState;
-    });
+    };
+    
+    // ✅ setStateSynced 사용 (stateRef 동기 업데이트 보장)
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     
     setDirty(true);
-    setModal(null);
-    saveToLocalStorage?.(); // 영구 저장
-  }, [modal, state.l3Confirmed, setState, setDirty, saveToLocalStorage]);
+    // ✅ 2026-01-16: 저장 후 모달 유지 (닫기 버튼으로만 닫음)
+    // ✅ 2026-01-16: 적용 시 localStorage + DB 저장
+    setTimeout(async () => {
+      saveToLocalStorage?.();
+      if (saveAtomicDB) {
+        try {
+          await saveAtomicDB();
+          console.log('[FunctionL3Tab] DB 저장 완료');
+        } catch (e) {
+          console.error('[FunctionL3Tab] DB 저장 오류:', e);
+        }
+      }
+    }, 100);
+  }, [modal, state.l3Confirmed, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   const handleDelete = useCallback((deletedValues: string[]) => {
     if (!modal) return;
     const deletedSet = new Set(deletedValues);
     
-    setState(prev => {
+    const updateFn = (prev: any) => {
       const newState = JSON.parse(JSON.stringify(prev));
       const { type, procId, l3Id, funcId } = modal;
 
@@ -477,18 +625,26 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
       }
       
       return newState;
-    });
+    };
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     
     setDirty(true);
-    setTimeout(() => saveToLocalStorage?.(), 200);
-  }, [modal, setState, setDirty, saveToLocalStorage]);
+    setTimeout(() => {
+      saveToLocalStorage?.();
+      saveAtomicDB?.();
+    }, 200);
+  }, [modal, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   // 특별특성 선택 핸들러
   // ✅ 특별특성 업데이트 - CRUD Update → 확정 해제 필요
   const handleSpecialCharSelect = useCallback((symbol: string) => {
     if (!specialCharModal) return;
     
-    setState(prev => {
+    const updateFn = (prev: any) => {
       const newState = JSON.parse(JSON.stringify(prev));
       const { procId, l3Id, funcId, charId } = specialCharModal;
       
@@ -517,12 +673,20 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
       // ✅ CRUD Update: 확정 상태 해제
       newState.l3Confirmed = false;
       return newState;
-    });
+    };
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
     
     setDirty(true);
     setSpecialCharModal(null);
-    setTimeout(() => saveToLocalStorage?.(), 200);
-  }, [specialCharModal, setState, setDirty, saveToLocalStorage]);
+    setTimeout(() => {
+      saveToLocalStorage?.();
+      saveAtomicDB?.();
+    }, 200);
+  }, [specialCharModal, setState, setStateSynced, setDirty, saveToLocalStorage, saveAtomicDB]);
 
   // ✅ 의미 있는 기능인지 체크하는 헬퍼 (자동생성 플레이스홀더 제외)
   const isMeaningfulFunc = (f: any) => {
@@ -594,7 +758,8 @@ export default function FunctionL3Tab({ state, setState, setStateSynced, setDirt
                     <button type="button" onClick={handleConfirm} className={btnConfirm}>확정</button>
                   )}
                   <span className={missingCount > 0 ? badgeMissing : badgeOk}>누락 {missingCount}건</span>
-                  {isConfirmed && (
+                  {/* ✅ 2026-01-16: 수정 버튼 항상 표시 (확정됨/누락 있을 때) */}
+                  {(isConfirmed || missingCount > 0) && (
                     <button type="button" onClick={handleEdit} className={btnEdit}>수정</button>
                   )}
                 </div>

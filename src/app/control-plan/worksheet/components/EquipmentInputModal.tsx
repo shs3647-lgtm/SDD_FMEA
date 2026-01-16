@@ -116,7 +116,7 @@ export default function EquipmentInputModal({
     const selected = equipments.find(e => e.id === selectedId);
     if (selected) {
       onSave(selected);
-      onClose();
+      // ✅ 2026-01-16: 적용 후 모달 유지 (닫기 버튼으로만 닫음)
     }
   };
 
@@ -143,7 +143,8 @@ export default function EquipmentInputModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-[9999] bg-black/40">
+      {/* ✅ 2026-01-16: 배경 클릭으로 닫히지 않음 (닫기 버튼으로만 닫음) */}
       <div 
         className="fixed bg-white rounded-lg shadow-2xl w-[350px] flex flex-col overflow-hidden max-h-[calc(100vh-120px)]"
         style={{ top: `${modalPosition.top}px`, right: `${modalPosition.right}px` }}

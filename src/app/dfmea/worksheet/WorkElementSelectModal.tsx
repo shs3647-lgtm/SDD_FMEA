@@ -220,14 +220,14 @@ export default function WorkElementSelectModal({
   const handleDeleteAll = () => {
     if (!confirm(`모든 작업요소를 삭제하시겠습니까?`)) return;
     onSave([]);
-    onClose();
+    // ✅ 2026-01-16: 삭제 후 모달 유지 (닫기 버튼으로만 닫음)
   };
 
   // 적용
   const handleApply = () => {
     const selected = elements.filter(e => selectedIds.has(e.id));
     onSave(selected);
-    onClose();
+    // ✅ 2026-01-16: 적용 후 모달 유지 (닫기 버튼으로만 닫음)
   };
 
   // 새 항목 저장 (DB)
@@ -282,7 +282,7 @@ export default function WorkElementSelectModal({
     newSelectedIds.delete(elem.id);
     const selected = elements.filter(el => newSelectedIds.has(el.id));
     onSave(selected);
-    onClose();
+    // ✅ 2026-01-16: 삭제 후 모달 유지 (닫기 버튼으로만 닫음)
   };
 
   const getM4Style = (m4: string) => {
@@ -295,7 +295,7 @@ export default function WorkElementSelectModal({
   return (
     <div 
       className="fixed inset-0 z-[9999] bg-black/40"
-      onClick={onClose}
+      // ✅ 2026-01-16: 배경 클릭으로 닫히지 않음 (닫기 버튼으로만 닫음)
     >
       <div 
         className="fixed bg-white rounded-lg shadow-2xl w-[350px] max-w-[350px] min-w-[350px] flex flex-col overflow-hidden max-h-[calc(100vh-120px)] cursor-move"

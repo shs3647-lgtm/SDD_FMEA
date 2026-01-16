@@ -201,10 +201,13 @@ export async function POST(request: NextRequest) {
       })));
     }
     
-    // ✅ FMEA ID는 항상 대문자로 정규화 (DB 일관성 보장)
+    // ✅ FMEA ID는 항상 소문자로 정규화 (DB 일관성 보장)
+    // ★ 원본 fmeaId 보존 (DELETE 시 대소문자 무관 삭제용)
+    const originalFmeaId = db.fmeaId;
     if (db.fmeaId) {
       db.fmeaId = db.fmeaId.toLowerCase(); // ★ 소문자로 정규화
     }
+    const normalizedFmeaId = db.fmeaId;
     
     if (!db.fmeaId) {
       console.error('[API] FMEA ID가 없습니다.');
@@ -305,20 +308,28 @@ export async function POST(request: NextRequest) {
 
       // ✅ 원자성 DB 삭제 후 재생성 (레거시 데이터 기준 동기화)
       // FK 제약조건 순서: 자식 → 부모
-      console.log(`[API] 원자성 DB 초기화: fmeaId=${db.fmeaId}`);
-      await tx.optimization.deleteMany({ where: { fmeaId: db.fmeaId } });
-      await tx.riskAnalysis.deleteMany({ where: { fmeaId: db.fmeaId } });
-      await tx.failureLink.deleteMany({ where: { fmeaId: db.fmeaId } });
-      await tx.failureAnalysis.deleteMany({ where: { fmeaId: db.fmeaId } }).catch(() => {});
-      await tx.failureCause.deleteMany({ where: { fmeaId: db.fmeaId } });
-      await tx.failureMode.deleteMany({ where: { fmeaId: db.fmeaId } });
-      await tx.failureEffect.deleteMany({ where: { fmeaId: db.fmeaId } });
-      await tx.l3Function.deleteMany({ where: { fmeaId: db.fmeaId } });
-      await tx.l2Function.deleteMany({ where: { fmeaId: db.fmeaId } });
-      await tx.l1Function.deleteMany({ where: { fmeaId: db.fmeaId } });
-      await tx.l3Structure.deleteMany({ where: { fmeaId: db.fmeaId } });
-      await tx.l2Structure.deleteMany({ where: { fmeaId: db.fmeaId } });
-      await tx.l1Structure.deleteMany({ where: { fmeaId: db.fmeaId } });
+      // ★★★ 근본 문제 해결: 대소문자 무관 삭제 (기존 대문자/소문자 데이터 모두 삭제) ★★★
+      const deleteCondition = { 
+        where: { 
+          fmeaId: { 
+            in: [originalFmeaId, normalizedFmeaId].filter(Boolean) as string[]
+          } 
+        } 
+      };
+      console.log(`[API] 원자성 DB 초기화: fmeaId=${db.fmeaId} (원본: ${originalFmeaId}, 정규화: ${normalizedFmeaId})`);
+      await tx.optimization.deleteMany(deleteCondition);
+      await tx.riskAnalysis.deleteMany(deleteCondition);
+      await tx.failureLink.deleteMany(deleteCondition);
+      await tx.failureAnalysis.deleteMany(deleteCondition).catch(() => {});
+      await tx.failureCause.deleteMany(deleteCondition);
+      await tx.failureMode.deleteMany(deleteCondition);
+      await tx.failureEffect.deleteMany(deleteCondition);
+      await tx.l3Function.deleteMany(deleteCondition);
+      await tx.l2Function.deleteMany(deleteCondition);
+      await tx.l1Function.deleteMany(deleteCondition);
+      await tx.l3Structure.deleteMany(deleteCondition);
+      await tx.l2Structure.deleteMany(deleteCondition);
+      await tx.l1Structure.deleteMany(deleteCondition);
       console.log(`[API] 원자성 DB 초기화 완료`);
 
       // 1. L1Structure 저장
@@ -408,12 +419,14 @@ export async function POST(request: NextRequest) {
       }
 
       // 7. FailureEffects 배치 저장 - ★★★ FK 검증 후 저장 ★★★
+      let validFeIdSet = new Set(db.failureEffects.map(fe => fe.id));
       if (db.failureEffects.length > 0) {
         const l1FuncIdSet = new Set(db.l1Functions.map(f => f.id));
         
         const validFEs = db.failureEffects.filter(fe => 
           !!fe.l1FuncId && l1FuncIdSet.has(fe.l1FuncId)
         );
+        validFeIdSet = new Set(validFEs.map(fe => fe.id));
         
         if (validFEs.length !== db.failureEffects.length) {
           console.warn('[API] ⚠️ FailureEffects FK 불일치 제외:', {
@@ -445,6 +458,7 @@ export async function POST(request: NextRequest) {
       }
 
       // 8. FailureModes 배치 저장 - ★★★ FK 검증 후 저장 ★★★
+      let validFmIdSet = new Set(db.failureModes.map(fm => fm.id));
       if (db.failureModes.length > 0) {
         const l2FuncIdSet = new Set(db.l2Functions.map(f => f.id));
         const l2StructIdSet = new Set(db.l2Structures.map(s => s.id));
@@ -454,6 +468,7 @@ export async function POST(request: NextRequest) {
           l2FuncIdSet.has(fm.l2FuncId) &&
           l2StructIdSet.has(fm.l2StructId)
         );
+        validFmIdSet = new Set(validFMs.map(fm => fm.id));
         
         if (validFMs.length !== db.failureModes.length) {
           console.warn('[API] ⚠️ FailureModes FK 불일치 제외:', {
@@ -486,6 +501,7 @@ export async function POST(request: NextRequest) {
       }
 
       // 9. FailureCauses 배치 저장 - ★★★ FK 검증 후 저장 ★★★
+      let validFcIdSet = new Set(db.failureCauses.map(fc => fc.id));
       if (db.failureCauses.length > 0) {
         const l3FuncIdSet = new Set(db.l3Functions.map(f => f.id));
         const l3StructIdSet = new Set(db.l3Structures.map(s => s.id));
@@ -495,6 +511,7 @@ export async function POST(request: NextRequest) {
           l3FuncIdSet.has(fc.l3FuncId) &&
           l3StructIdSet.has(fc.l3StructId)
         );
+        validFcIdSet = new Set(validFCs.map(fc => fc.id));
         
         if (validFCs.length !== db.failureCauses.length) {
           console.warn('[API] ⚠️ FailureCauses FK 불일치 제외:', {
@@ -533,9 +550,9 @@ export async function POST(request: NextRequest) {
         // - failure_links는 fmId/feId/fcId 모두 유효 FK여야만 저장 가능
         // - UI 편집 중(부분 연결) 또는 id 불일치가 섞이면 FK(P2003)로 전체 트랜잭션 롤백 → 새로고침 시 "사라짐" 발생
         // - 해결: atomic 테이블에 실제로 생성된 id 집합으로 필터링하여 "완전한 링크만" 저장
-        const fmIdSet = new Set(db.failureModes.map(fm => fm.id));
-        const feIdSet = new Set(db.failureEffects.map(fe => fe.id));
-        const fcIdSet = new Set(db.failureCauses.map(fc => fc.id));
+        const fmIdSet = validFmIdSet;
+        const feIdSet = validFeIdSet;
+        const fcIdSet = validFcIdSet;
 
         const validLinks = db.failureLinks.filter(link =>
           !!link.fmId && !!link.feId && !!link.fcId &&
@@ -963,7 +980,10 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     // ★ FMEA ID는 소문자로 정규화 (DB 일관성 보장)
-    const fmeaId = searchParams.get('fmeaId')?.toLowerCase();
+    const originalQueryFmeaId = searchParams.get('fmeaId');
+    const fmeaId = originalQueryFmeaId?.toLowerCase();
+    // ★ 대소문자 무관 검색용 배열
+    const fmeaIdVariants = [originalQueryFmeaId, fmeaId].filter(Boolean) as string[];
     const format = searchParams.get('format'); // 'atomic' | undefined
 
     if (!fmeaId) {
@@ -990,10 +1010,11 @@ export async function GET(request: NextRequest) {
     await prisma.$executeRawUnsafe(`SET search_path TO ${schema}, public`);
     
     // ★★★ 1단계: 레거시 데이터 우선 로드 (Single Source of Truth) ★★★
+    // ★ 대소문자 무관 검색: 기존 대문자/소문자 데이터 모두 지원
     let legacyDataRecord: any = null;
     try {
-      legacyDataRecord = await prisma.fmeaLegacyData.findUnique({
-        where: { fmeaId }
+      legacyDataRecord = await prisma.fmeaLegacyData.findFirst({
+        where: { fmeaId: { in: fmeaIdVariants } }
       });
     } catch (e: any) {
       // 테이블이 없으면 스킵 (마이그레이션 전)
@@ -1003,16 +1024,21 @@ export async function GET(request: NextRequest) {
     }
 
     // ✅ 프로젝트 스키마에 레거시가 없으면 public(기존 저장소)에서 1회 마이그레이션
+    // ★ 대소문자 무관 검색: 기존 대문자/소문자 데이터 모두 지원
     if (!legacyDataRecord?.data) {
       const publicPrisma = getPrisma();
-      const fromPublic = await publicPrisma?.fmeaLegacyData.findUnique({ where: { fmeaId } }).catch(() => null);
+      const fromPublic = await publicPrisma?.fmeaLegacyData.findFirst({ 
+        where: { fmeaId: { in: fmeaIdVariants } } 
+      }).catch(() => null);
       if (fromPublic?.data) {
         await prisma.fmeaLegacyData.upsert({
           where: { fmeaId },
           create: { fmeaId, data: fromPublic.data, version: fromPublic.version || '1.0.0' },
           update: { data: fromPublic.data, version: fromPublic.version || '1.0.0' },
         });
-        legacyDataRecord = await prisma.fmeaLegacyData.findUnique({ where: { fmeaId } }).catch(() => null);
+        legacyDataRecord = await prisma.fmeaLegacyData.findFirst({ 
+          where: { fmeaId: { in: fmeaIdVariants } } 
+        }).catch(() => null);
       }
     }
     
