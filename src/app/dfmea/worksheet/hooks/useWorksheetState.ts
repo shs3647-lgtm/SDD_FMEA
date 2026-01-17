@@ -412,12 +412,20 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     });
 
     return links.map((link: any) => {
-      const fmText = String(link.fmText || link.cache?.fmText || '').trim();
-      const feText = String(link.feText || link.cache?.feText || '').trim();
-      const fcText = String(link.fcText || link.cache?.fcText || '').trim();
-      const fmProcess = String(link.fmProcess || '').trim();
-      const feScope = String(link.feScope || link.cache?.feCategory || '').trim();
-      const fcProcess = String(link.fcProcess || '').trim();
+      // ✅ 원본 텍스트 먼저 추출 (절대 손실 방지)
+      const originalFmText = String(link.fmText || '').trim();
+      const originalFeText = String(link.feText || '').trim();
+      const originalFcText = String(link.fcText || '').trim();
+      const originalFmProcess = String(link.fmProcess || '').trim();
+      const originalFeScope = String(link.feScope || '').trim();
+      const originalFcProcess = String(link.fcProcess || '').trim();
+      
+      const fmText = originalFmText || String(link.cache?.fmText || '').trim();
+      const feText = originalFeText || String(link.cache?.feText || '').trim();
+      const fcText = originalFcText || String(link.cache?.fcText || '').trim();
+      const fmProcess = originalFmProcess;
+      const feScope = originalFeScope || String(link.cache?.feCategory || '').trim();
+      const fcProcess = originalFcProcess;
 
       const fmTextKey = normalizeKey(fmText);
       const feTextKey = normalizeKey(feText);
@@ -449,15 +457,18 @@ export function useWorksheetState(): UseWorksheetStateReturn {
         link.fcId ||
         '';
 
+      // ✅ 핵심 수정: 원본 텍스트를 최우선으로 유지, 맵에서 복원, 그래도 없으면 원본 반환
       return {
         ...link,
         fmId,
-        fmText: fmText || fmIdToText.get(fmId) || '',
-        fmProcess: fmProcess || fmIdToProcess.get(fmId) || '',
+        fmText: fmText || fmIdToText.get(fmId) || originalFmText || link.fmText || '',
+        fmProcess: fmProcess || fmIdToProcess.get(fmId) || originalFmProcess || link.fmProcess || '',
         feId,
-        feText: feText || feIdToText.get(feId) || '',
+        feText: feText || feIdToText.get(feId) || originalFeText || link.feText || '',
+        feScope: feScope || originalFeScope || link.feScope || '',
         fcId,
-        fcText: fcText || fcIdToText.get(fcId) || '',
+        fcText: fcText || fcIdToText.get(fcId) || originalFcText || link.fcText || '',
+        fcProcess: fcProcess || originalFcProcess || link.fcProcess || '',
       };
     });
   }, []);
@@ -836,23 +847,29 @@ export function useWorksheetState(): UseWorksheetStateReturn {
     });
 
     const normalized = links.map((link: any) => {
-      const fmText = link.fmText || link.cache?.fmText || '';
-      const feText = link.feText || link.cache?.feText || '';
-      const fcText = link.fcText || link.cache?.fcText || '';
+      // ✅ 원본 텍스트 먼저 추출 (절대 손실 방지)
+      const originalFmText = String(link.fmText || '').trim();
+      const originalFeText = String(link.feText || '').trim();
+      const originalFcText = String(link.fcText || '').trim();
+      
+      const fmText = originalFmText || link.cache?.fmText || '';
+      const feText = originalFeText || link.cache?.feText || '';
+      const fcText = originalFcText || link.cache?.fcText || '';
 
       const fmId = link.fmId || fmTextToId.get(fmText) || '';
       const feId = link.feId || feTextToId.get(feText) || '';
       const fcId = link.fcId || fcTextToId.get(fcText) || '';
 
+      // ✅ 핵심 수정: 원본 텍스트를 최우선으로 유지
       return {
         ...link,
         fmId,
-        fmText: fmText || fmIdToText.get(fmId) || '',
+        fmText: fmText || fmIdToText.get(fmId) || originalFmText || link.fmText || '',
         fmProcess: link.fmProcess || fmIdToProcess.get(fmId) || '',
         feId,
-        feText: feText || feIdToText.get(feId) || '',
+        feText: feText || feIdToText.get(feId) || originalFeText || link.feText || '',
         fcId,
-        fcText: fcText || fcIdToText.get(fcId) || '',
+        fcText: fcText || fcIdToText.get(fcId) || originalFcText || link.fcText || '',
       };
     });
 
