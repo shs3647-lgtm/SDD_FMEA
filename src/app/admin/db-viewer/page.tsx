@@ -236,6 +236,42 @@ export default function DBViewerPage() {
     setError(null);
     
     try {
+      // ✅ 고장연결(failure_links) 테이블은 legacyData에서 텍스트 정보와 함께 로드
+      if (tableName === 'failure_links' && projectId) {
+        const fmeaId = projectId.toLowerCase();
+        const legacyRes = await fetch(`/api/fmea?fmeaId=${fmeaId}`);
+        const legacyResult = await legacyRes.json();
+        
+        if (legacyResult.success && legacyResult.legacyData?.failureLinks) {
+          const links = legacyResult.legacyData.failureLinks;
+          // 텍스트 정보가 포함된 컬럼으로 변환
+          const columns = ['no', 'fmProcess', 'fmText', 'feScope', 'feText', 'severity', 'fcText', 'fcM4', 'fcWorkElem', 'fmId', 'feId', 'fcId'];
+          const data = links.map((link: any, idx: number) => ({
+            no: idx + 1,
+            fmProcess: link.fmProcess || '-',
+            fmText: link.fmText || '-',
+            feScope: link.feScope || '-',
+            feText: link.feText || '-',
+            severity: link.severity || 0,
+            fcText: link.fcText || '-',
+            fcM4: link.fcM4 || '-',
+            fcWorkElem: link.fcWorkElem || '-',
+            fmId: link.fmId || '-',
+            feId: link.feId || '-',
+            fcId: link.fcId || '-',
+          }));
+          
+          setTableData({
+            schema: 'legacyData',
+            table: 'failure_links (상세)',
+            columns,
+            data,
+          });
+          setLoading(false);
+          return;
+        }
+      }
+      
       const url = `/api/admin/db/data?schema=public&table=${tableName}&limit=100`;
       
       const res = await fetch(url);
@@ -257,34 +293,38 @@ export default function DBViewerPage() {
           
           const filteredData = result.result.data.filter((row: Record<string, unknown>) => {
             // 다양한 ID 필드 검사 (대소문자 구분 없이 비교)
-            const rowId = row.fmeaId || row.fmea_id || row.apqpNo || row.apqp_no || 
-                          row.cpNo || row.cp_no || row.pfdId || row.wsId || row.pmId;
+            const rowFmeaId = row.fmeaId || row.fmea_id;
+            const rowApqpNo = row.apqpNo || row.apqp_no;
+            const rowCpNo = row.cpNo || row.cp_no;
+            const rowOtherId = row.pfdId || row.wsId || row.pmId;
+            
+            const projectIdLower = String(projectId).trim().toLowerCase();
+            
+            // fmeaId 필드가 있는 경우 대소문자 구분 없이 비교
+            if (rowFmeaId) {
+              const rowFmeaIdLower = String(rowFmeaId).trim().toLowerCase();
+              return rowFmeaIdLower === projectIdLower;
+            }
             
             // cpNo 필드가 있는 경우 대소문자 구분 없이 비교
-            if (row.cpNo || row.cp_no) {
-              const rowCpNo = String(row.cpNo || row.cp_no || '').trim();
-              const projectCpNo = String(projectId).trim();
-              const matches = rowCpNo.toLowerCase() === projectCpNo.toLowerCase();
-              if (!matches && rowCpNo) {
-                console.log('❌ [DB Viewer] cpNo 불일치:', {
-                  rowCpNo,
-                  projectCpNo,
-                  rowKeys: Object.keys(row),
-                });
-              }
-              return matches;
+            if (rowCpNo) {
+              const rowCpNoLower = String(rowCpNo).trim().toLowerCase();
+              return rowCpNoLower === projectIdLower;
             }
             
-            // 다른 ID 필드는 정확히 일치해야 함
-            const matches = String(rowId || '').trim() === String(projectId).trim();
-            if (!matches && rowId) {
-              console.log('❌ [DB Viewer] ID 불일치:', {
-                rowId,
-                projectId,
-                rowKeys: Object.keys(row),
-              });
+            // apqpNo 필드가 있는 경우 대소문자 구분 없이 비교
+            if (rowApqpNo) {
+              const rowApqpNoLower = String(rowApqpNo).trim().toLowerCase();
+              return rowApqpNoLower === projectIdLower;
             }
-            return matches;
+            
+            // 기타 ID 필드는 대소문자 구분 없이 비교
+            if (rowOtherId) {
+              const rowOtherIdLower = String(rowOtherId).trim().toLowerCase();
+              return rowOtherIdLower === projectIdLower;
+            }
+            
+            return false;
           });
           
           console.log('✅ [DB Viewer] 필터링 완료:', {

@@ -187,7 +187,8 @@ export default function FailureLinkTables({
                     const stripeBg = scopeIdx % 2 === 0 ? scopeColors.dark : scopeColors.light;
                     scopeIdx++;
                     
-                    const isLinkedInSaved = linkStats.feLinkedIds.has(fe.id) || linkStats.feLinkedTexts.has(fe.text);
+                    // ✅ ID만 사용 (텍스트 매칭 완전 제거)
+                    const isLinkedInSaved = linkStats.feLinkedIds.has(fe.id);
                     const isLinkedToCurrentFM = linkedFEIds.has(fe.id);
                     // ★ 현재 FM에 연결된 FE: 하늘색 강조 (줄무늬와 명확 구분)
                     const noBg = isLinkedToCurrentFM ? '#1976d2' : (isLinkedInSaved ? COLORS.function.dark : '#f57c00');
@@ -349,7 +350,8 @@ export default function FailureLinkTables({
                     const stripeBg = processRowIdx % 2 === 0 ? colors.dark : colors.light;
                     processRowIdx++;
                     
-                    const isLinkedInSaved = linkStats.fcLinkedIds.has(fc.id) || linkStats.fcLinkedTexts.has(fc.text);
+                    // ✅ ID만 사용 (텍스트 매칭 완전 제거)
+                    const isLinkedInSaved = linkStats.fcLinkedIds.has(fc.id);
                     const isLinkedToCurrentFM = linkedFCIds.has(fc.id);
                     // ★ 현재 FM에 연결된 FC: 하늘색 강조 (줄무늬와 명확 구분)
                     const noBg = isLinkedToCurrentFM ? '#1976d2' : (isLinkedInSaved ? COLORS.function.dark : '#f57c00');

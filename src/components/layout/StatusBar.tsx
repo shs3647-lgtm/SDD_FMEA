@@ -112,14 +112,6 @@ export function StatusBar({
       const containerScrollWidth = container.scrollWidth;
       
       // 테이블이 있으면 테이블 너비와 컨테이너 너비를 비교
-      // 디버깅: 항상 로그 출력
-      console.log('StatusBar updateScrollPosition:', {
-        tableWidth,
-        containerWidth,
-        containerScrollWidth,
-        hasTable: !!tableElement,
-        pathname,
-      });
       const hasHorizontalScroll = tableWidth > 0 
         ? tableWidth > containerWidth + 1
         : containerScrollWidth > containerWidth + 1;
@@ -135,34 +127,9 @@ export function StatusBar({
         setScrollPercent(0);
       }
       
-      // 디버깅 로그 (항상 출력하여 문제 확인)
-      console.log('StatusBar 스크롤 상태:', {
-        containerId: container.id,
-        pathname,
-        containerScrollWidth: container.scrollWidth,
-        containerClientWidth: container.clientWidth,
-        tableWidth: tableWidth,
-        tableElement: tableElement ? {
-          offsetWidth: tableElement.offsetWidth,
-          scrollWidth: tableElement.scrollWidth,
-          computedWidth: window.getComputedStyle(tableElement).width,
-          computedMinWidth: window.getComputedStyle(tableElement).minWidth,
-        } : null,
-        difference: tableWidth > 0 ? tableWidth - containerWidth : containerScrollWidth - containerWidth,
-        canScroll: hasHorizontalScroll,
-        scrollLeft: container.scrollLeft,
-        scrollPercent: hasHorizontalScroll && maxScroll > 0 ? Math.round((container.scrollLeft / maxScroll) * 100) : 0,
-      });
     } else {
       setCanScroll(false);
       setScrollPercent(0);
-      console.log('StatusBar: 스크롤 컨테이너를 찾을 수 없습니다.', {
-        scrollContainerId,
-        cpImport: !!document.getElementById('cp-import-scroll-container'),
-        cpWorksheet: !!document.getElementById('cp-worksheet-scroll-container'),
-        allTab: !!document.getElementById('all-tab-scroll-wrapper'),
-        default: !!document.getElementById(scrollContainerId),
-      });
     }
   }, [getScrollContainer]);
 

@@ -142,6 +142,7 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
   // ========== savedLinks 변경 시 자동 동기화 + 저장 ==========
   const savedLinksJson = JSON.stringify(savedLinks);
   const prevSavedLinksRef = useRef<string>('[]');
+  const saveCompletedRef = useRef(true);  // ✅ 저장 완료 여부 추적
   useEffect(() => {
     // 초기 로드 시에는 스킵 (무한 루프 방지)
     if (isInitialLoad.current) return;
@@ -149,27 +150,45 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     // 이전 값과 동일하면 스킵
     if (savedLinksJson === prevSavedLinksRef.current) return;
     prevSavedLinksRef.current = savedLinksJson;
+    saveCompletedRef.current = false;  // ✅ 저장 필요 표시
     
     // savedLinks가 변경되면 state에 동기화
     console.log('[FailureLinkTab] 🔄 savedLinks 변경 감지:', savedLinks.length, '건 → state 동기화');
-    setState((prev: any) => {
-      // 이미 동일하면 업데이트 안 함
+    
+    // ✅ setStateSynced 사용하여 stateRef 즉시 동기화 (핵심 수정!)
+    const updateFn = (prev: any) => {
       const currentLinks = prev.failureLinks || [];
       if (JSON.stringify(currentLinks) === savedLinksJson) {
         return prev;
       }
       return { ...prev, failureLinks: savedLinks };
-    });
+    };
+    
+    if (setStateSynced) {
+      setStateSynced(updateFn);
+    } else {
+      setState(updateFn);
+    }
+    
+    setDirty(true);
     
     // ✅ 변경 시 자동 저장 (debounce)
     const saveTimer = setTimeout(() => {
-      setDirty(true);
       saveTemp?.();
+      saveCompletedRef.current = true;  // ✅ 저장 완료 표시
       console.log('[FailureLinkTab] ✅ 자동 저장 완료:', savedLinks.length, '건');
     }, 300);
     
-    return () => clearTimeout(saveTimer);
-  }, [savedLinksJson, setState, setDirty, saveTemp]);
+    // ✅ cleanup에서 저장이 아직 안 됐으면 즉시 저장 (탭 이동 시 데이터 손실 방지!)
+    return () => {
+      clearTimeout(saveTimer);
+      if (!saveCompletedRef.current) {
+        saveTemp?.();
+        saveCompletedRef.current = true;
+        console.log('[FailureLinkTab] ⚠️ cleanup 즉시 저장:', savedLinks.length, '건');
+      }
+    };
+  }, [savedLinksJson, setState, setStateSynced, setDirty, saveTemp, savedLinks]);
 
   // ========== FE 데이터 추출 (확정된 것만 사용 + 중복 제거) ==========
   const isL1Confirmed = state.failureL1Confirmed || false;
@@ -426,9 +445,12 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     (state.l2 || []).forEach((proc: any) => {
       (proc.failureModes || []).forEach((fm: any) => {
         if (!fm?.id) return;
-        map.set(fm.id, { text: fm.name || '', processName: proc.name || '' });
+        // name 또는 mode 필드에서 텍스트 추출
+        const text = fm.name || fm.mode || '';
+        map.set(fm.id, { text, processName: proc.name || '' });
       });
     });
+    console.log('[rawFmById] FM 맵 구축:', map.size, '개');
     return map;
   }, [state.l2]);
   const rawFeById = useMemo(() => {
@@ -455,18 +477,49 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
   const rawFcById = useMemo(() => {
     const map = new Map<string, { text: string; processName: string }>();
     (state.l2 || []).forEach((proc: any) => {
+      // 1. 공정 레벨의 failureCauses
       (proc.failureCauses || []).forEach((fc: any) => {
         if (!fc?.id) return;
         map.set(fc.id, { text: fc.name || '', processName: proc.name || '' });
       });
+      // 2. 작업요소(l3) 레벨의 failureCauses (하위호환)
+      (proc.l3 || []).forEach((we: any) => {
+        (we.failureCauses || []).forEach((fc: any) => {
+          if (!fc?.id || map.has(fc.id)) return;
+          map.set(fc.id, { text: fc.name || '', processName: proc.name || '' });
+        });
+        // 3. 공정특성(processChars) 레벨의 failureCauses
+        (we.functions || []).forEach((fn: any) => {
+          (fn.processChars || []).forEach((pc: any) => {
+            (pc.failureCauses || []).forEach((fc: any) => {
+              if (!fc?.id || map.has(fc.id)) return;
+              map.set(fc.id, { text: fc.name || '', processName: proc.name || '' });
+            });
+          });
+        });
+      });
     });
+    console.log('[rawFcById] FC 맵 구축:', map.size, '개');
     return map;
   }, [state.l2]);
   const enrichedLinks = useMemo(() => {
-    return savedLinks.map(link => {
+    // 텍스트 복원 통계
+    let restoredFmCount = 0, restoredFeCount = 0, restoredFcCount = 0;
+    
+    const result = savedLinks.map(link => {
       const fm = fmById.get(link.fmId) ?? rawFmById.get(link.fmId);
       const fe = feById.get(link.feId) ?? rawFeById.get(link.feId);
       const fc = fcById.get(link.fcId) ?? rawFcById.get(link.fcId);
+      
+      // 텍스트 복원 여부 추적
+      const needFmRestore = !link.fmText && fm?.text;
+      const needFeRestore = !link.feText && fe?.text;
+      const needFcRestore = !link.fcText && fc?.text;
+      
+      if (needFmRestore) restoredFmCount++;
+      if (needFeRestore) restoredFeCount++;
+      if (needFcRestore) restoredFcCount++;
+      
       return {
         ...link,
         fmText: link.fmText || fm?.text || '',
@@ -482,6 +535,27 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
         fcText: link.fcText || fc?.text || '',
       };
     });
+    
+    // 복원 결과 로그
+    if (savedLinks.length > 0) {
+      console.log('[enrichedLinks] 텍스트 복원:', {
+        totalLinks: savedLinks.length,
+        restoredFm: restoredFmCount,
+        restoredFe: restoredFeCount,
+        restoredFc: restoredFcCount,
+        fmMapSize: rawFmById.size,
+        feMapSize: rawFeById.size,
+        fcMapSize: rawFcById.size,
+        sampleLink: result[0] ? {
+          fmId: result[0].fmId,
+          fmText: result[0].fmText?.substring(0, 20),
+          feText: result[0].feText?.substring(0, 20),
+          fcText: result[0].fcText?.substring(0, 20),
+        } : null,
+      });
+    }
+    
+    return result;
   }, [savedLinks, fmById, feById, fcById, rawFmById, rawFeById, rawFcById]);
 
   useEffect(() => {
@@ -550,17 +624,18 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     });
     
     // 2. savedLinks에서 해당 FE와 관련된 연결 모두 찾기 (현재 FM 기준)
+    // ✅ ID만 사용 (텍스트 기반 매칭 완전 제거)
     if (currentFMId) {
       const existingLinks = savedLinks.filter(l => 
-        l.fmId === currentFMId && (l.feId === id || l.feText === fe.text)
+        l.fmId === currentFMId && l.feId === id
       );
       
       console.log('[unlinkFE] 기존 연결 검색:', existingLinks.length, '개 발견');
       
       if (existingLinks.length > 0) {
-        // 연결 해제 (ID 또는 텍스트 기반)
+        // 연결 해제 (ID만 사용)
         const filtered = savedLinks.filter(l => 
-          !(l.fmId === currentFMId && (l.feId === id || l.feText === fe.text))
+          !(l.fmId === currentFMId && l.feId === id)
         );
         
         console.log('[FE 연결 해제 (더블클릭)]', fe.text, 'from FM:', currentFMId, '| 제거:', existingLinks.length, '개');
@@ -625,7 +700,7 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
 
   // ========== 연결 통계 계산 ==========
   const linkStats = useMemo(() => {
-    // ID 기반 연결 확인 (빈 문자열 제외)
+    // ✅ ID 기반으로만 연결 확인 (텍스트 매칭 완전 제거)
     const feLinkedIds = new Set<string>();
     const fcLinkedIds = new Set<string>();
     const fmLinkedIds = new Set<string>();
@@ -636,66 +711,31 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
       if (link.feId && link.feId.trim() !== '') feLinkedIds.add(link.feId);
       if (link.fcId && link.fcId.trim() !== '') fcLinkedIds.add(link.fcId);
       
-      // FM별 연결 카운트 (ID, 번호, 텍스트 모두 확인)
+      // FM별 연결 카운트 (ID만 확인)
       if (!fmLinkCounts.has(link.fmId)) {
         fmLinkCounts.set(link.fmId, { feCount: 0, fcCount: 0 });
       }
       const counts = fmLinkCounts.get(link.fmId)!;
       
-      // FE 카운트: feId, feNo, feText 중 하나라도 있으면 카운트
-      if ((link.feId && link.feId.trim() !== '') || 
-          (link.feNo && link.feNo.trim() !== '') || 
-          (link.feText && link.feText.trim() !== '')) {
+      // FE 카운트: feId만 확인
+      if (link.feId && link.feId.trim() !== '') {
         counts.feCount++;
       }
       
-      // FC 카운트: fcId, fcNo, fcText 중 하나라도 있으면 카운트
-      if ((link.fcId && link.fcId.trim() !== '') || 
-          (link.fcNo && link.fcNo.trim() !== '') || 
-          (link.fcText && link.fcText.trim() !== '')) {
+      // FC 카운트: fcId만 확인
+      if (link.fcId && link.fcId.trim() !== '') {
         counts.fcCount++;
       }
     });
     
-    // 하위호환: 텍스트 기반 매칭 (trim 처리)
-    const feLinkedTexts = new Set<string>(
-      savedLinks
-        .filter(l => l.feText && l.feText.trim() !== '')
-        .map(l => l.feText.trim())
-    );
-    const fcLinkedTexts = new Set<string>(
-      savedLinks
-        .filter(l => l.fcText && l.fcText.trim() !== '')
-        .map(l => l.fcText.trim())
-    );
-    
-    // 번호 기반 매칭도 추가
-    const feLinkedNos = new Set<string>(
-      savedLinks
-        .filter(l => l.feNo && l.feNo.trim() !== '')
-        .map(l => l.feNo.trim())
-    );
-    const fcLinkedNos = new Set<string>(
-      savedLinks
-        .filter(l => l.fcNo && l.fcNo.trim() !== '')
-        .map(l => l.fcNo.trim())
-    );
-    
-    const feLinkedCount = feData.filter(fe => 
-      feLinkedIds.has(fe.id) || 
-      feLinkedTexts.has(fe.text.trim()) || 
-      feLinkedNos.has(fe.feNo)
-    ).length;
-    const fcLinkedCount = fcData.filter(fc => 
-      fcLinkedIds.has(fc.id) || 
-      fcLinkedTexts.has(fc.text.trim()) || 
-      fcLinkedNos.has(fc.fcNo)
-    ).length;
+    // ✅ ID 기반으로만 카운트 (텍스트/번호 매칭 완전 제거)
+    const feLinkedCount = feData.filter(fe => feLinkedIds.has(fe.id)).length;
+    const fcLinkedCount = fcData.filter(fc => fcLinkedIds.has(fc.id)).length;
     const fmLinkedCount = fmData.filter(fm => fmLinkedIds.has(fm.id)).length;
     
     return {
-      feLinkedIds, feLinkedTexts, feLinkedCount, feMissingCount: feData.length - feLinkedCount,
-      fcLinkedIds, fcLinkedTexts, fcLinkedCount, fcMissingCount: fcData.length - fcLinkedCount,
+      feLinkedIds, feLinkedTexts: new Set<string>(), feLinkedCount, feMissingCount: feData.length - feLinkedCount,
+      fcLinkedIds, fcLinkedTexts: new Set<string>(), fcLinkedCount, fcMissingCount: fcData.length - fcLinkedCount,
       fmLinkedIds, fmLinkedCount, fmMissingCount: fmData.length - fmLinkedCount,
       fmLinkCounts
     };
@@ -723,91 +763,62 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     console.log('[FM 선택] 연결된 links:', fmLinks.length, '개', fmLinks.map(l => ({ feId: l.feId, feText: l.feText, fcId: l.fcId, fcText: l.fcText })));
     
     fmLinks.forEach(link => {
-      // FE 로드 (ID → 번호 → 텍스트 순서로 매칭 시도)
-      let feItem: FEItem | undefined;
-      
-      // 1단계: ID로 찾기
+      // ✅ FE 로드 (ID 기반 - feData에서 못찾으면 savedLinks 저장 데이터로 복원)
       if (link.feId && link.feId.trim() !== '') {
-        feItem = feData.find(f => f.id === link.feId);
+        let feItem = feData.find(f => f.id === link.feId);
         if (feItem) {
           console.log('[FE 로드] ID 매칭 성공:', link.feId, '→', feItem.text);
+          newFEs.set(feItem.id, feItem);
+        } else if (link.feText) {
+          // ✅ 핵심 수정: feData가 비어있어도 savedLinks에 저장된 데이터로 임시 FEItem 생성
+          const rawFe = rawFeById.get(link.feId);
+          const tempFE: FEItem = {
+            id: link.feId,
+            feNo: link.feNo || '',
+            scope: link.feScope || rawFe?.scope || '',
+            text: link.feText || rawFe?.text || '',
+            severity: link.severity ?? rawFe?.severity ?? 0,
+            functionName: (link as any).feFunctionName || '',
+            requirement: (link as any).feRequirement || '',
+          };
+          console.log('[FE 로드] ✅ savedLinks에서 복원:', link.feId, '→', tempFE.text);
+          newFEs.set(link.feId, tempFE);
+        } else {
+          console.warn('[FE 로드] ID 매칭 실패 (feText도 없음):', link.feId);
         }
       }
       
-      // 2단계: ID 매칭 실패 시 번호로 찾기 (번호는 변경되지 않으므로 더 안정적)
-      if (!feItem && link.feNo && link.feNo.trim() !== '') {
-        feItem = feData.find(f => f.feNo === link.feNo.trim());
-        if (feItem) {
-          console.log('[FE 로드] 번호 매칭 성공:', link.feNo, '→', feItem.id, feItem.text);
-        }
-      }
-      
-      // 3단계: 번호 매칭 실패 시 텍스트로 찾기
-      if (!feItem && link.feText && link.feText.trim() !== '') {
-        const trimmedText = link.feText.trim();
-        feItem = feData.find(f => f.text.trim() === trimmedText);
-        if (feItem) {
-          console.log('[FE 로드] 텍스트 매칭 성공:', trimmedText, '→', feItem.id);
-        }
-      }
-      
-      if (feItem) {
-        newFEs.set(feItem.id, feItem);
-      } else if (link.feId || link.feNo || link.feText) {
-        // FE 데이터가 있는데 매칭 실패한 경우만 경고
-        console.warn('[FE 로드] 매칭 실패 (FE 데이터 불일치):', {
-          feId: link.feId,
-          feNo: link.feNo,
-          feText: link.feText,
-        });
-      }
-      // FE 데이터가 없는 경우는 정상 (FC만 연결된 링크)
-      
-      // FC 로드 (ID → 번호 → 텍스트 순서로 매칭 시도)
-      let fcItem: FCItem | undefined;
-      
-      // 1단계: ID로 찾기
+      // ✅ FC 로드 (ID 기반 - fcData에서 못찾으면 savedLinks 저장 데이터로 복원)
       if (link.fcId && link.fcId.trim() !== '') {
-        fcItem = fcData.find(f => f.id === link.fcId);
+        let fcItem = fcData.find(f => f.id === link.fcId);
         if (fcItem) {
           console.log('[FC 로드] ID 매칭 성공:', link.fcId, '→', fcItem.text);
+          newFCs.set(fcItem.id, fcItem);
+        } else if (link.fcText) {
+          // ✅ 핵심 수정: fcData가 비어있어도 savedLinks에 저장된 데이터로 임시 FCItem 생성
+          const rawFc = rawFcById.get(link.fcId);
+          const tempFC: FCItem = {
+            id: link.fcId,
+            fcNo: link.fcNo || '',
+            processName: link.fcProcess || rawFc?.processName || '',
+            m4: link.fcM4 || '',
+            workElem: link.fcWorkElem || '',
+            text: link.fcText || rawFc?.text || '',
+            workFunction: (link as any).fcWorkFunction || '',
+            processChar: (link as any).fcProcessChar || '',
+          };
+          console.log('[FC 로드] ✅ savedLinks에서 복원:', link.fcId, '→', tempFC.text);
+          newFCs.set(link.fcId, tempFC);
+        } else {
+          console.warn('[FC 로드] ID 매칭 실패 (fcText도 없음):', link.fcId);
         }
       }
-      
-      // 2단계: ID 매칭 실패 시 번호로 찾기 (번호는 변경되지 않으므로 더 안정적)
-      if (!fcItem && link.fcNo && link.fcNo.trim() !== '') {
-        fcItem = fcData.find(f => f.fcNo === link.fcNo.trim());
-        if (fcItem) {
-          console.log('[FC 로드] 번호 매칭 성공:', link.fcNo, '→', fcItem.id, fcItem.text);
-        }
-      }
-      
-      // 3단계: 번호 매칭 실패 시 텍스트로 찾기
-      if (!fcItem && link.fcText && link.fcText.trim() !== '') {
-        const trimmedText = link.fcText.trim();
-        fcItem = fcData.find(f => f.text.trim() === trimmedText);
-        if (fcItem) {
-          console.log('[FC 로드] 텍스트 매칭 성공:', trimmedText, '→', fcItem.id);
-        }
-      }
-      
-      if (fcItem) {
-        newFCs.set(fcItem.id, fcItem);
-      } else if (link.fcId || link.fcNo || link.fcText) {
-        // FC 데이터가 있는데 매칭 실패한 경우만 경고
-        console.warn('[FC 로드] 매칭 실패 (FC 데이터 불일치):', {
-          fcId: link.fcId,
-          fcNo: link.fcNo,
-          fcText: link.fcText,
-        });
-      }
-      // FC 데이터가 없는 경우는 정상 (FE만 연결된 링크)
     });
     
     setLinkedFEs(newFEs);
     setLinkedFCs(newFCs);
     console.log('[FM 선택 완료]', currentFMId, '→ FE:', newFEs.size, 'FC:', newFCs.size, '| savedLinks:', savedLinks.length);
-  }, [currentFMId, savedLinks, feData, fcData]);
+  }, [currentFMId, savedLinks, feData, fcData, rawFeById, rawFcById]);
 
   // ========== 규격미달(M1) 저장 데이터 vs 화면 표시 비교 ==========
   // 디버그 로직 제거됨 - 타이밍 이슈로 인한 거짓 양성 에러 방지
@@ -891,15 +902,15 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
       return;
     }
     
-    // 현재 FM과의 연결만 확인 (다른 FM과의 연결은 유지)
+    // ✅ 현재 FM과의 연결만 확인 (ID만 사용 - 텍스트 매칭 완전 제거)
     const existingLink = savedLinks.find(l => 
-      l.fmId === currentFMId && (l.feId === id || l.feText === fe.text)
+      l.fmId === currentFMId && l.feId === id
     );
     
     if (existingLink) {
       // 현재 FM과의 연결만 해제 (다른 FM과의 연결은 유지됨)
       const filtered = savedLinks.filter(l => 
-        !(l.fmId === currentFMId && (l.feId === id || l.feText === fe.text))
+        !(l.fmId === currentFMId && l.feId === id)
       );
       
       console.log('[FE 연결 해제]', fe.text, 'from FM:', currentFMId, '(다른 FM 연결 유지)');
@@ -964,9 +975,9 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
       }
     }
     
-    // 이미 연결된 경우 - 안내 메시지 (ID 또는 텍스트 기반 매칭)
+    // ✅ 이미 연결된 경우 - 안내 메시지 (ID만 사용 - 텍스트 매칭 완전 제거)
     const existingLink = savedLinks.find(l => 
-      l.fmId === currentFMId && (l.fcId === id || l.fcText === fc.text)
+      l.fmId === currentFMId && l.fcId === id
     );
     if (existingLink) {
       console.log('[FC 이미 연결됨] 더블클릭으로 해제하세요:', fc.text);
@@ -1010,17 +1021,18 @@ export default function FailureLinkTab({ state, setState, setStateSynced, setDir
     });
     
     // 2. savedLinks에서 해당 FC와 관련된 연결 모두 찾기 (현재 FM 기준)
+    // ✅ ID만 사용 (텍스트 기반 매칭 완전 제거)
     if (currentFMId) {
       const existingLinks = savedLinks.filter(l => 
-        l.fmId === currentFMId && (l.fcId === id || l.fcText === fc.text)
+        l.fmId === currentFMId && l.fcId === id
       );
       
       console.log('[unlinkFC] 기존 연결 검색:', existingLinks.length, '개 발견');
       
       if (existingLinks.length > 0) {
-        // 연결 해제 (ID 또는 텍스트 기반)
+        // 연결 해제 (ID만 사용)
         const filtered = savedLinks.filter(l => 
-          !(l.fmId === currentFMId && (l.fcId === id || l.fcText === fc.text))
+          !(l.fmId === currentFMId && l.fcId === id)
         );
         
         console.log('[FC 연결 해제 (더블클릭)]', fc.text, 'from FM:', currentFMId, '| 제거:', existingLinks.length, '개');
